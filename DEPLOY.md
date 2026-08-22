@@ -55,3 +55,28 @@ Verified before this repo was committed:
   you configure the GitHub connector yourself
 
 Everything else the app contacts is a provider *you* add a key for.
+
+---
+
+## "It loads a Vercel login page instead of the app"
+
+That is the whole problem, and it is one setting — not a build failure, not the CSP, not v0.
+
+Both `glassbox.vercel.app` and the team URL currently return **HTTP 200 to a Vercel login
+page**, because your team `CloudOps-Game-Time` has SAML with Deployment Protection on. Every
+visitor is asked to sign in to Vercel, so nobody but you can see it.
+
+**Fix:** Vercel dashboard → the `glassbox` project → **Settings → Deployment Protection →
+Vercel Authentication → Disabled** → Save. Then redeploy or just reload.
+
+Nothing else needs changing. The app itself was tested against this repo's exact production
+CSP headers: all 35 tabs render, the 3D editor loads three.js from unpkg inside a sandboxed
+iframe, and there are **zero CSP violations**.
+
+## Do not deploy this through v0
+
+v0 builds React/Next.js apps and will scaffold a project around your input. GlassBox is a
+single static HTML file with no build step — pushing it through v0 adds a framework it does
+not need and a build that can only fail. Use `npx vercel --prod` from this folder, or import
+the GitHub repo in the Vercel dashboard and accept the settings `vercel.json` already
+declares (no framework, no build command).
