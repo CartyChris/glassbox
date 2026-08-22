@@ -1,0 +1,11 @@
+{
+  "name": "glassbox",
+  "version": "1.0.0",
+  "private": false,
+  "description": "A reasoning and relay studio that runs entirely in your browser.",
+  "license": "MIT",
+  "scripts": {
+    "start": "npx --yes serve . -l 8765",
+    "bridge": "node glassbox-bridge.mjs"
+  }
+}

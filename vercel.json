@@ -1,0 +1,43 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": null,
+  "outputDirectory": ".",
+  "cleanUrls": true,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; img-src * data: blob:; media-src * blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://unpkg.com https://cdn.jsdelivr.net; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src *; frame-src 'self' blob: data:"
+        }
+      ]
+    },
+    {
+      "source": "/GlassBox.dmg",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/x-apple-diskimage"
+        },
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"GlassBox.dmg\""
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    }
+  ]
+}
