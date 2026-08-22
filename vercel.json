@@ -1,9 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "buildCommand": null,
+  "buildCommand": "",
+  "installCommand": "",
   "outputDirectory": ".",
-  "cleanUrls": true,
   "headers": [
     {
       "source": "/(.*)",
@@ -23,7 +23,7 @@
       ]
     },
     {
-      "source": "/GlassBox.dmg",
+      "source": "/desktop/GlassBox-macOS.dmg",
       "headers": [
         {
           "key": "Content-Type",
@@ -31,11 +31,37 @@
         },
         {
           "key": "Content-Disposition",
-          "value": "attachment; filename=\"GlassBox.dmg\""
+          "value": "attachment; filename=\"GlassBox-macOS.dmg\""
         },
         {
           "key": "Cache-Control",
           "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
+      "source": "/desktop/GlassBox-Windows.zip",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/zip"
+        },
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"GlassBox-Windows.zip\""
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
+      "source": "/GlassBox.html",
+      "headers": [
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"GlassBox.html\""
         }
       ]
     }
