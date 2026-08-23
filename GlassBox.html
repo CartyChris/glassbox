@@ -196,6 +196,291 @@ main{flex:1;overflow:hidden;background:var(--panel);border-top:1px solid var(--e
   .pane-row{grid-template-columns:60px 20px 1fr;row-gap:2px}
   .pane-row .pane-kind,.pane-row .pane-meta,.pane-row .pane-note{grid-column:3/4;font-size:11px}
 }
+/* ── WebOS ────────────────────────────────────────────────────────────────
+   Themes emulate a whole desktop rather than tinting one: Win95 gets a real taskbar and
+   square borders, Platinum loses the dock because System 7 had none, Phosphor is a CRT.
+   All geometry is driven by data-wtheme/data-wchrome/data-wdock on the root. */
+.wos{display:flex;flex-direction:column;height:calc(100vh - 150px);min-height:520px;
+  background:#07060f;color:#e8ecf6;overflow:hidden;position:relative;
+  font-family:var(--sans);border-top:1px solid var(--line)}
+.view:fullscreen .wos,body.popped .wos{height:100vh}
+.wos-menubar{display:flex;gap:8px;align-items:center;padding:5px 11px;font-size:12px;flex:0 0 auto;
+  background:rgba(10,12,24,.72);border-bottom:1px solid rgba(255,255,255,.09);backdrop-filter:blur(14px)}
+.wos-mb{background:transparent;border:1px solid transparent;border-radius:7px;color:inherit;
+  padding:3px 9px;font-size:12px;font-weight:600;cursor:pointer;position:relative}
+.wos-mb:hover{background:rgba(255,255,255,.09)}
+.wos-badge{position:absolute;top:-2px;right:-2px;background:#ff5c5c;color:#fff;font-size:9px;
+  min-width:14px;height:14px;border-radius:7px;display:grid;place-items:center;padding:0 3px}
+.wos-clock{font-size:12px;opacity:.8;font-variant-numeric:tabular-nums}
+.wos-desk{flex:1;position:relative;overflow:hidden;background-size:cover;background-position:center}
+.wos-sky{position:absolute;inset:0;opacity:0;transition:.4s;pointer-events:none;
+  background:radial-gradient(1200px 600px at 20% 0%,rgba(62,232,200,.18),transparent 60%),
+             radial-gradient(900px 500px at 80% 100%,rgba(139,120,255,.20),transparent 60%)}
+.wos.has-sky .wos-sky{opacity:1}
+.wos-icons{position:absolute;inset:0;z-index:3}
+.wos-wins{position:absolute;inset:0;z-index:10;pointer-events:none}
+.wos-icon{position:absolute;display:flex;flex-direction:column;align-items:center;gap:4px;
+  background:transparent;border:1px solid transparent;border-radius:11px;padding:7px 4px;cursor:pointer;
+  color:inherit;text-align:center;touch-action:none}
+.wos-icon:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.16)}
+.wos-glyph{font-size:31px;line-height:1.1;filter:drop-shadow(0 3px 7px rgba(0,0,0,.45))}
+.wos-name{font-size:11.5px;line-height:1.25;word-break:break-word;max-width:100%;
+  text-shadow:0 1px 3px rgba(0,0,0,.85)}
+.wos-win{position:absolute;display:flex;flex-direction:column;overflow:hidden;pointer-events:auto;
+  background:#12141f;border:1px solid rgba(255,255,255,.15);border-radius:13px;
+  box-shadow:0 22px 60px rgba(0,0,0,.55)}
+.wos-win.focus{border-color:rgba(110,168,255,.5)}
+.wos-win.max{border-radius:0}
+.wos-bar{display:flex;gap:9px;align-items:center;padding:7px 11px;flex:0 0 auto;cursor:grab;
+  background:rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.09);font-size:12.5px;
+  touch-action:none;user-select:none}
+.wos-bar b{font-weight:700}
+.wos-dots{display:flex;gap:6px}
+.wd{width:12px;height:12px;border-radius:50%;border:none;cursor:pointer;padding:0}
+.wd.close{background:#ff5f57}.wd.min{background:#febc2e}.wd.max{background:#28c840}
+.wos-x{background:transparent;border:none;color:inherit;cursor:pointer;font-size:13px;opacity:.7}
+.wos-x:hover{opacity:1}
+.wos-body{flex:1;min-height:0;overflow:auto;background:#0d0f18}
+.wos-frame{width:100%;height:100%;border:none;background:#fff;display:block}
+.wos-pad{padding:14px 16px;font-size:13px}
+.wos-pad h3{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;opacity:.65}
+.wos-notes{width:100%;height:100%;min-height:220px;border:none;background:#fffdf5;color:#222;
+  padding:18px 20px;font-family:var(--sans);font-size:14px;line-height:1.6;resize:none}
+.wos-srow{display:flex;gap:9px;align-items:center;padding:7px 9px;border-radius:9px;margin-bottom:5px;
+  border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.04)}
+.wos-srow i{display:block;font-style:normal;font-size:11px;opacity:.6}
+.wos-sic{font-size:19px}
+.wos-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:7px}
+.wos-sw{background:transparent;border:1.5px solid rgba(255,255,255,.14);border-radius:10px;padding:5px;
+  cursor:pointer;color:inherit}
+.wos-sw.on{border-color:#6ea8ff}
+.wos-sw span{display:block;height:38px;border-radius:6px}
+.wos-sw i{display:block;font-style:normal;font-size:10.5px;margin-top:4px;opacity:.8}
+.wos-rz{position:absolute;z-index:5}
+.r-n{top:-3px;left:8px;right:8px;height:7px;cursor:ns-resize}
+.r-s{bottom:-3px;left:8px;right:8px;height:7px;cursor:ns-resize}
+.r-e{right:-3px;top:8px;bottom:8px;width:7px;cursor:ew-resize}
+.r-w{left:-3px;top:8px;bottom:8px;width:7px;cursor:ew-resize}
+.r-ne{top:-3px;right:-3px;width:13px;height:13px;cursor:nesw-resize}
+.r-nw{top:-3px;left:-3px;width:13px;height:13px;cursor:nwse-resize}
+.r-se{bottom:-3px;right:-3px;width:13px;height:13px;cursor:nwse-resize}
+.r-sw{bottom:-3px;left:-3px;width:13px;height:13px;cursor:nesw-resize}
+.wos-dock{flex:0 0 auto;display:flex;justify-content:center;align-items:center;gap:6px;padding:7px;
+  background:rgba(10,12,24,.6);border-top:1px solid rgba(255,255,255,.09);backdrop-filter:blur(16px)}
+.wos-dockin{display:flex;gap:5px;flex-wrap:wrap;justify-content:center}
+.wos-dockb{width:42px;height:42px;border-radius:12px;font-size:19px;cursor:pointer;color:inherit;
+  border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.06);transition:.14s}
+.wos-dockb:hover{transform:translateY(-4px)}
+.wos-dockb.on{box-shadow:0 0 0 1px rgba(110,168,255,.55)}
+.wos-dockb span{display:none}
+.wos-notifpanel{position:absolute;top:8px;right:10px;width:296px;z-index:40;border-radius:13px;
+  background:rgba(14,16,28,.95);border:1px solid rgba(255,255,255,.15);overflow:hidden;
+  box-shadow:0 20px 54px rgba(0,0,0,.6)}
+.wos-notif{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.07);font-size:12px}
+.wos-notif b{display:block;font-size:12.5px}
+.wos-notif i{display:block;font-style:normal;opacity:.65;margin-top:1px}
+.wos-notif.read{opacity:.5}
+.wos-notif.good{border-left:2px solid #35d07f}
+.wos-notif.warn{border-left:2px solid #ffb020}
+.wos-nt{font-size:10px;opacity:.5}
+.wos-empty{padding:26px;text-align:center;opacity:.6}
+.wos-brow{display:flex;flex-direction:column;height:100%}
+.wos-browbar{display:flex;gap:6px;padding:7px;background:rgba(255,255,255,.05)}
+.wos-browbar input{height:28px}
+.wos-start{font-weight:800;padding:3px 13px;margin-right:6px;cursor:pointer}
+/* ── theme skins ── */
+.wos[data-wtheme=platinum]{background:#8b8b9e;color:#000}
+.wos[data-wtheme=platinum] .wos-win{background:#dcdcdc;color:#000;border:1px solid #000;border-radius:0;box-shadow:2px 2px 0 #000}
+.wos[data-wtheme=platinum] .wos-bar{background:repeating-linear-gradient(90deg,#000 0 1px,#dcdcdc 1px 3px);border-bottom:1px solid #000}
+.wos[data-wtheme=platinum] .wos-body{background:#fff;color:#000}
+.wos[data-wtheme=platinum] .wos-menubar{background:#dcdcdc;color:#000;border-bottom:1px solid #000}
+.wos[data-wdock=none] .wos-dock{display:none}
+.wos[data-wtheme=aqua]{background:linear-gradient(180deg,#5b9ae8,#1f4e9c)}
+.wos[data-wtheme=aqua] .wos-win{background:#eef2f9;color:#111;border-radius:12px 12px 7px 7px;border:1px solid #7a9}
+.wos[data-wtheme=aqua] .wos-bar{background:linear-gradient(180deg,#fdfdfd,#c8d4e6);color:#111}
+.wos[data-wtheme=aqua] .wos-body{background:#fff;color:#111}
+.wos[data-wtheme=aqua] .wos-menubar{background:rgba(240,244,250,.9);color:#111}
+.wos[data-wtheme=aqua] .wos-dock{background:rgba(228,236,248,.72)}
+.wos[data-wtheme=sequoia]{background:linear-gradient(160deg,#1c1c1e,#3a3a3c)}
+.wos[data-wtheme=sequoia] .wos-win{background:#2c2c2e;border-radius:11px}
+.wos[data-wtheme=win95]{background:#008080;color:#000;font-family:Tahoma,'MS Sans Serif',sans-serif}
+.wos[data-wtheme=win95] .wos-win{background:#c0c0c0;color:#000;border-radius:0;
+  border:2px solid;border-color:#fff #000 #000 #fff;box-shadow:1px 1px 0 #000}
+.wos[data-wtheme=win95] .wos-bar{background:linear-gradient(90deg,#000080,#1084d0);color:#fff;border:0}
+.wos[data-wtheme=win95] .wd{border-radius:0;width:14px;height:13px;background:#c0c0c0;
+  border:2px solid;border-color:#fff #000 #000 #fff}
+.wos[data-wtheme=win95] .wos-body{background:#fff;color:#000}
+.wos[data-wtheme=win95] .wos-menubar{display:none}
+.wos[data-wdock=taskbar] .wos-dock{justify-content:flex-start;background:#c0c0c0;border-top:2px solid #fff;padding:2px 4px}
+.wos[data-wdock=taskbar] .wos-dockin{justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto}
+.wos[data-wdock=taskbar] .wos-dockb{width:auto;height:24px;border-radius:0;font-size:11.5px;padding:0 9px;
+  border:2px solid;border-color:#fff #000 #000 #fff;background:#c0c0c0;color:#000;display:flex;align-items:center;gap:5px}
+.wos[data-wdock=taskbar] .wos-dockb span{display:inline}
+.wos[data-wdock=taskbar] .wos-dockb:hover{transform:none}
+.wos[data-wdock=taskbar] .wos-start{border:2px solid;border-color:#fff #000 #000 #fff;background:#c0c0c0;color:#000;border-radius:0}
+.wos[data-wtheme=vista]{background:linear-gradient(180deg,#8fd0ff,#12386e)}
+.wos[data-wtheme=vista] .wos-win{background:rgba(238,246,255,.96);color:#0a1a2f;border:1px solid #9cf}
+.wos[data-wtheme=vista] .wos-bar{background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(160,200,240,.75));color:#0a1a2f}
+.wos[data-wtheme=vista] .wos-body{background:#fff;color:#0a1a2f}
+.wos[data-wtheme=vista] .wos-dock{background:linear-gradient(180deg,rgba(200,230,255,.5),rgba(30,70,130,.75))}
+.wos[data-wtheme=fluent]{background:linear-gradient(150deg,#1b1b1f,#2d3a52)}
+.wos[data-wtheme=fluent] .wos-win{background:#202020;border-radius:9px;border:1px solid #3a3a3a}
+.wos[data-wtheme=fluent] .wos-dock{background:rgba(32,32,32,.88)}
+.wos[data-wtheme=fluent] .wos-dockb{border-radius:8px}
+.wos[data-wtheme=yaru]{background:linear-gradient(160deg,#2c001e,#77216f)}
+.wos[data-wtheme=yaru] .wos-bar{background:#3b0d33}
+.wos[data-wtheme=yaru] .wos-win{border-radius:10px;background:#2b2b2b}
+.wos[data-wtheme=tokyo]{background:linear-gradient(150deg,#1a1b26,#24283b)}
+.wos[data-wtheme=tokyo] .wos-win{background:#1f2335;border-color:#414868}
+.wos[data-wtheme=tokyo] .wos-bar{background:#24283b;color:#7dcfff}
+.wos[data-wtheme=solar]{background:#eee8d5;color:#073642}
+.wos[data-wtheme=solar] .wos-win{background:#fdf6e3;color:#073642;border-color:#93a1a1}
+.wos[data-wtheme=solar] .wos-bar{background:#eee8d5;color:#073642}
+.wos[data-wtheme=solar] .wos-body{background:#fdf6e3;color:#073642}
+.wos[data-wtheme=solar] .wos-menubar{background:#eee8d5;color:#073642}
+.wos[data-wtheme=solar] .wos-dock{background:rgba(238,232,213,.9)}
+.wos[data-wtheme=phosphor]{background:#050802;color:#b6ff3b;font-family:var(--mono)}
+.wos[data-wtheme=phosphor] .wos-win{background:#070c04;border:1px solid #2f5e14;border-radius:3px;
+  box-shadow:0 0 22px rgba(182,255,59,.16)}
+.wos[data-wtheme=phosphor] .wos-bar{background:#0c1707;color:#b6ff3b}
+.wos[data-wtheme=phosphor] .wos-body{background:#050802;color:#b6ff3b}
+.wos[data-wtheme=phosphor] .wos-menubar{background:#0c1707;color:#b6ff3b}
+.wos[data-wtheme=phosphor] .wd{border-radius:0}
+.wos[data-wtheme=paper]{background:#f3efe7;color:#1a1a1a}
+.wos[data-wtheme=paper] .wos-win{background:#fff;color:#1a1a1a;border:1px solid #1a1a1a;border-radius:0;box-shadow:5px 5px 0 rgba(180,35,24,.16)}
+.wos[data-wtheme=paper] .wos-bar{background:#b42318;color:#fff;border:0}
+.wos[data-wtheme=paper] .wos-body{background:#fff;color:#1a1a1a}
+.wos[data-wtheme=paper] .wos-menubar{background:#1a1a1a;color:#f3efe7}
+.wos[data-wtheme=paper] .wos-dock{background:rgba(26,26,26,.9)}
+.wos[data-wtheme=cyber]{background:linear-gradient(140deg,#05010d,#1a0033)}
+.wos[data-wtheme=cyber] .wos-win{background:#0b0418;border:1px solid #00f0ff;
+  box-shadow:0 0 26px rgba(0,240,255,.2),0 0 46px rgba(255,43,214,.12)}
+.wos[data-wtheme=cyber] .wos-bar{background:linear-gradient(90deg,rgba(0,240,255,.2),rgba(255,43,214,.2));color:#00f0ff}
+.wos[data-wtheme=amiga]{background:#0055aa;color:#fff;font-family:var(--mono)}
+.wos[data-wtheme=amiga] .wos-win{background:#c8c8c8;color:#000;border:2px solid #000;border-radius:0}
+.wos[data-wtheme=amiga] .wos-bar{background:#ff8800;color:#000;border:0}
+.wos[data-wtheme=amiga] .wos-body{background:#fff;color:#000}
+.wos[data-wtheme=amiga] .wos-menubar{background:#c8c8c8;color:#000}
+/* icon packs — shape and finish, not just a filter */
+.wos[data-wicons=classic] .wos-glyph,.wos[data-wicons=pixel] .wos-glyph{filter:saturate(.4) contrast(1.3)}
+.wos[data-wicons=pixel] .wos-glyph{image-rendering:pixelated;font-size:27px}
+.wos[data-wicons=mono] .wos-glyph{filter:grayscale(1)}
+.wos[data-wicons=neon] .wos-glyph{filter:drop-shadow(0 0 7px rgba(0,240,255,.9)) drop-shadow(0 0 14px rgba(255,43,214,.5))}
+.wos[data-wicons=aqua] .wos-glyph{filter:drop-shadow(0 2px 4px rgba(0,80,200,.5)) saturate(1.35)}
+.wos[data-wicons=aero] .wos-glyph{filter:drop-shadow(0 0 9px rgba(160,220,255,.75))}
+.wos[data-wicons=handmade] .wos-glyph{filter:sepia(.35) contrast(1.1);transform:rotate(-3deg)}
+.wos[data-wicons=fluent] .wos-glyph{filter:saturate(1.1)}
+.wos[data-wicons=luna] .wos-glyph{filter:saturate(1.4) hue-rotate(-8deg)}
+/* ── Connections / onboarding / help / tab placement ─────────────────────── */
+.cx-w{position:relative;display:inline-block}
+.cx-b{background:var(--bg);border:1px solid var(--edge);border-radius:8px;color:var(--ink2);
+  font-size:11.5px;font-weight:700;padding:4px 10px;cursor:pointer}
+.cx-b:hover{border-color:var(--acc);color:var(--ink)}
+.cx-menu{position:absolute;z-index:60;top:calc(100% + 5px);left:0;min-width:250px;max-height:320px;
+  overflow:auto;background:var(--panel);border:1px solid var(--edge2);border-radius:12px;
+  box-shadow:0 14px 44px rgba(0,0,0,.5);padding:5px;display:flex;flex-direction:column;gap:2px}
+.cx-menu[hidden]{display:none}
+.cx-i{display:flex;flex-direction:column;align-items:flex-start;gap:1px;background:transparent;
+  border:none;border-radius:8px;padding:7px 10px;cursor:pointer;text-align:left;width:100%}
+.cx-i:hover{background:var(--panel2)}
+.cx-i b{font-size:12.5px;color:var(--ink)}
+.cx-i i{font-size:11px;color:var(--ink3);font-style:normal}
+.cx-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 10px;border-radius:9px;
+  border:1px solid var(--edge);margin-bottom:6px;background:var(--bg)}
+.cx-ar{color:var(--acc);font-weight:800}
+/* Onboarding */
+.onb{text-align:center;padding:6px 2px}
+.onb-dots{display:flex;gap:6px;justify-content:center;margin-bottom:18px}
+.onb-dot{width:7px;height:7px;border-radius:50%;background:var(--edge2)}
+.onb-dot.on{background:var(--acc);width:22px;border-radius:4px}
+.onb-mark{font-size:40px;margin-bottom:6px}
+.onb h2{margin:0 0 10px;font-size:23px}
+.onb-hero p{color:var(--ink2);max-width:52ch;margin:0 auto 8px;line-height:1.6;font-size:14px}
+.onb-q{margin-bottom:6px!important}
+.onb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(184px,1fr));gap:10px;margin-top:16px}
+.onb-card{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:14px;border-radius:13px;
+  border:1.5px solid var(--edge);background:var(--panel2);cursor:pointer;text-align:left;transition:.14s}
+.onb-card:hover{border-color:var(--edge2);transform:translateY(-1px)}
+.onb-card.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,var(--panel2))}
+.onb-ic{font-size:24px}
+.onb-card b{font-size:13.5px;color:var(--ink)}
+.onb-card i{font-size:11.5px;color:var(--ink3);font-style:normal;line-height:1.4}
+.onb-lvls{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:9px;margin:14px 0}
+.onb-lvl{display:flex;flex-direction:column;gap:3px;padding:13px;border-radius:12px;text-align:left;
+  border:1.5px solid var(--edge);background:var(--panel2);cursor:pointer}
+.onb-lvl.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,var(--panel2))}
+.onb-lvl b{font-size:13px}.onb-lvl i{font-size:11.5px;color:var(--ink3);font-style:normal;line-height:1.4}
+.onb-prev{text-align:left;background:var(--bg);border:1px solid var(--edge);border-radius:12px;padding:12px}
+.onb-chip{display:inline-block;font-size:11.5px;padding:3px 9px;border-radius:999px;margin:0 4px 4px 0;
+  background:var(--panel2);border:1px solid var(--edge);color:var(--ink2)}
+/* Tab manager */
+.tm-list{max-height:46vh;overflow:auto;display:flex;flex-direction:column;gap:3px}
+.tm-row{display:flex;gap:9px;align-items:center;padding:8px 11px;border-radius:9px;cursor:pointer;
+  border:1px solid var(--edge);background:var(--bg);color:var(--ink3);width:100%;text-align:left}
+.tm-row.on{color:var(--ink);border-color:color-mix(in srgb,var(--acc) 45%,var(--edge))}
+.tm-row:hover{border-color:var(--edge2)}
+.tm-tick{width:16px;color:var(--acc);font-weight:800}
+.btn.ghost.small.on{border-color:var(--acc);color:var(--acc)}
+/* Help centre */
+.hc{display:grid;grid-template-columns:262px 1fr;gap:16px;align-items:start}
+@media(max-width:860px){.hc{grid-template-columns:1fr}}
+.hc-side{display:flex;flex-direction:column;gap:4px;position:sticky;top:8px}
+.hc-search{margin-bottom:6px}
+.hc-nav{display:flex;gap:10px;align-items:flex-start;padding:9px 11px;border-radius:11px;cursor:pointer;
+  border:1px solid transparent;background:transparent;text-align:left;width:100%}
+.hc-nav:hover{background:var(--panel2)}
+.hc-nav.on{background:var(--panel2);border-color:var(--acc)}
+.hc-nav b{display:block;font-size:13px;color:var(--ink)}
+.hc-nav i{display:block;font-size:11px;color:var(--ink3);font-style:normal;line-height:1.35;margin-top:1px}
+.hc-ic{font-size:17px;line-height:1.2}
+.hc-foot{margin-top:10px;display:flex;flex-direction:column;gap:5px}
+.hc-main h2{margin:0 0 4px;font-size:19px}
+.hc-art{border:1px solid var(--edge);border-radius:12px;margin-bottom:8px;background:var(--panel2);overflow:hidden}
+.hc-art summary{padding:12px 14px;cursor:pointer;font-weight:700;font-size:13.5px;list-style:none}
+.hc-art summary::-webkit-details-marker{display:none}
+.hc-art summary:before{content:'▸';margin-right:9px;color:var(--acc);display:inline-block;transition:.15s}
+.hc-art[open] summary:before{transform:rotate(90deg)}
+.hc-art[open] summary{border-bottom:1px solid var(--edge)}
+.hc-body{padding:13px 15px;font-size:13.5px;line-height:1.66;color:var(--ink2)}
+.hc-body p{margin:0 0 9px}.hc-body ul,.hc-body ol{margin:0 0 9px;padding-left:22px}
+.hc-body li{margin-bottom:5px}
+.hc-body code{background:var(--bg);border:1px solid var(--edge);border-radius:5px;padding:1px 5px;
+  font-family:var(--mono);font-size:12px}
+.hc-body a{color:var(--acc)}
+/* Tab bar placement. A body data-attribute drives it, but the grid must go on #app — the
+   header, tab bar and main are children of #app, not of body, so making body the grid
+   container only laid out #app itself and left the bar full-width in a single column. */
+body[data-tabpos=left] #app,body[data-tabpos=right] #app{
+  display:grid;grid-template-columns:var(--tabw,190px) 1fr;
+  grid-template-areas:"top top" "banner banner" "nav main" "bar bar";
+  align-items:start;min-height:100vh}
+body[data-tabpos=right] #app{grid-template-columns:1fr var(--tabw,190px);
+  grid-template-areas:"top top" "banner banner" "main nav" "bar bar"}
+body[data-tabpos=left] .top,body[data-tabpos=right] .top{grid-area:top}
+body[data-tabpos=left] #originbanner,body[data-tabpos=right] #originbanner{grid-area:banner}
+body[data-tabpos=left] #agentbar,body[data-tabpos=right] #agentbar{grid-area:bar}
+body[data-tabpos=left] .tabs,body[data-tabpos=right] .tabs{
+  grid-area:nav;flex-direction:column;align-items:stretch;
+  overflow-y:auto;overflow-x:hidden;max-height:100vh;position:sticky;top:0;border-bottom:none}
+body[data-tabpos=left] .tabs{border-right:1px solid var(--line)}
+body[data-tabpos=right] .tabs{border-left:1px solid var(--line)}
+body[data-tabpos=left] .tabs .tab,body[data-tabpos=right] .tabs .tab{
+  justify-content:flex-start;width:100%;white-space:nowrap;flex:0 0 auto}
+body[data-tabpos=left] main,body[data-tabpos=right] main{grid-area:main;min-width:0}
+body[data-tabpos=bottom] .tabs{position:fixed;bottom:0;left:0;right:0;z-index:90;
+  border-top:1px solid var(--line);border-bottom:none;background:var(--panel)}
+body[data-tabpos=bottom] main{padding-bottom:66px}
+.tab-add{font-weight:800;opacity:.8}
+.tab-add:hover{opacity:1}
+.stx-panel{padding:10px;overflow:auto;max-height:52vh;border-top:1px solid var(--edge);flex:0 0 auto}
+.stx-bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.stx-bar select{width:auto;height:28px;padding:2px 7px;font-size:12px}
+.stx-find{display:flex;gap:6px;margin-top:8px}
+.stx-find[hidden]{display:none}
+.stx-find input{height:28px;font-size:12px}
+.stx-frame{width:100%;height:270px;border:1px solid var(--edge);border-radius:9px;background:#fff;margin-top:8px}
+.stx-stats{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--ink3);margin-bottom:6px}
+.stx-panel select,.stx-panel textarea{width:100%}
 .view.nopad{padding:0}
 /* On a maximized/full-screen desktop window this used to cap at 1300px and leave two dead
    grey margins the width of the content itself. min() lets it use the real window on any
@@ -1260,6 +1545,9 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
     <button class="tab" data-view="transplant">🧬 Transplant</button>
     <button class="tab" data-view="models">📚 Catalog</button>
     <button class="tab" data-view="history">🗄️ History</button>
+    <button class="tab" data-view="webos">🪟 WebOS</button>
+    <button class="tab" data-view="connect">🔗 Connections</button>
+    <button class="tab" data-view="help">❓ Help</button>
     <button class="tab" data-view="settings">⚙️ Settings</button>
   </nav>
   <div id="agentbar" class="agentbar"></div>
@@ -1644,6 +1932,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
     </div></section>
 
     <section class="view" id="view-library"><div class="wrap">
+      <div id="ghi-panel"></div>
       <div id="sksurf-panel"></div>
       <div class="card">
         <h3>👁 OCR — give the models eyes</h3>
@@ -2364,6 +2653,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
         </div>
         <iframe id="st-frame" sandbox="allow-scripts allow-modals allow-forms allow-popups"></iframe>
         <div class="st-console" id="st-console"></div>
+        <div class="stx-panel" id="stx-panel"></div>
       </div>
     </div></section>
 
@@ -3193,6 +3483,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
             <span id="ofw-saved" class="help"></span>
             <span style="flex:1"></span>
             <label class="chk" style="font-size:11.5px"><input type="checkbox" id="ofw-spell" checked> spellcheck</label>
+            <span id="ofw-send"></span>
             <button class="ofw-b" id="of-live-office" title="Rebuild this as a generated Office document">→ Office Studio</button>
           </div>
         </div>
@@ -3243,7 +3534,8 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
             <button class="btn" id="ofc-run">Run</button>
             <span id="ofc-fb"></span>
           </div>
-          <div class="ofw-status"><span id="ofc-stat">empty sheet</span></div>
+          <div class="ofw-status"><span id="ofc-stat">empty sheet</span>
+            <span style="flex:1"></span><span id="ofc-send"></span></div>
         </div>
         <div id="of-live-frame-wrap" style="display:none;flex:1;min-height:0;flex-direction:column">
           <iframe id="of-live-frame" style="flex:1;border:none;min-height:0" allow="clipboard-write"></iframe>
@@ -4108,7 +4400,18 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
       </div>
     </section>
 
+    <section class="view nopad" id="view-webos"><div id="wos-root" class="wos"></div></section>
+
+    <section class="view" id="view-connect"><div class="wrap">
+      <div id="cx-panel"></div>
+    </div></section>
+
+    <section class="view" id="view-help"><div class="wrap">
+      <div id="help-panel"></div>
+    </div></section>
+
     <section class="view" id="view-settings"><div class="wrap" style="max-width:780px">
+      <div id="xd-panel"></div>
       <div class="card" id="proj-card">
         <h3>🗂 Projects</h3>
         <p class="help">Separate desktops. Switching swaps the whole working context — workspace
@@ -26640,8 +26943,22 @@ function ofwApplyStyle(){
   if(sheet)sheet.style.transform='scale('+(OFW.zoom||1)+')';
   const zl=$('#ofw-zoomlbl');if(zl)zl.textContent=Math.round((OFW.zoom||1)*100)+'%';
 }
+function ofwSendMenu(){
+  const h=$('#ofw-send');if(!h)return;
+  const el=ofwEl();if(!el)return;
+  const d=ofwDoc();
+  h.innerHTML=connMenu(connMake('text',el.innerText||'',(d&&d.name)||'Document','writer'));
+  connInit();
+}
+function ofcSendMenu(){
+  const h=$('#ofc-send');if(!h)return;
+  const b=ofcBook();
+  h.innerHTML=connMenu(connMake('table',ofcGridValues(),(b&&b.name)||'Sheet','calc'));
+  connInit();
+}
 function ofwStats(){
   const el=ofwEl(),out=$('#ofw-stats');if(!el||!out)return;
+  ofwSendMenu();
   const text=(el.innerText||'').trim();
   const words=text?text.split(/\s+/).length:0;
   const [ , ph]=String(OFW.paper||'816x1056').split('x');
@@ -27227,7 +27544,7 @@ function ofcRenderBar(){
       : 'empty sheet';
   }
 }
-function ofcRender(){ofcRenderGrid();ofcRenderBar();}
+function ofcRender(){ofcRenderGrid();ofcRenderBar();ofcSendMenu();}
 function ofcSet(key,raw){
   const sh=ofcSheet();if(!sh)return;
   sh.cells=sh.cells||{};
@@ -32712,6 +33029,10 @@ function importHistory(){
     rd.readAsText(f);};
   i.click();}
 function openModal(html){
+  /* Replace rather than stack. Several panels here (onboarding, the section manager) re-open
+     themselves on every click to re-render, and appending each time buried the page under
+     dead overlays that only the topmost Close could clear. */
+  document.querySelectorAll('.overlay').forEach(x=>x.remove());
   const o=document.createElement('div');o.className='overlay';
   o.innerHTML=`<div class="modal">${html}<div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn ghost" data-close>Close</button></div></div>`;
   o.onclick=e=>{if(e.target===o||e.target.hasAttribute('data-close'))o.remove();};
@@ -32830,6 +33151,9 @@ function applyUI(){
     const order=(UI.tabOrder&&UI.tabOrder.length?UI.tabOrder:REGISTRY.tabs.map(t=>t.id));
     order.forEach(id=>{const t=REGISTRY.tabs.find(x=>x.id===id);if(t&&t.el)nav.appendChild(t.el);});
     REGISTRY.tabs.forEach(t=>{if(!order.includes(t.id)&&t.el)nav.appendChild(t.el);});
+    /* The ＋ is not a registry tab, so the re-append above leaves it wherever it started —
+       which is first. It only makes sense at the end of the bar. */
+    const add=document.getElementById('tab-add');if(add)nav.appendChild(add);
     REGISTRY.tabs.forEach(t=>{
       if(!t.el)return;
       t.el.style.display=tabHidden(t.id)?'none':'';
@@ -33020,6 +33344,1960 @@ function initTabBar(){
   });
   tabEdges();
 }
+
+/* ═══════════════════ CONNECTIONS ═══════════════════
+   The app already had one hand-off path (Assistant → Studio/Office/Reverse) and it was the
+   single most-used thing in it, because the useful next move after producing an artifact is
+   almost never "read it here" — it is "open it where that kind of thing is worked on".
+   This generalises that into a typed port system so every producer can reach every consumer
+   that can genuinely accept its payload.
+
+   Typed, not free-for-all. A connection offer that is wrong twice stops being read at all, so
+   a destination only appears when it declares it accepts that payload KIND. The kinds are the
+   real shapes this app moves around, nothing aspirational. */
+const CONN_KINDS={
+  html:   {label:'A runnable page',      icon:'🧩'},
+  files:  {label:'Project files',        icon:'📁'},
+  text:   {label:'Prose or a brief',     icon:'📝'},
+  doc:    {label:'A document',           icon:'🗂'},
+  table:  {label:'Rows and columns',     icon:'📊'},
+  image:  {label:'An image',             icon:'🖼'},
+  video:  {label:'A video',              icon:'🎞'},
+  model3d:{label:'A 3D asset',           icon:'🧊'},
+  palette:{label:'Colours / design tokens',icon:'🎨'},
+  prompt: {label:'A prompt to run',      icon:'⚡'},
+  repo:   {label:'A repository',         icon:'🔩'},
+  trace:  {label:'A reasoning trace',    icon:'🧠'},
+  note:   {label:'Something to remember',icon:'💡'},
+};
+/* Each port says what it takes and what it does with it. `run` is the only thing that
+   actually moves data — everything else is description used to build the menu. */
+const CONN_PORTS=[
+  {id:'studio',    tab:'studio',  icon:'🛠', label:'Studio',        takes:['html','files'],
+   why:'edit and run it live', run:p=>connToStudio(p)},
+  {id:'webos',     tab:'webos',   icon:'🪟', label:'WebOS',         takes:['html'],
+   why:'install it as a real app on the desktop', run:p=>connToWebos(p)},
+  {id:'writer',    tab:'office',  icon:'📝', label:'Office Writer', takes:['text','doc'],
+   why:'edit it as a document', run:p=>connToWriter(p)},
+  {id:'calc',      tab:'office',  icon:'📊', label:'Office Calc',   takes:['table'],
+   why:'work on it as a spreadsheet', run:p=>connToCalc(p)},
+  {id:'officegen', tab:'office',  icon:'🗂', label:'Office Generate',takes:['text','doc','table'],
+   why:'build a real .docx / .xlsx / .pptx from it', run:p=>connToOfficeGen(p)},
+  {id:'gen',       tab:'gen',     icon:'🎬', label:'Create Studio', takes:['prompt','image','video'],
+   why:'generate or refine media from it', run:p=>connToGen(p)},
+  {id:'design',    tab:'design',  icon:'🎨', label:'Design Studio', takes:['palette','html','image'],
+   why:'design against it', run:p=>connToDesign(p)},
+  {id:'three',     tab:'three',   icon:'🧊', label:'3D Editor',     takes:['model3d','image','prompt'],
+   why:'build or place it in a 3D scene', run:p=>connTo3D(p)},
+  {id:'relay',     tab:'relay',   icon:'🔁', label:'Relay',         takes:['prompt','text','files'],
+   why:'have the architect/builder loop implement it', run:p=>connToRelay(p)},
+  {id:'lab',       tab:'lab',     icon:'🔬', label:'Reason Lab',    takes:['prompt','text'],
+   why:'watch a model actually think about it', run:p=>connToLab(p)},
+  {id:'assistant', tab:'assistant',icon:'💬',label:'Assistant',     takes:['prompt','text','trace'],
+   why:'talk it through', run:p=>connToAsst(p)},
+  {id:'brain',     tab:'brain',   icon:'🧠', label:'Brain',         takes:['note','text','trace'],
+   why:'remember it across sessions', run:p=>connToBrain(p)},
+  {id:'reverse',   tab:'reverse', icon:'🔩', label:'Reverse',       takes:['repo'],
+   why:'read the real tree and rebuild the spec', run:p=>connToReverse(p)},
+  {id:'transplant',tab:'transplant',icon:'🧬',label:'Transplant',   takes:['trace'],
+   why:'hand this thinking to a cheaper model', run:p=>connToTransplant(p)},
+  {id:'creations', tab:'creations',icon:'📦',label:'Creations',     takes:['html','files','image','video','doc','model3d'],
+   why:'keep it', run:p=>connToCreations(p)},
+];
+const connPort=id=>CONN_PORTS.find(p=>p.id===id);
+/* Destinations for a payload = every port that takes this kind, minus the one it came from
+   (offering to send something back where it already is, is noise), minus hidden tabs. */
+function connTargets(kind,fromId){
+  /* A hidden destination is still offered, flagged, and un-hidden when used. Filtering them
+     out instead produced silent dead ends: with the 3D tab switched off, a 3D asset had
+     nowhere at all to go and the Send button simply did not appear, which reads as the
+     feature being broken rather than as a section being off. */
+  return CONN_PORTS.filter(p=>p.takes.includes(kind)&&p.id!==fromId)
+    .map(p=>Object.assign({},p,{hidden:tabHidden(p.tab)}));
+}
+let CONNX=Object.assign({custom:[],log:[],suggested:[],dismissed:[]},store.get('connx',{}));
+const saveConnx=()=>store.set('connx',CONNX);
+
+/* One payload shape everywhere: {kind, data, title, from}. `data` meaning depends on kind and
+   is documented on each connTo* below rather than being guessed at the call site. */
+function connMake(kind,data,title,from){return{kind,data,title:title||'',from:from||'',ts:nowISO()};}
+async function connRun(portId,payload){
+  const p=connPort(portId);
+  if(!p)return toast('Unknown destination',2200);
+  if(!p.takes.includes(payload.kind))
+    return toast(`${p.label} cannot take ${CONN_KINDS[payload.kind]?CONN_KINDS[payload.kind].label.toLowerCase():payload.kind}`,3000);
+  /* Sending to a section the user switched off turns it back on — they just asked for it. */
+  if(tabHidden(p.tab)){UI.hiddenTabs=UI.hiddenTabs.filter(x=>x!==p.tab);saveUI();applyUI();
+    toast('Switched “'+p.label+'” back on',2600);}
+  try{
+    await p.run(payload);
+    CONNX.log=[{from:payload.from||'',to:portId,kind:payload.kind,title:payload.title,ts:nowISO()}]
+      .concat(CONNX.log||[]).slice(0,200);
+    saveConnx();
+    connLearn();
+  }catch(e){toast('Could not send: '+e.message,3200);}
+}
+/* Menu HTML any surface can drop next to an output. */
+function connMenu(payload){
+  const t=connTargets(payload.kind,payload.from);
+  if(!t.length)return '';
+  const id='cx'+uid();
+  CONNX._pending=CONNX._pending||{};CONNX._pending[id]=payload;
+  return `<span class="cx-w" data-cx="${esc(id)}">
+    <button class="cx-b" data-cxopen="${esc(id)}" title="Send this somewhere useful">→ Send to…</button>
+    <span class="cx-menu" hidden>${t.map(p=>
+      `<button class="cx-i" data-cxgo="${esc(id)}" data-cxport="${esc(p.id)}">
+        <b>${p.icon} ${esc(p.label)}${p.hidden?' <span class="tag">off</span>':''}</b>
+        <i>${esc(p.hidden?p.why+' — switches the section back on':p.why)}</i></button>`).join('')}</span></span>`;
+}
+function connInit(){
+  if(connInit._done)return;connInit._done=true;
+  document.addEventListener('click',ev=>{
+    const open=ev.target.closest('[data-cxopen]');
+    if(open){
+      const w=open.closest('.cx-w'),m=w&&w.querySelector('.cx-menu');
+      $$('.cx-menu').forEach(x=>{if(x!==m)x.hidden=true;});
+      if(m)m.hidden=!m.hidden;
+      return;
+    }
+    const go=ev.target.closest('[data-cxgo]');
+    if(go){
+      const payload=(CONNX._pending||{})[go.dataset.cxgo];
+      const m=go.closest('.cx-menu');if(m)m.hidden=true;
+      if(payload)connRun(go.dataset.cxport,payload);
+      return;
+    }
+    $$('.cx-menu').forEach(x=>x.hidden=true);
+  });
+}
+/* ── The actual movers ──────────────────────────────────────────────────────
+   Each one puts real data into the destination's real state and then navigates, rather than
+   navigating and hoping the user re-enters it. */
+function connToStudio(p){
+  const files=p.kind==='files'?p.data:[{name:'index.html',content:String(p.data||'')}];
+  if(typeof WS!=='undefined'&&WS&&WS.files){
+    (files||[]).forEach(f=>{WS.files[f.name]=f.content;});
+    const first=(files[0]||{}).name;
+    if(first){WS.active=first;if(/\.html?$/i.test(first))WS.entry=first;}
+    wsSave();
+  }
+  go('studio');
+  if(typeof renderStudio==='function')renderStudio();
+  if(typeof runPreview==='function')runPreview();
+  toast('Opened in Studio',2200);
+}
+function connToWebos(p){
+  wosInstall({name:p.title||'Imported app',html:String(p.data||''),src:p.from||'connection'});
+  go('webos');
+  toast('Installed on the WebOS desktop',2600);
+}
+function connToWriter(p){
+  const html=/<[a-z][\s\S]*>/i.test(String(p.data||''))?String(p.data)
+    :'<p>'+esc(String(p.data||'')).replace(/\n{2,}/g,'</p><p>').replace(/\n/g,'<br>')+'</p>';
+  if(typeof ofwNewDoc==='function'){ofwNewDoc(p.title||'From '+(p.from||'elsewhere'),html);}
+  go('office');
+  officeModeSwitch('live');
+  const k=$('#of-live-kind');if(k){k.value='native';k.dispatchEvent(new Event('change'));}
+  const el=$('#of-live-doc');if(el)el.innerHTML=html;
+  if(typeof ofwRenderDocList==='function')ofwRenderDocList();
+  if(typeof ofwStats==='function')ofwStats();
+  toast('Opened in Writer',2200);
+}
+function connToCalc(p){
+  /* data: array of rows (arrays) — the one table shape everything else in this app emits. */
+  const rows=Array.isArray(p.data)?p.data:[];
+  if(typeof ofcNewBook==='function'&&typeof ofcSheet==='function'){
+    ofcNewBook(p.title||'From '+(p.from||'elsewhere'));
+    const sh=ofcSheet();
+    rows.forEach((r,ri)=>(r||[]).forEach((v,ci)=>{
+      if(v!==''&&v!=null)sh.cells[ofcColName(ci)+(ri+1)]=String(v);
+    }));
+    OFC.rows=Math.max(OFC.rows,rows.length+6);
+    OFC.cols=Math.max(OFC.cols,Math.max(2,...rows.map(r=>(r||[]).length))+2);
+    ofcSaveState();
+  }
+  go('office');
+  officeModeSwitch('live');
+  const k=$('#of-live-kind');if(k){k.value='sheet-native';k.dispatchEvent(new Event('change'));}
+  toast('Opened in Calc',2200);
+}
+function connToOfficeGen(p){
+  go('office');
+  officeModeSwitch('generate');
+  const b=$('#of-brief');
+  if(b)b.value=typeof p.data==='string'?p.data:JSON.stringify(p.data,null,2);
+  toast('Loaded as a brief — pick a format and Generate',3000);
+}
+function connToGen(p){
+  go('gen');
+  if(p.kind==='prompt'){
+    const i=$('#gen-prompt');if(i)i.value=String(p.data||'');
+  }
+  toast('Opened in Create Studio',2200);
+}
+function connToDesign(p){
+  go('design');
+  if(p.kind==='palette'&&p.data&&typeof p.data==='object'&&typeof DESIGN!=='undefined'){
+    try{Object.assign(DESIGN.colour||{},p.data);}catch(_){}
+  }
+  if(typeof renderDesign==='function')renderDesign();
+  toast('Opened in Design Studio',2200);
+}
+function connTo3D(p){
+  go('three');
+  if(typeof renderAssets==='function')renderAssets();
+  toast('Opened in the 3D Editor',2200);
+}
+function connToRelay(p){
+  go('relay');
+  const g=$('#relay-goal')||$('#relay-brief')||$('#relay-task');
+  if(g)g.value=typeof p.data==='string'?p.data:JSON.stringify(p.data,null,2);
+  toast('Loaded into Relay',2200);
+}
+function connToLab(p){
+  go('lab');
+  const t=$('#lab-task')||$('#lab-prompt');
+  if(t)t.value=String(p.data||'');
+  toast('Loaded into Reason Lab',2200);
+}
+function connToAsst(p){
+  go('assistant');
+  const i=$('#asst-input');
+  if(i){i.value=(p.title?p.title+'\n\n':'')+String(typeof p.data==='string'?p.data:JSON.stringify(p.data));i.focus();}
+  toast('Loaded into the Assistant',2200);
+}
+function connToBrain(p){
+  const text=typeof p.data==='string'?p.data:JSON.stringify(p.data,null,2);
+  if(typeof brainAdd==='function')brainAdd(p.title||'From '+(p.from||'elsewhere'),text);
+  else if(typeof brainRemember==='function')brainRemember(text);
+  go('brain');
+  toast('Saved to the Brain',2200);
+}
+function connToReverse(p){
+  go('reverse');
+  const i=$('#ghr-repo');if(i)i.value=String(p.data||'');
+  toast('Loaded into Reverse',2200);
+}
+function connToTransplant(p){
+  go('transplant');
+  if(typeof fillTransplantSources==='function')fillTransplantSources();
+  toast('Opened in Transplant',2200);
+}
+function connToCreations(p){
+  if(typeof creationAdd==='function')creationAdd({title:p.title||'Untitled',kind:p.kind,body:p.data});
+  else if(typeof saveCreation==='function')saveCreation(p.title||'Untitled',p.data);
+  go('creations');
+  toast('Saved to Creations',2200);
+}
+/* ── User-made and AI-suggested connections ────────────────────────────────
+   A "custom connection" is a saved shortcut: this kind, from here, always goes there —
+   optionally with a standing instruction attached. It is a workflow the user noticed
+   themselves. Suggestions come from the log below, not from asking a model to imagine
+   workflows, because a route the user has actually walked three times is evidence and a
+   plausible-sounding invented one is not. */
+function connCustomAdd(c){
+  CONNX.custom=(CONNX.custom||[]).concat([Object.assign({id:uid(),ts:nowISO()},c)]);
+  saveConnx();
+}
+function connCustomDel(id){
+  CONNX.custom=(CONNX.custom||[]).filter(c=>c.id!==id);saveConnx();
+}
+function connLearn(){
+  const log=CONNX.log||[];
+  const counts={};
+  log.forEach(e=>{const k=e.from+'>'+e.to+'>'+e.kind;counts[k]=(counts[k]||0)+1;});
+  const have=new Set((CONNX.custom||[]).map(c=>c.from+'>'+c.to+'>'+c.kind));
+  const dismissed=new Set(CONNX.dismissed||[]);
+  CONNX.suggested=Object.entries(counts)
+    .filter(([k,n])=>n>=3&&!have.has(k)&&!dismissed.has(k))
+    .map(([k,n])=>{const[from,to,kind]=k.split('>');return{key:k,from,to,kind,n};})
+    .sort((a,b)=>b.n-a.n).slice(0,6);
+  saveConnx();
+  return CONNX.suggested;
+}
+function connSuggestDismiss(key){
+  CONNX.dismissed=(CONNX.dismissed||[]).concat([key]);
+  CONNX.suggested=(CONNX.suggested||[]).filter(s=>s.key!==key);
+  saveConnx();
+}
+/* An AI pass over what the user actually does, offered as ideas rather than applied. */
+async function connIdeas(){
+  const log=(CONNX.log||[]).slice(0,60);
+  const tabs=REGISTRY.tabs.filter(t=>!tabHidden(t.id)).map(t=>t.id);
+  const acc=await streamComplete({model:settings.archModel,maxTokens:1200,
+    messages:[{role:'system',content:
+      'You suggest workflow shortcuts for a creation app. Given which hand-offs the user '+
+      'actually performs and which areas they have enabled, propose at most 4 NEW shortcuts '+
+      'they have not already made. Each must be something the log genuinely supports — do not '+
+      'invent a workflow the evidence does not show. Return JSON '+
+      '{"ideas":[{"from":"","to":"","kind":"","why":""}]} and nothing else.'+skillBlockFor('brain')},
+      {role:'user',content:'PORTS: '+CONN_PORTS.map(p=>p.id+'(takes '+p.takes.join('/')+')').join(', ')+
+        '\nENABLED TABS: '+tabs.join(', ')+
+        '\nRECENT HANDOFFS: '+JSON.stringify(log)}]},null,null,'conn-ideas');
+  let j=null;
+  try{j=JSON.parse(String(acc.content).replace(/```(?:json)?/g,'').trim());}
+  catch(_){try{j=extractJSON(acc.content);}catch(__){}}
+  return (j&&j.ideas)||[];
+}
+function renderConnections(){
+  const host=$('#cx-panel');if(!host)return;
+  connLearn();
+  const custom=(CONNX.custom||[]).map(c=>{
+    const f=connPort(c.from),t=connPort(c.to);
+    return `<div class="cx-row"><b>${f?f.icon+' '+esc(f.label):esc(c.from||'anywhere')}</b>
+      <span class="cx-ar">→</span><b>${t?t.icon+' '+esc(t.label):esc(c.to)}</b>
+      <span class="tag">${esc(c.kind)}</span>
+      ${c.note?`<span class="mini muted">${esc(c.note)}</span>`:''}
+      <span style="flex:1"></span>
+      <button class="btn ghost small" data-cxdel="${esc(c.id)}">Remove</button></div>`;
+  }).join('')||'<p class="help">No saved connections yet. Every “Send to…” you use is remembered below, and a route you walk three times gets offered as a shortcut.</p>';
+
+  const sugg=(CONNX.suggested||[]).map(s=>{
+    const f=connPort(s.from),t=connPort(s.to);
+    return `<div class="cx-row"><b>${f?f.icon+' '+esc(f.label):esc(s.from||'anywhere')}</b>
+      <span class="cx-ar">→</span><b>${t?t.icon+' '+esc(t.label):esc(s.to)}</b>
+      <span class="tag">${esc(s.kind)}</span>
+      <span class="mini muted">you have done this ${s.n} times</span>
+      <span style="flex:1"></span>
+      <button class="btn small" data-cxadd="${esc(s.key)}">Save it</button>
+      <button class="btn ghost small" data-cxno="${esc(s.key)}">No thanks</button></div>`;
+  }).join('');
+
+  const recent=(CONNX.log||[]).slice(0,12).map(e=>{
+    const f=connPort(e.from),t=connPort(e.to);
+    return `<div class="cx-row mini"><span>${f?f.icon:'•'} ${esc(f?f.label:(e.from||'—'))}</span>
+      <span class="cx-ar">→</span><span>${t?t.icon:'•'} ${esc(t?t.label:e.to)}</span>
+      <span class="tag">${esc(e.kind)}</span>
+      <span class="muted">${esc(String(e.title||'').slice(0,44))}</span></div>`;
+  }).join('')||'<p class="help">Nothing sent yet.</p>';
+
+  host.innerHTML=`
+    <div class="card">
+      <h3>🔗 Connections</h3>
+      <p class="help">Anywhere this app produces something real, a <b>Send to…</b> button appears next to it.
+        Only places that can genuinely accept that kind of thing are offered — a spreadsheet is never
+        offered to the 3D editor. These are the routes you have saved and the ones your own use suggests.</p>
+      <div class="row" style="gap:8px;margin-bottom:10px">
+        <button class="btn small" id="cx-ideas">✦ Ask AI for workflow ideas</button>
+        <button class="btn ghost small" id="cx-newconn">＋ Make a connection</button>
+      </div>
+      <div id="cx-ideas-out"></div>
+    </div>
+    ${sugg?`<div class="card"><h3>Suggested from what you actually do</h3>${sugg}</div>`:''}
+    <div class="card"><h3>Your saved connections</h3>${custom}</div>
+    <div class="card"><h3>Recent hand-offs</h3>${recent}</div>
+    <div class="card"><h3>What can send to what</h3>
+      <p class="help">Every port and the payload kinds it accepts.</p>
+      ${CONN_PORTS.map(p=>`<div class="cx-row"><b>${p.icon} ${esc(p.label)}</b>
+        <span class="mini muted">${esc(p.why)}</span><span style="flex:1"></span>
+        ${p.takes.map(k=>`<span class="tag" title="${esc((CONN_KINDS[k]||{}).label||k)}">${(CONN_KINDS[k]||{}).icon||''} ${esc(k)}</span>`).join('')}
+      </div>`).join('')}
+    </div>`;
+
+  $$('#cx-panel [data-cxdel]').forEach(b=>b.onclick=()=>{connCustomDel(b.dataset.cxdel);renderConnections();});
+  $$('#cx-panel [data-cxno]').forEach(b=>b.onclick=()=>{connSuggestDismiss(b.dataset.cxno);renderConnections();});
+  $$('#cx-panel [data-cxadd]').forEach(b=>b.onclick=()=>{
+    const s=(CONNX.suggested||[]).find(x=>x.key===b.dataset.cxadd);
+    if(s){connCustomAdd({from:s.from,to:s.to,kind:s.kind});renderConnections();toast('Connection saved',2000);}
+  });
+  const nb=$('#cx-newconn');
+  if(nb)nb.onclick=()=>{
+    const opts=CONN_PORTS.map(p=>`<option value="${p.id}">${p.icon} ${esc(p.label)}</option>`).join('');
+    openModal(`<h3 style="margin-top:0">Make a connection</h3>
+      <p class="help">A shortcut you will see wherever that kind of thing is produced.</p>
+      <label class="field">From<select id="cxn-from"><option value="">anywhere</option>${opts}</select></label>
+      <label class="field" style="margin-top:8px">To<select id="cxn-to">${opts}</select></label>
+      <label class="field" style="margin-top:8px">Kind of thing<select id="cxn-kind">${
+        Object.entries(CONN_KINDS).map(([k,v])=>`<option value="${k}">${v.icon} ${esc(v.label)}</option>`).join('')}</select></label>
+      <label class="field" style="margin-top:8px">Standing note (optional)
+        <input id="cxn-note" placeholder="e.g. always make it mobile-first"></label>
+      <div class="row" style="margin-top:12px"><button class="btn" id="cxn-save">Save connection</button></div>`);
+    const sv=$('#cxn-save');
+    if(sv)sv.onclick=()=>{
+      connCustomAdd({from:$('#cxn-from').value,to:$('#cxn-to').value,
+        kind:$('#cxn-kind').value,note:$('#cxn-note').value.trim()});
+      closeModal();renderConnections();toast('Connection saved',2000);
+    };
+  };
+  const ib=$('#cx-ideas');
+  if(ib)ib.onclick=async()=>{
+    ib.disabled=true;ib.textContent='Thinking…';
+    const out=$('#cx-ideas-out');
+    try{
+      const ideas=await connIdeas();
+      out.innerHTML=ideas.length?ideas.map(i=>{
+        const f=connPort(i.from),t=connPort(i.to);
+        return `<div class="cx-row"><b>${f?f.icon+' '+esc(f.label):esc(i.from)}</b><span class="cx-ar">→</span>
+          <b>${t?t.icon+' '+esc(t.label):esc(i.to)}</b><span class="tag">${esc(i.kind)}</span>
+          <span class="mini muted">${esc(i.why||'')}</span></div>`;
+      }).join('')+feedbackWidget('brain','conn-ideas',settings.archModel)
+        :'<p class="help">It did not find a shortcut your use actually supports yet. Use a few more hand-offs first.</p>';
+      if(typeof feedbackInit==='function')feedbackInit();
+    }catch(e){out.innerHTML=`<p class="help" style="color:var(--bad)">${esc(e.message)}</p>`;}
+    ib.disabled=false;ib.textContent='✦ Ask AI for workflow ideas';
+  };
+}
+
+/* ═══════════════════ ONBOARDING ═══════════════════
+   36 tabs is the right amount of app and the wrong first impression. The fix is not fewer
+   features — it is not showing all of them to someone who has been here for four seconds.
+   This asks what they came to do and turns that into a small tab bar, then tells them plainly
+   that nothing was deleted and where the rest lives. An onboarding that hides things without
+   saying so produces a user who thinks the app cannot do what it does. */
+const ONB_INTERESTS=[
+  {id:'build',   icon:'🛠', label:'Build apps & sites',
+   why:'Write, preview and ship real HTML/JS',        tabs:['studio','relay','webos','design','devices']},
+  {id:'write',   icon:'📝', label:'Write & documents',
+   why:'Docs, spreadsheets, decks',                   tabs:['office','assistant','brain']},
+  {id:'media',   icon:'🎬', label:'Images & video',
+   why:'Generate and edit media',                     tabs:['gen','design','creations']},
+  {id:'3d',      icon:'🧊', label:'3D & games',
+   why:'Scenes, models, ThreeUI',                     tabs:['three','gen','studio']},
+  {id:'research',icon:'🔬', label:'Research & reasoning',
+   why:'See models actually think',                   tabs:['lab','council','compare','transplant']},
+  {id:'agents',  icon:'🤖', label:'Agents & automation',
+   why:'Swarms, bots, long-running work',             tabs:['vo','bots','mission','factory']},
+  {id:'data',    icon:'📊', label:'Data & analysis',
+   why:'Sheets, graphs, metrics',                     tabs:['office','graphs','metrics','viz']},
+  {id:'local',   icon:'🖥', label:'Local & private models',
+   why:'Ollama and your own machine',                 tabs:['local','modelhub','terminal']},
+];
+/* Always present regardless of answers — without these the app has no front door. */
+const ONB_ALWAYS=['assistant','settings','help'];
+const ONB_DEFAULTS={done:false,step:0,picks:[],level:'',name:''};
+let ONB=Object.assign({},ONB_DEFAULTS,store.get('onboarding',{}));
+const saveOnb=()=>store.set('onboarding',ONB);
+
+function onbNeeded(){return !ONB.done;}
+function onbTabsFor(picks,level){
+  const want=new Set(ONB_ALWAYS);
+  (picks||[]).forEach(id=>{
+    const it=ONB_INTERESTS.find(x=>x.id===id);
+    if(it)it.tabs.forEach(t=>want.add(t));
+  });
+  /* "Show me everything" is a real answer and the app should honour it literally. */
+  if(level==='all')return REGISTRY.tabs.map(t=>t.id);
+  return [...want];
+}
+function onbApply(){
+  const keep=new Set(onbTabsFor(ONB.picks,ONB.level));
+  const all=REGISTRY.tabs.map(t=>t.id);
+  UI.hiddenTabs=all.filter(id=>!keep.has(id));
+  ONB.done=true;saveOnb();saveUI();applyUI();
+  go(firstVisibleTab());
+  closeModal();
+  toast(`Set up with ${keep.size} sections — add any of the other ${UI.hiddenTabs.length} anytime from the ＋ button`,6000);
+}
+function onbRender(){
+  const step=ONB.step||0;
+  const dots=[0,1,2].map(i=>`<span class="onb-dot${i===step?' on':''}"></span>`).join('');
+  let body='';
+  if(step===0){
+    body=`<div class="onb-hero">
+        <div class="onb-mark">✦</div>
+        <h2>Welcome to Glassbox Jet</h2>
+        <p>It does a lot — reasoning, building, documents, media, 3D, agents. Rather than show you
+          all of it at once, let's switch on the parts you actually came for.</p>
+        <p class="help">Three questions, about twenty seconds. Nothing gets deleted, and you can
+          add or remove any section later in one click.</p>
+      </div>
+      <div class="row" style="justify-content:center;margin-top:16px">
+        <button class="btn" data-onbnav="next">Let's go →</button>
+        <button class="btn ghost" data-onbnav="skip">Skip, show me everything</button>
+      </div>`;
+  }else if(step===1){
+    body=`<h2 class="onb-q">What do you want to do here?</h2>
+      <p class="help">Pick as many as you like. Each one switches on the sections that do that job.</p>
+      <div class="onb-grid">${ONB_INTERESTS.map(i=>`
+        <button class="onb-card${(ONB.picks||[]).includes(i.id)?' on':''}" data-onbpick="${i.id}">
+          <span class="onb-ic">${i.icon}</span>
+          <b>${esc(i.label)}</b>
+          <i>${esc(i.why)}</i>
+        </button>`).join('')}</div>
+      <div class="row" style="justify-content:space-between;margin-top:18px">
+        <button class="btn ghost" data-onbnav="back">← Back</button>
+        <button class="btn" data-onbnav="next">Continue →</button>
+      </div>`;
+  }else{
+    const tabs=onbTabsFor(ONB.picks,ONB.level);
+    const named=tabs.map(id=>{
+      const t=REGISTRY.tabs.find(x=>x.id===id);
+      return t?`<span class="onb-chip">${esc(t.text||t.label||id)}</span>`:'';
+    }).join('');
+    const hidden=REGISTRY.tabs.length-tabs.length;
+    body=`<h2 class="onb-q">How much do you want on screen?</h2>
+      <div class="onb-lvls">
+        ${[['focused','Just the essentials','Only what your answers need. The cleanest bar.'],
+           ['balanced','A bit more room','Your sections plus the common extras.'],
+           ['all','Everything','All '+REGISTRY.tabs.length+' sections. Nothing hidden.']]
+          .map(([v,t,d])=>`<button class="onb-lvl${ONB.level===v?' on':''}" data-onblvl="${v}">
+            <b>${esc(t)}</b><i>${esc(d)}</i></button>`).join('')}
+      </div>
+      <div class="onb-prev">
+        <p class="help" style="margin:0 0 6px"><b>Your top bar will be:</b></p>
+        <div>${named}</div>
+        ${hidden>0?`<p class="help" style="margin:8px 0 0">${hidden} other section${hidden===1?'':'s'} stay
+          available — press <b>＋</b> at the end of the bar, or <span class="kbd">⌘K</span>, to bring any of them back.</p>`:''}
+      </div>
+      <div class="row" style="justify-content:space-between;margin-top:18px">
+        <button class="btn ghost" data-onbnav="back">← Back</button>
+        <button class="btn good" data-onbnav="done">Finish setup</button>
+      </div>`;
+  }
+  openModal(`<div class="onb"><div class="onb-dots">${dots}</div>${body}</div>`,{wide:true});
+  /* data-attribute nav rather than ids: the same Back/Continue pair appears in more than one
+     step, and two elements that are never in the DOM together still read as duplicate ids to
+     any static scan — including this repo's own. */
+  $$('[data-onbnav]').forEach(b=>b.onclick=()=>({
+    next:()=>{ONB.step=Math.min(2,step+1);if(!ONB.level)ONB.level='focused';saveOnb();onbRender();},
+    back:()=>{ONB.step=Math.max(0,step-1);saveOnb();onbRender();},
+    skip:()=>{ONB.level='all';ONB.picks=[];saveOnb();onbApply();},
+    done:onbApply,
+  }[b.dataset.onbnav]||(()=>{}))());
+  $$('[data-onbpick]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.onbpick;
+    ONB.picks=(ONB.picks||[]).includes(id)?ONB.picks.filter(x=>x!==id):(ONB.picks||[]).concat([id]);
+    saveOnb();onbRender();
+  });
+  $$('[data-onblvl]').forEach(b=>b.onclick=()=>{ONB.level=b.dataset.onblvl;saveOnb();onbRender();});
+}
+function onbMaybe(){
+  if(!onbNeeded())return false;
+  setTimeout(onbRender,350);          // let the app paint first; a modal over a blank page reads as an error
+  return true;
+}
+
+/* ═══════════════════ TAB BAR PLACEMENT ═══════════════════
+   A 36-tab horizontal strip scrolls; the same list down the side does not. Which one is right
+   depends on the screen, so it is a setting rather than a decision made for the user. The
+   layout is done with a body class and CSS grid areas — no JS re-parenting, so the tab bar
+   keeps its identity, its scroll position and its event handlers across a move. */
+const TABPOS=['top','left','right','bottom'];
+function applyTabPos(){
+  const p=TABPOS.includes(UI.tabPos)?UI.tabPos:'top';
+  document.body.setAttribute('data-tabpos',p);
+  const n=$('#tabs');
+  if(n)n.setAttribute('aria-orientation',(p==='left'||p==='right')?'vertical':'horizontal');
+}
+function setTabPos(p){
+  UI.tabPos=TABPOS.includes(p)?p:'top';saveUI();applyTabPos();
+  toast('Tab bar moved to the '+UI.tabPos,2000);
+}
+/* The ＋ at the end of the bar: everything switched off, one click to bring back. */
+function renderTabAdder(){
+  const nav=$('#tabs');if(!nav)return;
+  let btn=$('#tab-add');
+  if(!btn){
+    btn=document.createElement('button');
+    btn.id='tab-add';btn.className='tab tab-add';btn.title='Add or remove sections';
+    btn.textContent='＋';
+    nav.appendChild(btn);
+    btn.onclick=openTabManager;
+  }
+  nav.appendChild(btn);                // keep it last after any re-render
+  const n=(UI.hiddenTabs||[]).length;
+  btn.textContent=n?'＋ '+n:'＋';
+}
+function openTabManager(){
+  const rows=REGISTRY.tabs.map(t=>{
+    const on=!tabHidden(t.id);
+    return `<button class="tm-row${on?' on':''}" data-tmid="${esc(t.id)}">
+      <span class="tm-tick">${on?'✓':'＋'}</span>
+      <b>${esc(t.text||t.label||t.id)}</b>
+      <span style="flex:1"></span>
+      <span class="mini muted">${on?'showing':'hidden'}</span></button>`;
+  }).join('');
+  openModal(`<h3 style="margin-top:0">Sections</h3>
+    <p class="help">Click any section to show or hide it. Nothing is ever deleted — a hidden
+      section keeps all its data and comes back exactly as you left it.</p>
+    <div class="row" style="gap:6px;margin:10px 0">
+      <span class="mini muted" style="align-self:center">Tab bar on the</span>
+      ${TABPOS.map(p=>`<button class="btn ghost small${(UI.tabPos||'top')===p?' on':''}" data-tmpos="${p}">${p}</button>`).join('')}
+    </div>
+    <div class="row" style="gap:6px;margin-bottom:10px">
+      <button class="btn ghost small" id="tm-all">Show everything</button>
+      <button class="btn ghost small" id="tm-none">Hide all but essentials</button>
+      <button class="btn ghost small" id="tm-redo">Re-run setup</button>
+    </div>
+    <div class="tm-list">${rows}</div>`,{wide:true});
+  const wire=()=>{
+    $$('[data-tmid]').forEach(b=>b.onclick=()=>{
+      const id=b.dataset.tmid;
+      UI.hiddenTabs=tabHidden(id)?UI.hiddenTabs.filter(x=>x!==id):(UI.hiddenTabs||[]).concat([id]);
+      saveUI();applyUI();openTabManager();
+    });
+    $$('[data-tmpos]').forEach(b=>b.onclick=()=>{setTabPos(b.dataset.tmpos);openTabManager();});
+    const a=$('#tm-all'),n=$('#tm-none'),r=$('#tm-redo');
+    if(a)a.onclick=()=>{UI.hiddenTabs=[];saveUI();applyUI();openTabManager();};
+    if(n)n.onclick=()=>{UI.hiddenTabs=REGISTRY.tabs.map(t=>t.id).filter(id=>!ONB_ALWAYS.includes(id));
+      saveUI();applyUI();openTabManager();};
+    if(r)r.onclick=()=>{ONB.done=false;ONB.step=0;saveOnb();closeModal();onbRender();};
+  };
+  wire();
+}
+
+/* ═══════════════════ HELP CENTRE ═══════════════════
+   Organised by the question someone actually has, not by the app's own tab order. Every
+   article is written to be read by someone who has not decided yet whether this app is worth
+   their afternoon, which means: what it is, when to use it, when NOT to, and the cheapest way
+   to try it. The "when not to" lines are the ones that make the rest trustworthy. */
+const HELP_TOPICS=[
+  {id:'start',icon:'🚀',title:'Getting started',blurb:'From nothing to your first real answer.',
+   arts:[
+    {q:'What is this app, in one paragraph?',
+     a:`<p>Glassbox Jet is a workshop for working <b>with</b> models rather than just chatting at them.
+        It shows you the reasoning instead of hiding it, it runs the code models write, it keeps
+        what you make, and it hands work between its own tools so you are not copy-pasting between
+        twelve websites. Everything lives in your browser — there is no account and no server of ours.</p>`},
+    {q:'Do I need to pay for anything to try it?',
+     a:`<p>No. Three paths cost nothing:</p>
+        <ul>
+        <li><b>Local models</b> — install <a href="https://ollama.com" target="_blank" rel="noopener">Ollama</a>,
+          run <code>ollama pull qwen3:8b</code>, and this app finds it automatically. Completely free
+          and completely private; nothing leaves your machine.</li>
+        <li><b>Free tiers</b> — Google AI Studio gives a genuinely usable free Gemini quota, and
+          OpenRouter has a rotating set of <code>:free</code> models.</li>
+        <li><b>The offline tools</b> — Office, Design, the 3D editor and the WebOS all do real work
+          with no model at all.</li></ul>`},
+    {q:'Nothing runs and I do not know why',
+     a:`<p>In order, these are the three causes, most common first:</p>
+        <ol><li><b>No key and no local model.</b> The pill at the top-left says <i>No key</i>. Fix either one.</li>
+        <li><b>A key that is present but wrong.</b> Settings → Test. It reports the provider's actual
+          error rather than a generic failure.</li>
+        <li><b>The model id does not exist.</b> Catalog → search for it. Ids change; a preset from months
+          ago can point at something retired.</li></ol>`},
+   ]},
+  {id:'keys',icon:'🔑',title:'API keys & free options',blurb:'Where to get one, what it costs, what stays private.',
+   arts:[
+    {q:'Getting an OpenRouter key (the widest option)',
+     a:`<p>One key reaches most models from most labs, which is why this app defaults to it.</p>
+        <ol><li>Go to <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a> and sign in.</li>
+        <li>Create a key and copy it — it begins <code>sk-or-</code>.</li>
+        <li>Settings → paste → <b>Test</b>.</li></ol>
+        <p>You can add credit, or stay on the <code>:free</code> models, which are rate-limited but real.
+        Spend shows live in the top bar so it never surprises you.</p>`},
+    {q:'Free: Google AI Studio',
+     a:`<p><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>
+        gives a free key with a daily Gemini quota that is large enough for real work, including image
+        generation. Paste it in Settings under the Google provider. Note that free-tier prompts may be
+        used for product improvement — do not put anything confidential through it.</p>`},
+    {q:'Free and private: local models with Ollama',
+     a:`<p>The only option where nothing at all leaves your computer.</p>
+        <ol><li>Install <a href="https://ollama.com" target="_blank" rel="noopener">Ollama</a>.</li>
+        <li><code>ollama pull qwen3:8b</code> — a good general model that runs on ordinary laptops.
+          For coding try <code>qwen2.5-coder:7b</code>.</li>
+        <li>Open the <b>Local</b> tab. It should already be listed.</li></ol>
+        <p>Honest expectation: an 8B model is genuinely useful for drafting, summarising and small
+        edits. It is not a frontier model, and asking it to one-shot a large app will disappoint you.
+        Give it small, well-shaped tasks and it earns its place.</p>`},
+    {q:'Is my key safe here?',
+     a:`<p>It is stored in your browser's localStorage and sent only to the provider you chose. There is
+        no server of ours in the path. That also means: anyone with access to your browser profile can
+        read it, and clearing site data deletes it. Treat it like a saved password.</p>`},
+   ]},
+  {id:'reasoning',icon:'🧠',title:'Reasoning traces',blurb:'What they are, and when they are worth the tokens.',
+   arts:[
+    {q:'What is a reasoning trace?',
+     a:`<p>Some models produce a private working-out pass before their answer. Most interfaces hide it or
+        show a tidied summary. This app shows all three side by side where the provider allows it: the
+        <b>raw chain of thought</b>, the <b>provider's summary</b>, and the <b>encrypted trace</b> some
+        providers return instead of readable text.</p>
+        <p>The reason to look is that the answer tells you <i>what</i> the model concluded and the trace
+        tells you <i>whether it had a reason</i>. A confident answer built on a wrong assumption looks
+        exactly like a correct one until you read how it got there.</p>`},
+    {q:'When should I turn reasoning on?',
+     a:`<p><b>Worth it:</b> multi-step logic, debugging, planning, maths, anything where being subtly
+        wrong is expensive, and any time you plan to hand the thinking to a cheaper model afterwards.</p>
+        <p><b>Not worth it:</b> formatting, rewriting, translation, summarising, simple lookups. Reasoning
+        tokens are billed and often cost more than output tokens, so on easy work you are paying extra
+        for a model to talk itself into the same answer.</p>`},
+    {q:'What is Transplant for?',
+     a:`<p>Reasoning is the expensive part; typing out the implementation is not. Transplant captures a
+        strong model's trace and hands that exact thinking to a cheap model to execute. You pay frontier
+        prices for the thinking only. This is the single biggest cost lever in the app.</p>`},
+   ]},
+  {id:'moa',icon:'🎭',title:'Mixture of Agents',blurb:'Several models propose, one decides.',
+   arts:[
+    {q:'What Mixture of Agents actually does',
+     a:`<p>Several models answer the same question <i>independently</i>, then an aggregator reads all the
+        drafts and writes a better one. Independence is the whole mechanism: the proposers cannot see each
+        other, so their mistakes are uncorrelated, and a mistake only one of them made is visible to the
+        aggregator as a disagreement.</p>
+        <p>The aggregator is told to <b>improve on the drafts, not to agree with them</b>. Told to find
+        consensus instead, it averages toward the most common answer — which is worse than the best one
+        whenever the majority is wrong together.</p>`},
+    {q:'When to use it, and when it is a waste',
+     a:`<p><b>Use it</b> for open-ended questions with no single right answer — strategy, architecture,
+        naming, copy, judgement calls, anything you would want a second opinion on.</p>
+        <p><b>Do not use it</b> for factual lookups (three models being wrong together costs three times
+        as much), for code that either compiles or does not, or for anything where you can simply check
+        the answer. It multiplies both cost and latency by the number of proposers.</p>`},
+    {q:'Setting up presets',
+     a:`<p>Assistant → Mixture of Agents → the settings panel. Three presets ship:</p>
+        <ul><li><b>Quality</b> — strong proposers, strong aggregator. Most expensive.</li>
+        <li><b>Balanced</b> — the everyday default.</li>
+        <li><b>Economy</b> — cheap and local models. Surprisingly good for brainstorming.</li></ul>
+        <p>Add proposers with <b>＋</b>, pick from the live model list or type any id. The estimated cost
+        updates from real prices as you edit. <b>Ideal Settings</b> suggests changes based on what you have
+        actually kept — and it always creates a <i>new</i> preset, so yours is never overwritten.</p>`},
+   ]},
+  {id:'build',icon:'🛠',title:'Building things',blurb:'Studio, Relay, WebOS and the loop between them.',
+   arts:[
+    {q:'Studio vs Relay — which do I want?',
+     a:`<p><b>Studio</b> is the workshop: a multi-file editor, live preview, captured console. You drive.</p>
+        <p><b>Relay</b> is the loop: a strong model plans, a cheap model builds, the result <i>actually runs</i>,
+        the planner grades it against its own criteria plus real runtime errors, and fixes go back round.
+        You describe the outcome and let it iterate.</p>
+        <p>Start in Relay for something new; move to Studio when you want to steer the details.</p>`},
+    {q:'What is the WebOS for?',
+     a:`<p>A desktop inside the app where the things you build become real, launchable apps with icons —
+        rather than files you have to re-open. Anything from Studio installs in one click, and you can
+        drop in any HTML file or paste a URL. Windows drag, resize, snap and maximise; there are fourteen
+        desktop themes; and it can pop out into its own window that stays in sync.</p>`},
+    {q:'The bridge — what it unlocks and what it risks',
+     a:`<p>A small Node companion on your own machine. With it, the app can read and write real files,
+        run allow-listed commands, drive local CLIs, and proxy providers that block browser requests.</p>
+        <p>It is <b>off by default and should stay off unless you need it</b>. It pairs with a token that
+        dies when the process does, only serves 127.0.0.1, and confines file access to one workspace
+        folder. That is meaningful protection, but it is still a program on your machine that this page
+        can talk to. Start it when you need it and close it when you are done.</p>`},
+   ]},
+  {id:'sync',icon:'📱',title:'Using it on another device',blurb:'Phone, tablet, or a second computer.',
+   arts:[
+    {q:'The short answer',
+     a:`<p>Everything is stored in <i>this</i> browser, so another device starts empty unless you move
+        your work across. Four ways, cheapest first: <b>Export a bundle</b> and open it anywhere;
+        <b>the bridge</b> if both devices are on your network; <b>TrueForge</b> if you want agent context
+        shared properly; <b>the hosted URL</b> plus a bundle import.</p>`},
+    {q:'Export / import a bundle',
+     a:`<p>Settings → Cross-device → <b>Export bundle</b> writes one file with your projects, presets,
+        brain notes and WebOS apps (keys are excluded on purpose). Open the app on the other device and
+        import it. This works offline and needs nothing installed.</p>`},
+    {q:'Over your own network',
+     a:`<p>Run the bridge on the computer that has your work, then open the LAN address it prints from
+        your phone. Same network only — it never exposes anything to the internet.</p>`},
+   ]},
+];
+let HELPC={topic:'start',q:''};
+function helpSearch(q){
+  const s=String(q||'').toLowerCase().trim();
+  if(!s)return null;
+  const hits=[];
+  HELP_TOPICS.forEach(t=>(t.arts||[]).forEach(a=>{
+    const hay=(t.title+' '+a.q+' '+a.a).toLowerCase();
+    if(hay.includes(s))hits.push({t,a});
+  }));
+  return hits;
+}
+function renderHelp(){
+  const host=$('#help-panel');if(!host)return;
+  const hits=helpSearch(HELPC.q);
+  const topic=HELP_TOPICS.find(t=>t.id===HELPC.topic)||HELP_TOPICS[0];
+  const nav=HELP_TOPICS.map(t=>`<button class="hc-nav${t.id===HELPC.topic&&!hits?' on':''}" data-hct="${t.id}">
+      <span class="hc-ic">${t.icon}</span>
+      <span><b>${esc(t.title)}</b><i>${esc(t.blurb)}</i></span></button>`).join('');
+  const arts=(hits||topic.arts).map(x=>{
+    const a=hits?x.a:x, from=hits?` <span class="tag">${esc(x.t.title)}</span>`:'';
+    return `<details class="hc-art"><summary>${esc(a.q)}${from}</summary><div class="hc-body">${a.a}</div></details>`;
+  }).join('')||'<p class="help">Nothing matched. Try a shorter word.</p>';
+  host.innerHTML=`
+    <div class="hc">
+      <aside class="hc-side">
+        <input id="hc-q" class="hc-search" placeholder="Search help…" value="${esc(HELPC.q)}">
+        ${nav}
+        <div class="hc-foot">
+          <button class="btn ghost small" id="hc-setup">Re-run first-time setup</button>
+          <button class="btn ghost small" id="hc-tabs">Manage sections</button>
+        </div>
+      </aside>
+      <div class="hc-main">
+        <h2>${hits?`Search results <span class="mini muted">${hits.length} match${hits.length===1?'':'es'}</span>`:topic.icon+' '+esc(topic.title)}</h2>
+        ${hits?'':`<p class="help">${esc(topic.blurb)}</p>`}
+        ${arts}
+      </div>
+    </div>`;
+  const q=$('#hc-q');
+  if(q)q.oninput=()=>{HELPC.q=q.value;renderHelp();const n=$('#hc-q');if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length);}};
+  $$('[data-hct]').forEach(b=>b.onclick=()=>{HELPC.topic=b.dataset.hct;HELPC.q='';renderHelp();});
+  const su=$('#hc-setup');if(su)su.onclick=()=>{ONB.done=false;ONB.step=0;saveOnb();onbRender();};
+  const tb=$('#hc-tabs');if(tb)tb.onclick=openTabManager;
+}
+
+
+/* ═══════════════════ WEBOS ═══════════════════
+   A desktop inside the app. Two ideas are being merged here and both are kept whole:
+
+   AURORA contributed the *feel* — fourteen desktop skins that emulate a real OS rather than
+   tinting one (Win95 gets a grey taskbar with a Start button; Platinum loses the dock entirely
+   because System 7 had no dock), ten icon packs, draggable persistent desktop icons, and a
+   dock. KIMI's WebOS contributed the *point* — apps you make actually install, as icons you
+   launch, not previews you look at once and lose.
+
+   Neither had window resize, maximise or edge-snap. Those are added here, because a desktop
+   where windows cannot be resized stops being a desktop about ten seconds in.
+
+   Apps run in a sandboxed iframe with allow-scripts but NOT allow-same-origin. That pair is
+   the whole security story: withholding same-origin is what stops an installed app reading
+   this page's localStorage, which holds the user's API keys. An app that needs to talk to
+   GlassBox does it through postMessage, which is mediated below. */
+const WOS_THEMES=[
+  {id:'aurora',  name:'Aurora',           sw:'linear-gradient(135deg,#07060f,#3ee8c8 40%,#8b78ff)'},
+  {id:'platinum',name:'Mac OS Platinum',  sw:'linear-gradient(180deg,#ddd,#73739c)'},
+  {id:'aqua',    name:'Mac OS X Aqua',    sw:'linear-gradient(180deg,#7eb6ff,#2d6bdc)'},
+  {id:'sequoia', name:'macOS Sequoia',    sw:'linear-gradient(180deg,#2c2c2e,#0a84ff)'},
+  {id:'win95',   name:'Windows 95',       sw:'linear-gradient(180deg,#008080,#000080)'},
+  {id:'vista',   name:'Windows Vista Aero',sw:'linear-gradient(180deg,#9fd,#1a4a8a)'},
+  {id:'fluent',  name:'Windows 11 Fluent',sw:'linear-gradient(180deg,#202020,#60cdff)'},
+  {id:'yaru',    name:'Ubuntu Yaru',      sw:'linear-gradient(180deg,#2c001e,#e95420)'},
+  {id:'tokyo',   name:'Tokyo Night',      sw:'linear-gradient(135deg,#1a1b26,#7dcfff)'},
+  {id:'solar',   name:'Solarized Paper',  sw:'linear-gradient(180deg,#fdf6e3,#268bd2)'},
+  {id:'phosphor',name:'CRT Phosphor',     sw:'linear-gradient(180deg,#050802,#b6ff3b)'},
+  {id:'paper',   name:'Swiss Paper',      sw:'linear-gradient(180deg,#f3efe7,#b42318)'},
+  {id:'cyber',   name:'Night City',       sw:'linear-gradient(135deg,#05010d,#00f0ff 50%,#ff2bd6)'},
+  {id:'amiga',   name:'Amiga Workbench',  sw:'linear-gradient(180deg,#0055aa,#ff8800)'},
+];
+const WOS_ICONPACKS=[
+  {id:'aurora',name:'Aurora glyphs'},{id:'classic',name:'Classic Mac'},
+  {id:'aqua',name:'Aqua gel'},{id:'aero',name:'Vista Aero'},
+  {id:'luna',name:'XP Luna'},{id:'fluent',name:'Fluent filled'},
+  {id:'neon',name:'Neon outline'},{id:'pixel',name:'Pixel'},
+  {id:'handmade',name:'Handmade'},{id:'mono',name:'Monochrome'},
+];
+/* Theme presets decide chrome + whether the sky animates + which icon pack pairs with it,
+   exactly as AURORA did — a theme that only recoloured would not read as a different OS. */
+const WOS_PRESETS={
+  aurora:{sky:true,chrome:'aurora',icons:'aurora',dock:'dock'},
+  platinum:{sky:false,chrome:'mac9',icons:'classic',dock:'none'},
+  aqua:{sky:false,chrome:'aqua',icons:'aqua',dock:'dock'},
+  sequoia:{sky:false,chrome:'sequoia',icons:'aurora',dock:'dock'},
+  win95:{sky:false,chrome:'win95',icons:'luna',dock:'taskbar'},
+  vista:{sky:false,chrome:'vista',icons:'aero',dock:'taskbar'},
+  fluent:{sky:false,chrome:'fluent',icons:'fluent',dock:'dock'},
+  yaru:{sky:false,chrome:'yaru',icons:'aurora',dock:'dock'},
+  tokyo:{sky:true,chrome:'aurora',icons:'neon',dock:'dock'},
+  solar:{sky:false,chrome:'aurora',icons:'classic',dock:'dock'},
+  phosphor:{sky:false,chrome:'phosphor',icons:'pixel',dock:'dock'},
+  paper:{sky:false,chrome:'paper',icons:'handmade',dock:'dock'},
+  cyber:{sky:true,chrome:'aurora',icons:'neon',dock:'dock'},
+  amiga:{sky:false,chrome:'amiga',icons:'pixel',dock:'taskbar'},
+};
+/* Built-ins are windows onto GlassBox itself rather than separate programs — the point of the
+   desktop is that your real work is reachable from it, not that it is a toy OS beside the app. */
+const WOS_BUILTIN=[
+  {id:'files',   name:'Files',      icon:'📁', kind:'builtin'},
+  {id:'notes',   name:'Notes',      icon:'📝', kind:'builtin'},
+  {id:'term',    name:'Terminal',   icon:'⌨️', kind:'builtin'},
+  {id:'browser', name:'Web',        icon:'🌐', kind:'builtin'},
+  {id:'store',   name:'App Store',  icon:'🛍', kind:'builtin'},
+  {id:'settings',name:'Customise',  icon:'✦',  kind:'builtin'},
+];
+const WOS_DEFAULTS={
+  theme:'aurora',icons:'aurora',iconLock:false,iconSize:84,wallpaper:'',
+  apps:[],wins:[],iconPos:{},notes:'',notifs:[],z:10,installedFromStudio:[],
+};
+let WOS=Object.assign({},WOS_DEFAULTS,store.get('webos',{}));
+const saveWos=()=>store.set('webos',WOS);
+let WOS_DRAG=null, WOS_BODIES={};      // bodies are cached in memory, persisted in IDB
+
+/* ── App storage ────────────────────────────────────────────────────────────
+   Metadata in localStorage (small, needs to be synchronous for render); the HTML body in IDB,
+   because a single-file app is routinely 100KB+ and a handful of them would blow the 5MB
+   localStorage quota and take every other setting down with it. */
+async function wosBody(id){
+  if(WOS_BODIES[id]!=null)return WOS_BODIES[id];
+  const v=await IDB.get('wosApp:'+id,'');
+  WOS_BODIES[id]=v||'';
+  return WOS_BODIES[id];
+}
+async function wosSetBody(id,html){
+  WOS_BODIES[id]=String(html||'');
+  await IDB.set('wosApp:'+id,WOS_BODIES[id]);
+}
+function wosInstall(o){
+  const app={id:uid(),name:o.name||'Untitled app',icon:o.icon||'🧩',kind:'user',
+    src:o.src||'manual',url:o.url||'',ts:nowISO()};
+  WOS.apps=(WOS.apps||[]).concat([app]);
+  saveWos();
+  if(o.html)wosSetBody(app.id,o.html);
+  wosNotify('Installed “'+app.name+'”','It is on the desktop now.');
+  if($('#wos-root'))wosRender();
+  return app;
+}
+function wosUninstall(id){
+  WOS.apps=(WOS.apps||[]).filter(a=>a.id!==id);
+  WOS.wins=(WOS.wins||[]).filter(w=>w.app!==id);
+  delete WOS.iconPos[id];
+  saveWos();IDB.set('wosApp:'+id,'');delete WOS_BODIES[id];
+  wosRender();
+}
+function wosAllApps(){return WOS_BUILTIN.concat(WOS.apps||[]);}
+function wosApp(id){return wosAllApps().find(a=>a.id===id);}
+
+/* ── Notifications ──────────────────────────────────────────────────────────
+   The desktop subscribes to the app's existing event log rather than keeping a second one, so
+   anything GlassBox already records — a finished run, something waiting on approval — surfaces
+   here without the producing code needing to know the WebOS exists. */
+function wosNotify(title,body,kind){
+  WOS.notifs=[{id:uid(),title:String(title||''),body:String(body||''),kind:kind||'info',ts:nowISO(),read:false}]
+    .concat(WOS.notifs||[]).slice(0,60);
+  saveWos();
+  if($('#wos-notifs'))wosRenderNotifs();
+  wosBroadcast({t:'notify',title,body});
+}
+function wosFromLog(e){
+  if(!e)return;
+  const k=e.kind||e.type||'';
+  if(/approve|await|blocked/i.test(k))wosNotify('Waiting on you',e.msg||e.note||'Something needs approval','warn');
+  else if(/done|complete|finish/i.test(k))wosNotify('Finished',e.msg||e.note||'A run completed','good');
+}
+function wosRenderNotifs(){
+  const host=$('#wos-notifs');if(!host)return;
+  const list=(WOS.notifs||[]).slice(0,8);
+  host.innerHTML=list.length?list.map(n=>
+    `<div class="wos-notif ${esc(n.kind)}${n.read?' read':''}" data-wnotif="${esc(n.id)}">
+      <b>${esc(n.title)}</b><i>${esc(n.body)}</i>
+      <span class="wos-nt">${esc(new Date(n.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}))}</span>
+    </div>`).join(''):'<p class="help" style="padding:10px">Nothing yet.</p>';
+}
+
+/* ── Windows ────────────────────────────────────────────────────────────────
+   Drag, resize from eight handles, maximise, minimise, and edge-snap. Aurora had only drag
+   and close; a window you cannot resize makes every embedded app the wrong size forever. */
+function wosOpen(appId){
+  let w=(WOS.wins||[]).find(x=>x.app===appId&&!x.closed);
+  if(!w){
+    const n=(WOS.wins||[]).filter(x=>!x.closed).length;
+    w={id:uid(),app:appId,x:60+n*26,y:40+n*20,w:760,h:540,z:++WOS.z,min:false,max:false,closed:false};
+    WOS.wins=(WOS.wins||[]).concat([w]);
+  }
+  w.closed=false;w.min=false;w.z=++WOS.z;
+  saveWos();wosRender();
+  return w;
+}
+function wosClose(id){
+  const w=(WOS.wins||[]).find(x=>x.id===id);if(!w)return;
+  w.closed=true;saveWos();wosRender();
+}
+function wosFocus(id){
+  const w=(WOS.wins||[]).find(x=>x.id===id);if(!w)return;
+  w.z=++WOS.z;saveWos();
+  /* Restack in place — a full re-render would reload every app iframe and lose its state,
+     which is exactly what clicking a window must never do. */
+  const el=$(`.wos-win[data-w="${id}"]`);if(el)el.style.zIndex=w.z;
+  $$('.wos-win').forEach(x=>x.classList.toggle('focus',x.dataset.w===id));
+}
+function wosMax(id){
+  const w=(WOS.wins||[]).find(x=>x.id===id);if(!w)return;
+  w.max=!w.max;w.min=false;w.z=++WOS.z;saveWos();wosRender();
+}
+function wosMin(id){
+  const w=(WOS.wins||[]).find(x=>x.id===id);if(!w)return;
+  w.min=true;saveWos();wosRender();
+}
+function wosSnap(id,side){
+  const w=(WOS.wins||[]).find(x=>x.id===id);if(!w)return;
+  const d=$('#wos-desk');if(!d)return;
+  const r=d.getBoundingClientRect();
+  w.max=false;
+  if(side==='left'){w.x=0;w.y=0;w.w=Math.round(r.width/2);w.h=Math.round(r.height);}
+  if(side==='right'){w.x=Math.round(r.width/2);w.y=0;w.w=Math.round(r.width/2);w.h=Math.round(r.height);}
+  if(side==='top'){w.max=true;}
+  saveWos();wosRender();
+}
+
+/* ── Rendering ─────────────────────────────────────────────────────────────── */
+function wosPreset(){return WOS_PRESETS[WOS.theme]||WOS_PRESETS.aurora;}
+function wosApplyTheme(){
+  const root=$('#wos-root');if(!root)return;
+  const pre=wosPreset();
+  if(!WOS.iconLock)WOS.icons=pre.icons;
+  root.setAttribute('data-wtheme',WOS.theme);
+  root.setAttribute('data-wchrome',pre.chrome);
+  root.setAttribute('data-wicons',WOS.icons||'aurora');
+  root.setAttribute('data-wdock',pre.dock);
+  root.classList.toggle('has-sky',!!pre.sky);   // NOT 'wos-sky' — that is the sky element's own class
+}
+function wosIconPos(id,i){
+  if(WOS.iconPos[id])return WOS.iconPos[id];
+  return{x:18+Math.floor(i/7)*104,y:16+(i%7)*92};
+}
+function wosWinBody(app){
+  if(!app)return '<div class="wos-empty">This app is gone.</div>';
+  if(app.kind==='builtin'){
+    if(app.id==='notes')return `<textarea class="wos-notes" data-wnotes>${esc(WOS.notes||'')}</textarea>`;
+    if(app.id==='store')return wosStoreHtml();
+    if(app.id==='settings')return wosSettingsHtml();
+    if(app.id==='files')return wosFilesHtml();
+    if(app.id==='browser')return `<div class="wos-brow">
+        <div class="wos-browbar"><input data-wurl placeholder="https://…  (many sites refuse to be framed)">
+          <button class="btn small" data-wgo>Go</button></div>
+        <iframe class="wos-frame" data-wbrowframe sandbox="allow-scripts allow-forms allow-popups"></iframe>
+        <p class="help" style="padding:6px 10px;margin:0">Most large sites send <code>X-Frame-Options</code>
+          and will show blank here. That is their choice, not a bug in this window.</p></div>`;
+    if(app.id==='term')return `<div class="wos-term"><p class="help" style="padding:10px">
+        The real terminal lives in the Terminal tab, wired to the bridge.</p>
+        <div style="padding:0 10px"><button class="btn small" data-wjump="terminal">Open Terminal tab</button></div></div>`;
+  }
+  return `<iframe class="wos-frame" data-wapp="${esc(app.id)}"
+    sandbox="allow-scripts allow-forms allow-modals allow-popups"
+    allow="fullscreen;autoplay;gamepad"></iframe>`;
+}
+function wosStoreHtml(){
+  const mine=(WOS.apps||[]).map(a=>`<div class="wos-srow">
+      <span class="wos-sic">${esc(a.icon)}</span>
+      <span><b>${esc(a.name)}</b><i>from ${esc(a.src)} · ${esc(new Date(a.ts).toLocaleDateString())}</i></span>
+      <span style="flex:1"></span>
+      <button class="btn ghost small" data-wopen="${esc(a.id)}">Open</button>
+      <button class="btn ghost small" data-wexport="${esc(a.id)}">Export</button>
+      <button class="btn ghost small" data-wdel="${esc(a.id)}">Remove</button>
+    </div>`).join('')||'<p class="help">Nothing installed yet.</p>';
+  return `<div class="wos-pad">
+    <h3>Install an app</h3>
+    <p class="help">Anything that is a single HTML file becomes a real app with an icon. Nothing is
+      uploaded — it is stored in this browser and runs sandboxed.</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap">
+      <button class="btn small" data-wnew="studio">⬅ Bring in what's in Studio</button>
+      <button class="btn small" data-wnew="file">📂 Choose an HTML file</button>
+      <button class="btn small" data-wnew="paste">📋 Paste HTML</button>
+      <button class="btn small" data-wnew="url">🔗 Add a web link</button>
+      <button class="btn small" data-wnew="ai">✦ Describe one and let AI build it</button>
+    </div>
+    <h3 style="margin-top:16px">Installed</h3>${mine}</div>`;
+}
+function wosSettingsHtml(){
+  return `<div class="wos-pad">
+    <h3>Desktop theme</h3>
+    <p class="help">Each one emulates a whole desktop, not just a colour — Windows 95 gets a real
+      taskbar and Start button, Platinum has no dock because System 7 had none.</p>
+    <div class="wos-swatches">${WOS_THEMES.map(t=>
+      `<button class="wos-sw${WOS.theme===t.id?' on':''}" data-wtheme="${t.id}" title="${esc(t.name)}">
+        <span style="background:${t.sw}"></span><i>${esc(t.name)}</i></button>`).join('')}</div>
+    <h3 style="margin-top:14px">Icon pack</h3>
+    <label class="chk"><input type="checkbox" data-wiconlock ${WOS.iconLock?'checked':''}>
+      keep my icon pack when I change theme</label>
+    <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">${WOS_ICONPACKS.map(p=>
+      `<button class="btn ghost small${WOS.icons===p.id?' on':''}" data-wpack="${p.id}">${esc(p.name)}</button>`).join('')}</div>
+    <h3 style="margin-top:14px">Icon size</h3>
+    <input type="range" min="60" max="130" value="${WOS.iconSize||84}" data-wiconsize style="width:220px">
+    <h3 style="margin-top:14px">Wallpaper</h3>
+    <div class="row" style="gap:8px"><button class="btn ghost small" data-wwall>Choose an image…</button>
+      ${WOS.wallpaper?'<button class="btn ghost small" data-wwallclear>Clear</button>':''}</div>
+    <h3 style="margin-top:14px">Desktop</h3>
+    <div class="row" style="gap:8px"><button class="btn ghost small" data-warrange>Tidy icons</button>
+      <button class="btn ghost small" data-wreset>Reset desktop</button></div></div>`;
+}
+function wosFilesHtml(){
+  const st=(typeof WS!=='undefined'&&WS&&WS.files)?Object.keys(WS.files):[];
+  return `<div class="wos-pad">
+    <h3>Studio workspace</h3>
+    ${st.length?st.map(n=>`<div class="wos-srow"><span class="wos-sic">📄</span><b>${esc(n)}</b>
+      <span style="flex:1"></span>
+      <button class="btn ghost small" data-wjump="studio">Edit in Studio</button></div>`).join('')
+      :'<p class="help">Studio is empty.</p>'}
+    <h3 style="margin-top:14px">Bridge workspace</h3>
+    <p class="help">With the bridge running, real files on your machine appear here.</p>
+    <button class="btn ghost small" data-wjump="terminal">Open the bridge</button></div>`;
+}
+function wosRender(){
+  const root=$('#wos-root');if(!root)return;
+  wosApplyTheme();
+  const apps=wosAllApps();
+  const sz=WOS.iconSize||84;
+  const icons=apps.map((a,i)=>{
+    const p=wosIconPos(a.id,i);
+    return `<button class="wos-icon" data-wicon="${esc(a.id)}"
+      style="left:${p.x}px;top:${p.y}px;width:${sz}px"><span class="wos-glyph">${esc(a.icon)}</span>
+      <span class="wos-name">${esc(a.name)}</span></button>`;
+  }).join('');
+  const open=(WOS.wins||[]).filter(w=>!w.closed);
+  const wins=open.filter(w=>!w.min).map(w=>{
+    const a=wosApp(w.app);
+    const style=w.max?'left:0;top:0;width:100%;height:100%'
+      :`left:${w.x}px;top:${w.y}px;width:${w.w}px;height:${w.h}px`;
+    return `<div class="wos-win${w.max?' max':''}" data-w="${esc(w.id)}" style="${style};z-index:${w.z}">
+      <div class="wos-bar" data-wbar="${esc(w.id)}">
+        <span class="wos-dots">
+          <button class="wd close" data-wclose="${esc(w.id)}" title="Close"></button>
+          <button class="wd min" data-wmin="${esc(w.id)}" title="Minimise"></button>
+          <button class="wd max" data-wmaxb="${esc(w.id)}" title="Maximise"></button>
+        </span>
+        <b>${esc(a?a.icon+' '+a.name:'Missing app')}</b>
+        <span style="flex:1"></span>
+        ${a&&a.kind==='user'?`<button class="wos-x" data-wpop="${esc(w.id)}" title="Open in a real browser tab">↗</button>`:''}
+      </div>
+      <div class="wos-body">${wosWinBody(a)}</div>
+      ${w.max?'':['n','s','e','w','ne','nw','se','sw'].map(d=>
+        `<i class="wos-rz r-${d}" data-wrz="${esc(w.id)}" data-wdir="${d}"></i>`).join('')}
+    </div>`;
+  }).join('');
+  const dockItems=apps.slice(0,14).map(a=>{
+    const on=open.some(w=>w.app===a.id);
+    return `<button class="wos-dockb${on?' on':''}" data-wicon="${esc(a.id)}" title="${esc(a.name)}">
+      ${esc(a.icon)}${wosPreset().dock==='taskbar'?'<span>'+esc(a.name)+'</span>':''}</button>`;
+  }).join('');
+  const unread=(WOS.notifs||[]).filter(n=>!n.read).length;
+  root.innerHTML=`
+    <div class="wos-menubar">
+      <b>🪟 WebOS</b>
+      <button class="wos-mb" data-wicon="store">Apps</button>
+      <button class="wos-mb" data-wicon="settings">Customise</button>
+      <span style="flex:1"></span>
+      <button class="wos-mb" data-wbell>🔔${unread?'<span class="wos-badge">'+unread+'</span>':''}</button>
+      <button class="wos-mb" data-wfs title="Fullscreen">⛶</button>
+      <button class="wos-mb" data-wpopos title="Open the desktop in its own window">↗</button>
+      <span class="wos-clock">${esc(new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}))}</span>
+    </div>
+    <div class="wos-desk" id="wos-desk"${WOS.wallpaper?` style="background-image:url('${esc(WOS.wallpaper)}')"`:''}>
+      <div class="wos-sky"></div>
+      <div class="wos-icons">${icons}</div>
+      <div class="wos-wins">${wins}</div>
+      <div class="wos-notifpanel" id="wos-notifs" hidden></div>
+    </div>
+    <div class="wos-dock">${wosPreset().dock==='taskbar'?'<button class="wos-start">Start</button>':''}
+      <div class="wos-dockin">${dockItems}</div>
+      ${open.filter(w=>w.min).map(w=>{const a=wosApp(w.app);
+        return `<button class="wos-dockb min" data-wrestore="${esc(w.id)}">${esc(a?a.icon:'▫')}</button>`;}).join('')}
+    </div>`;
+  wosRenderNotifs();
+  wosFillFrames();
+}
+/* srcdoc is written after render, never inside the template: an app's HTML in an attribute
+   would have to be escaped and un-escaped, and any mistake there is an injection. */
+async function wosFillFrames(){
+  for(const f of $$('#wos-root [data-wapp]')){
+    const id=f.dataset.wapp,a=wosApp(id);
+    if(a&&a.url){f.src=a.url;continue;}
+    const html=await wosBody(id);
+    f.srcdoc=html||'<!doctype html><body style="font-family:system-ui;padding:24px">This app has no content.</body>';
+  }
+}
+
+/* ── Cross-window sync ──────────────────────────────────────────────────────
+   A popped-out desktop is a second load of the app, not a moved DOM node. BroadcastChannel
+   carries live events (a notification firing, a window moving) and the storage event carries
+   persisted state, so the two stay together in both directions. */
+let WOS_CH=null;
+function wosBroadcast(msg){
+  try{
+    if(!WOS_CH&&'BroadcastChannel' in window)WOS_CH=new BroadcastChannel('glassbox-webos');
+    if(WOS_CH)WOS_CH.postMessage(msg);
+  }catch(_){}
+}
+function wosChannelInit(){
+  if(WOS_CH||!('BroadcastChannel' in window))return;
+  try{
+    WOS_CH=new BroadcastChannel('glassbox-webos');
+    WOS_CH.onmessage=e=>{
+      const m=e.data||{};
+      if(m.t==='state'){WOS=Object.assign({},WOS,store.get('webos',{}));if($('#wos-root'))wosRender();}
+      if(m.t==='notify'&&currentView()!=='webos')toast('🪟 '+m.title,3000);
+    };
+  }catch(_){}
+}
+function wosInstallFromStudio(){
+  if(typeof WS==='undefined'||!WS||!WS.files)return toast('Studio is empty',2200);
+  const names=Object.keys(WS.files);
+  const entry=names.find(n=>/index\.html?$/i.test(n))||names.find(n=>/\.html?$/i.test(n));
+  if(!entry)return toast('Studio has no HTML file to install',2600);
+  /* Inline the workspace's own css/js so the installed app is genuinely self-contained —
+     a relative <script src> would 404 inside a srcdoc frame with no origin to resolve against. */
+  let html=WS.files[entry];
+  names.forEach(n=>{
+    if(n===entry)return;
+    const body=WS.files[n];
+    if(/\.css$/i.test(n))html=html.replace(new RegExp('<link[^>]*href=["\']\\.?/?'+n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'["\'][^>]*>','gi'),'<style>'+body+'</style>');
+    if(/\.js$/i.test(n))html=html.replace(new RegExp('<script[^>]*src=["\']\\.?/?'+n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'["\'][^>]*>\\s*<\\/script>','gi'),'<script>'+body+'<\/script>');
+  });
+  wosInstall({name:entry.replace(/\.html?$/i,'')||'Studio app',html,src:'Studio',icon:'🛠'});
+}
+async function wosInstallAI(prompt){
+  const acc=await streamComplete({model:settings.archModel,maxTokens:6000,
+    messages:[{role:'system',content:
+      'Write ONE complete, self-contained single-file HTML document. Everything inline — no '+
+      'external scripts, stylesheets, fonts or images, because it runs in a sandboxed frame with '+
+      'no network origin. It must work with no build step. Return only the HTML, no fences.'+
+      skillBlockFor('gen')},
+      {role:'user',content:String(prompt||'')}]},null,null,'webos-app');
+  const html=String(acc.content||'').replace(/```(?:html)?/g,'').trim();
+  if(!html)throw new Error('the model returned nothing');
+  const name=(/<title>([^<]{1,60})<\/title>/i.exec(html)||[])[1]||String(prompt).slice(0,32);
+  return wosInstall({name:name.trim(),html,src:'AI',icon:'✨'});
+}
+function wosInit(){
+  if(wosInit._done)return;wosInit._done=true;
+  wosChannelInit();
+  if(typeof LOG_LISTENERS!=='undefined'&&Array.isArray(LOG_LISTENERS))LOG_LISTENERS.push(wosFromLog);
+
+  const root=$('#wos-root');if(!root)return;
+
+  root.addEventListener('click',async ev=>{
+    const t=ev.target;
+    const g=(sel)=>t.closest('['+sel+']');
+    let el;
+    if((el=g('data-wicon'))){const id=el.dataset.wicon;if(!WOS_DRAG||!WOS_DRAG.moved)wosOpen(id);return;}
+    if((el=g('data-wrestore'))){const w=(WOS.wins||[]).find(x=>x.id===el.dataset.wrestore);
+      if(w){w.min=false;w.z=++WOS.z;saveWos();wosRender();}return;}
+    if((el=g('data-wclose'))){wosClose(el.dataset.wclose);return;}
+    if((el=g('data-wmin'))){wosMin(el.dataset.wmin);return;}
+    if((el=g('data-wmaxb'))){wosMax(el.dataset.wmaxb);return;}
+    if((el=g('data-wjump'))){go(el.dataset.wjump);return;}
+    if((el=g('data-wopen'))){wosOpen(el.dataset.wopen);return;}
+    if((el=g('data-wdel'))){const a=wosApp(el.dataset.wdel);
+      if(a&&confirm('Remove “'+a.name+'”? Its data goes with it.'))wosUninstall(el.dataset.wdel);return;}
+    if((el=g('data-wexport'))){const a=wosApp(el.dataset.wexport);
+      const html=await wosBody(el.dataset.wexport);
+      downloadText(html,(a?a.name:'app').replace(/[^\w-]+/g,'-')+'.html','text/html');return;}
+    if((el=g('data-wpop'))){const w=(WOS.wins||[]).find(x=>x.id===el.dataset.wpop);
+      if(w){const html=await wosBody(w.app);
+        const b=new Blob([html],{type:'text/html'});const u=URL.createObjectURL(b);
+        window.open(u,'_blank');setTimeout(()=>URL.revokeObjectURL(u),20000);}return;}
+    if(g('data-wbell')){const n=$('#wos-notifs');
+      if(n){n.hidden=!n.hidden;if(!n.hidden){(WOS.notifs||[]).forEach(x=>x.read=true);saveWos();}}return;}
+    if(g('data-wfs')){toggleFullscreenView();return;}
+    if(g('data-wpopos')){popOutView();return;}
+    if((el=g('data-wtheme'))){WOS.theme=el.dataset.wtheme;saveWos();wosRender();wosBroadcast({t:'state'});return;}
+    if((el=g('data-wpack'))){WOS.icons=el.dataset.wpack;WOS.iconLock=true;saveWos();wosRender();return;}
+    if(g('data-warrange')){WOS.iconPos={};saveWos();wosRender();return;}
+    if(g('data-wreset')){if(confirm('Reset the desktop layout? Installed apps are kept.')){
+      WOS.iconPos={};WOS.wins=[];WOS.theme='aurora';WOS.wallpaper='';saveWos();wosRender();}return;}
+    if(g('data-wwallclear')){WOS.wallpaper='';saveWos();wosRender();return;}
+    if(g('data-wwall')){
+      const i=document.createElement('input');i.type='file';i.accept='image/*';
+      i.onchange=()=>{const f=i.files[0];if(!f)return;
+        const r=new FileReader();
+        r.onload=()=>{WOS.wallpaper=String(r.result);saveWos();wosRender();};
+        r.readAsDataURL(f);};
+      i.click();return;}
+    if(g('data-wgo')){const u=root.querySelector('[data-wurl]'),fr=root.querySelector('[data-wbrowframe]');
+      if(u&&fr&&u.value.trim())fr.src=/^https?:/.test(u.value)?u.value:'https://'+u.value;return;}
+    if((el=g('data-wnew'))){wosNewApp(el.dataset.wnew);return;}
+  });
+  root.addEventListener('input',ev=>{
+    if(ev.target.matches('[data-wnotes]')){WOS.notes=ev.target.value;saveWos();}
+    if(ev.target.matches('[data-wiconsize]')){WOS.iconSize=+ev.target.value;saveWos();
+      $$('#wos-root .wos-icon').forEach(i=>i.style.width=WOS.iconSize+'px');}
+  });
+  root.addEventListener('change',ev=>{
+    if(ev.target.matches('[data-wiconlock]')){WOS.iconLock=ev.target.checked;saveWos();}
+  });
+
+  /* Pointer handling for icons, window drag and window resize. One set of listeners on the
+     document rather than per element, so a re-render never orphans a drag in progress. */
+  root.addEventListener('pointerdown',ev=>{
+    const rz=ev.target.closest('[data-wrz]');
+    if(rz){
+      const w=(WOS.wins||[]).find(x=>x.id===rz.dataset.wrz);if(!w)return;
+      WOS_DRAG={mode:'resize',id:w.id,dir:rz.dataset.wdir,sx:ev.clientX,sy:ev.clientY,
+        ox:w.x,oy:w.y,ow:w.w,oh:w.h,moved:false};
+      wosFocus(w.id);ev.preventDefault();return;
+    }
+    const bar=ev.target.closest('[data-wbar]');
+    if(bar&&!ev.target.closest('.wos-dots')&&!ev.target.closest('.wos-x')){
+      const w=(WOS.wins||[]).find(x=>x.id===bar.dataset.wbar);if(!w||w.max)return;
+      WOS_DRAG={mode:'win',id:w.id,sx:ev.clientX,sy:ev.clientY,ox:w.x,oy:w.y,moved:false};
+      wosFocus(w.id);ev.preventDefault();return;
+    }
+    const ic=ev.target.closest('[data-wicon]');
+    if(ic&&ic.classList.contains('wos-icon')){
+      const id=ic.dataset.wicon,i=wosAllApps().findIndex(a=>a.id===id);
+      const p=wosIconPos(id,i);
+      WOS_DRAG={mode:'icon',id,sx:ev.clientX,sy:ev.clientY,ox:p.x,oy:p.y,moved:false};
+      return;
+    }
+    const win=ev.target.closest('.wos-win');
+    if(win)wosFocus(win.dataset.w);
+  });
+  document.addEventListener('pointermove',ev=>{
+    if(!WOS_DRAG)return;
+    const dx=ev.clientX-WOS_DRAG.sx, dy=ev.clientY-WOS_DRAG.sy;
+    if(Math.hypot(dx,dy)>5)WOS_DRAG.moved=true;
+    if(!WOS_DRAG.moved)return;
+    if(WOS_DRAG.mode==='icon'){
+      const d=$('#wos-desk');if(!d)return;
+      const r=d.getBoundingClientRect();
+      const x=Math.max(0,Math.min(r.width-70,WOS_DRAG.ox+dx));
+      const y=Math.max(0,Math.min(r.height-80,WOS_DRAG.oy+dy));
+      WOS.iconPos[WOS_DRAG.id]={x,y};
+      const el=$(`#wos-root .wos-icon[data-wicon="${WOS_DRAG.id}"]`);
+      if(el){el.style.left=x+'px';el.style.top=y+'px';}
+      return;
+    }
+    const w=(WOS.wins||[]).find(x=>x.id===WOS_DRAG.id);if(!w)return;
+    const el=$(`#wos-root .wos-win[data-w="${w.id}"]`);if(!el)return;
+    if(WOS_DRAG.mode==='win'){
+      w.x=Math.max(0,WOS_DRAG.ox+dx);w.y=Math.max(0,WOS_DRAG.oy+dy);
+      el.style.left=w.x+'px';el.style.top=w.y+'px';
+      return;
+    }
+    const d=WOS_DRAG.dir;
+    if(d.includes('e'))w.w=Math.max(320,WOS_DRAG.ow+dx);
+    if(d.includes('s'))w.h=Math.max(200,WOS_DRAG.oh+dy);
+    if(d.includes('w')){const nw=Math.max(320,WOS_DRAG.ow-dx);w.x=WOS_DRAG.ox+(WOS_DRAG.ow-nw);w.w=nw;}
+    if(d.includes('n')){const nh=Math.max(200,WOS_DRAG.oh-dy);w.y=WOS_DRAG.oy+(WOS_DRAG.oh-nh);w.h=nh;}
+    el.style.left=w.x+'px';el.style.top=w.y+'px';el.style.width=w.w+'px';el.style.height=w.h+'px';
+  });
+  document.addEventListener('pointerup',ev=>{
+    if(!WOS_DRAG)return;
+    const D=WOS_DRAG;WOS_DRAG=null;
+    if(D.mode==='win'&&D.moved){
+      /* Edge snap, decided on release so a drag across the screen does not flicker. */
+      const d=$('#wos-desk');
+      if(d){const r=d.getBoundingClientRect();
+        if(ev.clientY-r.top<8)wosSnap(D.id,'top');
+        else if(ev.clientX-r.left<8)wosSnap(D.id,'left');
+        else if(r.right-ev.clientX<8)wosSnap(D.id,'right');}
+    }
+    saveWos();wosBroadcast({t:'state'});
+    /* A click that never moved is a launch; the click handler above reads D.moved, so keep
+       the flag readable for one tick before clearing it. */
+    if(D.mode==='icon'&&D.moved){WOS_DRAG={moved:true};setTimeout(()=>{WOS_DRAG=null;},0);}
+  });
+  window.addEventListener('storage',e=>{
+    if(e.key==='gb.webos'&&currentView()==='webos'){
+      WOS=Object.assign({},WOS_DEFAULTS,store.get('webos',{}));wosRender();
+    }
+  });
+}
+function wosNewApp(how){
+  if(how==='studio')return wosInstallFromStudio();
+  if(how==='file'){
+    const i=document.createElement('input');i.type='file';i.accept='.html,.htm,text/html';
+    i.onchange=()=>{const f=i.files[0];if(!f)return;
+      const r=new FileReader();
+      r.onload=()=>wosInstall({name:f.name.replace(/\.html?$/i,''),html:String(r.result),src:'file'});
+      r.readAsText(f);};
+    i.click();return;
+  }
+  if(how==='paste'){
+    openModal(`<h3 style="margin-top:0">Paste an app</h3>
+      <p class="help">One complete HTML document. It runs sandboxed and cannot read this page.</p>
+      <label class="field">Name<input id="wp-name" placeholder="My app"></label>
+      <label class="field" style="margin-top:8px">HTML<textarea id="wp-html" rows="10"
+        placeholder="&lt;!doctype html&gt;…"></textarea></label>
+      <div class="row" style="margin-top:12px"><button class="btn" id="wp-go">Install</button></div>`);
+    const b=$('#wp-go');
+    if(b)b.onclick=()=>{
+      const html=$('#wp-html').value.trim();
+      if(!html)return toast('Paste the HTML first',2000);
+      wosInstall({name:$('#wp-name').value.trim()||'Pasted app',html,src:'paste'});
+      closeModal();
+    };return;
+  }
+  if(how==='url'){
+    const u=prompt('Web address to add as an app','https://');
+    if(!u)return;
+    wosInstall({name:u.replace(/^https?:\/\//,'').split('/')[0]||'Web app',url:u,src:'link',icon:'🔗'});
+    return;
+  }
+  if(how==='ai'){
+    openModal(`<h3 style="margin-top:0">Describe an app</h3>
+      <p class="help">A model writes a complete single-file app and it installs straight to the desktop.</p>
+      <label class="field">What should it do?<textarea id="wa-p" rows="4"
+        placeholder="a pomodoro timer with a circular progress ring and a soft chime"></textarea></label>
+      <div class="row" style="margin-top:12px"><button class="btn" id="wa-go">✦ Build & install</button>
+        <span class="mini" id="wa-st"></span></div>`);
+    const b=$('#wa-go');
+    if(b)b.onclick=async()=>{
+      const p=$('#wa-p').value.trim();if(!p)return toast('Describe it first',2000);
+      b.disabled=true;b.textContent='Building…';
+      const st=$('#wa-st');if(st)st.textContent='This takes a few seconds…';
+      try{await wosInstallAI(p);closeModal();}
+      catch(e){toast('Could not build it: '+e.message,3400);b.disabled=false;b.textContent='✦ Build & install';}
+    };
+  }
+}
+
+
+/* ═══════════════════ TRUEFORGE + CROSS-DEVICE ═══════════════════
+   TrueForge (truefoundry/trueforge, MIT) is an agent harness: it runs the execution loop —
+   model calls, MCP tools, skills, sandboxing, approvals, session state — behind an HTTP API.
+   Connecting to it gives an agent context that OUTLIVES this browser tab, which is the whole
+   reason it appears here: everything else in this app is per-browser, so a session started on
+   a desktop is invisible from a phone. A TrueForge session is not.
+
+   Verified against the project's own docs rather than assumed:
+     · local mode  `npx @truefoundry/trueforge`   → http://localhost:8790  (SQLite, no auth)
+     · hosted mode  Docker Compose                → http://localhost:8791  (Postgres + Redis)
+     · API surface: /v1/capabilities /v1/models /v1/agents /v1/sessions
+                    /v1/sessions/{id}/turns  /v1/sessions/{id}/events (stream)
+   Two things stated plainly in the UI because getting them wrong costs the user real safety:
+   local mode has NO LOGIN, and its hosted port 8791 is the SAME port this app's own bridge
+   defaults to — run both and one of them silently loses. */
+const TF_DEFAULTS={base:'http://localhost:8790',key:'',agent:'',session:'',on:false,lastProbe:null};
+let TFORGE=Object.assign({},TF_DEFAULTS,store.get('trueforge',{}));
+const saveTforge=()=>store.set('trueforge',TFORGE);
+const TF_PORT_CLASH=8791;   // GlassBox bridge default — see BRIDGE_INFO
+
+function tfUrl(path){return String(TFORGE.base||'').replace(/\/+$/,'')+path;}
+async function tfFetch(path,init){
+  const o=Object.assign({headers:{}},init||{});
+  o.headers=Object.assign({'Content-Type':'application/json'},o.headers);
+  if(TFORGE.key)o.headers['Authorization']='Bearer '+TFORGE.key;
+  /* Direct first, bridge proxy as the fallback — a TrueForge on another machine will refuse
+     a cross-origin browser request, and the bridge is the only way through that. */
+  try{
+    const r=await fetch(tfUrl(path),o);
+    const t=await r.text();
+    return{ok:r.ok,status:r.status,body:t?JSON.parse(t):null,via:'direct'};
+  }catch(e){
+    if(typeof bridgePost==='function'&&BRIDGE_INFO&&BRIDGE_INFO.ok){
+      try{
+        const r=await bridgePost('/proxy',{url:tfUrl(path),method:o.method||'GET',
+          headers:o.headers,body:o.body});
+        if(r&&r.body!=null&&!(r.error&&r.body==null))
+          return{ok:(r.status||200)<400,status:r.status,body:typeof r.body==='string'?JSON.parse(r.body):r.body,via:'bridge'};
+      }catch(_){}
+    }
+    throw new Error('could not reach TrueForge at '+TFORGE.base+' — is it running? ('+e.message+')');
+  }
+}
+async function tfProbe(){
+  try{
+    const r=await tfFetch('/v1/capabilities');
+    TFORGE.lastProbe={ok:r.ok,ts:nowISO(),via:r.via,caps:r.body||null};
+  }catch(e){TFORGE.lastProbe={ok:false,ts:nowISO(),error:e.message};}
+  saveTforge();
+  return TFORGE.lastProbe;
+}
+async function tfAgents(){const r=await tfFetch('/v1/agents');return (r.body&&(r.body.data||r.body.agents||r.body))||[];}
+async function tfNewSession(agentId){
+  const r=await tfFetch('/v1/sessions',{method:'POST',
+    body:JSON.stringify({agent_id:agentId||TFORGE.agent||undefined,title:'Glassbox Jet'})});
+  const id=r.body&&(r.body.id||r.body.session_id);
+  if(id){TFORGE.session=id;saveTforge();}
+  return r.body;
+}
+async function tfSend(text){
+  if(!TFORGE.session)await tfNewSession();
+  if(!TFORGE.session)throw new Error('no session — check the agent id');
+  const r=await tfFetch('/v1/sessions/'+encodeURIComponent(TFORGE.session)+'/turns',
+    {method:'POST',body:JSON.stringify({input:text})});
+  return r.body;
+}
+/* ── Cross-device, without TrueForge ────────────────────────────────────────
+   TrueForge is the heavyweight answer and needs a server. Most people asking "can I get to my
+   work from my phone" want something far smaller, so three lighter paths ship alongside it.
+   Keys are NEVER included in a bundle — a file that lands in a Downloads folder, gets AirDropped
+   and sits in a chat thread is exactly the wrong place for a credential. */
+const XD_PARTS=[
+  {id:'projects',label:'Projects & Creations',keys:['projects','creations']},
+  {id:'office',label:'Documents & spreadsheets',keys:['ofw','ofc']},
+  {id:'webos',label:'WebOS apps & desktop',keys:['webos']},
+  {id:'brain',label:'Brain notes',keys:['brainDir']},
+  {id:'presets',label:'Presets, skills & connections',keys:['moaPresets','skillCtx','connx','ui','onboarding']},
+  {id:'history',label:'Run history & traces',keys:['history','traces']},
+];
+async function xdExport(parts){
+  const want=new Set(parts&&parts.length?parts:XD_PARTS.map(p=>p.id));
+  const out={app:'Glassbox Jet',v:1,ts:nowISO(),parts:[...want],data:{},idb:{}};
+  XD_PARTS.forEach(p=>{
+    if(!want.has(p.id))return;
+    p.keys.forEach(k=>{const v=store.get(k,null);if(v!=null)out.data[k]=v;});
+  });
+  /* WebOS app bodies live in IndexedDB, so a bundle that only copied localStorage would export
+     a desktop full of icons that all open blank. */
+  if(want.has('webos')){
+    const apps=(out.data.webos&&out.data.webos.apps)||[];
+    for(const a of apps){
+      const b=await IDB.get('wosApp:'+a.id,'');
+      if(b)out.idb['wosApp:'+a.id]=b;
+    }
+  }
+  /* Explicit and deliberate: no key of any kind travels in a bundle. */
+  delete out.data.key;delete out.data.settings;
+  return out;
+}
+async function xdImport(bundle,mode){
+  if(!bundle||bundle.app!=='Glassbox Jet')throw new Error('that is not a Glassbox Jet bundle');
+  const merge=mode!=='replace';
+  Object.entries(bundle.data||{}).forEach(([k,v])=>{
+    if(merge&&Array.isArray(v)){
+      const cur=store.get(k,[]);
+      store.set(k,Array.isArray(cur)?cur.concat(v.filter(x=>!cur.some(c=>c&&x&&c.id&&c.id===x.id))):v);
+    }else if(merge&&v&&typeof v==='object'){
+      store.set(k,Object.assign({},store.get(k,{}),v));
+    }else store.set(k,v);
+  });
+  for(const [k,v] of Object.entries(bundle.idb||{}))await IDB.set(k,v);
+  return Object.keys(bundle.data||{}).length;
+}
+function xdLanUrl(){
+  /* The bridge knows the machine's LAN address; without it we can only say "same network". */
+  const port=location.port||'8899';
+  return (BRIDGE_INFO&&BRIDGE_INFO.lan)?('http://'+BRIDGE_INFO.lan+':'+port+location.pathname):'';
+}
+function renderCrossDevice(){
+  const host=$('#xd-panel');if(!host)return;
+  const p=TFORGE.lastProbe;
+  const clash=/:8791(\/|$)/.test(TFORGE.base||'');
+  host.innerHTML=`
+    <div class="card">
+      <h3>📱 Get to your work from another device</h3>
+      <p class="help">Everything here is stored in <i>this</i> browser, so another device starts empty
+        until you move something across. Four ways, lightest first.</p>
+    </div>
+    <div class="card">
+      <h3>1 · Export a bundle <span class="tag">no install</span></h3>
+      <p class="help">One file with your work in it. Open the app on the other device and import it.
+        Works offline, works on any device, needs nothing running. <b>API keys are never included</b> —
+        add those on the new device yourself.</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin:8px 0">
+        ${XD_PARTS.map(x=>`<label class="chk"><input type="checkbox" class="xd-part" value="${x.id}" checked> ${esc(x.label)}</label>`).join('')}
+      </div>
+      <div class="row" style="gap:8px">
+        <button class="btn" id="xd-export">⬇ Export bundle</button>
+        <button class="btn ghost" id="xd-import">⬆ Import a bundle</button>
+        <span class="mini" id="xd-status"></span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>2 · Over your own network <span class="tag">bridge</span></h3>
+      <p class="help">With the bridge running on the computer that holds your work, open this address
+        on your phone. Same Wi-Fi only — nothing is exposed to the internet.</p>
+      <p class="mono" style="font-size:12.5px">${xdLanUrl()?esc(xdLanUrl()):'<span class="muted">Start the bridge to see your LAN address.</span>'}</p>
+    </div>
+    <div class="card">
+      <h3>3 · TrueForge <span class="tag">agent context that outlives this tab</span></h3>
+      <p class="help">TrueForge is an open-source agent harness (MIT). It runs the agent loop —
+        models, MCP tools, skills, sandboxing, approvals — on a server, so a session you start here
+        is still there from your phone, because the session lives in TrueForge rather than in this
+        browser. That is the one thing a bundle cannot give you.</p>
+      <p class="help">Run it locally with <code>npx @truefoundry/trueforge</code> (defaults to port 8790).</p>
+      ${clash?`<div class="banner warn" style="margin:8px 0">⚠ Port 8791 is also this app's bridge default.
+        If you run TrueForge in hosted mode and the bridge at the same time, one of them will fail to
+        bind. Give TrueForge a different port with <code>--port</code>.</div>`:''}
+      <div class="banner info" style="margin:8px 0">Local TrueForge has <b>no login by default</b> and its
+        own docs say to keep it on localhost. Do not point this at a public address without putting real
+        auth in front of it.</div>
+      <label class="field">Server address<input id="tf-base" value="${esc(TFORGE.base||'')}" placeholder="http://localhost:8790"></label>
+      <label class="field" style="margin-top:8px">API key <span class="muted">(hosted mode only)</span>
+        <input id="tf-key" type="password" value="${esc(TFORGE.key||'')}" placeholder="leave empty for local mode"></label>
+      <label class="field" style="margin-top:8px">Agent id <span class="muted">(optional)</span>
+        <input id="tf-agent" value="${esc(TFORGE.agent||'')}" placeholder="an agent you configured in TrueForge"></label>
+      <div class="row" style="gap:8px;margin-top:10px">
+        <button class="btn" id="tf-test">Test connection</button>
+        <button class="btn ghost" id="tf-agents">List agents</button>
+        <button class="btn ghost" id="tf-new">Start a session</button>
+        <span class="mini" id="tf-status">${p?(p.ok?`<span style="color:var(--good)">✓ reachable via ${esc(p.via||'direct')}</span>`
+          :`<span style="color:var(--bad)">✗ ${esc(p.error||'unreachable')}</span>`):''}</span>
+      </div>
+      <div id="tf-out" style="margin-top:8px"></div>
+      ${TFORGE.session?`<p class="help">Current session <code>${esc(TFORGE.session)}</code> — open the same
+        server from any device to carry on in it.</p>`:''}
+    </div>
+    <div class="card">
+      <h3>4 · The hosted copy</h3>
+      <p class="help">If you deployed this app to a URL, open that URL on the other device and import a
+        bundle into it. The app is one file, so anywhere that serves static files will do.</p>
+    </div>`;
+
+  const st=$('#xd-status');
+  const ex=$('#xd-export');
+  if(ex)ex.onclick=async()=>{
+    const parts=$$('.xd-part').filter(c=>c.checked).map(c=>c.value);
+    if(!parts.length)return toast('Pick at least one thing to export',2200);
+    st.textContent='Packing…';
+    const b=await xdExport(parts);
+    downloadText(JSON.stringify(b,null,2),'glassbox-bundle-'+new Date().toISOString().slice(0,10)+'.json','application/json');
+    st.textContent='Exported '+Object.keys(b.data).length+' item groups (no keys included)';
+  };
+  const im=$('#xd-import');
+  if(im)im.onclick=()=>{
+    const i=document.createElement('input');i.type='file';i.accept='.json,application/json';
+    i.onchange=()=>{const f=i.files[0];if(!f)return;
+      const r=new FileReader();
+      r.onload=async()=>{
+        try{
+          const b=JSON.parse(String(r.result));
+          const mode=confirm('Merge into what is already here?\n\nOK = merge   ·   Cancel = replace')?'merge':'replace';
+          const n=await xdImport(b,mode);
+          st.textContent='Imported '+n+' item groups — reloading…';
+          setTimeout(()=>location.reload(),1200);
+        }catch(e){st.innerHTML=`<span style="color:var(--bad)">${esc(e.message)}</span>`;}
+      };
+      r.readAsText(f);};
+    i.click();
+  };
+  const save=()=>{
+    TFORGE.base=$('#tf-base').value.trim()||TF_DEFAULTS.base;
+    TFORGE.key=$('#tf-key').value.trim();
+    TFORGE.agent=$('#tf-agent').value.trim();
+    saveTforge();
+  };
+  const tst=$('#tf-test');
+  if(tst)tst.onclick=async()=>{
+    save();const s=$('#tf-status');s.textContent='Checking…';
+    const r=await tfProbe();
+    s.innerHTML=r.ok?`<span style="color:var(--good)">✓ reachable via ${esc(r.via||'direct')}</span>`
+      :`<span style="color:var(--bad)">✗ ${esc(r.error||('HTTP '+r.status))}</span>`;
+  };
+  const ag=$('#tf-agents');
+  if(ag)ag.onclick=async()=>{
+    save();const o=$('#tf-out');o.textContent='Loading…';
+    try{
+      const list=await tfAgents();
+      o.innerHTML=list.length?list.map(a=>`<div class="cx-row"><b>${esc(a.name||a.id)}</b>
+        <span class="mono mini">${esc(a.id||'')}</span><span style="flex:1"></span>
+        <button class="btn ghost small" data-tfpick="${esc(a.id||'')}">Use this one</button></div>`).join('')
+        :'<p class="help">No agents configured in TrueForge yet — make one there first.</p>';
+      $$('[data-tfpick]').forEach(b=>b.onclick=()=>{
+        TFORGE.agent=b.dataset.tfpick;TFORGE.session='';saveTforge();renderCrossDevice();});
+    }catch(e){o.innerHTML=`<p class="help" style="color:var(--bad)">${esc(e.message)}</p>`;}
+  };
+  const nw=$('#tf-new');
+  if(nw)nw.onclick=async()=>{
+    save();const o=$('#tf-out');o.textContent='Starting…';
+    try{await tfNewSession();renderCrossDevice();toast('Session started — it now lives in TrueForge, not this tab',4000);}
+    catch(e){o.innerHTML=`<p class="help" style="color:var(--bad)">${esc(e.message)}</p>`;}
+  };
+}
+
+
+/* ═══════════════════ STUDIO — PREVIEW & UPGRADE ═══════════════════
+   Studio already had multi-file editing, live preview and a captured console. What it lacked
+   next to a dedicated previewer: device widths, find/replace, and — the important one — an
+   upgrade pass you can SEE BEFORE IT LANDS.
+
+   That last point is the whole design. "Fix errors with AI" overwrites the workspace and hopes.
+   An upgrade candidate is rendered in its own frame beside the current one, with the size delta
+   shown, and only replaces your files when you say Apply. A model that silently ate a working
+   app because its rewrite looked plausible is the failure this prevents. */
+const STX_DEVICES=[
+  {id:'auto',label:'Fit',w:0},
+  {id:'iphone-se',label:'iPhone SE · 375',w:375},
+  {id:'iphone',label:'iPhone 15 · 393',w:393},
+  {id:'ipad',label:'iPad · 820',w:820},
+  {id:'laptop',label:'Laptop · 1280',w:1280},
+  {id:'desktop',label:'Desktop · 1600',w:1600},
+];
+const STX_PRESETS=[
+  {id:'custom', label:'Describe it yourself', p:''},
+  {id:'fix',    label:'Fix bugs',            p:'Find and fix every real bug. Do not restyle anything or add features.'},
+  {id:'ui',     label:'Improve the UI',      p:'Improve visual design, spacing, hierarchy and typography. Keep all behaviour identical.'},
+  {id:'mobile', label:'Make it work on a phone',p:'Make this genuinely good on a small touch screen: real touch targets (44px minimum), no sideways scrolling, safe-area insets respected. Keep the desktop layout working.'},
+  {id:'game',   label:'Better game feel',    p:'Improve responsiveness and feedback: easing, hit feedback, screenshake where it fits, clearer state. Do not change the rules of the game.'},
+  {id:'perf',   label:'Performance pass',    p:'Reduce layout thrash, unnecessary re-renders and wasted work. Behaviour must not change.'},
+  {id:'a11y',   label:'Accessibility pass',  p:'Add real semantics, labels, focus order and keyboard support. Fix contrast that genuinely fails WCAG AA. Do not change the visual design otherwise.'},
+  {id:'refactor',label:'Tidy the code',      p:'Refactor for clarity. Behaviour must be byte-for-byte identical from the user side.'},
+  {id:'feature',label:'Add a feature',       p:'Add the feature described, and change nothing else.'},
+];
+let STX={device:'auto',preset:'custom',cand:null,busy:false,findOpen:false};
+
+function stxApplyDevice(){
+  const f=$('#st-frame');if(!f)return;
+  const d=STX_DEVICES.find(x=>x.id===STX.device)||STX_DEVICES[0];
+  if(!d.w){f.style.width='';f.style.margin='';f.style.maxWidth='';}
+  else{f.style.width=d.w+'px';f.style.maxWidth='100%';f.style.margin='0 auto';}
+  const l=$('#stx-devlbl');if(l)l.textContent=d.label;
+}
+function stxFind(){
+  const ta=$('#st-editor');if(!ta)return;
+  const q=$('#stx-fq').value;if(!q)return;
+  const from=ta.selectionEnd||0;
+  let i=ta.value.indexOf(q,from);
+  if(i<0)i=ta.value.indexOf(q,0);          // wrap
+  if(i<0){toast('Not found',1600);return;}
+  ta.focus();ta.setSelectionRange(i,i+q.length);
+  /* A textarea will not scroll a selection into view on its own. Line-height maths is the
+     only handle we have without a real editor component. */
+  const before=ta.value.slice(0,i).split('\n').length;
+  const lh=parseFloat(getComputedStyle(ta).lineHeight)||16;
+  ta.scrollTop=Math.max(0,(before-6)*lh);
+}
+function stxReplaceAll(){
+  const ta=$('#st-editor');if(!ta)return;
+  const q=$('#stx-fq').value,r=$('#stx-fr').value;
+  if(!q)return;
+  const n=ta.value.split(q).length-1;
+  if(!n)return toast('Nothing to replace',1800);
+  ta.value=ta.value.split(q).join(r);
+  ta.dispatchEvent(new Event('input',{bubbles:true}));
+  toast('Replaced '+n,2000);
+}
+async function stxUpgrade(){
+  if(STX.busy)return;
+  const preset=STX_PRESETS.find(x=>x.id===STX.preset)||STX_PRESETS[0];
+  const extra=$('#stx-prompt').value.trim();
+  const instruction=[preset.p,extra].filter(Boolean).join('\n\n');
+  if(!instruction)return toast('Say what to change',2200);
+  const useErr=$('#stx-witherr')&&$('#stx-witherr').checked&&previewErrors.length;
+  STX.busy=true;
+  const b=$('#stx-go');b.disabled=true;b.textContent='Working…';
+  const st=$('#stx-status');if(st)st.textContent='Generating a candidate…';
+  try{
+    const model=(pickers.relayBuild?pickers.relayBuild.get():null)||settings.buildModel;
+    const acc=await streamComplete({model,maxTokens:16000,
+      messages:[{role:'system',content:
+        'You upgrade an existing web app. Return the COMPLETE corrected files using the '+
+        '===FILE: name=== format, one block per file. Never return a diff, never return partial '+
+        'files, never drop a file you were given. Preserve every existing feature unless the '+
+        'instruction explicitly says to remove it.'+skillBlockFor('factory')},
+        {role:'user',content:'INSTRUCTION:\n'+instruction+
+          (useErr?'\n\nRUNTIME ERRORS CURRENTLY THROWN:\n'+previewErrors.join('\n'):'')+
+          '\n\nCURRENT FILES:\n'+filesToText(WS.files)}]},null,null,'studio-upgrade');
+    const files=parseFiles(acc.content);
+    if(!Object.keys(files).length)throw new Error('the model returned nothing parseable');
+    const before=Object.values(WS.files).join('').length;
+    const after=Object.values(files).join('').length;
+    STX.cand={files,model,before,after,ts:nowISO()};
+    renderStxCandidate();
+    if(st)st.textContent='';
+  }catch(e){
+    const st2=$('#stx-status');if(st2)st2.innerHTML=`<span style="color:var(--bad)">${esc(e.message)}</span>`;
+  }
+  STX.busy=false;b.disabled=false;b.textContent='✦ Upgrade';
+}
+function stxComposeFrom(files){
+  /* Same inlining composePreview does, but against a candidate set rather than the workspace,
+     so the preview is of the candidate and not of what is currently saved. */
+  const save=WS.files;
+  try{WS.files=files;return composePreview(true);}
+  finally{WS.files=save;}
+}
+function renderStxCandidate(){
+  const host=$('#stx-cand');if(!host)return;
+  if(!STX.cand){host.innerHTML='';return;}
+  const c=STX.cand;
+  const delta=c.after-c.before;
+  const pct=c.before?Math.round(delta/c.before*100):0;
+  /* A large shrink is the signature of a model that quietly dropped half the app, so it is
+     called out rather than left for the user to discover after applying. */
+  const warn=pct<=-25;
+  host.innerHTML=`<div class="card" style="margin-top:10px">
+    <h3>Candidate upgrade <span class="tag">${esc(c.model.split('/').pop())}</span></h3>
+    <p class="help">This has not touched your files. Look at it first.</p>
+    <div class="stx-stats">
+      <span>${Object.keys(c.files).length} file${Object.keys(c.files).length===1?'':'s'}</span>
+      <span>${c.before.toLocaleString()} → ${c.after.toLocaleString()} chars</span>
+      <span style="color:${warn?'var(--bad)':delta>0?'var(--good)':'var(--ink3)'}">${delta>=0?'+':''}${pct}%</span>
+      ${warn?'<b style="color:var(--bad)">⚠ much smaller — check nothing was dropped</b>':''}
+    </div>
+    <iframe class="stx-frame" id="stx-frame" sandbox="allow-scripts allow-modals allow-forms allow-popups"></iframe>
+    <div class="row" style="gap:8px;margin-top:8px">
+      <button class="btn good" id="stx-apply">Apply this</button>
+      <button class="btn ghost" id="stx-discard">Discard</button>
+      <button class="btn ghost" id="stx-retry">Try again</button>
+      <button class="btn ghost" id="stx-diff">What changed?</button>
+      ${connMenu(connMake('files',Object.entries(c.files).map(([name,content])=>({name,content})),'Upgraded app','studio'))}
+    </div>
+    <div id="stx-diffout"></div>
+  </div>`;
+  const fr=$('#stx-frame');if(fr)fr.srcdoc=stxComposeFrom(c.files);
+  const ap=$('#stx-apply');
+  if(ap)ap.onclick=()=>{
+    WS.files=c.files;WS.entry=pickEntry(c.files);WS.active=WS.entry;
+    wsSave();STX.cand=null;renderStudio();runPreview();renderStxCandidate();
+    toast('Applied — the previous version is still in History',3000);
+  };
+  const dc=$('#stx-discard');if(dc)dc.onclick=()=>{STX.cand=null;renderStxCandidate();};
+  const rt=$('#stx-retry');if(rt)rt.onclick=()=>{STX.cand=null;renderStxCandidate();stxUpgrade();};
+  const df=$('#stx-diff');
+  if(df)df.onclick=()=>{
+    const o=$('#stx-diffout');
+    const names=[...new Set(Object.keys(WS.files).concat(Object.keys(c.files)))];
+    o.innerHTML='<div class="hr"></div>'+names.map(n=>{
+      const a=WS.files[n]||'',b=c.files[n]||'';
+      const tag=!WS.files[n]?'<span class="tag" style="color:var(--good)">added</span>'
+        :!c.files[n]?'<span class="tag" style="color:var(--bad)">REMOVED</span>'
+        :a===b?'<span class="tag">unchanged</span>'
+        :`<span class="tag">${a.length.toLocaleString()} → ${b.length.toLocaleString()}</span>`;
+      return `<div class="cx-row mini"><b class="mono">${esc(n)}</b><span style="flex:1"></span>${tag}</div>`;
+    }).join('');
+  };
+  if(typeof connInit==='function')connInit();
+}
+function renderStudioX(){
+  const host=$('#stx-panel');if(!host)return;
+  host.innerHTML=`
+    <div class="stx-bar">
+      <select id="stx-dev" title="Preview width">${STX_DEVICES.map(d=>
+        `<option value="${d.id}"${STX.device===d.id?' selected':''}>${esc(d.label)}</option>`).join('')}</select>
+      <button class="btn ghost small" id="stx-findbtn">Find</button>
+      <button class="btn ghost small" id="stx-fs" title="Fullscreen the preview">⛶</button>
+      <button class="btn ghost small" id="stx-towebos" title="Install this on the WebOS desktop">🪟 Install as app</button>
+      <span style="flex:1"></span>
+      <span class="mini" id="stx-devlbl"></span>
+    </div>
+    <div class="stx-find" id="stx-find" ${STX.findOpen?'':'hidden'}>
+      <input id="stx-fq" placeholder="Find in this file">
+      <input id="stx-fr" placeholder="Replace with">
+      <button class="btn ghost small" id="stx-fnext">Next</button>
+      <button class="btn ghost small" id="stx-frall">Replace all</button>
+    </div>
+    <div class="card" style="margin-top:10px">
+      <h3>✦ Upgrade with AI</h3>
+      <p class="help">Generates a candidate and shows it beside your app. Nothing is overwritten
+        until you press Apply.</p>
+      <select id="stx-preset">${STX_PRESETS.map(x=>
+        `<option value="${x.id}"${STX.preset===x.id?' selected':''}>${esc(x.label)}</option>`).join('')}</select>
+      <textarea id="stx-prompt" rows="2" style="margin-top:8px"
+        placeholder="Anything specific to add — e.g. “keep the scoring exactly as it is”"></textarea>
+      <label class="chk" style="margin-top:6px"><input type="checkbox" id="stx-witherr" checked>
+        include the ${previewErrors.length} runtime error${previewErrors.length===1?'':'s'} the console caught</label>
+      <div class="row" style="gap:8px;margin-top:8px">
+        <button class="btn" id="stx-go">✦ Upgrade</button>
+        <span class="mini" id="stx-status"></span>
+      </div>
+    </div>
+    <div id="stx-cand"></div>`;
+  const dv=$('#stx-dev');
+  if(dv)dv.onchange=()=>{STX.device=dv.value;stxApplyDevice();};
+  const ps=$('#stx-preset');
+  if(ps)ps.onchange=()=>{STX.preset=ps.value;};
+  const fb=$('#stx-findbtn');
+  if(fb)fb.onclick=()=>{STX.findOpen=!STX.findOpen;$('#stx-find').hidden=!STX.findOpen;
+    if(STX.findOpen)$('#stx-fq').focus();};
+  const fn=$('#stx-fnext');if(fn)fn.onclick=stxFind;
+  const fa=$('#stx-frall');if(fa)fa.onclick=stxReplaceAll;
+  const fs=$('#stx-fs');
+  if(fs)fs.onclick=()=>{const f=$('#st-frame');
+    if(f&&f.requestFullscreen)f.requestFullscreen();else toast('Fullscreen unavailable here',2000);};
+  const tw=$('#stx-towebos');if(tw)tw.onclick=()=>{wosInstallFromStudio();};
+  const go2=$('#stx-go');if(go2)go2.onclick=stxUpgrade;
+  stxApplyDevice();renderStxCandidate();
+}
+
+
+/* ═══════════════════ GITHUB IMPORT ═══════════════════
+   Pull a single-file app or a skill straight out of a repo. Deliberately narrow: this fetches
+   files through the public GitHub API and installs what it finds. It does NOT run a build, so
+   a React repo that needs npm cannot become an app here — and the UI says that rather than
+   producing a blank window and letting the user guess why.
+
+   Unauthenticated GitHub allows 60 requests/hour per IP. That limit is reported honestly when
+   hit, because "nothing found" and "you are rate-limited" need completely different responses
+   from the user. */
+const GH_RAW='https://raw.githubusercontent.com/';
+function ghParse(input){
+  const s=String(input||'').trim().replace(/\.git$/,'');
+  const m=/(?:github\.com\/)?([\w.-]+)\/([\w.-]+)(?:\/(?:tree|blob)\/([\w.-]+)(?:\/(.*))?)?/.exec(s);
+  if(!m)return null;
+  return{owner:m[1],repo:m[2],ref:m[3]||'',path:m[4]||''};
+}
+async function ghApi(path){
+  const r=await fetch('https://api.github.com/'+path);
+  if(r.status===403){
+    const reset=r.headers.get('x-ratelimit-remaining')==='0';
+    throw new Error(reset?'GitHub rate limit reached (60/hour without a token). Try again later.'
+      :'GitHub refused the request (403).');
+  }
+  if(r.status===404)throw new Error('Not found — check the owner/repo and that it is public.');
+  if(!r.ok)throw new Error('GitHub returned '+r.status);
+  return r.json();
+}
+async function ghScan(input){
+  const g=ghParse(input);
+  if(!g)throw new Error('Could not read that as owner/repo or a github.com URL');
+  const meta=await ghApi('repos/'+g.owner+'/'+g.repo);
+  const ref=g.ref||meta.default_branch||'main';
+  const tree=await ghApi('repos/'+g.owner+'/'+g.repo+'/git/trees/'+encodeURIComponent(ref)+'?recursive=1');
+  const files=(tree.tree||[]).filter(t=>t.type==='blob');
+  const html=files.filter(f=>/\.html?$/i.test(f.path)&&f.size<3e6);
+  const skills=files.filter(f=>/(^|\/)(SKILL|skill)\.md$/.test(f.path)||/^skills?\/.+\.md$/i.test(f.path));
+  const md=files.filter(f=>/^readme\.md$/i.test(f.path));
+  const needsBuild=files.some(f=>/^package\.json$/i.test(f.path));
+  return{g:Object.assign({},g,{ref}),meta,html,skills,md,needsBuild,total:files.length,truncated:!!tree.truncated};
+}
+async function ghRaw(g,path){
+  const r=await fetch(GH_RAW+g.owner+'/'+g.repo+'/'+g.ref+'/'+path);
+  if(!r.ok)throw new Error('Could not fetch '+path+' ('+r.status+')');
+  return r.text();
+}
+function renderGhImport(){
+  const host=$('#ghi-panel');if(!host)return;
+  host.innerHTML=`<div class="card">
+      <h3>⬇ Bring in an app or skill from GitHub</h3>
+      <p class="help">Paste a repo. Any single-file HTML app can be installed to the WebOS desktop,
+        opened in Studio, or downloaded. Any <code>SKILL.md</code> is added to your skills.
+        <b>Repos that need a build step (npm) cannot run here</b> — this fetches files, it does not
+        compile them.</p>
+      <div class="row" style="gap:8px">
+        <input id="ghi-repo" class="mono" style="flex:1" placeholder="owner/repo — or a github.com URL">
+        <button class="btn" id="ghi-go">Scan</button>
+      </div>
+      <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">
+        ${['CartyChris/unlazy-skill','MengTo/threeui'].map(r=>
+          `<button class="btn ghost small" data-ghex="${esc(r)}">${esc(r)}</button>`).join('')}
+      </div>
+      <div id="ghi-out" style="margin-top:10px"></div>
+    </div>`;
+  const out=$('#ghi-out');
+  const run=async()=>{
+    const v=$('#ghi-repo').value.trim();
+    if(!v)return toast('Paste a repo first',2000);
+    out.innerHTML='<p class="help">Reading the repository…</p>';
+    try{
+      const r=await ghScan(v);
+      const lic=r.meta.license&&r.meta.license.spdx_id;
+      out.innerHTML=`
+        <div class="cx-row"><b>${esc(r.meta.full_name)}</b>
+          <span class="tag">${esc(lic||'no licence')}</span>
+          <span class="mini muted">★ ${r.meta.stargazers_count} · ${r.total} files${r.truncated?' (listing truncated)':''}</span></div>
+        ${r.meta.description?`<p class="help">${esc(r.meta.description)}</p>`:''}
+        ${r.needsBuild?`<div class="banner warn" style="margin:8px 0">This repo has a <code>package.json</code>,
+          so it probably needs <code>npm install &amp; build</code> before it runs. Single HTML files below
+          will still work; the rest will not run here.</div>`:''}
+        ${!lic?`<div class="banner warn" style="margin:8px 0">No licence file detected — code without a
+          licence is not automatically yours to reuse. Check before shipping anything from it.</div>`:''}
+        <h3 style="margin-top:10px">Runnable HTML (${r.html.length})</h3>
+        ${r.html.length?r.html.slice(0,40).map(f=>`<div class="cx-row">
+            <b class="mono mini">${esc(f.path)}</b>
+            <span class="mini muted">${(f.size/1024).toFixed(0)} KB</span>
+            <span style="flex:1"></span>
+            <button class="btn ghost small" data-ghinst="${esc(f.path)}">🪟 Install as app</button>
+            <button class="btn ghost small" data-ghstudio="${esc(f.path)}">🛠 Open in Studio</button>
+            <button class="btn ghost small" data-ghdl="${esc(f.path)}">⬇ Download</button>
+          </div>`).join(''):'<p class="help">No standalone HTML file in this repo.</p>'}
+        <h3 style="margin-top:10px">Skills (${r.skills.length})</h3>
+        ${r.skills.length?r.skills.slice(0,30).map(f=>`<div class="cx-row">
+            <b class="mono mini">${esc(f.path)}</b><span style="flex:1"></span>
+            <button class="btn ghost small" data-ghskill="${esc(f.path)}">＋ Add skill</button>
+          </div>`).join(''):'<p class="help">No SKILL.md found.</p>'}`;
+      const G=r.g;
+      const grab=async path=>{out.insertAdjacentHTML('beforeend','');return ghRaw(G,path);};
+      $$('[data-ghinst]').forEach(b=>b.onclick=async()=>{
+        b.disabled=true;b.textContent='Fetching…';
+        try{const html=await grab(b.dataset.ghinst);
+          wosInstall({name:b.dataset.ghinst.split('/').pop().replace(/\.html?$/i,''),html,
+            src:'GitHub · '+G.owner+'/'+G.repo,icon:'🐙'});
+          go('webos');
+        }catch(e){toast(e.message,3200);}
+        b.disabled=false;b.textContent='🪟 Install as app';
+      });
+      $$('[data-ghstudio]').forEach(b=>b.onclick=async()=>{
+        b.disabled=true;
+        try{const html=await grab(b.dataset.ghstudio);
+          connRun('studio',connMake('files',[{name:'index.html',content:html}],b.dataset.ghstudio,'github'));
+        }catch(e){toast(e.message,3200);}
+        b.disabled=false;
+      });
+      $$('[data-ghdl]').forEach(b=>b.onclick=async()=>{
+        try{const html=await grab(b.dataset.ghdl);
+          downloadText(html,b.dataset.ghdl.split('/').pop(),'text/html');}
+        catch(e){toast(e.message,3200);}
+      });
+      $$('[data-ghskill]').forEach(b=>b.onclick=async()=>{
+        b.disabled=true;b.textContent='Adding…';
+        try{
+          const md=await grab(b.dataset.ghskill);
+          const sk=parseSkillMd(md);
+          if(!sk||!sk.name)throw new Error('that file is not a valid SKILL.md');
+          if(typeof SKILLS!=='undefined'&&Array.isArray(SKILLS)){
+            SKILLS.push(sk);if(typeof saveSkills==='function')saveSkills();
+            else store.set('skills',SKILLS);
+          }
+          toast('Added skill “'+sk.name+'” — switch it on for any surface in Library',4200);
+        }catch(e){toast(e.message,3400);}
+        b.disabled=false;b.textContent='＋ Add skill';
+      });
+    }catch(e){out.innerHTML=`<p class="help" style="color:var(--bad)">${esc(e.message)}</p>`;}
+  };
+  const gb=$('#ghi-go');if(gb)gb.onclick=run;
+  const inp=$('#ghi-repo');
+  if(inp)inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();run();}};
+  $$('[data-ghex]').forEach(b=>b.onclick=()=>{$('#ghi-repo').value=b.dataset.ghex;run();});
+}
+
 function currentView(){
   const v=$('.view.active');return v?v.id.replace(/^view-/,''):'';
 }
@@ -33087,7 +35365,7 @@ function go(view){
   if(view==='vo'){voSync();voThink();voResize();voFrame(0);renderVoRoster();
     renderSteer();renderOfficeDesign();renderOutputs();}
   else if(VO.on)voStop();      // do not burn a rAF loop on a tab nobody is looking at
-  if(view==='library'){renderSkillSurfaces();}
+  if(view==='library'){renderSkillSurfaces();renderGhImport();}
   if(view==='library')renderOcrDocs();
   if(view==='study')renderStudy();
   if(view==='ops')renderStyleUI();
@@ -33095,7 +35373,11 @@ function go(view){
   if(view==='forge'&&$('#sub-brain')&&$('#sub-brain').classList.contains('on'))renderBrainMap();
   if(view==='history')renderHistory();
   if(view==='transplant')fillTransplantSources();
-  if(view==='studio'){renderStudio();if(!$('#st-frame').srcdoc)runPreview();}
+  if(view==='studio'){renderStudio();renderStudioX();connInit();if(!$('#st-frame').srcdoc)runPreview();}
+  if(view==='connect'){connInit();renderConnections();}
+  if(view==='settings')renderCrossDevice();
+  if(view==='help')renderHelp();
+  if(view==='webos'){wosInit();wosRender();}
 }
 async function boot(){
   document.documentElement.setAttribute('data-theme',settings.theme);
@@ -33151,7 +35433,9 @@ async function boot(){
   dreamSchedule();
   // Pop-out opens straight onto the Assistant rather than the default tab.
   if(location.hash==='#assistant')go('assistant');
+  connInit();applyTabPos();renderTabAdder();
   applyPopRoute();                            // #pop=<view> — a tab opened via the ↗ button
+  if(!location.hash.startsWith('#pop='))onbMaybe();
   updateKeyPill();renderHistory();fillTransplantSources();
   document.addEventListener('keydown',e=>{
     if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();
@@ -33354,11 +35638,26 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     notifyStopWatch,renderNotify,
     DEV_EMAIL,devDiagnostic,devMailDraft,wireDevMail,
     currentView,toggleFullscreenView,popOutView,applyPopRoute,
+    CONN_KINDS,CONN_PORTS,connPort,connTargets,get CONNX(){return CONNX},set CONNX(v){CONNX=v},
+    saveConnx,connMake,connRun,connMenu,connInit,connCustomAdd,connCustomDel,connLearn,
+    connSuggestDismiss,connIdeas,renderConnections,connToStudio,connToWebos,connToWriter,connToCalc,
+    ONB_INTERESTS,ONB_ALWAYS,get ONB(){return ONB},set ONB(v){ONB=v},saveOnb,onbNeeded,onbTabsFor,
+    onbApply,onbRender,onbMaybe,TABPOS,applyTabPos,setTabPos,renderTabAdder,openTabManager,
+    HELP_TOPICS,get HELPC(){return HELPC},set HELPC(v){HELPC=v},helpSearch,renderHelp,
+    WOS_THEMES,WOS_ICONPACKS,WOS_PRESETS,WOS_BUILTIN,get WOS(){return WOS},set WOS(v){WOS=v},
+    saveWos,wosBody,wosSetBody,wosInstall,wosUninstall,wosAllApps,wosApp,wosNotify,wosFromLog,
+    wosOpen,wosClose,wosFocus,wosMax,wosMin,wosSnap,wosApplyTheme,wosRender,wosRenderNotifs,
+    wosInit,wosNewApp,wosInstallFromStudio,wosInstallAI,wosBroadcast,wosPreset,wosIconPos,
+    GH_RAW,ghParse,ghApi,ghScan,ghRaw,renderGhImport,
+    STX_DEVICES,STX_PRESETS,get STX(){return STX},set STX(v){STX=v},stxApplyDevice,stxFind,
+    stxReplaceAll,stxUpgrade,stxComposeFrom,renderStxCandidate,renderStudioX,
+    get TFORGE(){return TFORGE},set TFORGE(v){TFORGE=v},saveTforge,tfUrl,tfFetch,tfProbe,tfAgents,
+    tfNewSession,tfSend,XD_PARTS,xdExport,xdImport,xdLanUrl,renderCrossDevice,TF_PORT_CLASH,
     officeLiveCryptUrl,officeModeSwitch,officeLiveRenderMode,officeLiveInit,
     OFW_FONTS,OFW_PAPERS,OFW_ACTS,get OFW(){return OFW},set OFW(v){OFW=v},ofwSaveState,
     ofwDoc,ofwEl,ofwNewDoc,ofwSaveDoc,ofwRenderDocList,ofwOpenDoc,ofwApplyStyle,ofwStats,
     ofwCmd,ofwSyncButtons,ofwInsertHtml,ofwInsertTable,ofwClearHits,ofwFind,ofwFindStep,
-    ofwReplace,ofwHtmlToBlocks,ofwHtmlToMd,ofwExport,ofwSelectionInfo,ofwAI,
+    ofwReplace,ofwHtmlToBlocks,ofwHtmlToMd,ofwExport,ofwSelectionInfo,ofwAI,ofwSendMenu,ofcSendMenu,
     ofcColName,ofcColIndex,ofcRefParts,ofcTokens,ofcParse,ofcEvalAst,ofcCellValue,ofcDisplay,
     ofcIsErr,OFC_ERR,OFC_FNS,get OFC(){return OFC},set OFC(v){OFC=v},ofcSaveState,ofcBook,
     ofcSheet,ofcNewBook,ofcRender,ofcRenderGrid,ofcRenderBar,ofcSet,ofcStyleSel,ofcFmtSel,
