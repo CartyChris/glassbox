@@ -288,6 +288,145 @@ main{flex:1;overflow:hidden;background:var(--panel);border-top:1px solid var(--e
 .wos-browbar{display:flex;gap:6px;padding:7px;background:rgba(255,255,255,.05)}
 .wos-browbar input{height:28px}
 .wos-start{font-weight:800;padding:3px 13px;margin-right:6px;cursor:pointer}
+/* ── new WebOS surfaces ── */
+.wos.no-anim *{transition:none!important;animation:none!important}
+.wos-mb.strong{font-weight:800}
+.wos-quota{font-size:11px;opacity:.7;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.07)}
+.wos-quota.warn{background:rgba(255,176,32,.2);color:#ffd79a;opacity:1}
+.wos-icon.folder .wos-glyph{filter:drop-shadow(0 3px 8px rgba(0,0,0,.5))}
+.wos-fcount{position:absolute;top:2px;right:8px;font-size:9.5px;background:rgba(0,0,0,.55);
+  border-radius:999px;padding:1px 5px}
+.wos-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:9px;
+  color:inherit;padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer}
+.wos-btn:hover{background:rgba(255,255,255,.16)}
+.wos-btn.primary{background:linear-gradient(135deg,#67e8f9,#8b5cf6);color:#06101c;border:0;font-weight:800}
+.wos-btn.danger{background:rgba(251,113,133,.18);color:#fecdd3}
+.wos-in{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.16);border-radius:9px;
+  color:inherit;padding:7px 10px;font-size:12.5px;width:100%}
+.wos-in:focus{outline:none;border-color:#67e8f9}
+.wos-lbl{display:flex;flex-direction:column;gap:4px;font-size:11.5px;opacity:.75}
+.wos-chk{display:inline-flex;gap:7px;align-items:center;font-size:12px;cursor:pointer}
+.wos-desc{font-size:11.5px;opacity:.62}
+.wos-note{font-size:11.5px;opacity:.6;line-height:1.5;margin:8px 0 0}
+.wos-none{opacity:.5;font-size:12.5px;padding:8px 0}
+.wos-tag{font-size:10px;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.09);opacity:.8}
+.wos-frow{display:flex;gap:9px;align-items:center;padding:7px 9px;border-radius:9px;margin-bottom:5px;
+  border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04)}
+.wos-frow.wrap,.wos-frow.head{flex-wrap:wrap}
+.wos-frow i{display:block;font-style:normal;font-size:11px;opacity:.6}
+.wos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:9px;margin-top:8px}
+.wos-card{display:flex;flex-direction:column;gap:3px;align-items:flex-start;padding:12px;border-radius:12px;
+  border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);cursor:pointer;
+  color:inherit;text-align:left;transition:.16s}
+.wos-card:hover{transform:translateY(-3px);background:rgba(255,255,255,.1)}
+.wos-cardic{font-size:26px}
+.wos-card b{font-size:12.5px}.wos-card i{font-style:normal;font-size:11px;opacity:.6;line-height:1.4}
+.wos-bigic{font-size:46px}
+.wos-bridge{text-align:center;display:flex;flex-direction:column;gap:9px;align-items:center;padding:34px 20px}
+.wos-extra{display:flex;gap:9px;align-items:center;padding:8px 10px;border-radius:10px;margin-bottom:5px;
+  border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);cursor:pointer}
+.wos-extra.on{border-color:rgba(103,232,249,.5);background:rgba(103,232,249,.09)}
+.wos-extra i{display:block;font-style:normal;font-size:11px;opacity:.6}
+.wos-extra b{font-size:12.5px}
+/* start menu, palette, toasts */
+.wos-start{position:absolute;left:12px;bottom:12px;width:min(600px,calc(100% - 24px));max-height:70%;
+  overflow:auto;z-index:60;padding:14px;border-radius:18px;background:rgba(7,13,24,.95);
+  border:1px solid rgba(255,255,255,.16);box-shadow:0 24px 70px rgba(0,0,0,.6);backdrop-filter:blur(24px)}
+.wos-start[hidden]{display:none}
+.wos-pal{position:absolute;left:50%;top:12%;transform:translateX(-50%);width:min(620px,92%);z-index:80;
+  padding:12px;border-radius:16px;background:rgba(6,12,23,.97);border:1px solid rgba(255,255,255,.18);
+  box-shadow:0 26px 70px rgba(0,0,0,.65);backdrop-filter:blur(22px)}
+.wos-pal[hidden]{display:none}
+.wos-palres{max-height:340px;overflow:auto;margin-top:8px;display:flex;flex-direction:column;gap:2px}
+.wos-palitem{display:flex;flex-direction:column;gap:1px;align-items:flex-start;padding:8px 11px;
+  border-radius:9px;background:transparent;border:none;color:inherit;cursor:pointer;text-align:left;width:100%}
+.wos-palitem:hover,.wos-palitem.on{background:rgba(255,255,255,.1)}
+.wos-palitem b{font-size:12.5px}.wos-palitem i{font-style:normal;font-size:11px;opacity:.55}
+.wos-toasts{position:absolute;right:12px;top:12px;z-index:90;display:flex;flex-direction:column;gap:7px;
+  width:min(320px,60%);pointer-events:none}
+.wos-toast{background:rgba(7,13,24,.94);border:1px solid rgba(255,255,255,.16);border-left:3px solid #67e8f9;
+  padding:10px 12px;border-radius:11px;font-size:12px;animation:wosIn .22s;box-shadow:0 12px 34px rgba(0,0,0,.5)}
+.wos-toast.good{border-left-color:#35d07f}.wos-toast.warn{border-left-color:#ffb020}
+.wos-toast i{display:block;font-style:normal;opacity:.65;margin-top:2px}
+.wos-toast.out{opacity:0;transform:translateX(14px);transition:.35s}
+@keyframes wosIn{from{opacity:0;transform:translateY(-8px)}}
+.wos-clearn{width:100%;background:transparent;border:none;color:inherit;opacity:.6;font-size:11.5px;
+  padding:8px;cursor:pointer}
+/* pet */
+.wos-pet{position:absolute;z-index:8;width:76px;cursor:grab;user-select:none;touch-action:none;text-align:center}
+.wos-pet[hidden]{display:none}
+.wos-petbody{width:66px;height:58px;margin:0 auto;border-radius:50% 50% 46% 46%;
+  background:radial-gradient(circle at 34% 30%,hsl(var(--pet-hue,170) 90% 72%),hsl(var(--pet-hue,170) 70% 44%));
+  box-shadow:0 8px 22px rgba(0,0,0,.45),inset 0 -6px 14px rgba(0,0,0,.25);
+  display:grid;place-items:center;font-size:15px;color:#04121a;font-weight:700;
+  animation:wosBob 3.2s ease-in-out infinite}
+.wos.no-anim .wos-petbody{animation:none}
+@keyframes wosBob{0%,100%{transform:translateY(0) scale(1,1)}50%{transform:translateY(-5px) scale(1.03,.97)}}
+.wos-pet[data-mood=alarmed] .wos-petbody{animation:wosShake .5s ease-in-out infinite}
+@keyframes wosShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+.wos-petname{font-size:10.5px;opacity:.7;margin-top:3px;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.wos-petbubble{position:absolute;bottom:74px;left:50%;transform:translateX(-50%);
+  background:rgba(8,14,26,.96);border:1px solid rgba(255,255,255,.2);border-radius:12px;
+  padding:8px 11px;font-size:11.5px;width:max-content;max-width:230px;line-height:1.45;
+  box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.wos-petbubble[hidden]{display:none}
+/* studio */
+.wos-studio{display:grid;grid-template-rows:auto auto 1fr auto;height:100%;gap:8px;padding:10px}
+.wos-srow{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.wos-srow .wos-in{width:auto;flex:1;min-width:110px}
+.wos-stabs{display:flex;gap:4px;flex-wrap:wrap}
+.wos-stabs button{background:transparent;border:1px solid rgba(255,255,255,.14);border-radius:8px 8px 0 0;
+  color:inherit;padding:4px 11px;font-size:11.5px;cursor:pointer;font-family:var(--mono)}
+.wos-stabs button.on{background:rgba(103,232,249,.16);border-color:#67e8f9;color:#a9f0ff}
+.wos-smain{display:grid;grid-template-columns:1fr 1fr;gap:8px;min-height:0}
+@media(max-width:820px){.wos-smain{grid-template-columns:1fr;grid-template-rows:1fr 1fr}}
+.wos-code{width:100%;height:100%;min-height:0;resize:none;background:#05070f;color:#cfe6ff;
+  border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:10px;
+  font-family:var(--mono);font-size:12.5px;line-height:1.5}
+.wos-preview{width:100%;height:100%;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:#fff}
+/* browser / terminal / misc */
+.wos-brow{display:flex;flex-direction:column;height:100%}
+.wos-browbar{display:flex;gap:6px;padding:8px;background:rgba(255,255,255,.05);align-items:center}
+.wos-bookmarks{display:flex;gap:5px;padding:0 8px 8px;flex-wrap:wrap}
+.wos-chip{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:999px;
+  color:inherit;padding:3px 10px;font-size:11px;cursor:pointer}
+.wos-chip:hover{background:rgba(255,255,255,.16)}
+.wos-term{display:flex;flex-direction:column;height:100%;background:#050a12;padding:10px;
+  font-family:var(--mono);font-size:12.5px}
+.wos-termout{flex:1;overflow:auto;white-space:pre-wrap;line-height:1.55;color:#9fe8c8}
+.wos-termin{display:flex;gap:7px;align-items:center;color:#67e8f9}
+.wos-termin .wos-in{font-family:var(--mono)}
+.wos-notesw{display:flex;flex-direction:column;height:100%;padding:10px;gap:8px}
+.wos-notes{flex:1;width:100%;border:none;border-radius:10px;background:#fffdf5;color:#222;
+  padding:16px 18px;font-size:14px;line-height:1.6;resize:none}
+.wos-calc{display:flex;flex-direction:column;height:100%;padding:12px;gap:9px}
+.wos-calcd{width:100%;font-size:29px;text-align:right;padding:12px;border-radius:11px;
+  background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.14);color:inherit}
+.wos-calck{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;flex:1}
+.wos-calck .wos-btn{font-size:16px}
+.wos-clockw{text-align:center}
+.wos-bigclock{font-size:52px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.wos-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px}
+.wos-cal b{font-size:10.5px;opacity:.5}
+.wos-day{padding:7px 0;border-radius:8px;background:rgba(255,255,255,.05);font-size:12px}
+.wos-day.today{background:#67e8f9;color:#06101c;font-weight:800}
+.wos-drop{border:1px dashed rgba(103,232,249,.55);border-radius:12px;padding:20px;text-align:center;font-size:12.5px}
+.wos-arcade{display:flex;flex-direction:column;height:100%}
+.wos-arcade .wos-srow{padding:8px}
+.wos-folder{display:flex;flex-direction:column;height:100%}
+.wos-filelist{overflow:auto;margin-top:8px}
+.wos-start-btn{font-weight:800;padding:3px 13px;margin-right:6px;cursor:pointer;
+  border:2px solid;border-color:#fff #000 #000 #fff;background:#c0c0c0;color:#000}
+/* the loud failed-write banner — deliberately not dismissible by clicking away */
+.persist-alarm{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;z-index:400;
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap;max-width:min(760px,94vw);
+  background:var(--panel);border:2px solid var(--bad);border-radius:14px;padding:13px 17px;
+  box-shadow:0 18px 54px rgba(0,0,0,.6)}
+.persist-alarm b{color:var(--bad);font-size:13.5px}
+.persist-alarm span{font-size:12.5px;color:var(--ink2);flex:1;min-width:190px}
+.pq-bar{height:9px;border-radius:999px;background:var(--bg);border:1px solid var(--edge);overflow:hidden;margin:8px 0}
+.pq-bar span{display:block;height:100%;background:var(--good);transition:.4s}
+.pq-bar span.warm{background:#ffb020}.pq-bar span.hot{background:var(--bad)}
 /* ── theme skins ── */
 .wos[data-wtheme=platinum]{background:#8b8b9e;color:#000}
 .wos[data-wtheme=platinum] .wos-win{background:#dcdcdc;color:#000;border:1px solid #000;border-radius:0;box-shadow:2px 2px 0 #000}
@@ -4411,6 +4550,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
     </div></section>
 
     <section class="view" id="view-settings"><div class="wrap" style="max-width:780px">
+      <div id="persist-panel"></div>
       <div id="xd-panel"></div>
       <div class="card" id="proj-card">
         <h3>🗂 Projects</h3>
@@ -4555,7 +4695,14 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function toast(m,ms=2400){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),ms);}
 const store={
   get(k,d){try{const v=localStorage.getItem('gb.'+k);return v==null?d:JSON.parse(v);}catch(e){return d;}},
-  set(k,v){try{localStorage.setItem('gb.'+k,JSON.stringify(v));return true;}catch(e){toast('Storage full — export & clear History');return false;}},
+  /* A failed write used to toast and return false — a value almost nothing checked, so a save
+     could fail and the app carried on as if it had worked. That is the one bug that loses real
+     work, so it now raises a banner that stays until it is dealt with. */
+  set(k,v){try{localStorage.setItem('gb.'+k,JSON.stringify(v));return true;}
+    catch(e){
+      try{if(typeof persistFailBanner==='function')persistFailBanner('Could not save “'+k+'”. '+(e&&e.name==='QuotaExceededError'?'Browser storage is full.':String(e.message||e)));}catch(_){}
+      try{if(typeof logEvent==='function')logEvent('storage',{msg:'write failed for '+k});}catch(_){}
+      return false;}},
 };
 const settings=Object.assign({base:'https://openrouter.ai/api/v1',title:'Glassbox Jet',referer:'glassbox.local',
   archModel:'anthropic/claude-fable-5',buildModel:'deepseek/deepseek-v4-flash-0731',guard:0.5,theme:'dark',
@@ -34124,24 +34271,30 @@ function renderHelp(){
 }
 
 
+
 /* ═══════════════════ WEBOS ═══════════════════
-   A desktop inside the app. Two ideas are being merged here and both are kept whole:
+   A desktop inside the app. Three sources are merged and all three are kept whole:
 
-   AURORA contributed the *feel* — fourteen desktop skins that emulate a real OS rather than
-   tinting one (Win95 gets a grey taskbar with a Start button; Platinum loses the dock entirely
-   because System 7 had no dock), ten icon packs, draggable persistent desktop icons, and a
-   dock. KIMI's WebOS contributed the *point* — apps you make actually install, as icons you
-   launch, not previews you look at once and lose.
+   AURORA gave the *feel* — skins that emulate a whole OS rather than tinting one (Win95 gets a
+   real taskbar and Start button; Platinum has no dock because System 7 had none), icon packs,
+   draggable persistent icons, and a desktop pet whose moods are wired to real system state
+   rather than animated at random.
+   NEXUS gave the *shell* — start menu, command palette, toasts, a real app library, and
+   playable games that run inside the window rather than linking out.
+   KIMI/WebAI gave the *point* — apps you build actually install and stay installed.
 
-   Neither had window resize, maximise or edge-snap. Those are added here, because a desktop
-   where windows cannot be resized stops being a desktop about ten seconds in.
+   Added here, because none of the three had them: window resize and edge-snap, desktop
+   FOLDERS for multi-file projects, and an app studio that hands off to the rest of GlassBox.
 
-   Apps run in a sandboxed iframe with allow-scripts but NOT allow-same-origin. That pair is
-   the whole security story: withholding same-origin is what stops an installed app reading
-   this page's localStorage, which holds the user's API keys. An app that needs to talk to
-   GlassBox does it through postMessage, which is mediated below. */
+   One Aurora app is deliberately NOT ported: G0DM0D3, a refusal-bypass "jailbreak race".
+   Everything else from its list is here, either natively or as a window onto the real
+   GlassBox system that already does that job.
+
+   Security: user apps run in a sandboxed iframe with allow-scripts but NOT allow-same-origin.
+   Withholding same-origin is the entire protection — it is what stops an installed app reading
+   this page's localStorage, where the user's API keys live. */
 const WOS_THEMES=[
-  {id:'aurora',  name:'Aurora',           sw:'linear-gradient(135deg,#07060f,#3ee8c8 40%,#8b78ff)'},
+  {id:'aurora',  name:'Aurora Mycelium',  sw:'linear-gradient(135deg,#07060f,#3ee8c8 40%,#8b78ff)'},
   {id:'platinum',name:'Mac OS Platinum',  sw:'linear-gradient(180deg,#ddd,#73739c)'},
   {id:'aqua',    name:'Mac OS X Aqua',    sw:'linear-gradient(180deg,#7eb6ff,#2d6bdc)'},
   {id:'sequoia', name:'macOS Sequoia',    sw:'linear-gradient(180deg,#2c2c2e,#0a84ff)'},
@@ -34155,6 +34308,17 @@ const WOS_THEMES=[
   {id:'paper',   name:'Swiss Paper',      sw:'linear-gradient(180deg,#f3efe7,#b42318)'},
   {id:'cyber',   name:'Night City',       sw:'linear-gradient(135deg,#05010d,#00f0ff 50%,#ff2bd6)'},
   {id:'amiga',   name:'Amiga Workbench',  sw:'linear-gradient(180deg,#0055aa,#ff8800)'},
+  /* New skins beyond the three sources. */
+  {id:'sunset',  name:'Sunset Drive',     sw:'linear-gradient(160deg,#210c18,#fb7185 55%,#f59e0b)'},
+  {id:'forest',  name:'Deep Forest',      sw:'linear-gradient(160deg,#071b15,#4ade80)'},
+  {id:'ocean',   name:'Abyssal',          sw:'linear-gradient(160deg,#06172b,#38bdf8)'},
+  {id:'candy',   name:'Candy Floss',      sw:'linear-gradient(160deg,#23102f,#f9a8d4 60%,#c084fc)'},
+  {id:'graphite',name:'Graphite',         sw:'linear-gradient(180deg,#09090b,#a1a1aa)'},
+  {id:'nord',    name:'Nord',             sw:'linear-gradient(160deg,#2e3440,#88c0d0)'},
+  {id:'dracula', name:'Dracula',          sw:'linear-gradient(160deg,#282a36,#bd93f9 60%,#ff79c6)'},
+  {id:'gruvbox', name:'Gruvbox',          sw:'linear-gradient(160deg,#282828,#fabd2f)'},
+  {id:'synth',   name:'Synthwave Grid',   sw:'linear-gradient(180deg,#2b1055,#ff2bd6 70%,#ffb703)'},
+  {id:'matrix',  name:'Matrix Rain',      sw:'linear-gradient(180deg,#000,#00ff41)'},
 ];
 const WOS_ICONPACKS=[
   {id:'aurora',name:'Aurora glyphs'},{id:'classic',name:'Classic Mac'},
@@ -34162,9 +34326,10 @@ const WOS_ICONPACKS=[
   {id:'luna',name:'XP Luna'},{id:'fluent',name:'Fluent filled'},
   {id:'neon',name:'Neon outline'},{id:'pixel',name:'Pixel'},
   {id:'handmade',name:'Handmade'},{id:'mono',name:'Monochrome'},
+  {id:'glass',name:'Glass'},{id:'flat',name:'Flat colour'},
 ];
-/* Theme presets decide chrome + whether the sky animates + which icon pack pairs with it,
-   exactly as AURORA did — a theme that only recoloured would not read as a different OS. */
+/* A theme is a whole desktop, not a tint: chrome shape, whether the sky animates, which icon
+   pack pairs with it, and whether the bottom bar is a dock, a taskbar, or absent. */
 const WOS_PRESETS={
   aurora:{sky:true,chrome:'aurora',icons:'aurora',dock:'dock'},
   platinum:{sky:false,chrome:'mac9',icons:'classic',dock:'none'},
@@ -34173,36 +34338,85 @@ const WOS_PRESETS={
   win95:{sky:false,chrome:'win95',icons:'luna',dock:'taskbar'},
   vista:{sky:false,chrome:'vista',icons:'aero',dock:'taskbar'},
   fluent:{sky:false,chrome:'fluent',icons:'fluent',dock:'dock'},
-  yaru:{sky:false,chrome:'yaru',icons:'aurora',dock:'dock'},
+  yaru:{sky:false,chrome:'yaru',icons:'flat',dock:'dock'},
   tokyo:{sky:true,chrome:'aurora',icons:'neon',dock:'dock'},
   solar:{sky:false,chrome:'aurora',icons:'classic',dock:'dock'},
   phosphor:{sky:false,chrome:'phosphor',icons:'pixel',dock:'dock'},
   paper:{sky:false,chrome:'paper',icons:'handmade',dock:'dock'},
   cyber:{sky:true,chrome:'aurora',icons:'neon',dock:'dock'},
   amiga:{sky:false,chrome:'amiga',icons:'pixel',dock:'taskbar'},
+  sunset:{sky:true,chrome:'aurora',icons:'glass',dock:'dock'},
+  forest:{sky:true,chrome:'aurora',icons:'flat',dock:'dock'},
+  ocean:{sky:true,chrome:'aurora',icons:'glass',dock:'dock'},
+  candy:{sky:true,chrome:'aurora',icons:'flat',dock:'dock'},
+  graphite:{sky:false,chrome:'fluent',icons:'mono',dock:'dock'},
+  nord:{sky:false,chrome:'aurora',icons:'flat',dock:'dock'},
+  dracula:{sky:false,chrome:'aurora',icons:'neon',dock:'dock'},
+  gruvbox:{sky:false,chrome:'aurora',icons:'pixel',dock:'dock'},
+  synth:{sky:true,chrome:'aurora',icons:'neon',dock:'dock'},
+  matrix:{sky:true,chrome:'phosphor',icons:'pixel',dock:'dock'},
 };
-/* Built-ins are windows onto GlassBox itself rather than separate programs — the point of the
-   desktop is that your real work is reachable from it, not that it is a toy OS beside the app. */
+/* Core apps — always present. */
 const WOS_BUILTIN=[
-  {id:'files',   name:'Files',      icon:'📁', kind:'builtin'},
-  {id:'notes',   name:'Notes',      icon:'📝', kind:'builtin'},
-  {id:'term',    name:'Terminal',   icon:'⌨️', kind:'builtin'},
-  {id:'browser', name:'Web',        icon:'🌐', kind:'builtin'},
-  {id:'store',   name:'App Store',  icon:'🛍', kind:'builtin'},
-  {id:'settings',name:'Customise',  icon:'✦',  kind:'builtin'},
+  {id:'studio',  name:'App Studio', icon:'🛠', kind:'builtin', desc:'Build a widget or app, then hand it to the real studios'},
+  {id:'store',   name:'App Library',icon:'🧩', kind:'builtin', desc:'Install, export and manage everything on this desktop'},
+  {id:'files',   name:'Files',      icon:'📁', kind:'builtin', desc:'Your projects, Studio workspace and bridge folder'},
+  {id:'browser', name:'Browser',    icon:'🌐', kind:'builtin', desc:'Open a site, with an honest fallback when it refuses framing'},
+  {id:'notes',   name:'Notes',      icon:'📝', kind:'builtin', desc:'A scratchpad that saves as you type'},
+  {id:'term',    name:'Terminal',   icon:'⌨️', kind:'builtin', desc:'A real shell through the bridge, plus desktop commands'},
+  {id:'calc',    name:'Calculator', icon:'🧮', kind:'builtin', desc:'Keyboard-first calculator'},
+  {id:'clock',   name:'Clock',      icon:'🕒', kind:'builtin', desc:'Clock, calendar and a timer'},
+  {id:'music',   name:'Music',      icon:'🎵', kind:'builtin', desc:'Play audio you drop in'},
+  {id:'arcade',  name:'Arcade',     icon:'🕹', kind:'builtin', desc:'Games that run inside this window'},
+  {id:'pet',     name:'Companion',  icon:'🍄', kind:'builtin', desc:'A desktop pet wired to what the app is really doing'},
+  {id:'settings',name:'Customise',  icon:'✦',  kind:'builtin', desc:'Themes, icons, wallpaper and extra features'},
+];
+/* Aurora's remaining apps. Every one of these is a window onto a system GlassBox ALREADY has,
+   which is why they are off by default rather than duplicated: switching one on opens the real
+   thing, so there is never a second copy of your data to get out of sync.
+   `tab` is where the real system lives; `native` means the WebOS draws it itself. */
+const WOS_EXTRAS=[
+  {id:'nexus',   name:'Nexus Chat',    icon:'💬', tab:'assistant', desc:'Every provider in one chat', from:'Aurora'},
+  {id:'swarm',   name:'Swarm Mesh',    icon:'✺',  tab:'vo',        desc:'Agents that leave signals for each other', from:'Aurora'},
+  {id:'conductor',name:'Conductor',    icon:'◈',  tab:'mission',   desc:'Direct the swarm and watch it work', from:'Aurora'},
+  {id:'council', name:'Consciousness', icon:'◎',  tab:'council',   desc:'Moderated debate between models', from:'Aurora'},
+  {id:'vault',   name:'Memory Vault',  icon:'▣',  tab:'brain',     desc:'Long-term memory with reflection', from:'Aurora'},
+  {id:'trust',   name:'Trust Ladder',  icon:'⬡',  tab:'guards',    desc:'Autonomy tiers, approvals and rollback', from:'Aurora'},
+  {id:'horizon', name:'Horizon',       icon:'▤',  tab:'factory',   desc:'Long-horizon work that survives a refresh', from:'Aurora'},
+  {id:'observatory',name:'Observatory',icon:'✧',  tab:'pane',      desc:'Span trees and reasoning flags', from:'Aurora'},
+  {id:'ledger',  name:'Ledger',        icon:'💰', tab:'metrics',   desc:'Cost and cache hits per task', from:'Aurora'},
+  {id:'bridge',  name:'Bridge',        icon:'⌬',  tab:'terminal',  desc:'The local daemon and a real shell', from:'Aurora'},
+  {id:'constellation',name:'Constellation',icon:'✦',tab:'modelhub',desc:'Every model and key you have live', from:'Aurora'},
+  {id:'forge',   name:'Forge',         icon:'⌥',  tab:'forge',     desc:'GitHub, tokens and CLIs', from:'Aurora'},
+  {id:'atlas',   name:'Atlas',         icon:'🗺', native:'atlas',  desc:'Free AI sites, framed where they allow it', from:'Aurora'},
+  {id:'theater', name:'Theater',       icon:'🎭', native:'theater',desc:'Replay a debate or a run, step by step', from:'Aurora'},
+  {id:'youtube', name:'Video',         icon:'▶️', native:'youtube',desc:'Play a video by URL or id', from:'Nexus'},
+  {id:'gallery', name:'Gallery',       icon:'🖼', native:'gallery',desc:'Images and video you have generated', from:'Nexus'},
 ];
 const WOS_DEFAULTS={
   theme:'aurora',icons:'aurora',iconLock:false,iconSize:84,wallpaper:'',
-  apps:[],wins:[],iconPos:{},notes:'',notifs:[],z:10,installedFromStudio:[],
+  apps:[],wins:[],iconPos:{},notes:'',notifs:[],z:10,
+  extras:{},petOn:true,pet:{x:70,y:420,name:'Spore'},openFolders:{},
+  dockSize:44,animate:true,
 };
 let WOS=Object.assign({},WOS_DEFAULTS,store.get('webos',{}));
 const saveWos=()=>store.set('webos',WOS);
-let WOS_DRAG=null, WOS_BODIES={};      // bodies are cached in memory, persisted in IDB
+let WOS_DRAG=null, WOS_BODIES={}, WOS_MENU=false, WOS_PAL=false;
 
-/* ── App storage ────────────────────────────────────────────────────────────
-   Metadata in localStorage (small, needs to be synchronous for render); the HTML body in IDB,
-   because a single-file app is routinely 100KB+ and a handful of them would blow the 5MB
-   localStorage quota and take every other setting down with it. */
+const wosExtraOn=id=>!!(WOS.extras||{})[id];
+function wosExtraToggle(id,on){
+  WOS.extras=Object.assign({},WOS.extras);
+  if(on===undefined)on=!WOS.extras[id];
+  if(on)WOS.extras[id]=true;else delete WOS.extras[id];
+  saveWos();wosRender();
+}
+/* ── App + folder storage ───────────────────────────────────────────────────
+   Two shapes, because they behave differently on a desktop and pretending otherwise makes a
+   mess. A `single` app is one HTML file and sits loose on the desktop like a document. A
+   `project` is a full-stack app with many files, so it gets a FOLDER — opening it shows the
+   files, and running it composes them. Metadata lives in localStorage (small, needed
+   synchronously to render); bodies live in IndexedDB, because one 100KB app per icon would
+   blow the 5MB localStorage quota and take every other setting down with it. */
 async function wosBody(id){
   if(WOS_BODIES[id]!=null)return WOS_BODIES[id];
   const v=await IDB.get('wosApp:'+id,'');
@@ -34211,66 +34425,113 @@ async function wosBody(id){
 }
 async function wosSetBody(id,html){
   WOS_BODIES[id]=String(html||'');
-  await IDB.set('wosApp:'+id,WOS_BODIES[id]);
+  const ok=await IDB.set('wosApp:'+id,WOS_BODIES[id]);
+  if(ok===false)wosNotify('Could not save “'+id+'”','Storage is full — free space or export a backup','warn');
+  return ok;
+}
+async function wosFiles(id){return await IDB.get('wosFiles:'+id,null);}
+async function wosSetFiles(id,files){return await IDB.set('wosFiles:'+id,files||{});}
+/* Compose a multi-file project into one runnable document, inlining local css/js so it works
+   inside a srcdoc frame that has no origin to resolve a relative path against. */
+function wosCompose(files){
+  const names=Object.keys(files||{});
+  const entry=names.find(n=>/^index\.html?$/i.test(n))||names.find(n=>/\.html?$/i.test(n));
+  if(!entry)return '<!doctype html><body style="font-family:system-ui;padding:24px">No HTML entry file in this project.</body>';
+  let html=files[entry];
+  names.forEach(n=>{
+    if(n===entry)return;
+    const esc_=n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    if(/\.css$/i.test(n))
+      html=html.replace(new RegExp('<link[^>]*href=["\']\\.?/?'+esc_+'["\'][^>]*>','gi'),'<style>'+files[n]+'</style>');
+    if(/\.js$/i.test(n))
+      html=html.replace(new RegExp('<script[^>]*src=["\']\\.?/?'+esc_+'["\'][^>]*>\\s*<\\/script>','gi'),'<script>'+files[n]+'<\/script>');
+  });
+  return html;
 }
 function wosInstall(o){
-  const app={id:uid(),name:o.name||'Untitled app',icon:o.icon||'🧩',kind:'user',
-    src:o.src||'manual',url:o.url||'',ts:nowISO()};
+  const kind=o.files?'project':(o.url?'link':'single');
+  const app={id:uid(),name:o.name||'Untitled app',icon:o.icon||(kind==='project'?'📦':'🧩'),
+    kind,src:o.src||'manual',url:o.url||'',ts:nowISO(),
+    fileCount:o.files?Object.keys(o.files).length:1};
   WOS.apps=(WOS.apps||[]).concat([app]);
   saveWos();
-  if(o.html)wosSetBody(app.id,o.html);
-  wosNotify('Installed “'+app.name+'”','It is on the desktop now.');
+  if(o.files)wosSetFiles(app.id,o.files);
+  else if(o.html)wosSetBody(app.id,o.html);
+  wosNotify('Installed “'+app.name+'”',kind==='project'
+    ?'It has a folder on the desktop with all '+app.fileCount+' files.'
+    :'It is on the desktop now.','good');
   if($('#wos-root'))wosRender();
   return app;
 }
 function wosUninstall(id){
   WOS.apps=(WOS.apps||[]).filter(a=>a.id!==id);
   WOS.wins=(WOS.wins||[]).filter(w=>w.app!==id);
-  delete WOS.iconPos[id];
-  saveWos();IDB.set('wosApp:'+id,'');delete WOS_BODIES[id];
+  delete WOS.iconPos[id];delete WOS.openFolders[id];
+  saveWos();IDB.set('wosApp:'+id,'');IDB.set('wosFiles:'+id,null);delete WOS_BODIES[id];
   wosRender();
 }
-function wosAllApps(){return WOS_BUILTIN.concat(WOS.apps||[]);}
+function wosVisibleExtras(){return WOS_EXTRAS.filter(e=>wosExtraOn(e.id));}
+function wosAllApps(){
+  return WOS_BUILTIN
+    .concat(wosVisibleExtras().map(e=>Object.assign({},e,{kind:'extra'})))
+    .concat(WOS.apps||[]);
+}
 function wosApp(id){return wosAllApps().find(a=>a.id===id);}
 
-/* ── Notifications ──────────────────────────────────────────────────────────
+/* ── Notifications ─────────────────────────────────────────────────────────
    The desktop subscribes to the app's existing event log rather than keeping a second one, so
-   anything GlassBox already records — a finished run, something waiting on approval — surfaces
+   anything GlassBox already records — a finished run, something awaiting approval — surfaces
    here without the producing code needing to know the WebOS exists. */
 function wosNotify(title,body,kind){
   WOS.notifs=[{id:uid(),title:String(title||''),body:String(body||''),kind:kind||'info',ts:nowISO(),read:false}]
-    .concat(WOS.notifs||[]).slice(0,60);
+    .concat(WOS.notifs||[]).slice(0,80);
   saveWos();
   if($('#wos-notifs'))wosRenderNotifs();
+  wosToast(title,body,kind);
+  wosPetSay(kind==='warn'?'Something needs you.':null);
   wosBroadcast({t:'notify',title,body});
+}
+function wosToast(title,body,kind){
+  const host=$('#wos-toasts');if(!host)return;
+  const el=document.createElement('div');
+  el.className='wos-toast '+(kind||'info');
+  el.innerHTML=`<b>${esc(title)}</b>${body?`<i>${esc(body)}</i>`:''}`;
+  host.appendChild(el);
+  setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),400);},4200);
 }
 function wosFromLog(e){
   if(!e)return;
-  const k=e.kind||e.type||'';
-  if(/approve|await|blocked/i.test(k))wosNotify('Waiting on you',e.msg||e.note||'Something needs approval','warn');
+  const k=(e.kind||e.type||'')+'';
+  if(/approve|await|blocked|guard/i.test(k))wosNotify('Waiting on you',e.msg||e.note||'Something needs approval','warn');
   else if(/done|complete|finish/i.test(k))wosNotify('Finished',e.msg||e.note||'A run completed','good');
 }
 function wosRenderNotifs(){
   const host=$('#wos-notifs');if(!host)return;
-  const list=(WOS.notifs||[]).slice(0,8);
-  host.innerHTML=list.length?list.map(n=>
-    `<div class="wos-notif ${esc(n.kind)}${n.read?' read':''}" data-wnotif="${esc(n.id)}">
+  const list=(WOS.notifs||[]).slice(0,10);
+  host.innerHTML=(list.length?list.map(n=>
+    `<div class="wos-notif ${esc(n.kind)}${n.read?' read':''}">
       <b>${esc(n.title)}</b><i>${esc(n.body)}</i>
       <span class="wos-nt">${esc(new Date(n.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}))}</span>
-    </div>`).join(''):'<p class="help" style="padding:10px">Nothing yet.</p>';
+    </div>`).join(''):'<p class="wos-none">Nothing yet.</p>')+
+    (list.length?'<button class="wos-clearn" data-wclearn>Clear all</button>':'');
 }
 
 /* ── Windows ────────────────────────────────────────────────────────────────
-   Drag, resize from eight handles, maximise, minimise, and edge-snap. Aurora had only drag
-   and close; a window you cannot resize makes every embedded app the wrong size forever. */
-function wosOpen(appId){
+   Drag, resize from eight handles, maximise, minimise and edge-snap. Aurora and WebAI had
+   drag and close only; Nexus had CSS `resize:both`, which cannot snap and cannot resize from
+   an edge that is not the bottom-right. A desktop whose windows cannot be sized properly
+   stops being a desktop within about ten seconds. */
+function wosOpen(appId,opts){
+  opts=opts||{};
   let w=(WOS.wins||[]).find(x=>x.app===appId&&!x.closed);
   if(!w){
     const n=(WOS.wins||[]).filter(x=>!x.closed).length;
-    w={id:uid(),app:appId,x:60+n*26,y:40+n*20,w:760,h:540,z:++WOS.z,min:false,max:false,closed:false};
+    w={id:uid(),app:appId,x:56+n*26,y:36+n*20,
+       w:opts.w||820,h:opts.h||560,z:++WOS.z,min:false,max:false,closed:false,arg:opts.arg||''};
     WOS.wins=(WOS.wins||[]).concat([w]);
   }
   w.closed=false;w.min=false;w.z=++WOS.z;
+  if(opts.arg)w.arg=opts.arg;
   saveWos();wosRender();
   return w;
 }
@@ -34281,10 +34542,10 @@ function wosClose(id){
 function wosFocus(id){
   const w=(WOS.wins||[]).find(x=>x.id===id);if(!w)return;
   w.z=++WOS.z;saveWos();
-  /* Restack in place — a full re-render would reload every app iframe and lose its state,
+  /* Restack in place. A full re-render would reload every app iframe and lose its state —
      which is exactly what clicking a window must never do. */
-  const el=$(`.wos-win[data-w="${id}"]`);if(el)el.style.zIndex=w.z;
-  $$('.wos-win').forEach(x=>x.classList.toggle('focus',x.dataset.w===id));
+  const el=$(`#wos-root .wos-win[data-w="${id}"]`);if(el)el.style.zIndex=w.z;
+  $$('#wos-root .wos-win').forEach(x=>x.classList.toggle('focus',x.dataset.w===id));
 }
 function wosMax(id){
   const w=(WOS.wins||[]).find(x=>x.id===id);if(!w)return;
@@ -34300,12 +34561,82 @@ function wosSnap(id,side){
   const r=d.getBoundingClientRect();
   w.max=false;
   if(side==='left'){w.x=0;w.y=0;w.w=Math.round(r.width/2);w.h=Math.round(r.height);}
-  if(side==='right'){w.x=Math.round(r.width/2);w.y=0;w.w=Math.round(r.width/2);w.h=Math.round(r.height);}
-  if(side==='top'){w.max=true;}
+  else if(side==='right'){w.x=Math.round(r.width/2);w.y=0;w.w=Math.round(r.width/2);w.h=Math.round(r.height);}
+  else if(side==='top')w.max=true;
+  saveWos();wosRender();
+}
+function wosTile(){
+  const open=(WOS.wins||[]).filter(w=>!w.closed&&!w.min);
+  if(!open.length)return;
+  const d=$('#wos-desk');if(!d)return;
+  const r=d.getBoundingClientRect();
+  const cols=Math.ceil(Math.sqrt(open.length)),rows=Math.ceil(open.length/cols);
+  open.forEach((w,i)=>{
+    w.max=false;
+    w.w=Math.floor(r.width/cols);w.h=Math.floor(r.height/rows);
+    w.x=(i%cols)*w.w;w.y=Math.floor(i/cols)*w.h;
+  });
   saveWos();wosRender();
 }
 
-/* ── Rendering ─────────────────────────────────────────────────────────────── */
+/* ── The pet ────────────────────────────────────────────────────────────────
+   Aurora's Familiar and WebAI's Buddy, merged. The rule both got right and worth keeping: its
+   mood is derived from what the app is ACTUALLY doing — no key, a run in flight, something
+   awaiting approval — rather than cycling at random. A pet that looks worried for no reason
+   teaches you to ignore it, which defeats the point of having one. */
+const WOS_MOODS={
+  idle:    {face:'◕ ◡ ◕', say:'Ready when you are.',            hue:170},
+  thinking:{face:'◔ ◡ ◔', say:'Something is running…',           hue:210},
+  hungry:  {face:'◕ ᴖ ◕', say:'No key and no local model yet.',  hue:38},
+  alarmed: {face:'◉ □ ◉', say:'Something needs your approval.',  hue:0},
+  glowing: {face:'◕ ▽ ◕', say:'That one came from cache — free.',hue:140},
+  sleepy:  {face:'– ᴗ –', say:'Zzz…',                            hue:260},
+};
+function wosPetMood(){
+  const busy=(typeof RUNNING!=='undefined'&&RUNNING)||$$('.spin').length>0;
+  const pending=(WOS.notifs||[]).some(n=>!n.read&&n.kind==='warn');
+  const noKey=!(typeof API_KEY!=='undefined'&&API_KEY)&&
+    !(typeof OLLAMA_MODELS!=='undefined'&&(OLLAMA_MODELS||[]).length);
+  if(pending)return 'alarmed';
+  if(busy)return 'thinking';
+  if(noKey)return 'hungry';
+  return 'idle';
+}
+function wosPetSay(msg){
+  const b=$('#wos-petbubble');if(!b)return;
+  const m=msg||WOS_MOODS[wosPetMood()].say;
+  b.textContent=m;b.hidden=false;
+  clearTimeout(wosPetSay._t);
+  wosPetSay._t=setTimeout(()=>{if(b)b.hidden=true;},4200);
+}
+function wosRenderPet(){
+  const el=$('#wos-pet');if(!el)return;
+  el.hidden=!WOS.petOn;
+  if(!WOS.petOn)return;
+  const mood=wosPetMood(),M=WOS_MOODS[mood];
+  const p=WOS.pet||{x:70,y:420};
+  el.style.left=p.x+'px';el.style.top=p.y+'px';
+  el.dataset.mood=mood;
+  el.style.setProperty('--pet-hue',M.hue);
+  const f=$('#wos-petface');if(f)f.textContent=M.face;
+  const n=$('#wos-petname');if(n)n.textContent=(WOS.pet&&WOS.pet.name)||'Spore';
+}
+async function wosPetChat(){
+  const q=prompt('Say something to '+((WOS.pet&&WOS.pet.name)||'Spore'));
+  if(!q)return;
+  wosPetSay('…');
+  try{
+    const acc=await streamComplete({model:settings.archModel,maxTokens:220,
+      messages:[{role:'system',content:
+        'You are a small desktop companion living in a creation app. Reply in at most two short '+
+        'sentences, warm and plain. You genuinely know the current state: mood is "'+wosPetMood()+
+        '". Never invent what the app is doing.'},
+        {role:'user',content:q}]},null,null,'webos-pet');
+    wosPetSay(String(acc.content||'').trim().slice(0,220));
+  }catch(e){wosPetSay('I could not reach a model just now.');}
+}
+
+/* ── Render ─────────────────────────────────────────────────────────────── */
 function wosPreset(){return WOS_PRESETS[WOS.theme]||WOS_PRESETS.aurora;}
 function wosApplyTheme(){
   const root=$('#wos-root');if(!root)return;
@@ -34315,88 +34646,12 @@ function wosApplyTheme(){
   root.setAttribute('data-wchrome',pre.chrome);
   root.setAttribute('data-wicons',WOS.icons||'aurora');
   root.setAttribute('data-wdock',pre.dock);
-  root.classList.toggle('has-sky',!!pre.sky);   // NOT 'wos-sky' — that is the sky element's own class
+  root.classList.toggle('has-sky',!!pre.sky);   // NOT 'wos-sky' — that is the sky element's class
+  root.classList.toggle('no-anim',WOS.animate===false);
 }
 function wosIconPos(id,i){
   if(WOS.iconPos[id])return WOS.iconPos[id];
   return{x:18+Math.floor(i/7)*104,y:16+(i%7)*92};
-}
-function wosWinBody(app){
-  if(!app)return '<div class="wos-empty">This app is gone.</div>';
-  if(app.kind==='builtin'){
-    if(app.id==='notes')return `<textarea class="wos-notes" data-wnotes>${esc(WOS.notes||'')}</textarea>`;
-    if(app.id==='store')return wosStoreHtml();
-    if(app.id==='settings')return wosSettingsHtml();
-    if(app.id==='files')return wosFilesHtml();
-    if(app.id==='browser')return `<div class="wos-brow">
-        <div class="wos-browbar"><input data-wurl placeholder="https://…  (many sites refuse to be framed)">
-          <button class="btn small" data-wgo>Go</button></div>
-        <iframe class="wos-frame" data-wbrowframe sandbox="allow-scripts allow-forms allow-popups"></iframe>
-        <p class="help" style="padding:6px 10px;margin:0">Most large sites send <code>X-Frame-Options</code>
-          and will show blank here. That is their choice, not a bug in this window.</p></div>`;
-    if(app.id==='term')return `<div class="wos-term"><p class="help" style="padding:10px">
-        The real terminal lives in the Terminal tab, wired to the bridge.</p>
-        <div style="padding:0 10px"><button class="btn small" data-wjump="terminal">Open Terminal tab</button></div></div>`;
-  }
-  return `<iframe class="wos-frame" data-wapp="${esc(app.id)}"
-    sandbox="allow-scripts allow-forms allow-modals allow-popups"
-    allow="fullscreen;autoplay;gamepad"></iframe>`;
-}
-function wosStoreHtml(){
-  const mine=(WOS.apps||[]).map(a=>`<div class="wos-srow">
-      <span class="wos-sic">${esc(a.icon)}</span>
-      <span><b>${esc(a.name)}</b><i>from ${esc(a.src)} · ${esc(new Date(a.ts).toLocaleDateString())}</i></span>
-      <span style="flex:1"></span>
-      <button class="btn ghost small" data-wopen="${esc(a.id)}">Open</button>
-      <button class="btn ghost small" data-wexport="${esc(a.id)}">Export</button>
-      <button class="btn ghost small" data-wdel="${esc(a.id)}">Remove</button>
-    </div>`).join('')||'<p class="help">Nothing installed yet.</p>';
-  return `<div class="wos-pad">
-    <h3>Install an app</h3>
-    <p class="help">Anything that is a single HTML file becomes a real app with an icon. Nothing is
-      uploaded — it is stored in this browser and runs sandboxed.</p>
-    <div class="row" style="gap:8px;flex-wrap:wrap">
-      <button class="btn small" data-wnew="studio">⬅ Bring in what's in Studio</button>
-      <button class="btn small" data-wnew="file">📂 Choose an HTML file</button>
-      <button class="btn small" data-wnew="paste">📋 Paste HTML</button>
-      <button class="btn small" data-wnew="url">🔗 Add a web link</button>
-      <button class="btn small" data-wnew="ai">✦ Describe one and let AI build it</button>
-    </div>
-    <h3 style="margin-top:16px">Installed</h3>${mine}</div>`;
-}
-function wosSettingsHtml(){
-  return `<div class="wos-pad">
-    <h3>Desktop theme</h3>
-    <p class="help">Each one emulates a whole desktop, not just a colour — Windows 95 gets a real
-      taskbar and Start button, Platinum has no dock because System 7 had none.</p>
-    <div class="wos-swatches">${WOS_THEMES.map(t=>
-      `<button class="wos-sw${WOS.theme===t.id?' on':''}" data-wtheme="${t.id}" title="${esc(t.name)}">
-        <span style="background:${t.sw}"></span><i>${esc(t.name)}</i></button>`).join('')}</div>
-    <h3 style="margin-top:14px">Icon pack</h3>
-    <label class="chk"><input type="checkbox" data-wiconlock ${WOS.iconLock?'checked':''}>
-      keep my icon pack when I change theme</label>
-    <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">${WOS_ICONPACKS.map(p=>
-      `<button class="btn ghost small${WOS.icons===p.id?' on':''}" data-wpack="${p.id}">${esc(p.name)}</button>`).join('')}</div>
-    <h3 style="margin-top:14px">Icon size</h3>
-    <input type="range" min="60" max="130" value="${WOS.iconSize||84}" data-wiconsize style="width:220px">
-    <h3 style="margin-top:14px">Wallpaper</h3>
-    <div class="row" style="gap:8px"><button class="btn ghost small" data-wwall>Choose an image…</button>
-      ${WOS.wallpaper?'<button class="btn ghost small" data-wwallclear>Clear</button>':''}</div>
-    <h3 style="margin-top:14px">Desktop</h3>
-    <div class="row" style="gap:8px"><button class="btn ghost small" data-warrange>Tidy icons</button>
-      <button class="btn ghost small" data-wreset>Reset desktop</button></div></div>`;
-}
-function wosFilesHtml(){
-  const st=(typeof WS!=='undefined'&&WS&&WS.files)?Object.keys(WS.files):[];
-  return `<div class="wos-pad">
-    <h3>Studio workspace</h3>
-    ${st.length?st.map(n=>`<div class="wos-srow"><span class="wos-sic">📄</span><b>${esc(n)}</b>
-      <span style="flex:1"></span>
-      <button class="btn ghost small" data-wjump="studio">Edit in Studio</button></div>`).join('')
-      :'<p class="help">Studio is empty.</p>'}
-    <h3 style="margin-top:14px">Bridge workspace</h3>
-    <p class="help">With the bridge running, real files on your machine appear here.</p>
-    <button class="btn ghost small" data-wjump="terminal">Open the bridge</button></div>`;
 }
 function wosRender(){
   const root=$('#wos-root');if(!root)return;
@@ -34405,9 +34660,12 @@ function wosRender(){
   const sz=WOS.iconSize||84;
   const icons=apps.map((a,i)=>{
     const p=wosIconPos(a.id,i);
-    return `<button class="wos-icon" data-wicon="${esc(a.id)}"
-      style="left:${p.x}px;top:${p.y}px;width:${sz}px"><span class="wos-glyph">${esc(a.icon)}</span>
-      <span class="wos-name">${esc(a.name)}</span></button>`;
+    const folder=a.kind==='project';
+    return `<button class="wos-icon${folder?' folder':''}" data-wicon="${esc(a.id)}"
+      title="${esc(a.desc||a.name)}" style="left:${p.x}px;top:${p.y}px;width:${sz}px">
+      <span class="wos-glyph">${esc(folder?'📁':a.icon)}</span>
+      <span class="wos-name">${esc(a.name)}</span>
+      ${folder?`<span class="wos-fcount">${a.fileCount||0}</span>`:''}</button>`;
   }).join('');
   const open=(WOS.wins||[]).filter(w=>!w.closed);
   const wins=open.filter(w=>!w.min).map(w=>{
@@ -34423,26 +34681,34 @@ function wosRender(){
         </span>
         <b>${esc(a?a.icon+' '+a.name:'Missing app')}</b>
         <span style="flex:1"></span>
-        ${a&&a.kind==='user'?`<button class="wos-x" data-wpop="${esc(w.id)}" title="Open in a real browser tab">↗</button>`:''}
+        <button class="wos-x" data-wsnapl="${esc(w.id)}" title="Snap left">◧</button>
+        <button class="wos-x" data-wsnapr="${esc(w.id)}" title="Snap right">◨</button>
+        ${a&&(a.kind==='single'||a.kind==='project')?
+          `<button class="wos-x" data-wpop="${esc(w.id)}" title="Open in a real browser tab">↗</button>`:''}
       </div>
-      <div class="wos-body">${wosWinBody(a)}</div>
+      <div class="wos-body" data-wbody="${esc(w.id)}">${wosWinBody(a,w)}</div>
       ${w.max?'':['n','s','e','w','ne','nw','se','sw'].map(d=>
         `<i class="wos-rz r-${d}" data-wrz="${esc(w.id)}" data-wdir="${d}"></i>`).join('')}
     </div>`;
   }).join('');
-  const dockItems=apps.slice(0,14).map(a=>{
+  const taskbar=wosPreset().dock==='taskbar';
+  const dockItems=apps.slice(0,16).map(a=>{
     const on=open.some(w=>w.app===a.id);
     return `<button class="wos-dockb${on?' on':''}" data-wicon="${esc(a.id)}" title="${esc(a.name)}">
-      ${esc(a.icon)}${wosPreset().dock==='taskbar'?'<span>'+esc(a.name)+'</span>':''}</button>`;
+      ${esc(a.kind==='project'?'📁':a.icon)}${taskbar?'<span>'+esc(a.name)+'</span>':''}</button>`;
   }).join('');
   const unread=(WOS.notifs||[]).filter(n=>!n.read).length;
   root.innerHTML=`
     <div class="wos-menubar">
-      <b>🪟 WebOS</b>
+      <button class="wos-mb strong" data-wstart>🪟 <b>Start</b></button>
+      <button class="wos-mb" data-wicon="studio">Build</button>
       <button class="wos-mb" data-wicon="store">Apps</button>
       <button class="wos-mb" data-wicon="settings">Customise</button>
+      <button class="wos-mb" data-wpal title="Command palette (⌘K)">⌘K</button>
       <span style="flex:1"></span>
-      <button class="wos-mb" data-wbell>🔔${unread?'<span class="wos-badge">'+unread+'</span>':''}</button>
+      <span class="wos-quota" id="wos-quota" title="How much browser storage your work is using"></span>
+      <button class="wos-mb" data-wtile title="Tile all windows">▦</button>
+      <button class="wos-mb" data-wbell title="Notifications">🔔${unread?'<span class="wos-badge">'+unread+'</span>':''}</button>
       <button class="wos-mb" data-wfs title="Fullscreen">⛶</button>
       <button class="wos-mb" data-wpopos title="Open the desktop in its own window">↗</button>
       <span class="wos-clock">${esc(new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}))}</span>
@@ -34451,31 +34717,676 @@ function wosRender(){
       <div class="wos-sky"></div>
       <div class="wos-icons">${icons}</div>
       <div class="wos-wins">${wins}</div>
+      <div id="wos-pet" class="wos-pet" ${WOS.petOn?'':'hidden'}>
+        <div class="wos-petbubble" id="wos-petbubble" hidden></div>
+        <div class="wos-petbody"><span id="wos-petface">◕ ◡ ◕</span></div>
+        <div class="wos-petname" id="wos-petname">Spore</div>
+      </div>
       <div class="wos-notifpanel" id="wos-notifs" hidden></div>
+      <div class="wos-start" id="wos-startmenu" hidden></div>
+      <div class="wos-pal" id="wos-palette" hidden></div>
+      <div class="wos-toasts" id="wos-toasts"></div>
     </div>
-    <div class="wos-dock">${wosPreset().dock==='taskbar'?'<button class="wos-start">Start</button>':''}
+    <div class="wos-dock">${taskbar?'<button class="wos-start-btn" data-wstart>Start</button>':''}
       <div class="wos-dockin">${dockItems}</div>
       ${open.filter(w=>w.min).map(w=>{const a=wosApp(w.app);
-        return `<button class="wos-dockb min" data-wrestore="${esc(w.id)}">${esc(a?a.icon:'▫')}</button>`;}).join('')}
+        return `<button class="wos-dockb min" data-wrestore="${esc(w.id)}" title="${esc(a?a.name:'')}">${esc(a?a.icon:'▫')}</button>`;}).join('')}
     </div>`;
-  wosRenderNotifs();
-  wosFillFrames();
+  wosRenderNotifs();wosRenderPet();wosFillFrames();wosQuotaMeter();
 }
 /* srcdoc is written after render, never inside the template: an app's HTML in an attribute
-   would have to be escaped and un-escaped, and any mistake there is an injection. */
+   would need escaping and un-escaping, and any mistake there is an injection. */
 async function wosFillFrames(){
+  /* Games are written the same way as installed apps: srcdoc after render, never in an
+     attribute, so nothing has to be escaped and un-escaped. */
+  $$('#wos-root [data-wgame]').forEach(f=>{
+    if(f.dataset.filled==='1')return;
+    f.dataset.filled='1';
+    f.srcdoc=wosGameSrc(f.dataset.wgame);
+  });
   for(const f of $$('#wos-root [data-wapp]')){
     const id=f.dataset.wapp,a=wosApp(id);
     if(a&&a.url){f.src=a.url;continue;}
-    const html=await wosBody(id);
-    f.srcdoc=html||'<!doctype html><body style="font-family:system-ui;padding:24px">This app has no content.</body>';
+    let html;
+    if(a&&a.kind==='project'){const files=await wosFiles(id);html=wosCompose(files||{});}
+    else html=await wosBody(id);
+    f.srcdoc=html||'<!doctype html><body style="font-family:system-ui;padding:24px">This app has no content yet.</body>';
   }
 }
 
-/* ── Cross-window sync ──────────────────────────────────────────────────────
+/* ── App views ──────────────────────────────────────────────────────────── */
+function wosWinBody(app,w){
+  if(!app)return '<div class="wos-empty">This app is gone.</div>';
+  if(app.kind==='extra'){
+    if(app.native)return wosNativeExtra(app);
+    return `<div class="wos-pad wos-bridge">
+      <div class="wos-bigic">${esc(app.icon)}</div>
+      <h3>${esc(app.name)}</h3>
+      <p class="wos-desc">${esc(app.desc)}</p>
+      <p class="wos-note">This is a real GlassBox system, not a copy of one. Opening it takes you to
+        the tab where it lives, so there is never a second set of your data to fall out of sync.</p>
+      <button class="wos-btn primary" data-wjump="${esc(app.tab)}">Open ${esc(app.name)}</button>
+      <button class="wos-btn" data-wextraoff="${esc(app.id)}">Remove from desktop</button>
+    </div>`;
+  }
+  if(app.kind==='project')return wosFolderView(app);
+  if(app.kind==='single'||app.kind==='link')
+    return `<iframe class="wos-frame" data-wapp="${esc(app.id)}"
+      sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"
+      allow="fullscreen;autoplay;gamepad;clipboard-write"></iframe>`;
+  return ({
+    studio:wosStudioView, store:wosStoreView, files:wosFilesView, browser:wosBrowserView,
+    notes:wosNotesView, term:wosTermView, calc:wosCalcView, clock:wosClockView,
+    music:wosMusicView, arcade:wosArcadeView, pet:wosPetView, settings:wosSettingsView,
+  }[app.id]||(()=>'<div class="wos-empty">Not built yet.</div>'))(w);
+}
+function wosFolderView(app){
+  return `<div class="wos-pad wos-folder" data-wfolder="${esc(app.id)}">
+    <div class="wos-frow head"><b>📁 ${esc(app.name)}</b>
+      <span class="wos-desc">${app.fileCount||0} files · full-stack project</span>
+      <span style="flex:1"></span>
+      <button class="wos-btn primary" data-wrun="${esc(app.id)}">▶ Run it</button>
+      <button class="wos-btn" data-wtostudio="${esc(app.id)}">🛠 Edit in Studio</button>
+      <button class="wos-btn" data-wzip="${esc(app.id)}">⬇ Download folder</button>
+    </div>
+    <div class="wos-filelist" data-wfl="${esc(app.id)}"><p class="wos-none">Reading…</p></div>
+  </div>`;
+}
+function wosStudioView(){
+  return `<div class="wos-studio">
+    <div class="wos-srow">
+      <input class="wos-in" data-wsname placeholder="App name" value="My widget">
+      <input class="wos-in" data-wsicon value="✨" style="max-width:58px">
+      <select class="wos-in" data-wskind style="max-width:150px">
+        <option value="single">Single file</option>
+        <option value="project">Full-stack project</option>
+      </select>
+      <span style="flex:1"></span>
+      <button class="wos-btn" data-wsai>✦ Describe it</button>
+    </div>
+    <div class="wos-stabs" data-wstabs><button class="on" data-wsf="index.html">index.html</button>
+      <button data-wsaddfile>＋</button></div>
+    <div class="wos-smain">
+      <textarea class="wos-code" data-wscode spellcheck="false"></textarea>
+      <iframe class="wos-preview" data-wspreview sandbox="allow-scripts allow-forms allow-modals"></iframe>
+    </div>
+    <div class="wos-srow">
+      <button class="wos-btn primary" data-wsrun>▶ Preview</button>
+      <button class="wos-btn" data-wsinstall>＋ Install on desktop</button>
+      <button class="wos-btn" data-wsdl>⇩ Export</button>
+      <span style="flex:1"></span>
+      <span class="wos-desc">Hand it to a real studio:</span>
+      <button class="wos-btn" data-wsto="studio">🛠 Studio</button>
+      <button class="wos-btn" data-wsto="design">🎨 Design</button>
+      <button class="wos-btn" data-wsto="gen">🎬 Create</button>
+      <span class="wos-desc" data-wsstatus></span>
+    </div>
+  </div>`;
+}
+function wosStoreView(){
+  const mine=(WOS.apps||[]);
+  return `<div class="wos-pad">
+    <h3>Install an app</h3>
+    <p class="wos-desc">Anything that is HTML becomes a real app with an icon. A single file sits
+      loose on the desktop; a multi-file project gets its own folder. Nothing is uploaded — it is
+      stored in this browser and runs sandboxed.</p>
+    <div class="wos-frow wrap">
+      <button class="wos-btn primary" data-wnew="studio">⬅ Bring in what's in Studio</button>
+      <button class="wos-btn" data-wnew="file">📂 One HTML file</button>
+      <button class="wos-btn" data-wnew="folder">📦 A whole project folder</button>
+      <button class="wos-btn" data-wnew="paste">📋 Paste HTML</button>
+      <button class="wos-btn" data-wnew="url">🔗 A web link</button>
+      <button class="wos-btn" data-wnew="ai">✦ Describe one</button>
+      <button class="wos-btn" data-wnew="github">🐙 From GitHub</button>
+    </div>
+    <h3 style="margin-top:14px">Installed (${mine.length})</h3>
+    ${mine.length?mine.map(a=>`<div class="wos-frow">
+        <span class="wos-sic">${esc(a.kind==='project'?'📁':a.icon)}</span>
+        <span><b>${esc(a.name)}</b><i>${esc(a.kind)} · from ${esc(a.src)}${a.kind==='project'?' · '+(a.fileCount||0)+' files':''}</i></span>
+        <span style="flex:1"></span>
+        <button class="wos-btn" data-wopen="${esc(a.id)}">Open</button>
+        <button class="wos-btn" data-wexport="${esc(a.id)}">Export</button>
+        <button class="wos-btn danger" data-wdel="${esc(a.id)}">Remove</button>
+      </div>`).join(''):'<p class="wos-none">Nothing installed yet.</p>'}
+  </div>`;
+}
+function wosFilesView(){
+  const ws=(typeof WS!=='undefined'&&WS&&WS.files)?Object.keys(WS.files):[];
+  const projects=(WOS.apps||[]).filter(a=>a.kind==='project');
+  return `<div class="wos-pad">
+    <h3>Project folders on this desktop</h3>
+    ${projects.length?projects.map(p=>`<div class="wos-frow"><span class="wos-sic">📁</span>
+      <b>${esc(p.name)}</b><span class="wos-desc">${p.fileCount||0} files</span>
+      <span style="flex:1"></span>
+      <button class="wos-btn" data-wopen="${esc(p.id)}">Open folder</button></div>`).join('')
+      :'<p class="wos-none">No project folders yet — install a full-stack app to get one.</p>'}
+    <h3 style="margin-top:14px">Studio workspace</h3>
+    ${ws.length?ws.map(n=>`<div class="wos-frow"><span class="wos-sic">📄</span>
+      <b class="mono">${esc(n)}</b><span style="flex:1"></span>
+      <button class="wos-btn" data-wjump="studio">Edit</button></div>`).join('')
+      :'<p class="wos-none">Studio is empty.</p>'}
+    <h3 style="margin-top:14px">Your machine</h3>
+    <p class="wos-desc">With the bridge running, real files on your computer are reachable.</p>
+    <div class="wos-frow wrap">
+      <button class="wos-btn" data-wjump="terminal">Open the bridge</button>
+      <button class="wos-btn" data-wpickdir>📂 Choose a work folder</button>
+      <button class="wos-btn" data-wjump="settings">Backups &amp; storage</button>
+    </div>
+  </div>`;
+}
+function wosBrowserView(w){
+  return `<div class="wos-brow">
+    <div class="wos-browbar">
+      <button class="wos-btn" data-wbback>←</button>
+      <button class="wos-btn" data-wbre>↻</button>
+      <input class="wos-in" data-wurl value="${esc((w&&w.arg)||'https://en.wikipedia.org/wiki/Special:Random')}" placeholder="Type a URL or a search">
+      <button class="wos-btn primary" data-wgo>Go</button>
+      <button class="wos-btn" data-wext>↗ Real tab</button>
+    </div>
+    <div class="wos-bookmarks">${[
+      ['Wikipedia','https://en.wikipedia.org/wiki/Special:Random'],
+      ['MDN','https://developer.mozilla.org/'],
+      ['Hacker News','https://news.ycombinator.com/'],
+      ['CodePen','https://codepen.io/trending'],
+      ['three.js','https://threejs.org/examples/'],
+      ['OpenRouter','https://openrouter.ai/models'],
+    ].map(([n,u])=>`<button class="wos-chip" data-wbm="${esc(u)}">${esc(n)}</button>`).join('')}</div>
+    <iframe class="wos-frame" data-wbrowframe sandbox="allow-scripts allow-forms allow-popups allow-downloads"></iframe>
+    <p class="wos-note" data-wbnote>Many large sites send <code>X-Frame-Options</code> and will stay blank
+      here — that is their choice, not a fault in this window. The bookmarks above are ones that do allow
+      framing. Use <b>Real tab</b> for anything that refuses.</p>
+  </div>`;
+}
+function wosNotesView(){
+  return `<div class="wos-notesw">
+    <div class="wos-srow"><b>Notes</b><span style="flex:1"></span>
+      <span class="wos-desc" data-wnstatus>Saved</span>
+      <button class="wos-btn" data-wntobrain>🧠 Save to Brain</button></div>
+    <textarea class="wos-notes" data-wnotes placeholder="Type anything. It saves as you go.">${esc(WOS.notes||'')}</textarea>
+  </div>`;
+}
+function wosTermView(){
+  return `<div class="wos-term">
+    <div class="wos-termout" data-wtout>GlassBox WebOS shell
+Type <b>help</b> for commands. Anything else is sent to the bridge if it is connected.
+</div>
+    <div class="wos-termin"><span>$</span><input class="wos-in" data-wtin spellcheck="false"></div>
+  </div>`;
+}
+function wosCalcView(){
+  return `<div class="wos-calc">
+    <input class="wos-calcd" data-wcd value="0" readonly>
+    <div class="wos-calck">${['C','(',')','÷','7','8','9','×','4','5','6','−','1','2','3','+','0','.','⌫','=']
+      .map(k=>`<button class="wos-btn${k==='='?' primary':''}" data-wck="${esc(k)}">${esc(k)}</button>`).join('')}</div>
+  </div>`;
+}
+function wosClockView(){
+  const now=new Date(),y=now.getFullYear(),m=now.getMonth();
+  const first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate();
+  let cells='';for(let i=0;i<first;i++)cells+='<div></div>';
+  for(let d=1;d<=days;d++)cells+=`<div class="wos-day${d===now.getDate()?' today':''}">${d}</div>`;
+  return `<div class="wos-pad wos-clockw">
+    <div class="wos-bigclock" data-wclockbig></div>
+    <div class="wos-desc" data-wclockdate></div>
+    <h3 style="margin-top:12px">${esc(now.toLocaleString([],{month:'long',year:'numeric'}))}</h3>
+    <div class="wos-cal"><b>S</b><b>M</b><b>T</b><b>W</b><b>T</b><b>F</b><b>S</b>${cells}</div>
+    <h3 style="margin-top:12px">Timer</h3>
+    <div class="wos-frow"><input class="wos-in" data-wtimer type="number" value="5" style="max-width:80px">
+      <span class="wos-desc">minutes</span>
+      <button class="wos-btn primary" data-wtimerstart>Start</button>
+      <span class="wos-desc" data-wtimerout></span></div>
+  </div>`;
+}
+function wosMusicView(){
+  return `<div class="wos-pad">
+    <h3>Music</h3>
+    <p class="wos-desc">Drop in audio files. They stay in this browser and play here.</p>
+    <div class="wos-drop" data-wmdrop>Drop audio here, or <button class="wos-btn" data-wmpick>choose files</button></div>
+    <div data-wmlist></div>
+    <audio data-wmaudio controls style="width:100%;margin-top:10px"></audio>
+  </div>`;
+}
+function wosPetView(){
+  return `<div class="wos-pad">
+    <h3>Companion</h3>
+    <p class="wos-desc">A desktop pet whose mood comes from what the app is really doing — a run in
+      flight, something waiting on your approval, no key configured. It is never worried at random,
+      because a pet that cries wolf gets ignored.</p>
+    <label class="wos-lbl">Name<input class="wos-in" data-wpetname value="${esc((WOS.pet&&WOS.pet.name)||'Spore')}"></label>
+    <div class="wos-frow wrap" style="margin-top:10px">
+      <button class="wos-btn primary" data-wpettoggle>${WOS.petOn?'Hide':'Show'} the companion</button>
+      <button class="wos-btn" data-wpettalk>Talk to it</button>
+    </div>
+    <h3 style="margin-top:14px">Moods</h3>
+    ${Object.entries(WOS_MOODS).map(([k,m])=>`<div class="wos-frow">
+      <span class="wos-sic">${esc(m.face)}</span><b>${esc(k)}</b>
+      <span class="wos-desc">${esc(m.say)}</span></div>`).join('')}
+  </div>`;
+}
+function wosSettingsView(){
+  return `<div class="wos-pad">
+    <h3>Desktop theme <span class="wos-desc">${WOS_THEMES.length} skins</span></h3>
+    <p class="wos-desc">Each one emulates a whole desktop, not just a colour — Windows 95 gets a real
+      taskbar and Start button, Platinum has no dock because System 7 had none.</p>
+    <div class="wos-swatches">${WOS_THEMES.map(t=>
+      `<button class="wos-sw${WOS.theme===t.id?' on':''}" data-wtheme="${t.id}" title="${esc(t.name)}">
+        <span style="background:${t.sw}"></span><i>${esc(t.name)}</i></button>`).join('')}</div>
+    <h3 style="margin-top:14px">Icon pack</h3>
+    <label class="wos-chk"><input type="checkbox" data-wiconlock ${WOS.iconLock?'checked':''}>
+      keep my icon pack when I change theme</label>
+    <div class="wos-frow wrap" style="margin-top:8px">${WOS_ICONPACKS.map(p=>
+      `<button class="wos-btn${WOS.icons===p.id?' primary':''}" data-wpack="${p.id}">${esc(p.name)}</button>`).join('')}</div>
+    <h3 style="margin-top:14px">Desktop</h3>
+    <div class="wos-frow wrap">
+      <label class="wos-lbl">Icon size<input type="range" min="60" max="140" value="${WOS.iconSize||84}" data-wiconsize></label>
+      <label class="wos-chk"><input type="checkbox" data-wanim ${WOS.animate!==false?'checked':''}> animations</label>
+      <button class="wos-btn" data-wwall>🖼 Wallpaper…</button>
+      ${WOS.wallpaper?'<button class="wos-btn" data-wwallclear>Clear wallpaper</button>':''}
+      <button class="wos-btn" data-warrange>Tidy icons</button>
+      <button class="wos-btn danger" data-wreset>Reset desktop</button>
+    </div>
+    <h3 style="margin-top:16px">Extra features <span class="wos-desc">${wosVisibleExtras().length} of ${WOS_EXTRAS.length} on</span></h3>
+    <p class="wos-desc">Everything AURORA had, plus the rest. These are switched off by default because
+      each one is a window onto a system GlassBox already has — turning one on puts it on the desktop
+      rather than making a second copy of your data.</p>
+    <div class="wos-frow wrap" style="margin-bottom:8px">
+      <button class="wos-btn primary" data-wextraall>Turn on everything</button>
+      <button class="wos-btn" data-wextranone>Turn all off</button>
+    </div>
+    ${WOS_EXTRAS.map(e=>`<label class="wos-extra${wosExtraOn(e.id)?' on':''}">
+      <input type="checkbox" data-wextra="${esc(e.id)}" ${wosExtraOn(e.id)?'checked':''}>
+      <span class="wos-sic">${esc(e.icon)}</span>
+      <span><b>${esc(e.name)}</b><i>${esc(e.desc)}</i></span>
+      <span style="flex:1"></span><span class="wos-tag">${esc(e.from)}</span></label>`).join('')}
+    <p class="wos-note" style="margin-top:12px">One AURORA app is deliberately not included:
+      <b>G0DM0D3</b>, a "refusal race" for getting models to bypass their own safety rules. Everything
+      else from that desktop is here.</p>
+  </div>`;
+}
+
+/* ── Arcade ─────────────────────────────────────────────────────────────────
+   Games run in the same sandboxed frame as any installed app, so they are genuinely playable
+   inside this window rather than being a link out. Each is a complete document with its own
+   loop; keyboard focus follows the frame once you click it. */
+const WOS_GAMES=[
+  {id:'city',name:'Neon Drive',icon:'🚘',desc:'Top-down city. WASD to drive, Space to boost.'},
+  {id:'fps', name:'Vector FPS',icon:'🎯',desc:'Raycast maze. Click to lock the mouse, WASD to move.'},
+  {id:'snake',name:'Snake',icon:'🐍',desc:'Arrow keys. It gets faster.'},
+  {id:'breaker',name:'Brick Breaker',icon:'🧱',desc:'Mouse or arrows.'},
+  {id:'life',name:'Life',icon:'🔬',desc:"Conway's Game of Life. Click cells, Space to run."},
+];
+function wosGameSrc(id){
+  const shell=(title,help,body)=>`<!doctype html><html><head><meta charset="utf-8"><style>
+    html,body{margin:0;height:100%;overflow:hidden;background:#05070f;font-family:system-ui}
+    canvas{display:block;width:100%;height:100%}
+    .hud{position:fixed;top:10px;left:10px;color:#fff;background:#0009;padding:8px 11px;
+      border-radius:10px;font-size:12.5px;line-height:1.45;pointer-events:none}
+    </style></head><body><canvas id="c"></canvas>
+    <div class="hud"><b>${title}</b><br>${help}</div><script>
+    const c=document.getElementById('c'),x=c.getContext('2d');let W,H;
+    function rs(){W=c.width=innerWidth;H=c.height=innerHeight;}addEventListener('resize',rs);rs();
+    const K={};addEventListener('keydown',e=>{K[e.key.toLowerCase()]=1;if(e.key.startsWith('Arrow')||e.key===' ')e.preventDefault();});
+    addEventListener('keyup',e=>{K[e.key.toLowerCase()]=0;});
+    ${body}
+    <\/script></body></html>`;
+  if(id==='city')return shell('NEON DRIVE','WASD or arrows to drive · Space to boost',`
+    let p={x:0,y:0,a:0,v:0};
+    const B=Array.from({length:70},()=>({x:Math.random()*2400-1200,y:Math.random()*1800-900,
+      w:40+Math.random()*100,h:40+Math.random()*100,c:'hsl('+(Math.random()*80+190)+' 60% '+(18+Math.random()*20)+'%)'}));
+    (function loop(){requestAnimationFrame(loop);
+      if(K.w||K.arrowup)p.v+=.14; if(K.s||K.arrowdown)p.v-=.11;
+      if(K.a||K.arrowleft)p.a-=.05; if(K.d||K.arrowright)p.a+=.05;
+      if(K[' '])p.v*=1.04; p.v*=.975;
+      p.x+=Math.cos(p.a)*p.v; p.y+=Math.sin(p.a)*p.v;
+      x.fillStyle='#05070f';x.fillRect(0,0,W,H);
+      x.save();x.translate(W/2-p.x,H/2-p.y);
+      x.strokeStyle='#16304d';x.lineWidth=32;
+      for(let i=-1200;i<=1200;i+=200){x.beginPath();x.moveTo(i,-900);x.lineTo(i,900);x.stroke();}
+      for(let i=-900;i<=900;i+=200){x.beginPath();x.moveTo(-1200,i);x.lineTo(1200,i);x.stroke();}
+      B.forEach(b=>{x.fillStyle=b.c;x.fillRect(b.x,b.y,b.w,b.h);
+        x.fillStyle='#ffe97a';for(let yy=b.y+8;yy<b.y+b.h-6;yy+=16)for(let xx=b.x+8;xx<b.x+b.w-6;xx+=17)
+          if((xx*yy)%11>9)x.fillRect(xx,yy,4,4);});
+      x.translate(p.x,p.y);x.rotate(p.a);
+      x.fillStyle='#ff2bd6';x.fillRect(-18,-10,36,20);
+      x.fillStyle='#67e8f9';x.fillRect(5,-8,10,16);x.restore();
+      x.fillStyle='#9fb0c7';x.font='13px system-ui';x.fillText('speed '+Math.abs(p.v).toFixed(1),12,H-14);
+    })();`);
+  if(id==='fps')return shell('VECTOR FPS','Click to lock the mouse · WASD to move · move mouse to aim',`
+    let a=0,p={x:2.5,y:2.5};
+    const map=['111111111111','100000000001','101110011101','100010000001','101011101101',
+               '100000100001','101110101101','100000000001','111111111111'];
+    const wall=(X,Y)=>(map[Math.floor(Y)]||'')[Math.floor(X)]==='1';
+    c.onclick=()=>c.requestPointerLock&&c.requestPointerLock();
+    addEventListener('mousemove',e=>{if(document.pointerLockElement===c)a+=e.movementX*.0026;});
+    (function loop(){requestAnimationFrame(loop);
+      let nx=p.x,ny=p.y,s=.05;
+      if(K.w){nx+=Math.cos(a)*s;ny+=Math.sin(a)*s;} if(K.s){nx-=Math.cos(a)*s;ny-=Math.sin(a)*s;}
+      if(K.a){nx+=Math.cos(a-Math.PI/2)*s;ny+=Math.sin(a-Math.PI/2)*s;}
+      if(K.d){nx+=Math.cos(a+Math.PI/2)*s;ny+=Math.sin(a+Math.PI/2)*s;}
+      if(!wall(nx,p.y))p.x=nx; if(!wall(p.x,ny))p.y=ny;
+      x.fillStyle='#1b3a5c';x.fillRect(0,0,W,H/2);
+      x.fillStyle='#0d1420';x.fillRect(0,H/2,W,H/2);
+      for(let i=0;i<W;i+=2){const ra=a-.65+1.3*i/W;let d=0;
+        while(d<20&&!wall(p.x+Math.cos(ra)*d,p.y+Math.sin(ra)*d))d+=.02;
+        const h=Math.min(H,H/(d+.0001)),sh=Math.max(22,215-d*18);
+        x.fillStyle='rgb('+Math.round(sh*.45)+','+Math.round(sh*.8)+','+sh+')';
+        x.fillRect(i,H/2-h/2,3,h);}
+      x.strokeStyle='#fff';x.beginPath();x.moveTo(W/2-8,H/2);x.lineTo(W/2+8,H/2);
+      x.moveTo(W/2,H/2-8);x.lineTo(W/2,H/2+8);x.stroke();
+    })();`);
+  if(id==='snake')return shell('SNAKE','Arrow keys · it speeds up as you eat',`
+    const G=22;let s=[{x:8,y:8}],d={x:1,y:0},f={x:14,y:8},sc=0,t=0,sp=9,dead=false;
+    addEventListener('keydown',e=>{const m={arrowup:[0,-1],arrowdown:[0,1],arrowleft:[-1,0],arrowright:[1,0]}[e.key.toLowerCase()];
+      if(m&&!(m[0]===-d.x&&m[1]===-d.y))d={x:m[0],y:m[1]};
+      if(dead&&e.key===' '){s=[{x:8,y:8}];d={x:1,y:0};sc=0;sp=9;dead=false;}});
+    (function loop(){requestAnimationFrame(loop);
+      const cell=Math.floor(Math.min(W,H)/G);const ox=(W-cell*G)/2,oy=(H-cell*G)/2;
+      if(!dead&&++t>60/sp){t=0;
+        const h={x:(s[0].x+d.x+G)%G,y:(s[0].y+d.y+G)%G};
+        if(s.some(q=>q.x===h.x&&q.y===h.y))dead=true;
+        else{s.unshift(h);
+          if(h.x===f.x&&h.y===f.y){sc++;sp=Math.min(22,9+sc*.5);
+            f={x:Math.floor(Math.random()*G),y:Math.floor(Math.random()*G)};}
+          else s.pop();}}
+      x.fillStyle='#05070f';x.fillRect(0,0,W,H);
+      x.strokeStyle='#131c2e';x.strokeRect(ox,oy,cell*G,cell*G);
+      x.fillStyle='#ff5470';x.fillRect(ox+f.x*cell,oy+f.y*cell,cell-1,cell-1);
+      s.forEach((q,i)=>{x.fillStyle=i?'#2ee6a4':'#67e8f9';x.fillRect(ox+q.x*cell,oy+q.y*cell,cell-1,cell-1);});
+      x.fillStyle='#fff';x.font='15px system-ui';x.fillText('Score '+sc,12,H-14);
+      if(dead){x.fillStyle='#000b';x.fillRect(0,H/2-40,W,80);x.fillStyle='#fff';x.font='22px system-ui';
+        x.fillText('Game over — press Space',W/2-120,H/2+8);}
+    })();`);
+  if(id==='breaker')return shell('BRICK BREAKER','Move the mouse or use ← → · Space to launch',`
+    let px=0,bx=0,by=0,vx=4,vy=-4,live=false,sc=0,rows=5,cols=11,br=[];
+    function reset(){br=[];for(let r=0;r<rows;r++)for(let cc=0;cc<cols;cc++)br.push({r,c:cc,on:true});
+      live=false;}
+    reset();
+    addEventListener('mousemove',e=>{px=e.clientX;});
+    addEventListener('keydown',e=>{if(e.key===' ')live=true;});
+    (function loop(){requestAnimationFrame(loop);
+      if(K.arrowleft)px-=9; if(K.arrowright)px+=9;
+      px=Math.max(60,Math.min(W-60,px||W/2));
+      const bw=W/cols,bh=22;
+      if(!live){bx=px;by=H-46;}
+      else{bx+=vx;by+=vy;
+        if(bx<6||bx>W-6)vx*=-1; if(by<6)vy*=-1;
+        if(by>H-38&&by<H-26&&Math.abs(bx-px)<62){vy=-Math.abs(vy);vx+=(bx-px)*.05;}
+        if(by>H){live=false;}
+        br.forEach(b=>{if(!b.on)return;
+          const X=b.c*bw,Y=60+b.r*bh;
+          if(bx>X&&bx<X+bw-3&&by>Y&&by<Y+bh-3){b.on=false;vy*=-1;sc+=10;}});
+        if(br.every(b=>!b.on)){reset();sc+=100;}}
+      x.fillStyle='#05070f';x.fillRect(0,0,W,H);
+      br.forEach(b=>{if(!b.on)return;x.fillStyle='hsl('+(190+b.r*22)+' 70% 55%)';
+        x.fillRect(b.c*bw+2,60+b.r*bh+2,bw-4,bh-4);});
+      x.fillStyle='#67e8f9';x.fillRect(px-60,H-34,120,10);
+      x.beginPath();x.arc(bx,by,6,0,7);x.fillStyle='#fff';x.fill();
+      x.font='15px system-ui';x.fillText('Score '+sc,12,30);
+      if(!live){x.fillText('Press Space to launch',W/2-90,H/2);}
+    })();`);
+  return shell('GAME OF LIFE','Click cells to draw · Space runs and pauses · C clears',`
+    const N=60;let g=Array.from({length:N},()=>new Array(N).fill(0)),run=false,t=0;
+    addEventListener('keydown',e=>{if(e.key===' ')run=!run;
+      if(e.key.toLowerCase()==='c')g=Array.from({length:N},()=>new Array(N).fill(0));});
+    c.onmousedown=c.onmousemove=e=>{if(e.buttons!==1)return;
+      const cell=Math.min(W,H)/N,ox=(W-cell*N)/2,oy=(H-cell*N)/2;
+      const i=Math.floor((e.clientX-ox)/cell),j=Math.floor((e.clientY-oy)/cell);
+      if(g[j]&&g[j][i]!==undefined)g[j][i]=1;};
+    (function loop(){requestAnimationFrame(loop);
+      if(run&&++t>4){t=0;
+        const n=g.map((row,j)=>row.map((v,i)=>{let s=0;
+          for(let dj=-1;dj<2;dj++)for(let di=-1;di<2;di++){if(!di&&!dj)continue;
+            const r=g[j+dj];if(r&&r[i+di])s++;}
+          return s===3||(v&&s===2)?1:0;}));
+        g=n;}
+      const cell=Math.min(W,H)/N,ox=(W-cell*N)/2,oy=(H-cell*N)/2;
+      x.fillStyle='#05070f';x.fillRect(0,0,W,H);
+      for(let j=0;j<N;j++)for(let i=0;i<N;i++)if(g[j][i]){
+        x.fillStyle='#2ee6a4';x.fillRect(ox+i*cell,oy+j*cell,cell-.6,cell-.6);}
+      x.fillStyle='#9fb0c7';x.font='14px system-ui';
+      x.fillText(run?'running — Space pauses':'paused — Space runs, click to draw',12,H-14);
+    })();`);
+}
+function wosArcadeView(w){
+  const cur=(w&&w.arg)||'';
+  if(cur)return `<div class="wos-arcade">
+    <div class="wos-srow"><button class="wos-btn" data-warcback>← All games</button>
+      <b>${esc((WOS_GAMES.find(g=>g.id===cur)||{}).name||'')}</b>
+      <span class="wos-desc">click the game to give it the keyboard</span></div>
+    <iframe class="wos-frame" data-wgame="${esc(cur)}"
+      sandbox="allow-scripts allow-pointer-lock allow-modals" allow="fullscreen;gamepad"></iframe>
+  </div>`;
+  return `<div class="wos-pad"><h3>Arcade</h3>
+    <p class="wos-desc">These run inside this window — no downloads, nothing external.</p>
+    <div class="wos-grid">${WOS_GAMES.map(g=>`<button class="wos-card" data-wgamepick="${esc(g.id)}">
+      <span class="wos-cardic">${esc(g.icon)}</span><b>${esc(g.name)}</b><i>${esc(g.desc)}</i></button>`).join('')}</div></div>`;
+}
+function wosNativeExtra(app){
+  if(app.native==='atlas'){
+    const sites=[['Pollinations','https://pollinations.ai','Free image generation, no key'],
+      ['HuggingFace','https://huggingface.co/spaces','Thousands of hosted demos'],
+      ['Perplexity','https://www.perplexity.ai','Search with citations'],
+      ['Ollama','https://ollama.com/library','Local models you can pull'],
+      ['OpenRouter','https://openrouter.ai/models','Every model and its live price']];
+    return `<div class="wos-pad"><h3>Atlas</h3>
+      <p class="wos-desc">Useful AI sites. Framing is attempted, and the ones that refuse are opened
+        in a real tab instead of showing you a blank rectangle.</p>
+      ${sites.map(([n,u,d])=>`<div class="wos-frow"><b>${esc(n)}</b>
+        <span class="wos-desc">${esc(d)}</span><span style="flex:1"></span>
+        <button class="wos-btn" data-watlas="${esc(u)}">Try to frame it</button>
+        <button class="wos-btn" data-wexturl="${esc(u)}">Real tab</button></div>`).join('')}</div>`;
+  }
+  if(app.native==='youtube')return `<div class="wos-brow">
+    <div class="wos-browbar"><input class="wos-in" data-wyt placeholder="Paste a video URL or 11-character id">
+      <button class="wos-btn primary" data-wytgo>Play</button></div>
+    <iframe class="wos-frame" data-wytframe allow="accelerometer;autoplay;encrypted-media;picture-in-picture" allowfullscreen></iframe>
+    <p class="wos-note">Whether a video can be embedded is the uploader's setting, not ours.</p></div>`;
+  if(app.native==='gallery'){
+    const assets=(typeof GEN_ASSETS!=='undefined'&&GEN_ASSETS)||[];
+    return `<div class="wos-pad"><h3>Gallery</h3>
+      ${assets.length?'<div class="wos-grid">'+assets.slice(0,40).map(a=>
+        `<div class="wos-card"><b>${esc(a.name||a.kind||'asset')}</b><i>${esc(a.ts||'')}</i></div>`).join('')+'</div>'
+        :'<p class="wos-none">Nothing generated yet. The Create tab fills this.</p>'}
+      <button class="wos-btn" data-wjump="gen" style="margin-top:10px">Open Create</button></div>`;
+  }
+  if(app.native==='theater'){
+    const runs=(typeof HISTORY!=='undefined'&&HISTORY)||[];
+    return `<div class="wos-pad"><h3>Theater</h3>
+      <p class="wos-desc">Replay a run or a debate step by step, at your own pace.</p>
+      ${runs.length?runs.slice(0,20).map((r,i)=>`<div class="wos-frow">
+        <b>${esc(String(r.task||r.title||'Run '+(i+1)).slice(0,60))}</b>
+        <span style="flex:1"></span><button class="wos-btn" data-wjump="history">Open</button></div>`).join('')
+        :'<p class="wos-none">No runs recorded yet.</p>'}</div>`;
+  }
+  return '<div class="wos-empty">Not built.</div>';
+}
+
+/* ── Start menu + command palette ──────────────────────────────────────── */
+function wosStartMenu(show){
+  const el=$('#wos-startmenu');if(!el)return;
+  WOS_MENU=show===undefined?!WOS_MENU:show;
+  el.hidden=!WOS_MENU;
+  if(!WOS_MENU)return;
+  const apps=wosAllApps();
+  el.innerHTML=`<input class="wos-in" data-wsearch placeholder="Search apps…" autofocus>
+    <div class="wos-grid" data-wmenugrid>${apps.map(a=>`
+      <button class="wos-card" data-wicon="${esc(a.id)}">
+        <span class="wos-cardic">${esc(a.kind==='project'?'📁':a.icon)}</span>
+        <b>${esc(a.name)}</b><i>${esc(a.desc||a.kind)}</i></button>`).join('')}</div>
+    <div class="wos-frow" style="margin-top:8px">
+      <button class="wos-btn" data-wicon="settings">✦ Customise</button>
+      <button class="wos-btn" data-wnew="ai">✦ Build an app with AI</button>
+      <span style="flex:1"></span>
+      <button class="wos-btn" data-wjump="help">Help</button>
+    </div>`;
+  const s=el.querySelector('[data-wsearch]');
+  if(s){s.focus();s.oninput=()=>{
+    const q=s.value.toLowerCase();
+    el.querySelectorAll('[data-wicon]').forEach(b=>{
+      const a=wosApp(b.dataset.wicon);
+      b.style.display=(!q||((a&&a.name||'')+' '+(a&&a.desc||'')).toLowerCase().includes(q))?'':'none';
+    });};}
+}
+function wosPalette(show){
+  const el=$('#wos-palette');if(!el)return;
+  WOS_PAL=show===undefined?!WOS_PAL:show;
+  el.hidden=!WOS_PAL;
+  if(!WOS_PAL)return;
+  const cmds=wosAllApps().map(a=>({label:a.icon+'  '+a.name,sub:a.desc||'',run:()=>wosOpen(a.id)}))
+    .concat(WOS_THEMES.map(t=>({label:'🎨  Theme: '+t.name,sub:'switch the desktop skin',
+      run:()=>{WOS.theme=t.id;saveWos();wosRender();}})))
+    .concat(WOS_GAMES.map(g=>({label:'🕹  Play '+g.name,sub:g.desc,
+      run:()=>wosOpen('arcade',{arg:g.id})})))
+    .concat([
+      {label:'▦  Tile windows',sub:'arrange everything open',run:wosTile},
+      {label:'🧹  Close all windows',sub:'',run:()=>{WOS.wins=[];saveWos();wosRender();}},
+      {label:'💾  Back up my work now',sub:'write a snapshot to your folder',run:()=>persistBackupNow()},
+      {label:'📦  Download everything as a ZIP',sub:'brain + all work',run:()=>persistZip()},
+    ]);
+  el.innerHTML=`<input class="wos-in" data-wpalin placeholder="Type an app, a theme, a command…">
+    <div class="wos-palres" data-wpalres></div>`;
+  const inp=el.querySelector('[data-wpalin]'),res=el.querySelector('[data-wpalres]');
+  let list=cmds;
+  const draw=()=>{
+    const q=(inp.value||'').toLowerCase();
+    list=cmds.filter(c=>(c.label+' '+c.sub).toLowerCase().includes(q)).slice(0,14);
+    res.innerHTML=list.map((c,i)=>`<button class="wos-palitem${i===0?' on':''}" data-wpali="${i}">
+      <b>${esc(c.label)}</b><i>${esc(c.sub)}</i></button>`).join('')||'<p class="wos-none">Nothing matches.</p>';
+    res.querySelectorAll('[data-wpali]').forEach(b=>b.onclick=()=>{
+      const c=list[+b.dataset.wpali];wosPalette(false);if(c)c.run();});
+  };
+  inp.oninput=draw;
+  inp.onkeydown=e=>{
+    if(e.key==='Escape')wosPalette(false);
+    if(e.key==='Enter'&&list[0]){wosPalette(false);list[0].run();}
+  };
+  draw();setTimeout(()=>inp.focus(),10);
+}
+/* ── Studio inside the WebOS ────────────────────────────────────────────── */
+let WOS_STUDIO={files:{'index.html':''},cur:'index.html'};
+const WOS_SAMPLE=`<!doctype html>
+<html><head><meta charset="utf-8"><title>My widget</title><style>
+  body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui;
+    background:linear-gradient(140deg,#0f172a,#312e81);color:#fff}
+  button{padding:12px 20px;border:0;border-radius:12px;background:#67e8f9;font-weight:800;cursor:pointer}
+</style></head><body><main style="text-align:center">
+  <h1>My widget</h1><p>Edit it, preview it, then install it on the desktop.</p>
+  <button onclick="document.body.style.filter='hue-rotate('+(Math.random()*360|0)+'deg)'">Remix</button>
+</main></body></html>`;
+function wosStudioSync(w){
+  const root=$('#wos-root');if(!root)return;
+  const code=root.querySelector('[data-wscode]');
+  if(code)code.value=WOS_STUDIO.files[WOS_STUDIO.cur]||'';
+  const tabs=root.querySelector('[data-wstabs]');
+  if(tabs)tabs.innerHTML=Object.keys(WOS_STUDIO.files).map(n=>
+    `<button class="${n===WOS_STUDIO.cur?'on':''}" data-wsf="${esc(n)}">${esc(n)}</button>`).join('')+
+    '<button data-wsaddfile title="Add a file">＋</button>';
+}
+function wosStudioPreview(){
+  const fr=$('#wos-root [data-wspreview]');if(!fr)return;
+  fr.srcdoc=wosCompose(WOS_STUDIO.files);
+}
+async function wosInstallAI(prompt,kind){
+  const acc=await streamComplete({model:settings.archModel,maxTokens:7000,
+    messages:[{role:'system',content:
+      kind==='project'
+      ? 'Write a small multi-file web app. Return each file as ===FILE: name=== followed by its '+
+        'contents. Include index.html plus any css/js it needs. Everything must work with no build '+
+        'step and no external network, because it runs in a sandboxed frame with no origin.'
+      : 'Write ONE complete, self-contained single-file HTML document. Everything inline — no '+
+        'external scripts, stylesheets, fonts or images, because it runs in a sandboxed frame with '+
+        'no network origin. No markdown fences. Return only the HTML.'
+      +skillBlockFor('gen')},
+      {role:'user',content:String(prompt||'')}]},null,null,'webos-app');
+  const raw=String(acc.content||'').replace(/```(?:html)?/g,'').trim();
+  if(!raw)throw new Error('the model returned nothing');
+  if(kind==='project'){
+    const files=parseFiles(raw);
+    if(!Object.keys(files).length)throw new Error('no files came back in the expected format');
+    const name=(String(prompt).slice(0,30));
+    return wosInstall({name,files,src:'AI',icon:'📦'});
+  }
+  const name=(/<title>([^<]{1,60})<\/title>/i.exec(raw)||[])[1]||String(prompt).slice(0,32);
+  return wosInstall({name:name.trim(),html:raw,src:'AI',icon:'✨'});
+}
+function wosInstallFromStudio(){
+  if(typeof WS==='undefined'||!WS||!WS.files)return toast('Studio is empty',2200);
+  const names=Object.keys(WS.files);
+  if(!names.some(n=>/\.html?$/i.test(n)))return toast('Studio has no HTML file to install',2600);
+  /* More than one file means it is a project, and a project gets a folder. */
+  if(names.length>1)
+    return wosInstall({name:'Studio project',files:Object.assign({},WS.files),src:'Studio',icon:'📦'});
+  return wosInstall({name:names[0].replace(/\.html?$/i,''),html:WS.files[names[0]],src:'Studio',icon:'🛠'});
+}
+function wosNewApp(how){
+  if(how==='studio')return wosInstallFromStudio();
+  if(how==='github'){go('library');toast('Scan a repo here, then Install as app',3200);return;}
+  if(how==='file'){
+    const i=document.createElement('input');i.type='file';i.accept='.html,.htm,text/html';
+    i.onchange=()=>{const f=i.files[0];if(!f)return;
+      const r=new FileReader();
+      r.onload=()=>wosInstall({name:f.name.replace(/\.html?$/i,''),html:String(r.result),src:'file'});
+      r.readAsText(f);};
+    i.click();return;
+  }
+  if(how==='folder'){
+    const i=document.createElement('input');i.type='file';
+    i.webkitdirectory=true;i.multiple=true;
+    i.onchange=async()=>{
+      const list=[...i.files].filter(f=>f.size<3e6);
+      if(!list.length)return toast('No usable files in that folder',2600);
+      const files={};
+      for(const f of list){
+        const rel=(f.webkitRelativePath||f.name).split('/').slice(1).join('/')||f.name;
+        if(/\.(html?|css|js|json|md|txt|svg)$/i.test(rel))files[rel]=await f.text();
+      }
+      if(!Object.keys(files).length)return toast('That folder has no web files',2800);
+      const root=(list[0].webkitRelativePath||'project').split('/')[0];
+      wosInstall({name:root,files,src:'folder',icon:'📦'});
+    };
+    i.click();return;
+  }
+  if(how==='paste'){
+    openModal(`<h3 style="margin-top:0">Paste an app</h3>
+      <p class="help">One complete HTML document. It runs sandboxed and cannot read this page.</p>
+      <label class="field">Name<input id="wp-name" placeholder="My app"></label>
+      <label class="field" style="margin-top:8px">HTML<textarea id="wp-html" rows="10"></textarea></label>
+      <div class="row" style="margin-top:12px"><button class="btn" id="wp-go">Install</button></div>`);
+    const b=$('#wp-go');
+    if(b)b.onclick=()=>{const html=$('#wp-html').value.trim();
+      if(!html)return toast('Paste the HTML first',2000);
+      wosInstall({name:$('#wp-name').value.trim()||'Pasted app',html,src:'paste'});closeModal();};
+    return;
+  }
+  if(how==='url'){
+    const u=prompt('Web address to add as an app','https://');
+    if(!u)return;
+    wosInstall({name:u.replace(/^https?:\/\//,'').split('/')[0]||'Web app',url:u,src:'link',icon:'🔗'});
+    return;
+  }
+  if(how==='ai'){
+    openModal(`<h3 style="margin-top:0">Describe an app</h3>
+      <p class="help">A model writes it and it installs straight to the desktop.</p>
+      <label class="field">What should it do?<textarea id="wa-p" rows="4"
+        placeholder="a pomodoro timer with a circular progress ring and a soft chime"></textarea></label>
+      <label class="field" style="margin-top:8px">Shape
+        <select id="wa-k"><option value="single">Single file — sits on the desktop</option>
+        <option value="project">Full-stack project — gets a folder</option></select></label>
+      <div class="row" style="margin-top:12px"><button class="btn" id="wa-go">✦ Build &amp; install</button>
+        <span class="mini" id="wa-st"></span></div>`);
+    const b=$('#wa-go');
+    if(b)b.onclick=async()=>{
+      const p=$('#wa-p').value.trim();if(!p)return toast('Describe it first',2000);
+      b.disabled=true;b.textContent='Building…';
+      const st=$('#wa-st');if(st)st.textContent='This takes a few seconds…';
+      try{await wosInstallAI(p,$('#wa-k').value);closeModal();}
+      catch(e){toast('Could not build it: '+e.message,3400);b.disabled=false;b.textContent='✦ Build & install';}
+    };
+  }
+}
+/* ── Cross-window sync ─────────────────────────────────────────────────────
    A popped-out desktop is a second load of the app, not a moved DOM node. BroadcastChannel
-   carries live events (a notification firing, a window moving) and the storage event carries
-   persisted state, so the two stay together in both directions. */
+   carries live events; the storage event carries persisted state. */
 let WOS_CH=null;
 function wosBroadcast(msg){
   try{
@@ -34489,121 +35400,205 @@ function wosChannelInit(){
     WOS_CH=new BroadcastChannel('glassbox-webos');
     WOS_CH.onmessage=e=>{
       const m=e.data||{};
-      if(m.t==='state'){WOS=Object.assign({},WOS,store.get('webos',{}));if($('#wos-root'))wosRender();}
+      if(m.t==='state'){WOS=Object.assign({},WOS_DEFAULTS,store.get('webos',{}));if($('#wos-root'))wosRender();}
       if(m.t==='notify'&&currentView()!=='webos')toast('🪟 '+m.title,3000);
     };
   }catch(_){}
 }
-function wosInstallFromStudio(){
-  if(typeof WS==='undefined'||!WS||!WS.files)return toast('Studio is empty',2200);
-  const names=Object.keys(WS.files);
-  const entry=names.find(n=>/index\.html?$/i.test(n))||names.find(n=>/\.html?$/i.test(n));
-  if(!entry)return toast('Studio has no HTML file to install',2600);
-  /* Inline the workspace's own css/js so the installed app is genuinely self-contained —
-     a relative <script src> would 404 inside a srcdoc frame with no origin to resolve against. */
-  let html=WS.files[entry];
-  names.forEach(n=>{
-    if(n===entry)return;
-    const body=WS.files[n];
-    if(/\.css$/i.test(n))html=html.replace(new RegExp('<link[^>]*href=["\']\\.?/?'+n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'["\'][^>]*>','gi'),'<style>'+body+'</style>');
-    if(/\.js$/i.test(n))html=html.replace(new RegExp('<script[^>]*src=["\']\\.?/?'+n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'["\'][^>]*>\\s*<\\/script>','gi'),'<script>'+body+'<\/script>');
-  });
-  wosInstall({name:entry.replace(/\.html?$/i,'')||'Studio app',html,src:'Studio',icon:'🛠'});
-}
-async function wosInstallAI(prompt){
-  const acc=await streamComplete({model:settings.archModel,maxTokens:6000,
-    messages:[{role:'system',content:
-      'Write ONE complete, self-contained single-file HTML document. Everything inline — no '+
-      'external scripts, stylesheets, fonts or images, because it runs in a sandboxed frame with '+
-      'no network origin. It must work with no build step. Return only the HTML, no fences.'+
-      skillBlockFor('gen')},
-      {role:'user',content:String(prompt||'')}]},null,null,'webos-app');
-  const html=String(acc.content||'').replace(/```(?:html)?/g,'').trim();
-  if(!html)throw new Error('the model returned nothing');
-  const name=(/<title>([^<]{1,60})<\/title>/i.exec(html)||[])[1]||String(prompt).slice(0,32);
-  return wosInstall({name:name.trim(),html,src:'AI',icon:'✨'});
-}
+
+/* ── Events ─────────────────────────────────────────────────────────────── */
 function wosInit(){
   if(wosInit._done)return;wosInit._done=true;
   wosChannelInit();
   if(typeof LOG_LISTENERS!=='undefined'&&Array.isArray(LOG_LISTENERS))LOG_LISTENERS.push(wosFromLog);
-
+  if(!WOS_STUDIO.files['index.html'])WOS_STUDIO.files['index.html']=WOS_SAMPLE;
   const root=$('#wos-root');if(!root)return;
 
   root.addEventListener('click',async ev=>{
-    const t=ev.target;
-    const g=(sel)=>t.closest('['+sel+']');
+    const g=sel=>ev.target.closest('['+sel+']');
     let el;
-    if((el=g('data-wicon'))){const id=el.dataset.wicon;if(!WOS_DRAG||!WOS_DRAG.moved)wosOpen(id);return;}
+    if((el=g('data-wicon'))){
+      if(WOS_DRAG&&WOS_DRAG.moved)return;
+      const a=wosApp(el.dataset.wicon);
+      if(a&&a.kind==='extra'&&a.tab&&!a.native){wosOpen(a.id);return;}
+      wosOpen(el.dataset.wicon);wosStartMenu(false);return;}
     if((el=g('data-wrestore'))){const w=(WOS.wins||[]).find(x=>x.id===el.dataset.wrestore);
       if(w){w.min=false;w.z=++WOS.z;saveWos();wosRender();}return;}
     if((el=g('data-wclose'))){wosClose(el.dataset.wclose);return;}
     if((el=g('data-wmin'))){wosMin(el.dataset.wmin);return;}
     if((el=g('data-wmaxb'))){wosMax(el.dataset.wmaxb);return;}
+    if((el=g('data-wsnapl'))){wosSnap(el.dataset.wsnapl,'left');return;}
+    if((el=g('data-wsnapr'))){wosSnap(el.dataset.wsnapr,'right');return;}
     if((el=g('data-wjump'))){go(el.dataset.wjump);return;}
     if((el=g('data-wopen'))){wosOpen(el.dataset.wopen);return;}
-    if((el=g('data-wdel'))){const a=wosApp(el.dataset.wdel);
-      if(a&&confirm('Remove “'+a.name+'”? Its data goes with it.'))wosUninstall(el.dataset.wdel);return;}
-    if((el=g('data-wexport'))){const a=wosApp(el.dataset.wexport);
-      const html=await wosBody(el.dataset.wexport);
-      downloadText(html,(a?a.name:'app').replace(/[^\w-]+/g,'-')+'.html','text/html');return;}
-    if((el=g('data-wpop'))){const w=(WOS.wins||[]).find(x=>x.id===el.dataset.wpop);
-      if(w){const html=await wosBody(w.app);
-        const b=new Blob([html],{type:'text/html'});const u=URL.createObjectURL(b);
-        window.open(u,'_blank');setTimeout(()=>URL.revokeObjectURL(u),20000);}return;}
+    if(g('data-wstart')){wosStartMenu();return;}
+    if(g('data-wpal')){wosPalette();return;}
+    if(g('data-wtile')){wosTile();return;}
+    if(g('data-wclearn')){WOS.notifs=[];saveWos();wosRender();return;}
     if(g('data-wbell')){const n=$('#wos-notifs');
-      if(n){n.hidden=!n.hidden;if(!n.hidden){(WOS.notifs||[]).forEach(x=>x.read=true);saveWos();}}return;}
+      if(n){n.hidden=!n.hidden;if(!n.hidden){(WOS.notifs||[]).forEach(x=>x.read=true);saveWos();wosRenderNotifs();}}
+      return;}
     if(g('data-wfs')){toggleFullscreenView();return;}
     if(g('data-wpopos')){popOutView();return;}
+    if((el=g('data-wdel'))){const a=wosApp(el.dataset.wdel);
+      if(a&&confirm('Remove “'+a.name+'”? Its files go with it.'))wosUninstall(el.dataset.wdel);return;}
+    if((el=g('data-wexport'))){await wosExportApp(el.dataset.wexport);return;}
+    if((el=g('data-wzip'))){await wosExportApp(el.dataset.wzip);return;}
+    if((el=g('data-wpop'))){const w=(WOS.wins||[]).find(x=>x.id===el.dataset.wpop);
+      if(w){const a=wosApp(w.app);
+        let html;
+        if(a&&a.kind==='project'){const f=await wosFiles(a.id);html=wosCompose(f||{});}
+        else html=await wosBody(w.app);
+        const b=new Blob([html],{type:'text/html'});const u=URL.createObjectURL(b);
+        window.open(u,'_blank');setTimeout(()=>URL.revokeObjectURL(u),20000);}
+      return;}
+    if((el=g('data-wrun'))){
+      const a=wosApp(el.dataset.wrun);if(!a)return;
+      const f=await wosFiles(a.id);
+      const w=wosOpen(a.id);
+      setTimeout(()=>{const host=$(`#wos-root [data-wbody="${w.id}"]`);
+        if(host)host.innerHTML=`<iframe class="wos-frame" sandbox="allow-scripts allow-forms allow-modals allow-popups"
+          srcdoc="${esc(wosCompose(f||{}))}"></iframe>`;},60);
+      return;}
+    if((el=g('data-wtostudio'))){
+      const a=wosApp(el.dataset.wtostudio);const f=await wosFiles(a.id);
+      connRun('studio',connMake('files',Object.entries(f||{}).map(([name,content])=>({name,content})),a.name,'webos'));
+      return;}
+    if((el=g('data-wextraoff'))){wosExtraToggle(el.dataset.wextraoff,false);return;}
+    if(g('data-wextraall')){WOS_EXTRAS.forEach(e=>{WOS.extras[e.id]=true;});saveWos();wosRender();
+      toast('Every extra feature is on the desktop now',3000);return;}
+    if(g('data-wextranone')){WOS.extras={};saveWos();wosRender();return;}
     if((el=g('data-wtheme'))){WOS.theme=el.dataset.wtheme;saveWos();wosRender();wosBroadcast({t:'state'});return;}
     if((el=g('data-wpack'))){WOS.icons=el.dataset.wpack;WOS.iconLock=true;saveWos();wosRender();return;}
     if(g('data-warrange')){WOS.iconPos={};saveWos();wosRender();return;}
-    if(g('data-wreset')){if(confirm('Reset the desktop layout? Installed apps are kept.')){
+    if(g('data-wreset')){if(confirm('Reset the desktop layout and theme? Installed apps are kept.')){
       WOS.iconPos={};WOS.wins=[];WOS.theme='aurora';WOS.wallpaper='';saveWos();wosRender();}return;}
     if(g('data-wwallclear')){WOS.wallpaper='';saveWos();wosRender();return;}
-    if(g('data-wwall')){
-      const i=document.createElement('input');i.type='file';i.accept='image/*';
-      i.onchange=()=>{const f=i.files[0];if(!f)return;
-        const r=new FileReader();
-        r.onload=()=>{WOS.wallpaper=String(r.result);saveWos();wosRender();};
-        r.readAsDataURL(f);};
+    if(g('data-wwall')){const i=document.createElement('input');i.type='file';i.accept='image/*';
+      i.onchange=()=>{const f=i.files[0];if(!f)return;const r=new FileReader();
+        r.onload=()=>{WOS.wallpaper=String(r.result);saveWos();wosRender();};r.readAsDataURL(f);};
       i.click();return;}
-    if(g('data-wgo')){const u=root.querySelector('[data-wurl]'),fr=root.querySelector('[data-wbrowframe]');
-      if(u&&fr&&u.value.trim())fr.src=/^https?:/.test(u.value)?u.value:'https://'+u.value;return;}
     if((el=g('data-wnew'))){wosNewApp(el.dataset.wnew);return;}
-  });
-  root.addEventListener('input',ev=>{
-    if(ev.target.matches('[data-wnotes]')){WOS.notes=ev.target.value;saveWos();}
-    if(ev.target.matches('[data-wiconsize]')){WOS.iconSize=+ev.target.value;saveWos();
-      $$('#wos-root .wos-icon').forEach(i=>i.style.width=WOS.iconSize+'px');}
-  });
-  root.addEventListener('change',ev=>{
-    if(ev.target.matches('[data-wiconlock]')){WOS.iconLock=ev.target.checked;saveWos();}
+    if(g('data-wpickdir')){persistPickFolder();return;}
+    // pet
+    if(g('data-wpettoggle')){WOS.petOn=!WOS.petOn;saveWos();wosRender();return;}
+    if(g('data-wpettalk')){wosPetChat();return;}
+    if(ev.target.closest('#wos-pet')){wosPetSay();return;}
+    // browser
+    if((el=g('data-wbm'))){const u=root.querySelector('[data-wurl]');
+      if(u){u.value=el.dataset.wbm;wosBrowse(u.value);}return;}
+    if(g('data-wgo')){const u=root.querySelector('[data-wurl]');if(u)wosBrowse(u.value);return;}
+    if(g('data-wbre')){const f=root.querySelector('[data-wbrowframe]');if(f)f.src=f.src;return;}
+    if(g('data-wbback')){const f=root.querySelector('[data-wbrowframe]');
+      try{f.contentWindow.history.back();}catch(_){toast('That site will not let us go back from here',2600);}return;}
+    if(g('data-wext')){const u=root.querySelector('[data-wurl]');if(u&&u.value)window.open(u.value,'_blank','noopener');return;}
+    if((el=g('data-watlas'))){wosOpen('browser',{arg:el.dataset.watlas});return;}
+    if((el=g('data-wexturl'))){window.open(el.dataset.wexturl,'_blank','noopener');return;}
+    if(g('data-wytgo')){const v=root.querySelector('[data-wyt]').value.trim();
+      const id=(v.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/)||[])[1]||(/^[\w-]{11}$/.test(v)?v:'');
+      const f=root.querySelector('[data-wytframe]');
+      if(id&&f)f.src='https://www.youtube-nocookie.com/embed/'+id;else toast('Paste a valid video URL or id',2600);
+      return;}
+    // arcade
+    if((el=g('data-wgamepick'))){
+      const w=(WOS.wins||[]).find(x=>x.app==='arcade'&&!x.closed);
+      if(w){w.arg=el.dataset.wgamepick;saveWos();wosRender();}
+      return;}
+    if(g('data-warcback')){const w=(WOS.wins||[]).find(x=>x.app==='arcade'&&!x.closed);
+      if(w){w.arg='';saveWos();wosRender();}return;}
+    // notes
+    if(g('data-wntobrain')){connRun('brain',connMake('note',WOS.notes||'','WebOS notes','webos'));return;}
+    // calculator
+    if((el=g('data-wck'))){wosCalcKey(el.dataset.wck);return;}
+    // clock timer
+    if(g('data-wtimerstart')){wosTimer();return;}
+    // music
+    if(g('data-wmpick')){wosMusicPick();return;}
+    // studio
+    if((el=g('data-wsf'))){WOS_STUDIO.cur=el.dataset.wsf;wosStudioSync();return;}
+    if(g('data-wsaddfile')){const n=prompt('File name','style.css');
+      if(n){WOS_STUDIO.files[n]='';WOS_STUDIO.cur=n;wosStudioSync();}return;}
+    if(g('data-wsrun')){wosStudioPreview();return;}
+    if(g('data-wsinstall')){
+      const nm=root.querySelector('[data-wsname]').value.trim()||'My widget';
+      const ic=root.querySelector('[data-wsicon]').value.trim()||'✨';
+      const kind=root.querySelector('[data-wskind]').value;
+      if(kind==='project'||Object.keys(WOS_STUDIO.files).length>1)
+        wosInstall({name:nm,icon:'📦',files:Object.assign({},WOS_STUDIO.files),src:'App Studio'});
+      else wosInstall({name:nm,icon:ic,html:WOS_STUDIO.files['index.html'],src:'App Studio'});
+      return;}
+    if(g('data-wsdl')){
+      const nm=(root.querySelector('[data-wsname]').value.trim()||'widget').replace(/[^\w-]+/g,'-');
+      downloadText(wosCompose(WOS_STUDIO.files),nm+'.html','text/html');return;}
+    if((el=g('data-wsto'))){
+      const dest=el.dataset.wsto;
+      const files=Object.entries(WOS_STUDIO.files).map(([name,content])=>({name,content}));
+      const nm=root.querySelector('[data-wsname]').value.trim()||'Widget';
+      if(dest==='studio')connRun('studio',connMake('files',files,nm,'webos'));
+      if(dest==='design')connRun('design',connMake('html',wosCompose(WOS_STUDIO.files),nm,'webos'));
+      if(dest==='gen')connRun('gen',connMake('prompt','Make artwork for a widget called "'+nm+'"','',
+        'webos'));
+      return;}
+    if(g('data-wsai')){
+      const p=prompt('Describe the widget you want');
+      if(!p)return;
+      const st=root.querySelector('[data-wsstatus]');if(st)st.textContent='Writing…';
+      streamComplete({model:settings.archModel,maxTokens:6000,
+        messages:[{role:'system',content:'Write ONE complete self-contained single-file HTML document. '+
+          'Everything inline. No markdown fences, no external requests.'+skillBlockFor('gen')},
+          {role:'user',content:p}]},null,null,'webos-studio')
+        .then(acc=>{WOS_STUDIO.files['index.html']=String(acc.content||'').replace(/```(?:html)?/g,'').trim();
+          WOS_STUDIO.cur='index.html';wosStudioSync();wosStudioPreview();
+          if(st)st.textContent='Done';})
+        .catch(e=>{if(st)st.textContent=e.message;});
+      return;}
+    if(!ev.target.closest('#wos-startmenu')&&!ev.target.closest('[data-wstart]'))wosStartMenu(false);
   });
 
-  /* Pointer handling for icons, window drag and window resize. One set of listeners on the
-     document rather than per element, so a re-render never orphans a drag in progress. */
+  root.addEventListener('input',ev=>{
+    const t=ev.target;
+    if(t.matches('[data-wnotes]')){WOS.notes=t.value;
+      const s=root.querySelector('[data-wnstatus]');if(s)s.textContent='Saving…';
+      clearTimeout(wosInit._nt);wosInit._nt=setTimeout(()=>{saveWos();if(s)s.textContent='Saved';},350);}
+    if(t.matches('[data-wiconsize]')){WOS.iconSize=+t.value;saveWos();
+      $$('#wos-root .wos-icon').forEach(i=>i.style.width=WOS.iconSize+'px');}
+    if(t.matches('[data-wscode]')){WOS_STUDIO.files[WOS_STUDIO.cur]=t.value;
+      clearTimeout(wosInit._st);wosInit._st=setTimeout(wosStudioPreview,600);}
+    if(t.matches('[data-wpetname]')){WOS.pet=Object.assign({},WOS.pet,{name:t.value});saveWos();
+      const n=$('#wos-petname');if(n)n.textContent=t.value;}
+  });
+  root.addEventListener('change',ev=>{
+    const t=ev.target;
+    if(t.matches('[data-wiconlock]')){WOS.iconLock=t.checked;saveWos();}
+    if(t.matches('[data-wanim]')){WOS.animate=t.checked;saveWos();wosApplyTheme();}
+    if(t.matches('[data-wextra]')){wosExtraToggle(t.dataset.wextra,t.checked);}
+  });
+  root.addEventListener('keydown',ev=>{
+    if(ev.target.matches('[data-wtin]')&&ev.key==='Enter'){ev.preventDefault();wosTermRun(ev.target);}
+    if(ev.target.matches('[data-wurl]')&&ev.key==='Enter'){ev.preventDefault();wosBrowse(ev.target.value);}
+    if(ev.target.matches('[data-wscode]')&&ev.key==='Tab'){ev.preventDefault();
+      const s=ev.target.selectionStart;ev.target.setRangeText('  ',s,ev.target.selectionEnd,'end');}
+  });
+
+  /* Pointer: icons, window drag, window resize, pet drag. One document-level set so a
+     re-render never orphans a drag in progress. */
   root.addEventListener('pointerdown',ev=>{
     const rz=ev.target.closest('[data-wrz]');
-    if(rz){
-      const w=(WOS.wins||[]).find(x=>x.id===rz.dataset.wrz);if(!w)return;
+    if(rz){const w=(WOS.wins||[]).find(x=>x.id===rz.dataset.wrz);if(!w)return;
       WOS_DRAG={mode:'resize',id:w.id,dir:rz.dataset.wdir,sx:ev.clientX,sy:ev.clientY,
         ox:w.x,oy:w.y,ow:w.w,oh:w.h,moved:false};
-      wosFocus(w.id);ev.preventDefault();return;
-    }
+      wosFocus(w.id);ev.preventDefault();return;}
+    if(ev.target.closest('#wos-pet')){
+      const p=WOS.pet||{x:70,y:420};
+      WOS_DRAG={mode:'pet',sx:ev.clientX,sy:ev.clientY,ox:p.x,oy:p.y,moved:false};return;}
     const bar=ev.target.closest('[data-wbar]');
     if(bar&&!ev.target.closest('.wos-dots')&&!ev.target.closest('.wos-x')){
       const w=(WOS.wins||[]).find(x=>x.id===bar.dataset.wbar);if(!w||w.max)return;
       WOS_DRAG={mode:'win',id:w.id,sx:ev.clientX,sy:ev.clientY,ox:w.x,oy:w.y,moved:false};
-      wosFocus(w.id);ev.preventDefault();return;
-    }
-    const ic=ev.target.closest('[data-wicon]');
-    if(ic&&ic.classList.contains('wos-icon')){
-      const id=ic.dataset.wicon,i=wosAllApps().findIndex(a=>a.id===id);
-      const p=wosIconPos(id,i);
-      WOS_DRAG={mode:'icon',id,sx:ev.clientX,sy:ev.clientY,ox:p.x,oy:p.y,moved:false};
-      return;
-    }
+      wosFocus(w.id);ev.preventDefault();return;}
+    const ic=ev.target.closest('.wos-icon');
+    if(ic){const id=ic.dataset.wicon,i=wosAllApps().findIndex(a=>a.id===id),p=wosIconPos(id,i);
+      WOS_DRAG={mode:'icon',id,sx:ev.clientX,sy:ev.clientY,ox:p.x,oy:p.y,moved:false};return;}
     const win=ev.target.closest('.wos-win');
     if(win)wosFocus(win.dataset.w);
   });
@@ -34612,35 +35607,37 @@ function wosInit(){
     const dx=ev.clientX-WOS_DRAG.sx, dy=ev.clientY-WOS_DRAG.sy;
     if(Math.hypot(dx,dy)>5)WOS_DRAG.moved=true;
     if(!WOS_DRAG.moved)return;
+    const d=$('#wos-desk');if(!d)return;
+    const r=d.getBoundingClientRect();
     if(WOS_DRAG.mode==='icon'){
-      const d=$('#wos-desk');if(!d)return;
-      const r=d.getBoundingClientRect();
       const x=Math.max(0,Math.min(r.width-70,WOS_DRAG.ox+dx));
       const y=Math.max(0,Math.min(r.height-80,WOS_DRAG.oy+dy));
       WOS.iconPos[WOS_DRAG.id]={x,y};
       const el=$(`#wos-root .wos-icon[data-wicon="${WOS_DRAG.id}"]`);
       if(el){el.style.left=x+'px';el.style.top=y+'px';}
-      return;
-    }
+      return;}
+    if(WOS_DRAG.mode==='pet'){
+      const x=Math.max(0,Math.min(r.width-90,WOS_DRAG.ox+dx));
+      const y=Math.max(0,Math.min(r.height-110,WOS_DRAG.oy+dy));
+      WOS.pet=Object.assign({},WOS.pet,{x,y});
+      const el=$('#wos-pet');if(el){el.style.left=x+'px';el.style.top=y+'px';}
+      return;}
     const w=(WOS.wins||[]).find(x=>x.id===WOS_DRAG.id);if(!w)return;
     const el=$(`#wos-root .wos-win[data-w="${w.id}"]`);if(!el)return;
     if(WOS_DRAG.mode==='win'){
       w.x=Math.max(0,WOS_DRAG.ox+dx);w.y=Math.max(0,WOS_DRAG.oy+dy);
-      el.style.left=w.x+'px';el.style.top=w.y+'px';
-      return;
-    }
-    const d=WOS_DRAG.dir;
-    if(d.includes('e'))w.w=Math.max(320,WOS_DRAG.ow+dx);
-    if(d.includes('s'))w.h=Math.max(200,WOS_DRAG.oh+dy);
-    if(d.includes('w')){const nw=Math.max(320,WOS_DRAG.ow-dx);w.x=WOS_DRAG.ox+(WOS_DRAG.ow-nw);w.w=nw;}
-    if(d.includes('n')){const nh=Math.max(200,WOS_DRAG.oh-dy);w.y=WOS_DRAG.oy+(WOS_DRAG.oh-nh);w.h=nh;}
+      el.style.left=w.x+'px';el.style.top=w.y+'px';return;}
+    const dir=WOS_DRAG.dir;
+    if(dir.includes('e'))w.w=Math.max(320,WOS_DRAG.ow+dx);
+    if(dir.includes('s'))w.h=Math.max(200,WOS_DRAG.oh+dy);
+    if(dir.includes('w')){const nw=Math.max(320,WOS_DRAG.ow-dx);w.x=WOS_DRAG.ox+(WOS_DRAG.ow-nw);w.w=nw;}
+    if(dir.includes('n')){const nh=Math.max(200,WOS_DRAG.oh-dy);w.y=WOS_DRAG.oy+(WOS_DRAG.oh-nh);w.h=nh;}
     el.style.left=w.x+'px';el.style.top=w.y+'px';el.style.width=w.w+'px';el.style.height=w.h+'px';
   });
   document.addEventListener('pointerup',ev=>{
     if(!WOS_DRAG)return;
     const D=WOS_DRAG;WOS_DRAG=null;
     if(D.mode==='win'&&D.moved){
-      /* Edge snap, decided on release so a drag across the screen does not flicker. */
       const d=$('#wos-desk');
       if(d){const r=d.getBoundingClientRect();
         if(ev.clientY-r.top<8)wosSnap(D.id,'top');
@@ -34648,65 +35645,517 @@ function wosInit(){
         else if(r.right-ev.clientX<8)wosSnap(D.id,'right');}
     }
     saveWos();wosBroadcast({t:'state'});
-    /* A click that never moved is a launch; the click handler above reads D.moved, so keep
-       the flag readable for one tick before clearing it. */
-    if(D.mode==='icon'&&D.moved){WOS_DRAG={moved:true};setTimeout(()=>{WOS_DRAG=null;},0);}
+    /* A click that never moved is a launch; the click handler reads D.moved, so keep the flag
+       readable for one tick before clearing it. */
+    if((D.mode==='icon'||D.mode==='pet')&&D.moved){WOS_DRAG={moved:true};setTimeout(()=>{WOS_DRAG=null;},0);}
   });
+  document.addEventListener('keydown',ev=>{
+    if(currentView()!=='webos')return;
+    if((ev.metaKey||ev.ctrlKey)&&ev.key.toLowerCase()==='k'&&$('#wos-palette')){
+      ev.preventDefault();ev.stopPropagation();wosPalette(true);}
+    if(ev.key==='Escape'){wosPalette(false);wosStartMenu(false);}
+  },true);
   window.addEventListener('storage',e=>{
     if(e.key==='gb.webos'&&currentView()==='webos'){
-      WOS=Object.assign({},WOS_DEFAULTS,store.get('webos',{}));wosRender();
-    }
+      WOS=Object.assign({},WOS_DEFAULTS,store.get('webos',{}));wosRender();}
   });
+  setInterval(()=>{if(currentView()==='webos'){wosRenderPet();
+    const c=$('#wos-root .wos-clock');
+    if(c)c.textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}},20000);
 }
-function wosNewApp(how){
-  if(how==='studio')return wosInstallFromStudio();
-  if(how==='file'){
-    const i=document.createElement('input');i.type='file';i.accept='.html,.htm,text/html';
-    i.onchange=()=>{const f=i.files[0];if(!f)return;
-      const r=new FileReader();
-      r.onload=()=>wosInstall({name:f.name.replace(/\.html?$/i,''),html:String(r.result),src:'file'});
-      r.readAsText(f);};
-    i.click();return;
+
+/* ── Small app helpers ──────────────────────────────────────────────────── */
+function wosBrowse(u){
+  const f=$('#wos-root [data-wbrowframe]'),note=$('#wos-root [data-wbnote]');
+  if(!f||!u)return;
+  let v=String(u).trim();
+  /* Anything that is not obviously a host goes to a search engine rather than becoming a
+     broken URL — a browser that only accepts perfect input is not a browser. */
+  if(!/^https?:\/\//i.test(v)){
+    if(/^[\w-]+(\.[\w-]+)+(\/|$)/.test(v))v='https://'+v;
+    else v='https://duckduckgo.com/?q='+encodeURIComponent(v);
   }
-  if(how==='paste'){
-    openModal(`<h3 style="margin-top:0">Paste an app</h3>
-      <p class="help">One complete HTML document. It runs sandboxed and cannot read this page.</p>
-      <label class="field">Name<input id="wp-name" placeholder="My app"></label>
-      <label class="field" style="margin-top:8px">HTML<textarea id="wp-html" rows="10"
-        placeholder="&lt;!doctype html&gt;…"></textarea></label>
-      <div class="row" style="margin-top:12px"><button class="btn" id="wp-go">Install</button></div>`);
-    const b=$('#wp-go');
-    if(b)b.onclick=()=>{
-      const html=$('#wp-html').value.trim();
-      if(!html)return toast('Paste the HTML first',2000);
-      wosInstall({name:$('#wp-name').value.trim()||'Pasted app',html,src:'paste'});
-      closeModal();
-    };return;
+  const inp=$('#wos-root [data-wurl]');if(inp)inp.value=v;
+  f.src=v;
+  if(note)note.textContent='Loading '+v+' … if it stays blank, that site refuses to be framed. Use “Real tab”.';
+}
+let WOS_CALC={cur:'0',prev:null,op:null};
+function wosCalcKey(k){
+  const d=$('#wos-root [data-wcd]');if(!d)return;
+  const ops={'÷':'/','×':'*','−':'-','+':'+'};
+  if(k==='C'){WOS_CALC={cur:'0',prev:null,op:null};}
+  else if(k==='⌫')WOS_CALC.cur=WOS_CALC.cur.length>1?WOS_CALC.cur.slice(0,-1):'0';
+  else if(ops[k]){WOS_CALC.prev=parseFloat(WOS_CALC.cur);WOS_CALC.op=ops[k];WOS_CALC.cur='0';}
+  else if(k==='='){
+    if(WOS_CALC.op!=null&&WOS_CALC.prev!=null){
+      const a=WOS_CALC.prev,b=parseFloat(WOS_CALC.cur);
+      const r={'+':a+b,'-':a-b,'*':a*b,'/':b===0?NaN:a/b}[WOS_CALC.op];
+      WOS_CALC.cur=isFinite(r)?String(+r.toFixed(10)):'Cannot divide by zero';
+      WOS_CALC.prev=null;WOS_CALC.op=null;}
   }
-  if(how==='url'){
-    const u=prompt('Web address to add as an app','https://');
-    if(!u)return;
-    wosInstall({name:u.replace(/^https?:\/\//,'').split('/')[0]||'Web app',url:u,src:'link',icon:'🔗'});
+  else if(k==='.'){if(!WOS_CALC.cur.includes('.'))WOS_CALC.cur+='.';}
+  else if(k==='('||k===')'){/* display-only grouping is misleading, so it is ignored */}
+  else WOS_CALC.cur=WOS_CALC.cur==='0'?k:WOS_CALC.cur+k;
+  d.value=WOS_CALC.cur;
+}
+function wosTimer(){
+  const inp=$('#wos-root [data-wtimer]'),out=$('#wos-root [data-wtimerout]');
+  if(!inp||!out)return;
+  let left=Math.max(1,Math.round(parseFloat(inp.value)*60));
+  clearInterval(wosTimer._i);
+  wosTimer._i=setInterval(()=>{
+    left--;
+    const o=$('#wos-root [data-wtimerout]');
+    if(!o){clearInterval(wosTimer._i);return;}
+    o.textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0');
+    if(left<=0){clearInterval(wosTimer._i);o.textContent='done';
+      wosNotify('Timer finished','','good');}
+  },1000);
+  out.textContent='starting…';
+}
+function wosClockTick(){
+  const b=$('#wos-root [data-wclockbig]'),d=$('#wos-root [data-wclockdate]');
+  if(!b)return;
+  b.textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  if(d)d.textContent=new Date().toLocaleDateString([],{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  clearTimeout(wosClockTick._t);
+  if($('#wos-root [data-wclockbig]'))wosClockTick._t=setTimeout(wosClockTick,1000);
+}
+function wosMusicPick(){
+  const i=document.createElement('input');i.type='file';i.accept='audio/*';i.multiple=true;
+  i.onchange=()=>{
+    const list=$('#wos-root [data-wmlist]'),au=$('#wos-root [data-wmaudio]');
+    if(!list)return;
+    [...i.files].forEach(f=>{
+      const u=URL.createObjectURL(f);
+      const row=document.createElement('div');row.className='wos-frow';
+      row.innerHTML=`<span class="wos-sic">🎵</span><b>${esc(f.name)}</b><span style="flex:1"></span>`;
+      const b=document.createElement('button');b.className='wos-btn';b.textContent='Play';
+      b.onclick=()=>{if(au){au.src=u;au.play();}};
+      row.appendChild(b);list.appendChild(row);
+    });
+  };
+  i.click();
+}
+async function wosTermRun(inp){
+  const out=$('#wos-root [data-wtout]');if(!out)return;
+  const raw=inp.value.trim();inp.value='';
+  if(!raw)return;
+  out.innerHTML+='\n$ '+esc(raw)+'\n';
+  const [cmd,...rest]=raw.split(/\s+/);
+  const say=t=>{out.innerHTML+=esc(t)+'\n';out.scrollTop=out.scrollHeight;};
+  if(cmd==='help')return say('help · apps · open <name> · theme <name> · themes · extras · storage · clear · backup · zip\nAnything else is sent to the bridge if it is connected.');
+  if(cmd==='clear'){out.innerHTML='';return;}
+  if(cmd==='apps')return say(wosAllApps().map(a=>a.icon+' '+a.name).join('\n'));
+  if(cmd==='themes')return say(WOS_THEMES.map(t=>t.id).join(', '));
+  if(cmd==='theme'){const id=rest[0];
+    if(WOS_PRESETS[id]){WOS.theme=id;saveWos();wosRender();return;}
+    return say('Themes: '+WOS_THEMES.map(t=>t.id).join(', '));}
+  if(cmd==='extras')return say(WOS_EXTRAS.map(e=>(wosExtraOn(e.id)?'[on]  ':'[off] ')+e.id+' — '+e.desc).join('\n'));
+  if(cmd==='open'){const q=rest.join(' ').toLowerCase();
+    const a=wosAllApps().find(x=>x.name.toLowerCase().includes(q));
+    if(a){wosOpen(a.id);return say('Opened '+a.name);}return say('No app matches that.');}
+  if(cmd==='storage'){const q=await persistQuota();
+    return say(q?`Using ${persistFmt(q.usage)} of ${persistFmt(q.quota)} (${q.pct}%) · persistent: ${q.persisted?'yes':'NO — click the shield in Settings'}`:'Storage estimate unavailable in this browser.');}
+  if(cmd==='backup'){await persistBackupNow();return say('Backup written.');}
+  if(cmd==='zip'){await persistZip();return say('ZIP building — check your downloads.');}
+  if(typeof BRIDGE_INFO!=='undefined'&&BRIDGE_INFO&&BRIDGE_INFO.ok){
+    try{const r=await bridgePost('/exec',{cmd:raw});
+      return say((r&&(r.out||r.err||r.error))||'(no output)');}
+    catch(e){return say('bridge error: '+e.message);}
+  }
+  say('Command not found, and the bridge is not connected. Type help.');
+}
+async function wosExportApp(id){
+  const a=wosApp(id);if(!a)return;
+  const safe=(a.name||'app').replace(/[^\w-]+/g,'-');
+  if(a.kind==='project'){
+    const files=await wosFiles(id);
+    if(typeof makeZip==='function'){
+      const blob=makeZip(files||{});
+      officeDownload(blob,safe,'zip');
+    }else downloadText(wosCompose(files||{}),safe+'.html','text/html');
     return;
   }
-  if(how==='ai'){
-    openModal(`<h3 style="margin-top:0">Describe an app</h3>
-      <p class="help">A model writes a complete single-file app and it installs straight to the desktop.</p>
-      <label class="field">What should it do?<textarea id="wa-p" rows="4"
-        placeholder="a pomodoro timer with a circular progress ring and a soft chime"></textarea></label>
-      <div class="row" style="margin-top:12px"><button class="btn" id="wa-go">✦ Build & install</button>
-        <span class="mini" id="wa-st"></span></div>`);
-    const b=$('#wa-go');
-    if(b)b.onclick=async()=>{
-      const p=$('#wa-p').value.trim();if(!p)return toast('Describe it first',2000);
-      b.disabled=true;b.textContent='Building…';
-      const st=$('#wa-st');if(st)st.textContent='This takes a few seconds…';
-      try{await wosInstallAI(p);closeModal();}
-      catch(e){toast('Could not build it: '+e.message,3400);b.disabled=false;b.textContent='✦ Build & install';}
-    };
+  downloadText(await wosBody(id),safe+'.html','text/html');
+}
+/* The folder listing is filled after render because the files live in IndexedDB. */
+async function wosFillFolders(){
+  for(const host of $$('#wos-root [data-wfl]')){
+    const id=host.dataset.wfl;
+    const files=await wosFiles(id)||{};
+    const names=Object.keys(files);
+    host.innerHTML=names.length?names.map(n=>`<div class="wos-frow">
+      <span class="wos-sic">${/\.html?$/i.test(n)?'🌐':/\.css$/i.test(n)?'🎨':/\.js$/i.test(n)?'📜':'📄'}</span>
+      <b class="mono">${esc(n)}</b>
+      <span class="wos-desc">${(files[n]||'').length.toLocaleString()} chars</span>
+      <span style="flex:1"></span>
+      <button class="wos-btn" data-wfview="${esc(id)}|${esc(n)}">View</button></div>`).join('')
+      :'<p class="wos-none">This folder is empty.</p>';
+    host.querySelectorAll('[data-wfview]').forEach(b=>b.onclick=()=>{
+      const [aid,nm]=b.dataset.wfview.split('|');
+      wosFiles(aid).then(f=>openModal(`<h3 style="margin-top:0">${esc(nm)}</h3>
+        <pre class="mono" style="max-height:60vh;overflow:auto;white-space:pre-wrap;font-size:12px">${esc((f||{})[nm]||'')}</pre>`));
+    });
   }
 }
 
+/* ═══════════════════ PERSISTENCE ═══════════════════
+   The honest problem this solves: everything in this app lives in localStorage and IndexedDB,
+   and both are EVICTABLE. A browser under storage pressure can discard an origin's data
+   without asking, and `store.set` previously caught a quota failure, showed a small toast and
+   returned false — a value almost no caller checked. So a save could fail and the app would
+   carry on as though it had worked. That is the one failure mode that loses real work.
+
+   Four defences, in order of how much they matter:
+     1. Ask for PERSISTENT storage, which exempts the origin from routine eviction.
+     2. Make a failed write LOUD — a banner that stays until dealt with, not a toast that fades.
+     3. Keep a rolling backup in a real folder on disk, via the File System Access API, so the
+        browser is no longer the only copy.
+     4. One ZIP that contains the Brain and every piece of work, openable anywhere. */
+const PERSIST_DEFAULTS={dirName:'',auto:true,everyMin:15,lastBackup:'',failures:0};
+let PERSIST=Object.assign({},PERSIST_DEFAULTS,store.get('persist',{}));
+const savePersist=()=>{try{localStorage.setItem('gb.persist',JSON.stringify(PERSIST));}catch(_){}};
+let PERSIST_DIR=null;          // FileSystemDirectoryHandle — kept in IDB so it survives reloads
+let PERSIST_FAILED=false;
+
+function persistFmt(n){
+  n=+n||0;
+  if(n>1e9)return (n/1e9).toFixed(1)+' GB';
+  if(n>1e6)return (n/1e6).toFixed(1)+' MB';
+  if(n>1e3)return (n/1e3).toFixed(0)+' KB';
+  return n+' B';
+}
+async function persistQuota(){
+  try{
+    if(!navigator.storage||!navigator.storage.estimate)return null;
+    const e=await navigator.storage.estimate();
+    const persisted=navigator.storage.persisted?await navigator.storage.persisted():false;
+    return{usage:e.usage||0,quota:e.quota||0,
+      pct:e.quota?Math.round((e.usage/e.quota)*100):0,persisted};
+  }catch(_){return null;}
+}
+/* Chrome grants this silently when the site looks "important"; Firefox prompts. Either way the
+   answer is worth knowing, because "not persisted" means the browser may evict the work. */
+async function persistRequest(){
+  try{
+    if(!navigator.storage||!navigator.storage.persist)return false;
+    const already=navigator.storage.persisted?await navigator.storage.persisted():false;
+    if(already)return true;
+    return await navigator.storage.persist();
+  }catch(_){return false;}
+}
+/* A failed write must not be dismissible noise. This banner stays until storage is actually
+   freed or a backup is taken. */
+function persistFailBanner(msg){
+  PERSIST_FAILED=true;
+  PERSIST.failures=(PERSIST.failures||0)+1;savePersist();
+  let el=$('#persist-alarm');
+  if(!el){
+    el=document.createElement('div');el.id='persist-alarm';el.className='persist-alarm';
+    document.body.appendChild(el);
+  }
+  el.innerHTML=`<b>⚠ A save just failed — your work is at risk.</b>
+    <span>${esc(msg||'Browser storage is full.')}</span>
+    <button class="btn small" id="pa-zip">Download everything now</button>
+    <button class="btn ghost small" id="pa-folder">Pick a backup folder</button>
+    <button class="btn ghost small" id="pa-open">Storage settings</button>`;
+  const z=$('#pa-zip');if(z)z.onclick=()=>persistZip();
+  const f=$('#pa-folder');if(f)f.onclick=()=>persistPickFolder();
+  const o=$('#pa-open');if(o)o.onclick=()=>{go('settings');setTimeout(()=>{
+    const p=$('#persist-panel');if(p)p.scrollIntoView({behavior:'smooth',block:'center'});},200);};
+}
+function persistClearAlarm(){
+  PERSIST_FAILED=false;
+  const el=$('#persist-alarm');if(el)el.remove();
+}
+/* ── The backup folder ─────────────────────────────────────────────────────
+   File System Access API. The handle is stored in IndexedDB so the folder is remembered across
+   reloads; the browser still requires a user gesture to re-grant permission after a restart,
+   which is stated rather than hidden. */
+async function persistPickFolder(){
+  if(!window.showDirectoryPicker)
+    return toast('This browser has no folder access. Use “Download everything” instead — Chrome and Edge support folders.',5200);
+  try{
+    const dir=await window.showDirectoryPicker({mode:'readwrite',id:'glassbox-workspace'});
+    PERSIST_DIR=dir;
+    await IDB.set('persistDir',dir);
+    PERSIST.dirName=dir.name;savePersist();
+    await persistBackupNow();
+    toast('Backups will be written to “'+dir.name+'” from now on',4200);
+    if($('#persist-panel'))renderPersist();
+  }catch(e){
+    if(e&&e.name==='AbortError')return;
+    toast('Could not use that folder: '+e.message,3600);
+  }
+}
+async function persistDir(){
+  if(PERSIST_DIR)return PERSIST_DIR;
+  try{
+    const h=await IDB.get('persistDir',null);
+    if(!h)return null;
+    const perm=h.queryPermission?await h.queryPermission({mode:'readwrite'}):'granted';
+    if(perm==='granted'){PERSIST_DIR=h;return h;}
+    return null;             // needs a gesture to re-grant; the panel says so
+  }catch(_){return null;}
+}
+/* ── What "all my work" actually is ────────────────────────────────────── */
+const PERSIST_KEYS=['ws','projects','creations','ofw','ofc','webos','brainDir','moaPresets',
+  'skillCtx','connx','ui','onboarding','skills','history','traces','persist','trueforge','notes'];
+async function persistCollect(){
+  const out={app:'Glassbox Jet',kind:'workspace',v:1,ts:nowISO(),data:{},idb:{},brain:null};
+  PERSIST_KEYS.forEach(k=>{const v=store.get(k,null);if(v!=null)out.data[k]=v;});
+  /* Keys are deliberately excluded: a backup file lands in a folder, gets synced and copied,
+     and a credential should never ride along. */
+  delete out.data.key;delete out.data.settings;
+  try{out.brain=await IDB.get(typeof brainKey==='function'?brainKey():'brain',null);}catch(_){}
+  const apps=(out.data.webos&&out.data.webos.apps)||[];
+  for(const a of apps){
+    if(a.kind==='project'){const f=await IDB.get('wosFiles:'+a.id,null);if(f)out.idb['wosFiles:'+a.id]=f;}
+    else{const b=await IDB.get('wosApp:'+a.id,'');if(b)out.idb['wosApp:'+a.id]=b;}
+  }
+  return out;
+}
+async function persistBackupNow(){
+  const dir=await persistDir();
+  const snap=await persistCollect();
+  const text=JSON.stringify(snap,null,2);
+  if(!dir){
+    downloadText(text,'glassbox-backup-'+new Date().toISOString().slice(0,10)+'.json','application/json');
+    toast('No folder chosen yet — downloaded a one-off backup instead',4000);
+    return false;
+  }
+  try{
+    /* Rolling: a dated file plus a stable "latest". The dated copies mean a corrupted save
+       does not overwrite the only good one. */
+    const stamp=new Date().toISOString().replace(/[:.]/g,'-').slice(0,16);
+    for(const name of ['glassbox-latest.json','backups/glassbox-'+stamp+'.json']){
+      const parts=name.split('/');
+      let d=dir;
+      for(let i=0;i<parts.length-1;i++)d=await d.getDirectoryHandle(parts[i],{create:true});
+      const fh=await d.getFileHandle(parts[parts.length-1],{create:true});
+      const w=await fh.createWritable();
+      await w.write(text);await w.close();
+    }
+    PERSIST.lastBackup=nowISO();savePersist();
+    persistClearAlarm();
+    if($('#persist-panel'))renderPersist();
+    return true;
+  }catch(e){
+    toast('Backup failed: '+e.message,4200);
+    return false;
+  }
+}
+/* ── The ZIP: brain + every piece of work, readable without this app ────── */
+async function persistZip(){
+  const snap=await persistCollect();
+  const files={};
+  files['README.md']=
+`# Glassbox Jet — your workspace
+
+This folder is a complete copy of everything you have made, taken ${new Date().toLocaleString()}.
+It contains no API keys — those are deliberately left behind.
+
+## What is in here
+
+- **brain/**       — your Brain: notes, facts and everything the assistant remembers.
+- **work/**        — documents, spreadsheets, projects and Creations.
+- **webos/**       — every app installed on your WebOS desktop, as real runnable files.
+- **workspace.json** — the machine-readable copy. Import this back into Glassbox Jet
+  (Settings → Cross-device → Import a bundle) to restore everything exactly.
+
+## Putting it back
+
+Open Glassbox Jet, go to Settings, and import \`workspace.json\`. Everything returns —
+documents, presets, desktop apps and Brain.
+
+## Reading it without the app
+
+Every file under \`brain/\` and \`work/\` is plain Markdown or JSON, and everything under
+\`webos/\` is a real HTML file you can open in any browser by double-clicking it.
+`;
+  files['workspace.json']=JSON.stringify(snap,null,2);
+  const brain=snap.brain;
+  if(brain&&typeof brain==='object'){
+    const docs=brain.docs||brain.notes||[];
+    if(Array.isArray(docs)&&docs.length){
+      docs.forEach((d,i)=>{
+        const nm=(d.title||d.name||('note-'+(i+1))).replace(/[^\w \-]+/g,'').slice(0,60)||('note-'+(i+1));
+        files['brain/'+nm+'.md']=
+          '# '+(d.title||nm)+'\n\n'+(d.text||d.body||d.content||'')+
+          '\n\n---\n'+(d.ts?('Saved '+d.ts+'\n'):'');
+      });
+    }
+    files['brain/brain.json']=JSON.stringify(brain,null,2);
+  }else files['brain/README.md']='Your Brain is empty — nothing has been saved to it yet.\n';
+  // Office documents
+  const ofw=snap.data.ofw;
+  if(ofw&&ofw.docs)ofw.docs.forEach(d=>{
+    files['work/documents/'+(d.name||'document').replace(/[^\w \-]+/g,'')+'.html']=
+      '<!doctype html><meta charset="utf-8"><title>'+(d.name||'')+'</title>\n'+(d.html||'');
+  });
+  const ofc=snap.data.ofc;
+  if(ofc&&ofc.books)ofc.books.forEach(b=>{
+    files['work/spreadsheets/'+(b.name||'workbook').replace(/[^\w \-]+/g,'')+'.json']=JSON.stringify(b,null,2);
+  });
+  // Studio workspace
+  const ws=snap.data.ws;
+  if(ws&&ws.files)Object.entries(ws.files).forEach(([n,c])=>{files['work/studio/'+n]=c;});
+  // WebOS apps as real files
+  const apps=(snap.data.webos&&snap.data.webos.apps)||[];
+  apps.forEach(a=>{
+    const safe=(a.name||'app').replace(/[^\w \-]+/g,'').slice(0,50)||'app';
+    if(a.kind==='project'){
+      const f=snap.idb['wosFiles:'+a.id]||{};
+      Object.entries(f).forEach(([n,c])=>{files['webos/'+safe+'/'+n]=c;});
+    }else{
+      const b=snap.idb['wosApp:'+a.id];
+      if(b)files['webos/'+safe+'.html']=b;
+    }
+  });
+  if(typeof makeZip!=='function'){
+    downloadText(JSON.stringify(snap,null,2),'glassbox-workspace.json','application/json');
+    return toast('Saved as JSON — the ZIP builder was unavailable',4000);
+  }
+  const blob=makeZip(files);
+  officeDownload(blob,'Glassbox-Workspace-'+new Date().toISOString().slice(0,10),'zip');
+  toast('Downloaded — open it and you have your Brain and every piece of work as real files',5200);
+}
+async function persistImportZipJson(text,mode){
+  const b=JSON.parse(text);
+  if(!b||b.app!=='Glassbox Jet')throw new Error('that is not a Glassbox Jet workspace file');
+  const merge=mode!=='replace';
+  Object.entries(b.data||{}).forEach(([k,v])=>{
+    if(merge&&Array.isArray(v)){
+      const cur=store.get(k,[]);
+      store.set(k,Array.isArray(cur)?cur.concat(v.filter(x=>!cur.some(c=>c&&x&&c.id&&c.id===x.id))):v);
+    }else if(merge&&v&&typeof v==='object')store.set(k,Object.assign({},store.get(k,{}),v));
+    else store.set(k,v);
+  });
+  for(const [k,v] of Object.entries(b.idb||{}))await IDB.set(k,v);
+  if(b.brain&&typeof brainKey==='function')await IDB.set(brainKey(),b.brain);
+  return Object.keys(b.data||{}).length;
+}
+function wosQuotaMeter(){
+  const el=$('#wos-quota');if(!el)return;
+  persistQuota().then(q=>{
+    const e=$('#wos-quota');if(!e)return;
+    if(!q){e.textContent='';return;}
+    const warn=q.pct>=80||!q.persisted;
+    e.className='wos-quota'+(warn?' warn':'');
+    e.textContent=persistFmt(q.usage)+' · '+q.pct+'%'+(q.persisted?'':' · not protected');
+    e.title=q.persisted
+      ? 'Storage is marked persistent, so the browser will not evict your work.'
+      : 'This origin is NOT persistent — the browser may clear your work under storage pressure. Open Settings to fix it.';
+  });
+}
+async function persistInit(){
+  if(persistInit._done)return;persistInit._done=true;
+  await persistDir();
+  const ok=await persistRequest();
+  if(!ok){
+    const q=await persistQuota();
+    if(q&&!q.persisted)
+      logEvent('storage',{msg:'origin is not persistent — work can be evicted'});
+  }
+  /* Rolling backup on a timer, and one on the way out. */
+  if(PERSIST.auto){
+    setInterval(()=>{if(PERSIST.auto)persistBackupNow();},Math.max(5,PERSIST.everyMin||15)*60000);
+    window.addEventListener('beforeunload',()=>{ /* best effort, no await available here */ });
+  }
+}
+
+function renderPersist(){
+  const host=$('#persist-panel');if(!host)return;
+  persistQuota().then(async q=>{
+    const h=$('#persist-panel');if(!h)return;
+    const dir=await persistDir();
+    const savedName=PERSIST.dirName;
+    const pct=q?q.pct:0;
+    h.innerHTML=`
+    <div class="card">
+      <h3>💾 Making sure your work cannot vanish</h3>
+      <p class="help">Everything you make here lives in this browser. That is what makes the app
+        private and account-free — and it is also the one real risk, because a browser can clear an
+        origin's data when it needs space. These four things remove that risk.</p>
+
+      <h3 style="margin-top:14px">1 · Storage protection</h3>
+      ${q?`<div class="pq-bar"><span style="width:${Math.min(100,pct)}%"
+            class="${pct>=80?'hot':pct>=50?'warm':''}"></span></div>
+          <p class="help">Using <b>${persistFmt(q.usage)}</b> of about ${persistFmt(q.quota)} (${pct}%).</p>
+          <p class="help">${q.persisted
+            ? '<b style="color:var(--good)">✓ Protected.</b> This origin is marked persistent, so the browser will not evict your work to reclaim space.'
+            : '<b style="color:var(--bad)">✗ Not protected.</b> The browser may clear this data under storage pressure. Ask for protection below — Chrome usually grants it silently once you have used the app a little; Firefox will prompt you.'}</p>`
+        :'<p class="help">This browser does not report storage usage, so the meter is unavailable. The backup folder below still works.</p>'}
+      <div class="row" style="gap:8px">
+        <button class="btn" id="pq-persist">Ask for storage protection</button>
+        <button class="btn ghost" id="pq-refresh">Recheck</button>
+      </div>
+
+      <h3 style="margin-top:16px">2 · A real folder on your disk</h3>
+      <p class="help">The strongest protection: a copy that is not in the browser at all. Pick a folder
+        once and a dated snapshot is written there automatically, plus a <code>glassbox-latest.json</code>
+        that is always current.</p>
+      ${dir?`<p class="help"><b style="color:var(--good)">✓ Backing up to “${esc(savedName)}”.</b>
+          ${PERSIST.lastBackup?'Last written '+esc(new Date(PERSIST.lastBackup).toLocaleString())+'.':''}</p>`
+        :savedName?`<p class="help"><b style="color:var(--warn,#ffb020)">“${esc(savedName)}” is remembered but needs permission again.</b>
+            Browsers drop folder access on restart until you re-approve it — click below.</p>`
+          :`<p class="help">No folder chosen yet.</p>`}
+      <div class="row" style="gap:8px">
+        <button class="btn" id="pq-pick">${dir?'Change folder':'Choose a backup folder'}</button>
+        <button class="btn ghost" id="pq-now">Back up now</button>
+        <label class="chk"><input type="checkbox" id="pq-auto" ${PERSIST.auto?'checked':''}> automatic</label>
+        <select id="pq-every" style="width:auto">
+          ${[5,15,30,60].map(m=>`<option value="${m}"${PERSIST.everyMin===m?' selected':''}>every ${m} min</option>`).join('')}
+        </select>
+      </div>
+      ${window.showDirectoryPicker?'':'<p class="help">Your browser has no folder API — Chrome and Edge do. The ZIP below works everywhere.</p>'}
+
+      <h3 style="margin-top:16px">3 · One ZIP with everything in it</h3>
+      <p class="help">Your <b>Brain</b> and every piece of work as <i>real files</i> — notes as Markdown,
+        documents as HTML, WebOS apps as pages you can double-click. It also contains a
+        <code>workspace.json</code> that restores the whole app exactly. No keys are included.</p>
+      <div class="row" style="gap:8px">
+        <button class="btn good" id="pq-zip">📦 Download everything as a ZIP</button>
+        <button class="btn ghost" id="pq-import">⬆ Restore from a backup</button>
+      </div>
+
+      <h3 style="margin-top:16px">4 · Failed saves are loud</h3>
+      <p class="help">A save that fails now raises a banner that stays until you deal with it.
+        ${PERSIST.failures?`<b>${PERSIST.failures} failed write${PERSIST.failures===1?'':'s'}</b> have been recorded on this browser.`
+          :'None have happened on this browser.'}</p>
+      <div class="row" style="gap:8px">
+        <button class="btn ghost small" id="pq-test">Show me what that looks like</button>
+      </div>
+    </div>`;
+    const on=(id,fn)=>{const b=$(id);if(b)b.onclick=fn;};
+    on('#pq-persist',async()=>{const ok=await persistRequest();
+      toast(ok?'Storage protection granted — your work is exempt from eviction'
+        :'The browser declined for now. Use the app a little more, or rely on the folder backup.',5000);
+      renderPersist();});
+    on('#pq-refresh',renderPersist);
+    on('#pq-pick',persistPickFolder);
+    on('#pq-now',async()=>{const ok=await persistBackupNow();if(ok)toast('Backup written',2400);});
+    on('#pq-zip',persistZip);
+    on('#pq-test',()=>persistFailBanner('This is a demonstration — nothing actually failed.'));
+    on('#pq-import',()=>{
+      const i=document.createElement('input');i.type='file';i.accept='.json,application/json';
+      i.onchange=()=>{const f=i.files[0];if(!f)return;
+        const r=new FileReader();
+        r.onload=async()=>{
+          try{
+            const mode=confirm('Merge into what is already here?\n\nOK = merge   ·   Cancel = replace')?'merge':'replace';
+            const n=await persistImportZipJson(String(r.result),mode);
+            toast('Restored '+n+' item groups — reloading…',3000);
+            setTimeout(()=>location.reload(),1400);
+          }catch(e){toast(e.message,4000);}
+        };
+        r.readAsText(f);};
+      i.click();});
+    const a=$('#pq-auto');if(a)a.onchange=()=>{PERSIST.auto=a.checked;savePersist();};
+    const e2=$('#pq-every');if(e2)e2.onchange=()=>{PERSIST.everyMin=+e2.value;savePersist();};
+  });
+}
 
 /* ═══════════════════ TRUEFORGE + CROSS-DEVICE ═══════════════════
    TrueForge (truefoundry/trueforge, MIT) is an agent harness: it runs the execution loop —
@@ -35375,9 +36824,9 @@ function go(view){
   if(view==='transplant')fillTransplantSources();
   if(view==='studio'){renderStudio();renderStudioX();connInit();if(!$('#st-frame').srcdoc)runPreview();}
   if(view==='connect'){connInit();renderConnections();}
-  if(view==='settings')renderCrossDevice();
+  if(view==='settings'){renderCrossDevice();renderPersist();}
   if(view==='help')renderHelp();
-  if(view==='webos'){wosInit();wosRender();}
+  if(view==='webos'){wosInit();wosRender();wosFillFolders();wosClockTick();}
 }
 async function boot(){
   document.documentElement.setAttribute('data-theme',settings.theme);
@@ -35433,7 +36882,7 @@ async function boot(){
   dreamSchedule();
   // Pop-out opens straight onto the Assistant rather than the default tab.
   if(location.hash==='#assistant')go('assistant');
-  connInit();applyTabPos();renderTabAdder();
+  connInit();applyTabPos();renderTabAdder();persistInit();
   applyPopRoute();                            // #pop=<view> — a tab opened via the ↗ button
   if(!location.hash.startsWith('#pop='))onbMaybe();
   updateKeyPill();renderHistory();fillTransplantSources();
@@ -35644,7 +37093,17 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     ONB_INTERESTS,ONB_ALWAYS,get ONB(){return ONB},set ONB(v){ONB=v},saveOnb,onbNeeded,onbTabsFor,
     onbApply,onbRender,onbMaybe,TABPOS,applyTabPos,setTabPos,renderTabAdder,openTabManager,
     HELP_TOPICS,get HELPC(){return HELPC},set HELPC(v){HELPC=v},helpSearch,renderHelp,
-    WOS_THEMES,WOS_ICONPACKS,WOS_PRESETS,WOS_BUILTIN,get WOS(){return WOS},set WOS(v){WOS=v},
+    WOS_THEMES,WOS_ICONPACKS,WOS_PRESETS,WOS_BUILTIN,WOS_EXTRAS,WOS_GAMES,WOS_MOODS,
+    get WOS(){return WOS},set WOS(v){WOS=v},saveWos,wosExtraOn,wosExtraToggle,wosBody,wosSetBody,
+    wosFiles,wosSetFiles,wosCompose,wosInstall,wosUninstall,wosAllApps,wosApp,wosNotify,wosToast,
+    wosFromLog,wosOpen,wosClose,wosFocus,wosMax,wosMin,wosSnap,wosTile,wosApplyTheme,wosRender,
+    wosRenderNotifs,wosRenderPet,wosPetMood,wosPetSay,wosPetChat,wosInit,wosNewApp,wosInstallAI,
+    wosInstallFromStudio,wosBroadcast,wosPreset,wosIconPos,wosStartMenu,wosPalette,wosGameSrc,
+    wosBrowse,wosCalcKey,wosTermRun,wosExportApp,wosFillFolders,wosClockTick,wosQuotaMeter,
+    get WOS_STUDIO(){return WOS_STUDIO},set WOS_STUDIO(v){WOS_STUDIO=v},wosStudioSync,wosStudioPreview,
+    get PERSIST(){return PERSIST},savePersist,persistFmt,persistQuota,persistRequest,persistFailBanner,
+    persistClearAlarm,persistPickFolder,persistDir,persistCollect,persistBackupNow,persistZip,
+    persistImportZipJson,persistInit,renderPersist,PERSIST_KEYS,
     saveWos,wosBody,wosSetBody,wosInstall,wosUninstall,wosAllApps,wosApp,wosNotify,wosFromLog,
     wosOpen,wosClose,wosFocus,wosMax,wosMin,wosSnap,wosApplyTheme,wosRender,wosRenderNotifs,
     wosInit,wosNewApp,wosInstallFromStudio,wosInstallAI,wosBroadcast,wosPreset,wosIconPos,
