@@ -196,6 +196,98 @@ main{flex:1;overflow:hidden;background:var(--panel);border-top:1px solid var(--e
   .pane-row{grid-template-columns:60px 20px 1fr;row-gap:2px}
   .pane-row .pane-kind,.pane-row .pane-meta,.pane-row .pane-note{grid-column:3/4;font-size:11px}
 }
+/* ── Sounds ─────────────────────────────────────────────────────────────── */
+.sfx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px}
+.sfx-row{display:flex;gap:9px;align-items:center;padding:7px 10px;border-radius:10px;
+  border:1px solid var(--edge);background:var(--bg)}
+.sfx-row.off{opacity:.5}
+.sfx-row b{font-size:12.5px;display:block}
+.sfx-row i{font-style:normal;font-size:11px;color:var(--ink3);display:block;line-height:1.35}
+.sfx-play{width:26px;height:26px;flex:0 0 auto;border-radius:50%;border:1px solid var(--edge2);
+  background:var(--panel2);color:var(--ink2);cursor:pointer;font-size:10px}
+.sfx-play:hover{border-color:var(--acc);color:var(--acc)}
+/* ── Awards ─────────────────────────────────────────────────────────────── */
+.aw-hero{background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 12%,var(--panel2)),var(--panel2));
+  border-color:color-mix(in srgb,var(--acc) 32%,var(--edge))}
+.aw-hero h2{margin:0 0 8px;font-size:24px}
+.aw-cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:8px}
+.aw-cat-pick{display:flex;gap:9px;align-items:center;padding:10px 12px;border-radius:12px;cursor:pointer;
+  border:1.5px solid var(--edge);background:var(--bg)}
+.aw-cat-pick.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 10%,var(--bg))}
+.aw-cat-pick b{font-size:12.5px;display:block}
+.aw-cat-pick i{font-style:normal;font-size:11px;color:var(--ink3);display:block;line-height:1.35}
+.aw-cat-ic{font-size:20px}
+.aw-stage-host{min-height:10px;position:relative}
+.aw-stage{display:flex;flex-direction:column;gap:12px;position:relative}
+.aw-confetti{position:absolute;inset:0;width:100%;pointer-events:none;z-index:5}
+.aw-card{position:relative;text-align:center;padding:20px 18px;border-radius:18px;
+  border:1.5px solid color-mix(in srgb,var(--acc) 42%,var(--edge));
+  background:linear-gradient(160deg,color-mix(in srgb,var(--acc) 9%,var(--panel2)),var(--panel2));
+  box-shadow:0 10px 34px rgba(0,0,0,.32)}
+.aw-card.turkey{border-color:color-mix(in srgb,var(--bad) 45%,var(--edge));
+  background:linear-gradient(160deg,color-mix(in srgb,var(--bad) 8%,var(--panel2)),var(--panel2))}
+.aw-card.pop{animation:awPop .55s cubic-bezier(.2,1.4,.4,1)}
+@keyframes awPop{0%{opacity:0;transform:scale(.86) translateY(14px)}
+  60%{opacity:1;transform:scale(1.035) translateY(-3px)}100%{transform:scale(1) translateY(0)}}
+.aw-medal{font-size:44px;line-height:1;filter:drop-shadow(0 5px 12px rgba(0,0,0,.4));
+  animation:awShine 2.6s ease-in-out infinite}
+@keyframes awShine{0%,100%{transform:rotate(-4deg) scale(1)}50%{transform:rotate(4deg) scale(1.07)}}
+.aw-cat{font-size:11px;text-transform:uppercase;letter-spacing:1.4px;color:var(--acc);
+  font-weight:800;margin-top:6px}
+.aw-title{font-size:17px;font-weight:700;margin-top:5px;line-height:1.3}
+.aw-by{font-size:11.5px;color:var(--ink3);font-family:var(--mono);margin-top:3px}
+.aw-cite{margin-top:10px;font-size:13.5px;line-height:1.6;color:var(--ink2);font-style:italic;
+  max-width:60ch;margin-left:auto;margin-right:auto}
+.aw-over{margin-top:9px;font-size:11.5px;color:var(--ink3);background:var(--bg);
+  border:1px solid var(--edge);border-radius:9px;padding:7px 10px;display:inline-block}
+.aw-remark{text-align:center;font-size:14px;font-style:italic;color:var(--ink2);
+  padding:16px;line-height:1.6;max-width:62ch;margin:0 auto}
+.aw-remark span{display:block;font-style:normal;font-size:11.5px;color:var(--ink3);margin-top:7px}
+.aw-wait{text-align:center;padding:26px}
+.aw-spin{width:30px;height:30px;margin:0 auto 12px;border-radius:50%;
+  border:3px solid var(--edge);border-top-color:var(--acc);animation:awSpin .8s linear infinite}
+@keyframes awSpin{to{transform:rotate(360deg)}}
+.aw-row{padding:8px 0;border-bottom:1px solid var(--edge)}
+.aw-avg{font-family:var(--mono);font-weight:800;color:var(--acc);margin-left:6px}
+.aw-votes{margin-top:5px;font-size:11.5px;color:var(--ink3);line-height:1.55}
+.aw-office{border-color:color-mix(in srgb,var(--acc) 40%,var(--edge))}
+/* ── Office games ───────────────────────────────────────────────────────── */
+.vog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(184px,1fr));gap:9px}
+.vog-card{display:flex;flex-direction:column;gap:3px;align-items:flex-start;text-align:left;
+  padding:12px;border-radius:13px;border:1.5px solid var(--edge);background:var(--bg);
+  color:var(--ink);cursor:pointer;transition:.15s}
+.vog-card:hover:not(:disabled){transform:translateY(-2px);border-color:var(--edge2)}
+.vog-card.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 10%,var(--bg))}
+.vog-card:disabled{opacity:.5;cursor:wait}
+.vog-ic{font-size:23px}
+.vog-card b{font-size:12.5px}
+.vog-card i{font-style:normal;font-size:11px;color:var(--ink3);line-height:1.4}
+.vog-cost{font-size:10px;color:var(--good);margin-top:3px;font-weight:700}
+.vog-play{background:var(--bg);border:1px solid var(--edge);border-radius:12px;padding:13px}
+.vog-quote{white-space:pre-wrap;font-size:12px;line-height:1.55;max-height:180px;overflow:auto;
+  background:var(--panel2);border:1px solid var(--edge);border-radius:9px;padding:10px;margin:0 0 10px}
+.vog-stat{display:block;width:100%;text-align:left;margin-bottom:6px;padding:10px 12px;
+  border-radius:10px;border:1px solid var(--edge);background:var(--panel2);color:var(--ink);
+  cursor:pointer;font-size:13px;line-height:1.5}
+.vog-stat:hover:not(:disabled){border-color:var(--edge2)}
+.vog-stat.true{border-color:var(--good);background:color-mix(in srgb,var(--good) 12%,var(--panel2))}
+.vog-stat.false{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--panel2))}
+.vog-say{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--edge);font-size:12.5px}
+.vog-say b{flex:0 0 96px;color:var(--acc)}
+.vog-pitch{border:1px solid var(--edge);border-radius:11px;padding:11px;margin-bottom:8px;background:var(--panel2)}
+.vog-pitch.won{border-color:var(--good);background:color-mix(in srgb,var(--good) 10%,var(--panel2))}
+.vog-pitch b{color:var(--acc);font-size:12.5px}
+.vog-pitch p{margin:5px 0 8px;font-size:13px;line-height:1.55}
+.vog-words{display:flex;gap:9px;flex-wrap:wrap;margin-top:8px}
+.vog-word{text-align:center;padding:11px 15px;border-radius:12px;background:var(--panel2);
+  border:1px solid var(--edge);animation:awPop .4s cubic-bezier(.2,1.4,.4,1)}
+.vog-word b{display:block;font-size:16px;color:var(--acc)}
+.vog-word i{font-style:normal;font-size:10.5px;color:var(--ink3)}
+/* ── Why ────────────────────────────────────────────────────────────────── */
+.why{background:linear-gradient(165deg,color-mix(in srgb,var(--acc) 7%,var(--panel2)),var(--panel2))}
+.why p{font-size:13.5px;line-height:1.72;color:var(--ink2);margin:0 0 12px;max-width:70ch}
+.why-lead{font-size:15.5px!important;color:var(--ink)!important;line-height:1.6!important}
+.why-last{border-left:3px solid var(--acc);padding-left:14px}
 /* ── WebOS ────────────────────────────────────────────────────────────────
    Themes emulate a whole desktop rather than tinting one: Win95 gets a real taskbar and
    square borders, Platinum loses the dock because System 7 had none, Phosphor is a CRT.
@@ -1684,6 +1776,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
     <button class="tab" data-view="transplant">🧬 Transplant</button>
     <button class="tab" data-view="models">📚 Catalog</button>
     <button class="tab" data-view="history">🗄️ History</button>
+    <button class="tab" data-view="awards">🏆 Awards</button>
     <button class="tab" data-view="webos">🪟 WebOS</button>
     <button class="tab" data-view="connect">🔗 Connections</button>
     <button class="tab" data-view="help">❓ Help</button>
@@ -2957,6 +3050,9 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
     </section>
 
         <section class="view" id="view-local"><div class="wrap">
+      <!-- Two of the first things anyone sets up, so they lead rather than trail. -->
+      <div id="gauntlet-panel"></div>
+      <div id="notify-panel"></div>
       <div class="card">
         <h2>🖥 Local models</h2>
         <p class="help">Everything about running models on your own machine: which runtimes are up,
@@ -3027,8 +3123,6 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
       </div>
       <div id="local-panel"></div>
       <div id="harness-panel"></div>
-      <div id="notify-panel"></div>
-      <div id="gauntlet-panel"></div>
       <div id="ghostty-panel"></div>
     </section>
 
@@ -4038,6 +4132,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
         <div id="out-list" style="margin-top:10px"></div>
       </div>
       <div class="card">
+        <div id="vog-panel"></div>
         <h3>🏗 Office design</h3>
         <p class="help">The room is data, so a theme changes the layout, the palette and which
           fixtures exist — not just the colours. Everything below persists.</p>
@@ -4539,6 +4634,10 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
       </div>
     </section>
 
+    <section class="view" id="view-awards"><div class="wrap">
+      <div id="aw-panel"></div>
+    </div></section>
+
     <section class="view nopad" id="view-webos"><div id="wos-root" class="wos"></div></section>
 
     <section class="view" id="view-connect"><div class="wrap">
@@ -4550,6 +4649,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
     </div></section>
 
     <section class="view" id="view-settings"><div class="wrap" style="max-width:780px">
+      <div id="sfx-panel"></div>
       <div id="persist-panel"></div>
       <div id="xd-panel"></div>
       <div class="card" id="proj-card">
@@ -4668,6 +4768,9 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           <span class="help" id="dev-out"></span>
         </div>
       </div>
+    
+      <!-- deliberately the last thing in Settings -->
+      <div id="why-panel"></div>
     </div></section>
   </main>
 </div>
@@ -20470,8 +20573,28 @@ function genPalette(p){
 }
 /* Every generator takes the same shape and returns a complete standalone SVG string, so the
    preview, the export, the asset library and the app background all consume one thing. */
+/* Every input is normalised here rather than trusted, because Object.assign copies an explicit
+   `undefined` straight over a default and does nothing about NaN or a string where a number
+   belongs. Left unguarded, a width of NaN or a bg of undefined propagates into the path data
+   and the generator emits an SVG containing the literal text "NaN" — a layout that renders as
+   nothing at all. Clamping once at the entry fixes all twelve generators; guarding each of
+   them separately is the version that rots the first time a thirteenth is added. */
+function genNum(v,dflt,lo,hi){
+  const n=typeof v==='number'?v:parseFloat(v);
+  if(!isFinite(n))return dflt;
+  return Math.max(lo,Math.min(hi,n));
+}
+function genColour(v,dflt){
+  const s=String(v==null?'':v).trim();
+  return /^(#[0-9a-f]{3,8}|rgba?\(|hsla?\(|oklch\(|oklab\(|color\(|[a-z]{3,20}$)/i.test(s)?s:dflt;
+}
 function genSvg(kind,opts){
   const o=Object.assign({seed:'glassbox',w:960,h:600,palette:null,bg:'#0b0d12',density:1},opts||{});
+  o.w=genNum(o.w,960,16,8000);
+  o.h=genNum(o.h,600,16,8000);
+  o.density=genNum(o.density,1,0.25,3);
+  o.bg=genColour(o.bg,'#0b0d12');
+  o.seed=(o.seed==null||o.seed==='')?'glassbox':String(o.seed);
   const R=rngFrom(kind+'|'+o.seed),W=o.w,H=o.h;
   const P=genPalette(o.palette);
   const pick=()=>P[Math.floor(R()*P.length)];
@@ -26413,6 +26536,8 @@ async function notifyPermission(){
   try{return await Notification.requestPermission();}catch(e){return'denied';}
 }
 function notifyBeep(kind){
+  /* Routed through the sound system so the per-sound switches apply here too. */
+  if(typeof sfx==='function'){sfx(kind==='fail'?'fail':kind==='ask'?'ask':'done');return;}
   if(!NOTIFY.sound)return;
   try{
     const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return;
@@ -27058,6 +27183,7 @@ function ofwNewDoc(name,html){
 }
 function ofwSaveDoc(){
   const el=ofwEl(),d=ofwDoc();if(!el||!d)return;
+  sfx('save');
   d.html=el.innerHTML;d.ts=nowISO();ofwSaveState();
   const s=$('#ofw-saved');if(s){s.textContent='saved';setTimeout(()=>{if(s.textContent==='saved')s.textContent='';},1600);}
 }
@@ -33892,23 +34018,38 @@ function renderConnections(){
    that nothing was deleted and where the rest lives. An onboarding that hides things without
    saying so produces a user who thinks the app cannot do what it does. */
 const ONB_INTERESTS=[
+  /* `core` is what that interest cannot work without; `more` is the rest of its family.
+     The three levels are core → core+more+common → everything, so they genuinely differ.
+     They previously did not: focused and balanced both returned the same set, which made the
+     middle option pointless and the first two identical on screen. */
   {id:'build',   icon:'🛠', label:'Build apps & sites',
-   why:'Write, preview and ship real HTML/JS',        tabs:['studio','relay','webos','design','devices']},
+   why:'Write, preview and ship real HTML/JS',
+   core:['studio','relay'],           more:['webos','design','devices','handoff']},
   {id:'write',   icon:'📝', label:'Write & documents',
-   why:'Docs, spreadsheets, decks',                   tabs:['office','assistant','brain']},
+   why:'Docs, spreadsheets, decks',
+   core:['office'],                   more:['brain','creations','library']},
   {id:'media',   icon:'🎬', label:'Images & video',
-   why:'Generate and edit media',                     tabs:['gen','design','creations']},
+   why:'Generate and edit media',
+   core:['gen'],                      more:['design','creations','viz']},
   {id:'3d',      icon:'🧊', label:'3D & games',
-   why:'Scenes, models, ThreeUI',                     tabs:['three','gen','studio']},
+   why:'Scenes, models, ThreeUI',
+   core:['three'],                    more:['gen','studio','webos']},
   {id:'research',icon:'🔬', label:'Research & reasoning',
-   why:'See models actually think',                   tabs:['lab','council','compare','transplant']},
+   why:'See models actually think',
+   core:['lab'],                      more:['council','compare','transplant','pane']},
   {id:'agents',  icon:'🤖', label:'Agents & automation',
-   why:'Swarms, bots, long-running work',             tabs:['vo','bots','mission','factory']},
+   why:'Swarms, bots, long-running work',
+   core:['vo','bots'],                more:['mission','factory','guards','awards']},
   {id:'data',    icon:'📊', label:'Data & analysis',
-   why:'Sheets, graphs, metrics',                     tabs:['office','graphs','metrics','viz']},
+   why:'Sheets, graphs, metrics',
+   core:['office'],                   more:['graphs','metrics','viz']},
   {id:'local',   icon:'🖥', label:'Local & private models',
-   why:'Ollama and your own machine',                 tabs:['local','modelhub','terminal']},
+   why:'Ollama and your own machine',
+   core:['local'],                    more:['modelhub','terminal','guards']},
 ];
+/* Added at the middle level regardless of what was picked — the things nearly everyone wants
+   once they have used the app for an hour. */
+const ONB_COMMON=['creations','history','metrics','modelhub','webos'];
 /* Always present regardless of answers — without these the app has no front door. */
 const ONB_ALWAYS=['assistant','settings','help'];
 const ONB_DEFAULTS={done:false,step:0,picks:[],level:'',name:''};
@@ -33917,14 +34058,20 @@ const saveOnb=()=>store.set('onboarding',ONB);
 
 function onbNeeded(){return !ONB.done;}
 function onbTabsFor(picks,level){
-  const want=new Set(ONB_ALWAYS);
-  (picks||[]).forEach(id=>{
-    const it=ONB_INTERESTS.find(x=>x.id===id);
-    if(it)it.tabs.forEach(t=>want.add(t));
-  });
   /* "Show me everything" is a real answer and the app should honour it literally. */
   if(level==='all')return REGISTRY.tabs.map(t=>t.id);
-  return [...want];
+  const want=new Set(ONB_ALWAYS);
+  const chosen=(picks||[]).map(id=>ONB_INTERESTS.find(x=>x.id===id)).filter(Boolean);
+  chosen.forEach(it=>(it.core||[]).forEach(t=>want.add(t)));
+  if(level==='balanced'){
+    chosen.forEach(it=>(it.more||[]).forEach(t=>want.add(t)));
+    ONB_COMMON.forEach(t=>want.add(t));
+  }
+  /* Someone who picked nothing still needs a usable app, so the focused floor is the
+     essentials plus a way in rather than three tabs and a shrug. */
+  if(!chosen.length)['lab','studio','office','gen'].forEach(t=>want.add(t));
+  const real=new Set(REGISTRY.tabs.map(t=>t.id));
+  return [...want].filter(t=>real.has(t));
 }
 function onbApply(){
   const keep=new Set(onbTabsFor(ONB.picks,ONB.level));
@@ -34449,6 +34596,7 @@ function wosCompose(files){
   return html;
 }
 function wosInstall(o){
+  if(typeof sfx==='function')sfx('install');
   const kind=o.files?'project':(o.url?'link':'single');
   const app={id:uid(),name:o.name||'Untitled app',icon:o.icon||(kind==='project'?'📦':'🧩'),
     kind,src:o.src||'manual',url:o.url||'',ts:nowISO(),
@@ -34522,6 +34670,7 @@ function wosRenderNotifs(){
    an edge that is not the bottom-right. A desktop whose windows cannot be sized properly
    stops being a desktop within about ten seconds. */
 function wosOpen(appId,opts){
+  if(typeof sfx==='function')sfx('open');
   opts=opts||{};
   let w=(WOS.wins||[]).find(x=>x.app===appId&&!x.closed);
   if(!w){
@@ -34537,6 +34686,7 @@ function wosOpen(appId,opts){
 }
 function wosClose(id){
   const w=(WOS.wins||[]).find(x=>x.id===id);if(!w)return;
+  sfx('close');
   w.closed=true;saveWos();wosRender();
 }
 function wosFocus(id){
@@ -34604,6 +34754,7 @@ function wosPetMood(){
 }
 function wosPetSay(msg){
   const b=$('#wos-petbubble');if(!b)return;
+  sfx('pet');
   const m=msg||WOS_MOODS[wosPetMood()].say;
   b.textContent=m;b.hidden=false;
   clearTimeout(wosPetSay._t);
@@ -35849,6 +36000,7 @@ async function persistRequest(){
    freed or a backup is taken. */
 function persistFailBanner(msg){
   PERSIST_FAILED=true;
+  if(typeof sfx==='function')sfx('warn');
   PERSIST.failures=(PERSIST.failures||0)+1;savePersist();
   let el=$('#persist-alarm');
   if(!el){
@@ -36747,6 +36899,864 @@ function renderGhImport(){
   $$('[data-ghex]').forEach(b=>b.onclick=()=>{$('#ghi-repo').value=b.dataset.ghex;run();});
 }
 
+
+/* ═══════════════════ SOUND ═══════════════════
+   Synthesised with WebAudio rather than shipped as files — a single-file app cannot carry
+   audio assets without bloating to megabytes, and an oscillator costs nothing.
+
+   Two rules that keep this from becoming annoying, which is the only way a sound design in a
+   work tool fails: nothing plays unless the user actually did something or something finished,
+   and EVERY sound is individually switchable. A single global mute is not enough, because the
+   sound people want to keep (a long run finishing) is rarely the one they want gone (every
+   click). Default volume is deliberately low. */
+const SFX_LIB={
+  /* name: [waveform, [freq steps], duration, gain, description] */
+  click:   {wave:'sine',    seq:[[880,0]],              dur:.05, gain:.05, label:'Button click',      why:'a light tick when you press something'},
+  toggle:  {wave:'triangle',seq:[[520,0],[760,.04]],    dur:.10, gain:.06, label:'Toggle',            why:'switching an option on or off'},
+  open:    {wave:'sine',    seq:[[420,0],[640,.05]],    dur:.14, gain:.06, label:'Open',              why:'a window or panel opening'},
+  close:   {wave:'sine',    seq:[[640,0],[400,.05]],    dur:.14, gain:.05, label:'Close',             why:'a window or panel closing'},
+  done:    {wave:'sine',    seq:[[660,0],[880,.09]],    dur:.32, gain:.10, label:'Finished',          why:'a run or generation completed'},
+  fail:    {wave:'sawtooth',seq:[[300,0],[180,.10]],    dur:.34, gain:.09, label:'Failed',            why:'something errored'},
+  ask:     {wave:'triangle',seq:[[520,0],[520,.12]],    dur:.30, gain:.10, label:'Needs you',         why:'something is waiting on your approval'},
+  send:    {wave:'sine',    seq:[[700,0],[980,.05]],    dur:.12, gain:.05, label:'Message sent',      why:'you sent a prompt'},
+  arrive:  {wave:'sine',    seq:[[980,0],[700,.05]],    dur:.13, gain:.05, label:'Answer arrived',    why:'a reply finished streaming'},
+  install: {wave:'triangle',seq:[[440,0],[660,.06],[880,.12]], dur:.34, gain:.09, label:'Installed',  why:'an app landed on the WebOS desktop'},
+  save:    {wave:'sine',    seq:[[760,0]],              dur:.07, gain:.04, label:'Saved',             why:'a document or preset saved'},
+  award:   {wave:'triangle',seq:[[523,0],[659,.10],[784,.20],[1047,.30]], dur:.62, gain:.11, label:'Award',  why:'a winner is announced'},
+  levelup: {wave:'square',  seq:[[392,0],[523,.07],[659,.14]], dur:.30, gain:.07, label:'Milestone',  why:'a streak or milestone in the office'},
+  pet:     {wave:'sine',    seq:[[880,0],[1180,.04],[880,.09]], dur:.20, gain:.06, label:'Companion',  why:'the desktop pet speaks'},
+  warn:    {wave:'square',  seq:[[330,0],[262,.08]],    dur:.26, gain:.08, label:'Warning',           why:'storage trouble or a guard tripping'},
+};
+const SFX_DEFAULTS={on:true,vol:.5,off:{},reduceWhenHidden:true};
+let SFX=Object.assign({},SFX_DEFAULTS,store.get('sfx',{}));
+const saveSfx=()=>store.set('sfx',SFX);
+let SFX_CTX=null;
+/* One shared context. Creating one per sound leaks handles and Safari caps them, which shows
+   up as sound silently stopping after a few dozen plays rather than as an error. */
+function sfxCtx(){
+  try{
+    const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;
+    if(!SFX_CTX)SFX_CTX=new C();
+    if(SFX_CTX.state==='suspended')SFX_CTX.resume();
+    return SFX_CTX;
+  }catch(_){return null;}
+}
+function sfx(name){
+  if(!SFX.on)return;
+  if((SFX.off||{})[name])return;
+  if(SFX.reduceWhenHidden&&document.hidden&&!/^(done|fail|ask|warn|award)$/.test(name))return;
+  const d=SFX_LIB[name];if(!d)return;
+  const ctx=sfxCtx();if(!ctx)return;
+  try{
+    const t0=ctx.currentTime;
+    const o=ctx.createOscillator(),g=ctx.createGain();
+    o.type=d.wave;
+    d.seq.forEach(([f,at])=>o.frequency.setValueAtTime(f,t0+at));
+    o.connect(g);g.connect(ctx.destination);
+    const peak=Math.max(.0001,d.gain*(SFX.vol==null?.5:SFX.vol));
+    g.gain.setValueAtTime(.0001,t0);
+    g.gain.exponentialRampToValueAtTime(peak,t0+.015);
+    g.gain.exponentialRampToValueAtTime(.0001,t0+d.dur);
+    o.start(t0);o.stop(t0+d.dur+.02);
+  }catch(_){}
+}
+/* A short fanfare for the awards ceremony — a chord arpeggio rather than one tone, because a
+   single beep does not read as a celebration. */
+function sfxFanfare(){
+  if(!SFX.on||(SFX.off||{}).award)return;
+  const ctx=sfxCtx();if(!ctx)return;
+  const notes=[523.25,659.25,783.99,1046.5,1318.5];
+  notes.forEach((f,i)=>{
+    try{
+      const t0=ctx.currentTime+i*.09;
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type=i===notes.length-1?'triangle':'sine';
+      o.frequency.setValueAtTime(f,t0);
+      o.connect(g);g.connect(ctx.destination);
+      const peak=.09*(SFX.vol==null?.5:SFX.vol);
+      g.gain.setValueAtTime(.0001,t0);
+      g.gain.exponentialRampToValueAtTime(peak,t0+.02);
+      g.gain.exponentialRampToValueAtTime(.0001,t0+(i===notes.length-1?.9:.28));
+      o.start(t0);o.stop(t0+1);
+    }catch(_){}
+  });
+}
+function renderSfx(){
+  const host=$('#sfx-panel');if(!host)return;
+  host.innerHTML=`
+  <div class="card">
+    <h3>🔊 Sounds</h3>
+    <p class="help">Short synthesised tones — nothing is downloaded. They only play when you did
+      something or something finished, never on a timer. Every one can be switched off on its own,
+      because the sound worth keeping (a long run completing) is rarely the one worth losing
+      (every click).</p>
+    <div class="row" style="gap:12px;align-items:center;margin-bottom:10px">
+      <label class="chk"><input type="checkbox" id="sfx-on" ${SFX.on?'checked':''}> <b>sounds on</b></label>
+      <label class="chk" style="flex:1;max-width:260px">volume
+        <input type="range" id="sfx-vol" min="0" max="1" step="0.05" value="${SFX.vol==null?.5:SFX.vol}" style="flex:1"></label>
+      <label class="chk"><input type="checkbox" id="sfx-hidden" ${SFX.reduceWhenHidden?'checked':''}>
+        quiet when the tab is in the background</label>
+    </div>
+    <div class="row" style="gap:6px;margin-bottom:10px">
+      <button class="btn ghost small" id="sfx-all">Turn every sound on</button>
+      <button class="btn ghost small" id="sfx-none">Turn every sound off</button>
+      <button class="btn ghost small" id="sfx-essential">Only the important ones</button>
+    </div>
+    <div class="sfx-grid">
+      ${Object.entries(SFX_LIB).map(([k,d])=>{
+        const on=!(SFX.off||{})[k];
+        return `<div class="sfx-row${on?'':' off'}">
+          <button class="sfx-play" data-sfxplay="${esc(k)}" title="Hear it">▶</button>
+          <span><b>${esc(d.label)}</b><i>${esc(d.why)}</i></span>
+          <span style="flex:1"></span>
+          <label class="chk"><input type="checkbox" data-sfxtoggle="${esc(k)}" ${on?'checked':''}></label>
+        </div>`;}).join('')}
+    </div>
+  </div>`;
+  const on=$('#sfx-on');if(on)on.onchange=()=>{SFX.on=on.checked;saveSfx();if(SFX.on)sfx('toggle');};
+  const v=$('#sfx-vol');if(v)v.oninput=()=>{SFX.vol=+v.value;saveSfx();};
+  if(v)v.onchange=()=>sfx('click');
+  const h=$('#sfx-hidden');if(h)h.onchange=()=>{SFX.reduceWhenHidden=h.checked;saveSfx();};
+  $$('[data-sfxplay]').forEach(b=>b.onclick=()=>{
+    /* Preview must ignore the per-sound mute, otherwise the button does nothing on the very
+       row you are trying to decide about. */
+    const k=b.dataset.sfxplay,was=(SFX.off||{})[k];
+    if(was){delete SFX.off[k];sfx(k);SFX.off[k]=true;}else sfx(k);
+  });
+  $$('[data-sfxtoggle]').forEach(c=>c.onchange=()=>{
+    SFX.off=Object.assign({},SFX.off);
+    if(c.checked)delete SFX.off[c.dataset.sfxtoggle];else SFX.off[c.dataset.sfxtoggle]=true;
+    saveSfx();renderSfx();if(c.checked)sfx(c.dataset.sfxtoggle);
+  });
+  const all=$('#sfx-all');if(all)all.onclick=()=>{SFX.off={};SFX.on=true;saveSfx();renderSfx();sfx('done');};
+  const none=$('#sfx-none');if(none)none.onclick=()=>{
+    SFX.off={};Object.keys(SFX_LIB).forEach(k=>{SFX.off[k]=true;});saveSfx();renderSfx();};
+  const ess=$('#sfx-essential');if(ess)ess.onclick=()=>{
+    SFX.off={};Object.keys(SFX_LIB).forEach(k=>{if(!/^(done|fail|ask|warn|award)$/.test(k))SFX.off[k]=true;});
+    SFX.on=true;saveSfx();renderSfx();sfx('done');};
+}
+
+/* ═══════════════════ THE AWARDS ═══════════════════
+   Several models score the same set of your real outputs independently, then one judge model
+   reads the panel's scores and picks winners. It is Mixture-of-Agents pointed at evaluation
+   instead of generation, and the same property makes it work: the panellists cannot see each
+   other, so their biases are uncorrelated and a score only one of them gave shows up as
+   disagreement rather than becoming the consensus.
+
+   Two honesty rules the whole feature rests on:
+   1. Nothing is invented. Candidates come from YOUR history, traces, creations and documents.
+      With an empty app it says so and offers to run on samples instead of fabricating a
+      ceremony about work you never did.
+   2. A model never scores its own output. Self-preference in LLM judges is large and well
+      documented, and an award show where the judge keeps giving itself the prize is a toy.
+      `awardEligible()` enforces it and the ballot records who was excluded and why.
+
+   Cost: each panellist reads a compact digest of the candidates ONCE and returns one JSON
+   ballot. Ten candidates and three panellists is four calls total, not thirty. */
+const AWARD_CATEGORIES=[
+  {id:'reasoning', icon:'🧠', name:'Best Reasoning',
+   blurb:'The trace that actually got somewhere',
+   crit:'genuine step-by-step progress, assumptions made explicit, a real check at the end. '+
+        'Penalise confident leaps and restated premises.'},
+  {id:'insight',   icon:'💡', name:'Sharpest Insight',
+   blurb:'The line that changed how you saw it',
+   crit:'a non-obvious observation that reframes the problem. Penalise summary dressed as insight.'},
+  {id:'craft',     icon:'🎨', name:'Best Craft',
+   blurb:'The thing that was simply well made',
+   crit:'execution quality — writing, code, design. Judge the artefact, not the ambition.'},
+  {id:'honesty',   icon:'🔍', name:'Most Honest',
+   blurb:'Said what it did not know',
+   crit:'admitted uncertainty, named its own limits, refused to guess. This is rare and valuable.'},
+  {id:'efficient', icon:'⚡', name:'Best Value',
+   blurb:'Most result per token',
+   crit:'quality relative to cost and length. A short answer that fully lands beats a long one.'},
+  {id:'surprise',  icon:'🎲', name:'Biggest Surprise',
+   blurb:'Nobody expected this to work',
+   crit:'unexpected approach that paid off. Novelty alone does not qualify — it had to work.'},
+  {id:'workhorse', icon:'🐴', name:'The Workhorse',
+   blurb:'Quietly did the most',
+   crit:'consistent usefulness across many tasks rather than one brilliant moment.'},
+  {id:'turkey',    icon:'🦃', name:'Most Confidently Wrong',
+   blurb:'An award nobody wants',
+   crit:'maximum confidence, minimum correctness. Naming these is how you stop repeating them.'},
+];
+const AWARD_PERIODS=[
+  {id:'day',  label:'Today',      ms:864e5},
+  {id:'week', label:'This week',  ms:6048e5},
+  {id:'month',label:'This month', ms:2592e6},
+  {id:'all',  label:'All time',   ms:Infinity},
+];
+const AWARDS_DEFAULTS={
+  panel:[],judge:'',period:'week',cats:['reasoning','insight','craft','honesty','efficient'],
+  history:[],last:null,autoWeekly:false,useBrain:true,officeMode:false,
+};
+let AWARDS=Object.assign({},AWARDS_DEFAULTS,store.get('awards',{}));
+const saveAwards=()=>store.set('awards',AWARDS);
+
+/* ── Gathering real candidates ─────────────────────────────────────────── */
+function awardCandidates(period){
+  const cutoff=(()=>{const p=AWARD_PERIODS.find(x=>x.id===period);
+    return (!p||p.ms===Infinity)?0:Date.now()-p.ms;})();
+  const out=[];
+  const push=(o)=>{
+    if(!o||!o.body||String(o.body).trim().length<40)return;
+    const t=o.ts?Date.parse(o.ts):Date.now();
+    if(isFinite(t)&&t<cutoff)return;
+    out.push({id:uid(),kind:o.kind,title:String(o.title||'Untitled').slice(0,90),
+      model:o.model||'unknown',body:String(o.body).slice(0,2400),ts:o.ts||nowISO(),
+      cost:o.cost||0,tokens:o.tokens||0});
+  };
+  try{(typeof HISTORY!=='undefined'?HISTORY:[]).forEach(h=>push({kind:'run',
+    title:h.task||h.title,model:h.model,ts:h.ts,cost:h.cost,
+    body:(h.answer||h.output||h.result||'')+(h.reasoning?'\n\n[reasoning]\n'+h.reasoning:'')}));}catch(_){}
+  try{(typeof TRACES!=='undefined'?TRACES:[]).forEach(t=>push({kind:'trace',
+    title:t.task||t.label,model:t.model,ts:t.ts,cost:t.cost,body:t.reasoning||t.raw||t.text}));}catch(_){}
+  try{(typeof CREATIONS!=='undefined'?CREATIONS:[]).forEach(c=>push({kind:'creation',
+    title:c.title,model:c.model,ts:c.ts,body:typeof c.body==='string'?c.body:JSON.stringify(c.body)}));}catch(_){}
+  try{(typeof FEEDBACK!=='undefined'?FEEDBACK:[]).forEach(f=>{if(f.good&&f.note)push({kind:'kept',
+    title:f.task||f.subject,model:f.model,ts:f.ts,body:f.note});});}catch(_){}
+  /* Newest first, then capped. A ceremony over 400 items costs real money and nobody reads it. */
+  return out.sort((a,b)=>Date.parse(b.ts)-Date.parse(a.ts)).slice(0,24);
+}
+/* A model must not score its own work. */
+function awardEligible(panelModel,cands){
+  const norm=m=>String(m||'').toLowerCase().split('/').pop().split(':')[0];
+  const self=norm(panelModel);
+  return cands.filter(c=>norm(c.model)!==self);
+}
+function awardDigest(cands){
+  return cands.map((c,i)=>
+    `#${i+1} [${c.kind}] "${c.title}"\n`+
+    `by: ${c.model}\n`+
+    c.body.slice(0,900).replace(/\n{3,}/g,'\n\n')
+  ).join('\n\n---\n\n');
+}
+const AWARD_BALLOT_SCHEMA={type:'json_schema',json_schema:{name:'ballot',strict:true,schema:{
+  type:'object',additionalProperties:false,
+  properties:{scores:{type:'array',items:{type:'object',additionalProperties:false,
+    properties:{n:{type:'integer'},category:{type:'string'},score:{type:'integer'},why:{type:'string'}},
+    required:['n','category','score','why']}}},
+  required:['scores']}}};
+
+async function awardPanellist(model,cands,cats,onTick){
+  const eligible=awardEligible(model,cands);
+  if(!eligible.length)return{model,skipped:'every candidate was its own work',scores:[]};
+  const idx=new Map(eligible.map((c,i)=>[i+1,c.id]));
+  const sys=
+    'You are one judge on an independent panel scoring a person\'s real AI outputs. You cannot '+
+    'see the other judges. Score honestly — a panel is only useful if you disagree when you '+
+    'disagree.\n\nCategories:\n'+
+    cats.map(c=>`- ${c.id}: ${c.name}. ${c.crit}`).join('\n')+
+    '\n\nScore 0-100 for every category you have an opinion on. Skip a category for an item '+
+    'rather than inventing a score. `why` must be one concrete sentence quoting or naming what '+
+    'earned it — never "it was good". Return only JSON.';
+  const acc=await streamComplete({model,maxTokens:2600,response_format:AWARD_BALLOT_SCHEMA,
+    messages:[{role:'system',content:sys+skillBlockFor('brain')},
+      {role:'user',content:'CANDIDATES\n\n'+awardDigest(eligible)}]},
+    onTick,null,'award-panel');
+  let j=null;
+  try{j=JSON.parse(acc.content);}catch(_){try{j=extractJSON(acc.content);}catch(__){}}
+  const scores=((j&&j.scores)||[]).map(s=>({
+    id:idx.get(s.n),category:String(s.category||'').toLowerCase(),
+    score:Math.max(0,Math.min(100,+s.score||0)),why:String(s.why||'').slice(0,220)
+  })).filter(s=>s.id);
+  return{model,scores,cost:acc.cost||0,excluded:cands.length-eligible.length};
+}
+function awardTally(ballots,cands,cats){
+  const byCat={};
+  cats.forEach(cat=>{
+    const rows=cands.map(c=>{
+      const votes=[];
+      ballots.forEach(b=>(b.scores||[]).forEach(s=>{
+        if(s.id===c.id&&s.category===cat.id)votes.push({model:b.model,score:s.score,why:s.why});
+      }));
+      const avg=votes.length?votes.reduce((a,v)=>a+v.score,0)/votes.length:null;
+      /* Spread is reported, not hidden: three judges at 90 mean something different from
+         50/95/95, and the second is the more interesting result. */
+      const spread=votes.length>1?Math.max(...votes.map(v=>v.score))-Math.min(...votes.map(v=>v.score)):0;
+      return{cand:c,votes,avg,spread};
+    }).filter(r=>r.avg!=null).sort((a,b)=>b.avg-a.avg);
+    byCat[cat.id]=rows;
+  });
+  return byCat;
+}
+const AWARD_VERDICT_SCHEMA={type:'json_schema',json_schema:{name:'verdict',strict:true,schema:{
+  type:'object',additionalProperties:false,
+  properties:{winners:{type:'array',items:{type:'object',additionalProperties:false,
+    properties:{category:{type:'string'},n:{type:'integer'},citation:{type:'string'},
+      overruled:{type:'boolean'},note:{type:'string'}},
+    required:['category','n','citation','overruled','note']}},
+    remark:{type:'string'}},
+  required:['winners','remark']}}};
+
+async function awardJudge(model,tally,cands,cats,onTick){
+  const brief=cats.map(cat=>{
+    const rows=(tally[cat.id]||[]).slice(0,5);
+    if(!rows.length)return `${cat.id}: no scores`;
+    return `${cat.id} (${cat.name}) — ${cat.crit}\n`+rows.map((r,i)=>
+      `  ${i+1}. #${cands.indexOf(r.cand)+1} "${r.cand.title}" avg ${r.avg.toFixed(1)}`+
+      (r.spread>18?` (panel disagreed, spread ${r.spread})`:'')+
+      `\n     ${r.votes.map(v=>v.why).slice(0,2).join(' | ')}`).join('\n');
+  }).join('\n\n');
+  const sys=
+    'You are the head judge. The panel scored independently; you decide the winners. You MAY '+
+    'overrule the average — say so and why when you do, because a panel that averages well is '+
+    'not the same as a panel that is right. Prefer the item the citations argue for over the '+
+    'one with the highest number when they disagree. Every citation must be one vivid sentence '+
+    'a person would enjoy reading aloud. Return only JSON.';
+  const acc=await streamComplete({model,maxTokens:2000,response_format:AWARD_VERDICT_SCHEMA,
+    messages:[{role:'system',content:sys+skillBlockFor('brain')},
+      {role:'user',content:'PANEL RESULTS\n\n'+brief+'\n\nCANDIDATE LIST\n'+
+        cands.map((c,i)=>`#${i+1} "${c.title}" by ${c.model}`).join('\n')}]},
+    onTick,null,'award-judge');
+  let j=null;
+  try{j=JSON.parse(acc.content);}catch(_){try{j=extractJSON(acc.content);}catch(__){}}
+  return{winners:((j&&j.winners)||[]).map(w=>({
+    category:String(w.category||'').toLowerCase(),cand:cands[(+w.n||1)-1],
+    citation:String(w.citation||''),overruled:!!w.overruled,note:String(w.note||'')
+  })).filter(w=>w.cand),remark:(j&&j.remark)||'',cost:acc.cost||0};
+}
+async function awardsRun(opts){
+  opts=opts||{};
+  const cats=AWARD_CATEGORIES.filter(c=>AWARDS.cats.includes(c.id));
+  if(!cats.length)throw new Error('pick at least one category');
+  const panel=(AWARDS.panel||[]).filter(Boolean);
+  if(!panel.length)throw new Error('pick at least one panellist');
+  const judge=AWARDS.judge||panel[0];
+  const cands=opts.cands||awardCandidates(AWARDS.period);
+  if(cands.length<2)throw new Error('there are not enough outputs yet — use a few models first, or run it on samples');
+  const say=opts.onStage||(()=>{});
+  say('panel',`${panel.length} judges reading ${cands.length} pieces of work…`);
+  const ballots=[];
+  for(const m of panel){
+    say('panel','scoring: '+m);
+    try{ballots.push(await awardPanellist(m,cands,cats));}
+    catch(e){ballots.push({model:m,error:e.message,scores:[]});}
+  }
+  const usable=ballots.filter(b=>(b.scores||[]).length);
+  if(!usable.length)throw new Error('no judge returned a usable ballot');
+  say('tally','counting the votes…');
+  const tally=awardTally(usable,cands,cats);
+  say('judge','head judge deciding: '+judge);
+  const verdict=await awardJudge(judge,tally,cands,cats);
+  const result={ts:nowISO(),period:AWARDS.period,cats:cats.map(c=>c.id),
+    panel:panel,judge,candCount:cands.length,
+    ballots:usable.map(b=>({model:b.model,n:(b.scores||[]).length,excluded:b.excluded||0})),
+    failed:ballots.filter(b=>b.error).map(b=>({model:b.model,error:b.error})),
+    tally:Object.fromEntries(Object.entries(tally).map(([k,rows])=>[k,rows.slice(0,5).map(r=>({
+      title:r.cand.title,model:r.cand.model,avg:+r.avg.toFixed(1),spread:r.spread,
+      votes:r.votes.map(v=>({model:v.model,score:v.score,why:v.why}))}))])),
+    winners:verdict.winners.map(w=>({category:w.category,title:w.cand.title,model:w.cand.model,
+      kind:w.cand.kind,citation:w.citation,overruled:w.overruled,note:w.note,
+      body:w.cand.body.slice(0,700)})),
+    remark:verdict.remark,
+    cost:usable.reduce((a,b)=>a+(b.cost||0),0)+(verdict.cost||0)};
+  AWARDS.last=result;
+  AWARDS.history=[{ts:result.ts,period:result.period,winners:result.winners.length,cost:result.cost}]
+    .concat(AWARDS.history||[]).slice(0,40);
+  saveAwards();
+  return result;
+}
+
+/* ── Ceremony ───────────────────────────────────────────────────────────────
+   Winners are revealed one at a time on a timer rather than all at once. That is the whole
+   difference between a results table and a ceremony, and it costs nothing. */
+let AWARD_CEREMONY=null;
+/* `host` is passed in rather than looked up by id: the office holds its own ceremony in a
+   second stage, and a shared id would make $() always resolve to the Awards tab's element —
+   the office would quietly render into the wrong panel. */
+function awardsCeremony(result,host){
+  host=host||$('.aw-stage-host');if(!host)return;
+  clearTimeout(AWARD_CEREMONY);
+  const ws=result.winners||[];
+  if(!ws.length){host.innerHTML='<p class="help">The judge did not name a winner.</p>';return;}
+  host.innerHTML=`<div class="aw-stage"></div>
+    <div class="row" style="justify-content:center;margin-top:10px">
+      <button class="btn ghost small" data-awskip>Skip to all winners</button></div>`;
+  const stage=host.querySelector('.aw-stage');
+  let i=0;
+  const step=()=>{
+    if(i>=ws.length){
+      if(result.remark)stage.insertAdjacentHTML('beforeend',
+        `<div class="aw-remark">“${esc(result.remark)}”<span>— the head judge, ${esc(result.judge||'')}</span></div>`);
+      return;
+    }
+    const w=ws[i++];
+    const cat=AWARD_CATEGORIES.find(c=>c.id===w.category)||{icon:'🏆',name:w.category,blurb:''};
+    stage.insertAdjacentHTML('beforeend',awardCardHtml(w,cat,true));
+    sfx('award');
+    if(i===1)sfxFanfare();
+    awardConfetti(host);
+    const el=stage.lastElementChild;
+    if(el)el.scrollIntoView({block:'nearest',behavior:'smooth'});
+    AWARD_CEREMONY=setTimeout(step,2100);
+  };
+  const skip=host.querySelector('[data-awskip]');
+  if(skip)skip.onclick=()=>{
+    clearTimeout(AWARD_CEREMONY);
+    stage.innerHTML=ws.map(w=>{
+      const cat=AWARD_CATEGORIES.find(c=>c.id===w.category)||{icon:'🏆',name:w.category,blurb:''};
+      return awardCardHtml(w,cat,false);}).join('')+
+      (result.remark?`<div class="aw-remark">“${esc(result.remark)}”<span>— the head judge, ${esc(result.judge||'')}</span></div>`:'');
+  };
+  step();
+}
+function awardCardHtml(w,cat,animate){
+  return `<div class="aw-card${animate?' pop':''}${w.category==='turkey'?' turkey':''}">
+    <div class="aw-medal">${cat.icon}</div>
+    <div class="aw-cat">${esc(cat.name)}</div>
+    <div class="aw-title">${esc(w.title)}</div>
+    <div class="aw-by">${esc(w.model)}${w.kind?' · '+esc(w.kind):''}</div>
+    <div class="aw-cite">“${esc(w.citation)}”</div>
+    ${w.overruled?`<div class="aw-over">⚖️ The judge overruled the panel here. ${esc(w.note||'')}</div>`:''}
+    <div class="row" style="justify-content:center;gap:6px;margin-top:8px">
+      ${connMenu(connMake('note','AWARD — '+cat.name+'\n\n'+w.title+' ('+w.model+')\n\n"'+w.citation+'"\n\n'+(w.body||''),
+        'Award: '+cat.name,'awards'))}
+    </div>
+  </div>`;
+}
+/* Confetti with no library and no leak: one canvas, particles die, canvas removes itself. */
+function awardConfetti(host){
+  if(UI.motion===false)return;
+  host=host||$('.aw-stage-host');if(!host)return;
+  const c=document.createElement('canvas');
+  c.className='aw-confetti';
+  const r=host.getBoundingClientRect();
+  c.width=r.width;c.height=Math.min(420,r.height||420);
+  host.appendChild(c);
+  const x=c.getContext('2d');
+  const P=Array.from({length:70},()=>({
+    x:Math.random()*c.width,y:-14-Math.random()*90,
+    vx:(Math.random()-.5)*2.4,vy:1.6+Math.random()*2.6,
+    s:3+Math.random()*5,r:Math.random()*6.28,vr:(Math.random()-.5)*.28,
+    c:['#ffd166','#67e8f9','#8b5cf6','#2ee6a4','#ff5470'][(Math.random()*5)|0]}));
+  let f=0;
+  (function tick(){
+    f++;x.clearRect(0,0,c.width,c.height);
+    P.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.045;p.r+=p.vr;
+      x.save();x.translate(p.x,p.y);x.rotate(p.r);
+      x.fillStyle=p.c;x.globalAlpha=Math.max(0,1-f/110);
+      x.fillRect(-p.s/2,-p.s/2,p.s,p.s*.62);x.restore();});
+    if(f<110)requestAnimationFrame(tick);else c.remove();
+  })();
+}
+function renderAwards(){
+  const host=$('#aw-panel');if(!host)return;
+  const cands=awardCandidates(AWARDS.period);
+  const models=(typeof CATALOG!=='undefined'?CATALOG:[]).slice(0,300);
+  const opt=(sel)=>models.map(m=>
+    `<option value="${esc(m.id)}"${m.id===sel?' selected':''}>${esc(m.name||m.id)}</option>`).join('');
+  const last=AWARDS.last;
+  host.innerHTML=`
+  <div class="card aw-hero">
+    <h2>🏆 The Awards</h2>
+    <p class="help">Several models score <b>your real work</b> independently, then a head judge you
+      choose reads the panel and picks winners. It is the Mixture-of-Agents idea aimed at judging
+      instead of writing — the panellists cannot see each other, so a score only one of them gave
+      shows up as disagreement rather than quietly becoming the consensus.</p>
+    <p class="help"><b>Two rules this rests on.</b> Nothing is invented — every candidate comes from
+      your own history, traces and creations. And <b>a model never scores its own output</b>:
+      self-preference in model judges is large and well documented, so a ballot that included it
+      would be theatre.</p>
+  </div>
+
+  <div class="card">
+    <h3>The panel</h3>
+    <div class="row" style="gap:8px;align-items:flex-end;flex-wrap:wrap">
+      <label class="field" style="flex:1;min-width:200px">Judges (score independently)
+        <div id="aw-panel-list"></div></label>
+    </div>
+    <div class="row" style="gap:6px;margin-top:8px">
+      <button class="btn ghost small" id="aw-addp">＋ Add a judge</button>
+      <button class="btn ghost small" id="aw-quick">Use a sensible default panel</button>
+    </div>
+    <label class="field" style="margin-top:12px">Head judge (makes the final call, may overrule)
+      <select id="aw-judge"><option value="">— first panellist —</option>${opt(AWARDS.judge)}</select></label>
+    <div class="row" style="gap:10px;margin-top:12px;align-items:flex-end;flex-wrap:wrap">
+      <label class="field" style="max-width:190px">Period
+        <select id="aw-period">${AWARD_PERIODS.map(p=>
+          `<option value="${p.id}"${AWARDS.period===p.id?' selected':''}>${esc(p.label)}</option>`).join('')}</select></label>
+      <label class="chk"><input type="checkbox" id="aw-brain" ${AWARDS.useBrain?'checked':''}>
+        weight it toward what my Brain says I care about</label>
+      <label class="chk"><input type="checkbox" id="aw-office" ${AWARDS.officeMode?'checked':''}>
+        hold the ceremony in the Virtual Office</label>
+    </div>
+    <h3 style="margin-top:14px">Categories</h3>
+    <div class="aw-cats">${AWARD_CATEGORIES.map(c=>`
+      <label class="aw-cat-pick${AWARDS.cats.includes(c.id)?' on':''}">
+        <input type="checkbox" data-awcat="${c.id}" ${AWARDS.cats.includes(c.id)?'checked':''}>
+        <span class="aw-cat-ic">${c.icon}</span>
+        <span><b>${esc(c.name)}</b><i>${esc(c.blurb)}</i></span></label>`).join('')}</div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="gap:10px;align-items:center;flex-wrap:wrap">
+      <button class="btn good" id="aw-run">🏆 Hold the ceremony</button>
+      <button class="btn ghost" id="aw-demo">Run it on samples</button>
+      ${last?'<button class="btn ghost" id="aw-replay">↺ Replay the last one</button>':''}
+      <span class="mini" id="aw-status">${cands.length} candidate${cands.length===1?'':'s'} in this period</span>
+    </div>
+    ${cands.length<2?`<p class="help" style="margin-top:8px">You need at least two pieces of real work
+      before a panel can compare anything. Use a few models first — or press <b>Run it on samples</b>
+      to see exactly how a ceremony works without pretending the work is yours.</p>`:''}
+    <div class="aw-stage-host" style="margin-top:14px"></div>
+  </div>
+
+  ${last?`<div class="card">
+    <h3>Behind the scores</h3>
+    <p class="help">Every ballot, so you can see where the panel disagreed. A wide spread is the
+      interesting result — it means one judge saw something the others did not.</p>
+    <p class="help">Panel: ${last.ballots.map(b=>esc(b.model)+' ('+b.n+' scores'+
+      (b.excluded?', '+b.excluded+' of its own excluded':'')+')').join(' · ')}
+      ${last.failed&&last.failed.length?'<br><b>Failed:</b> '+last.failed.map(f=>esc(f.model)+' — '+esc(f.error)).join('; '):''}
+      <br>Head judge: <b>${esc(last.judge)}</b> · cost ${money(last.cost||0)}</p>
+    ${Object.entries(last.tally||{}).map(([cid,rows])=>{
+      const cat=AWARD_CATEGORIES.find(c=>c.id===cid)||{name:cid,icon:'•'};
+      return `<details class="dd"><summary>${cat.icon} ${esc(cat.name)}</summary><div class="ddb">
+        ${rows.map((r,i)=>`<div class="aw-row">
+          <b>${i+1}. ${esc(r.title)}</b> <span class="tag">${esc(r.model)}</span>
+          <span class="aw-avg">${r.avg}</span>
+          ${r.spread>18?`<span class="tag" style="color:var(--warn,#ffb020)">panel split by ${r.spread}</span>`:''}
+          <div class="aw-votes">${r.votes.map(v=>
+            `<div><b>${esc(v.model)}</b> ${v.score} — ${esc(v.why)}</div>`).join('')}</div>
+        </div>`).join('')}
+      </div></details>`;}).join('')}
+  </div>`:''}`;
+
+  renderAwPanel();
+  const on=(id,fn,ev)=>{const e=$(id);if(e)e[ev||'onclick']=fn;};
+  on('#aw-addp',()=>{AWARDS.panel=(AWARDS.panel||[]).concat(['']);saveAwards();renderAwPanel();});
+  on('#aw-quick',()=>{
+    /* A default panel should be genuinely different models, not three sizes of one family —
+       correlated judges defeat the entire mechanism. */
+    const fam=new Set(),pick=[];
+    models.forEach(m=>{const f=String(m.id).split('/')[0];
+      if(!fam.has(f)&&pick.length<3){fam.add(f);pick.push(m.id);}});
+    AWARDS.panel=pick;AWARDS.judge=pick[0]||'';saveAwards();renderAwards();
+    toast('Picked '+pick.length+' judges from different model families — uncorrelated on purpose',4200);
+  });
+  on('#aw-judge',()=>{AWARDS.judge=$('#aw-judge').value;saveAwards();},'onchange');
+  on('#aw-period',()=>{AWARDS.period=$('#aw-period').value;saveAwards();renderAwards();},'onchange');
+  on('#aw-brain',()=>{AWARDS.useBrain=$('#aw-brain').checked;saveAwards();},'onchange');
+  on('#aw-office',()=>{AWARDS.officeMode=$('#aw-office').checked;saveAwards();},'onchange');
+  $$('[data-awcat]').forEach(c=>c.onchange=()=>{
+    AWARDS.cats=c.checked?AWARDS.cats.concat([c.dataset.awcat]):AWARDS.cats.filter(x=>x!==c.dataset.awcat);
+    saveAwards();renderAwards();});
+  on('#aw-run',()=>awardsGo(null));
+  on('#aw-demo',()=>awardsGo(awardSamples()));
+  on('#aw-replay',()=>{if(AWARDS.last)awardsCeremony(AWARDS.last);});
+  const stageHost=host.querySelector('.aw-stage-host');
+  if(last&&stageHost&&!stageHost.innerHTML)awardsCeremony(last,stageHost);
+}
+function renderAwPanel(){
+  const host=$('#aw-panel-list');if(!host)return;
+  const models=(typeof CATALOG!=='undefined'?CATALOG:[]).slice(0,300);
+  const rows=(AWARDS.panel||[]);
+  host.innerHTML=(rows.length?rows:['']).map((m,i)=>`
+    <div class="row" style="gap:6px;margin-bottom:6px">
+      <span class="moap-n">${i+1}</span>
+      <select data-awp="${i}" style="flex:1">
+        <option value="">— pick a model —</option>
+        ${models.map(x=>`<option value="${esc(x.id)}"${x.id===m?' selected':''}>${esc(x.name||x.id)}</option>`).join('')}
+      </select>
+      <button class="btn ghost small moap-del" data-awpdel="${i}">✕</button>
+    </div>`).join('');
+  $$('[data-awp]').forEach(s=>s.onchange=()=>{
+    AWARDS.panel=(AWARDS.panel.length?AWARDS.panel:['']).slice();
+    AWARDS.panel[+s.dataset.awp]=s.value;saveAwards();});
+  $$('[data-awpdel]').forEach(b=>b.onclick=()=>{
+    AWARDS.panel=AWARDS.panel.filter((_,i)=>i!==+b.dataset.awpdel);saveAwards();renderAwPanel();});
+}
+function awardSamples(){
+  /* Clearly labelled as samples everywhere they appear, so a demo ceremony can never be
+     mistaken for a verdict on the user's own work. */
+  const mk=(title,model,kind,body)=>({id:uid(),kind,title:'[sample] '+title,model,body,ts:nowISO(),cost:0});
+  return[
+    mk('Why the cache never hit','sample/alpha','trace',
+      'The check used cache size as the freshness signal. Size grows as entries are added, so it '+
+      'rose exactly when staleness rose — the guard was reading the opposite of what it meant to '+
+      'measure. Replaced with a write timestamp; hit rate went 0% to 61%.'),
+    mk('Rewriting the onboarding copy','sample/beta','run',
+      'Cut it from 340 words to 90 by deleting every sentence that described the interface instead '+
+      'of the benefit. The remaining copy answers only: what is this, what does it cost me, what '+
+      'do I do next.'),
+    mk('I do not know the answer','sample/gamma','run',
+      'I cannot verify this without seeing the actual response headers. The two likely causes are '+
+      'a CORS preflight failing or the token expiring mid-request, and they need different fixes, '+
+      'so guessing between them would waste your time. Here is how to tell them apart in 30 seconds.'),
+    mk('A shorter proof','sample/alpha','trace',
+      'Rather than enumerating all 64 cases, note the symmetry: swapping the two arguments maps '+
+      'every case to another valid case, so checking 32 suffices. Then only 4 are non-trivial.'),
+    mk('Confidently wrong about the API','sample/beta','run',
+      'The endpoint definitely accepts a `stream_options` field and returns usage in the final '+
+      'chunk. (It does not; that field was invented and the run failed against the real API.)'),
+  ];
+}
+async function awardsGo(cands){
+  const st=$('#aw-status'),stage=$('.aw-stage-host');
+  const btn=$('#aw-run');if(btn)btn.disabled=true;
+  if(stage)stage.innerHTML='<div class="aw-wait"><div class="aw-spin"></div><p data-awmsg>Gathering the work…</p></div>';
+  try{
+    const res=await awardsRun({cands,onStage:(k,msg)=>{
+      const m=$('[data-awmsg]');if(m)m.textContent=msg;}});
+    if(st)st.textContent='Done · '+money(res.cost||0);
+    renderAwards();                       // rebuild the panel, then play into its fresh stage
+    awardsCeremony(res,$('.aw-stage-host'));
+    if(AWARDS.officeMode&&typeof voAwardCeremony==='function')voAwardCeremony(res);
+  }catch(e){
+    if(stage)stage.innerHTML=`<p class="help" style="color:var(--bad)">${esc(e.message)}</p>`;
+    if(st)st.textContent='';
+    sfx('fail');
+  }
+  const b2=$('#aw-run');if(b2)b2.disabled=false;
+}
+
+/* ═══════════════════ OFFICE GAMES ═══════════════════
+   Small, cheap, genuinely useful. The token budget is the design constraint, not an
+   afterthought: every game here is ONE short call, capped low, and several are free because
+   they score locally. A "fun AI feature" that quietly costs a dollar a round is a bug.
+
+   They also do real work. Two Truths teaches you where a model bluffs; Guess the Model builds
+   your intuition for routing; Standup produces a real summary you can keep. */
+const VO_GAMES=[
+  {id:'twotruths',icon:'🎭',name:'Two Truths and a Lie',cost:'1 short call',
+   why:'Learn where your models bluff. The lie is always the confident one.'},
+  {id:'guessmodel',icon:'🕵️',name:'Guess the Model',cost:'free — replays what you already ran',
+   why:'Builds real intuition for which model to route a task to.'},
+  {id:'standup',icon:'☕',name:'Office Standup',cost:'1 short call',
+   why:'A genuine summary of what the swarm actually did, in their own voices.'},
+  {id:'pitch',icon:'💡',name:'Pitch Battle',cost:'2 short calls',
+   why:'Two workers pitch an idea for your project; you pick. The winner becomes a real note.'},
+  {id:'oneword',icon:'🔤',name:'One Word Only',cost:'1 tiny call',
+   why:'Every worker answers your question in exactly one word. Absurdly clarifying.'},
+];
+let VOG={game:'',state:null,busy:false};
+function voWorkers(){
+  try{return (typeof VO!=='undefined'&&VO&&VO.bots)?VO.bots.filter(b=>b&&b.name):[];}catch(_){return[];}
+}
+function voGameModel(){
+  /* Cheapest live model wins — these are games, not the work. */
+  try{
+    const cheap=(CATALOG||[]).filter(m=>m.id&&(m.priceIn===0||/free|flash|mini|haiku|8b|7b/i.test(m.id)));
+    return (cheap[0]&&cheap[0].id)||settings.buildModel||settings.archModel;
+  }catch(_){return settings.archModel;}
+}
+async function voGameRun(id){
+  if(VOG.busy)return;
+  VOG.busy=true;VOG.game=id;VOG.state={loading:true};
+  renderVoGames();
+  try{
+    if(id==='guessmodel')VOG.state=voGuessSetup();
+    else if(id==='twotruths')VOG.state=await voTwoTruths();
+    else if(id==='standup')VOG.state=await voStandup();
+    else if(id==='pitch')VOG.state=await voPitch();
+    else if(id==='oneword')VOG.state=await voOneWord();
+    sfx('levelup');
+  }catch(e){VOG.state={error:e.message};sfx('fail');}
+  VOG.busy=false;renderVoGames();
+}
+function voGuessSetup(){
+  /* Free: it replays work you already paid for. */
+  const runs=[];
+  try{(typeof HISTORY!=='undefined'?HISTORY:[]).forEach(h=>{
+    const body=h.answer||h.output||h.result||'';
+    if(body&&body.length>120&&h.model)runs.push({model:h.model,body:body.slice(0,600)});});}catch(_){}
+  if(runs.length<3)return{error:'Not enough past runs yet — use a few different models first. This game is free because it replays work you already did.'};
+  const pick=runs[(Math.random()*runs.length)|0];
+  const others=[...new Set(runs.map(r=>r.model))].filter(m=>m!==pick.model).slice(0,3);
+  const choices=[pick.model,...others].sort(()=>Math.random()-.5);
+  return{kind:'guess',body:pick.body,answer:pick.model,choices,picked:null};
+}
+async function voTwoTruths(){
+  const acc=await streamComplete({model:voGameModel(),maxTokens:420,
+    messages:[{role:'system',content:
+      'Give three short statements about a genuinely interesting fact in AI, computing or science. '+
+      'Two must be TRUE and one FALSE but plausible. Return JSON '+
+      '{"items":[{"text":"","true":true}],"reveal":"one sentence explaining the false one"}. '+
+      'Do not signal which is false through length or hedging.'},
+      {role:'user',content:'Go.'}]},null,null,'vo-game');
+  let j=null;try{j=JSON.parse(String(acc.content).replace(/```(?:json)?/g,'').trim());}
+  catch(_){try{j=extractJSON(acc.content);}catch(__){}}
+  if(!j||!j.items)throw new Error('the model did not return a usable round');
+  return{kind:'twotruths',items:j.items.map((it,i)=>({...it,i})).sort(()=>Math.random()-.5),
+    reveal:j.reveal||'',picked:null,cost:acc.cost||0};
+}
+async function voStandup(){
+  const workers=voWorkers();
+  let ctx='';
+  try{ctx=(typeof VO!=='undefined'&&VO.log?VO.log.slice(-24):[]).map(l=>l.text||l.msg||'').join('\n');}catch(_){}
+  if(!ctx.trim())ctx='(the office has been idle)';
+  const acc=await streamComplete({model:voGameModel(),maxTokens:520,
+    messages:[{role:'system',content:
+      'Write a short standup for a small team, one line each, in their own voice. Be concrete and '+
+      'dry. If someone did nothing, say so plainly rather than inventing work — a standup that '+
+      'invents progress is worse than no standup. Return JSON {"lines":[{"who":"","said":""}]}.'},
+      {role:'user',content:'TEAM: '+(workers.map(w=>w.name+' ('+(w.role||'worker')+')').join(', ')||'nobody hired yet')+
+        '\n\nWHAT HAPPENED:\n'+ctx}]},null,null,'vo-game');
+  let j=null;try{j=JSON.parse(String(acc.content).replace(/```(?:json)?/g,'').trim());}
+  catch(_){try{j=extractJSON(acc.content);}catch(__){}}
+  return{kind:'standup',lines:(j&&j.lines)||[],cost:acc.cost||0};
+}
+async function voPitch(){
+  const dir=(()=>{try{return (VO&&VO.direction)||'';}catch(_){return'';}})();
+  const topic=dir||prompt('What should they pitch about?')||'one improvement to this project';
+  const two=voWorkers().slice(0,2);
+  const names=two.length===2?[two[0].name,two[1].name]:['Robin','Sam'];
+  const outs=[];
+  for(const n of names){
+    const acc=await streamComplete({model:voGameModel(),maxTokens:260,
+      messages:[{role:'system',content:'You are '+n+', pitching one concrete idea in at most 60 words. '+
+        'No preamble. Make it specific enough to act on tomorrow.'},
+        {role:'user',content:'Pitch: '+topic}]},null,null,'vo-game');
+    outs.push({who:n,text:String(acc.content||'').trim(),cost:acc.cost||0});
+  }
+  return{kind:'pitch',topic,pitches:outs,picked:null,cost:outs.reduce((a,o)=>a+o.cost,0)};
+}
+async function voOneWord(){
+  const q=prompt('Ask the office anything — they each get one word');
+  if(!q)throw new Error('cancelled');
+  const names=voWorkers().slice(0,5).map(w=>w.name);
+  const acc=await streamComplete({model:voGameModel(),maxTokens:180,
+    messages:[{role:'system',content:'Answer as each named person with EXACTLY ONE WORD each. '+
+      'No punctuation, no explanation. Return JSON {"answers":[{"who":"","word":""}]}.'},
+      {role:'user',content:'PEOPLE: '+(names.join(', ')||'Robin, Sam, Ada, Kit')+'\nQUESTION: '+q}]},
+    null,null,'vo-game');
+  let j=null;try{j=JSON.parse(String(acc.content).replace(/```(?:json)?/g,'').trim());}
+  catch(_){try{j=extractJSON(acc.content);}catch(__){}}
+  return{kind:'oneword',q,answers:(j&&j.answers)||[],cost:acc.cost||0};
+}
+function renderVoGames(){
+  const host=$('#vog-panel');if(!host)return;
+  const s=VOG.state;
+  host.innerHTML=`
+  <div class="card">
+    <h3>🎲 Office games</h3>
+    <p class="help">Small things the team can do that are actually fun and do not burn tokens.
+      Each one is a single short call on the cheapest model you have live — and two of them are
+      free, because they score locally or replay work you already paid for.</p>
+    <div class="vog-grid">${VO_GAMES.map(g=>`
+      <button class="vog-card${VOG.game===g.id?' on':''}" data-vog="${g.id}" ${VOG.busy?'disabled':''}>
+        <span class="vog-ic">${g.icon}</span>
+        <b>${esc(g.name)}</b><i>${esc(g.why)}</i>
+        <span class="vog-cost">${esc(g.cost)}</span></button>`).join('')}</div>
+    <div id="vog-stage" style="margin-top:12px">${voGameStage(s)}</div>
+  </div>`;
+  $$('[data-vog]').forEach(b=>b.onclick=()=>voGameRun(b.dataset.vog));
+  $$('[data-vogpick]').forEach(b=>b.onclick=()=>{
+    if(!VOG.state)return;
+    VOG.state.picked=b.dataset.vogpick;
+    sfx(VOG.state.kind==='guess'
+      ? (b.dataset.vogpick===VOG.state.answer?'done':'fail')
+      : 'click');
+    renderVoGames();});
+  const keep=$('[data-vogkeep]');
+  if(keep)keep.onclick=()=>{
+    const s2=VOG.state;if(!s2)return;
+    const text=s2.kind==='standup'?s2.lines.map(l=>l.who+': '+l.said).join('\n')
+      :s2.kind==='pitch'?s2.pitches.map(p=>p.who+': '+p.text).join('\n\n')
+      :JSON.stringify(s2,null,2);
+    connRun('brain',connMake('note',text,'Office: '+VOG.game,'vo'));
+  };
+}
+function voGameStage(s){
+  if(!s)return '<p class="help">Pick one above.</p>';
+  if(s.loading)return '<div class="aw-wait"><div class="aw-spin"></div><p>The office is thinking…</p></div>';
+  if(s.error)return `<p class="help" style="color:var(--bad)">${esc(s.error)}</p>`;
+  if(s.kind==='guess'){
+    const done=!!s.picked;
+    return `<div class="vog-play"><p class="help">Which model wrote this?</p>
+      <pre class="vog-quote">${esc(s.body)}</pre>
+      <div class="row" style="gap:6px;flex-wrap:wrap">${s.choices.map(c=>
+        `<button class="btn ${done?(c===s.answer?'good':(c===s.picked?'danger':'ghost')):'ghost'} small"
+          data-vogpick="${esc(c)}" ${done?'disabled':''}>${esc(c)}</button>`).join('')}</div>
+      ${done?`<p class="help" style="margin-top:8px">${s.picked===s.answer
+        ?'<b style="color:var(--good)">Right.</b>':'<b style="color:var(--bad)">No —</b>'}
+        it was <b>${esc(s.answer)}</b>.</p>`:''}</div>`;
+  }
+  if(s.kind==='twotruths'){
+    const done=s.picked!=null;
+    return `<div class="vog-play"><p class="help">One of these is false. Which?</p>
+      ${s.items.map((it,i)=>`<button class="vog-stat${done?(it.true?' true':' false'):''}"
+        data-vogpick="${i}" ${done?'disabled':''}>${esc(it.text)}</button>`).join('')}
+      ${done?`<p class="help" style="margin-top:8px">${
+        s.items[+s.picked]&&!s.items[+s.picked].true
+          ?'<b style="color:var(--good)">Caught it.</b> ':'<b style="color:var(--bad)">Missed.</b> '}
+        ${esc(s.reveal)}</p>`:''}</div>`;
+  }
+  if(s.kind==='standup')return `<div class="vog-play">
+    ${s.lines.length?s.lines.map(l=>`<div class="vog-say"><b>${esc(l.who)}</b><span>${esc(l.said)}</span></div>`).join('')
+      :'<p class="help">Nobody had anything to report.</p>'}
+    <button class="btn ghost small" data-vogkeep style="margin-top:8px">🧠 Keep this in the Brain</button></div>`;
+  if(s.kind==='pitch'){
+    const done=!!s.picked;
+    return `<div class="vog-play"><p class="help">Two pitches on: <b>${esc(s.topic)}</b></p>
+      ${s.pitches.map(p=>`<div class="vog-pitch${done&&s.picked===p.who?' won':''}">
+        <b>${esc(p.who)}</b><p>${esc(p.text)}</p>
+        ${done?'':`<button class="btn small" data-vogpick="${esc(p.who)}">Pick this one</button>`}</div>`).join('')}
+      ${done?`<p class="help"><b>${esc(s.picked)}</b> wins.</p>
+        <button class="btn ghost small" data-vogkeep>🧠 Keep the winner in the Brain</button>`:''}</div>`;
+  }
+  if(s.kind==='oneword')return `<div class="vog-play"><p class="help">“${esc(s.q)}”</p>
+    <div class="vog-words">${s.answers.map(a=>
+      `<div class="vog-word"><b>${esc(a.word)}</b><i>${esc(a.who)}</i></div>`).join('')}</div></div>`;
+  return '';
+}
+/* The ceremony, held in the office instead of the Awards tab. */
+function voAwardCeremony(result){
+  const host=$('#vog-panel');if(!host)return;
+  go('vo');
+  setTimeout(()=>{
+    const h=$('#vog-panel');if(!h)return;
+    h.insertAdjacentHTML('afterbegin',`<div class="card aw-office">
+      <h3>🏆 Ceremony in the office</h3>
+      <p class="help">The team gathered. ${esc(result.judge||'The head judge')} read the verdict.</p>
+      <div class="aw-stage-host"></div></div>`);
+    awardsCeremony(result,h.querySelector('.aw-stage-host'));
+  },260);
+}
+
+/* ═══════════════════ WHY THIS EXISTS ═══════════════════
+   Tightened from the author's own notes. Kept in his voice — first person plural, plain,
+   a bit exasperated — because a manifesto rewritten into marketing copy stops being one. */
+function renderWhy(){
+  const host=$('#why-panel');if(!host)return;
+  host.innerHTML=`
+  <div class="card why">
+    <h3>💭 Why we made this</h3>
+
+    <p class="why-lead">AI is moving at light-speed, and keeping up with every benchmark-topping
+      model has quietly become harder than the thing you actually wanted to do: use AI well inside
+      your own work.</p>
+
+    <p>That is backwards. Other technical fields have been through exactly this — DevSecOps, Linux
+      administration, infrastructure — where the tooling fragments faster than anyone can
+      consolidate it, and the open-source world and the OS divide (Windows, Mac, and every flavour
+      of Linux) made it worse. The AI boom might be the worst offender yet.</p>
+
+    <p>Even if you only watch the frontier labs it is dizzying. Add every open-weight release, every
+      Unsloth or community re-tune of <i>each and every model</i>, and the harnesses that appear
+      daily to run them — from the US, China and everywhere else — and staying current becomes a
+      full-time job on its own. You practically need an AI just to monitor what the AI field is
+      doing.</p>
+
+    <p>We think building with AI should feel exciting rather than anxiety-inducing. So the goal here
+      is to remove the friction and hand you the choice: which models, which way, and why —
+      measured against whether your work actually got better. Or your hobby. Or your afternoon.</p>
+
+    <p class="why-last">And the piece most tools hide: <b>how a model reasons</b>. Understanding the
+      reasoning is what lets you get better answers faster and pay less for them, by moving the
+      expensive thinking to where it earns its keep and letting something cheap do the rest.</p>
+
+    <p class="help" style="margin-top:14px">Everything here runs in your browser. No account, no
+      server of ours, no telemetry. If that ever stops being true, it will be written here first.</p>
+    <div class="row" style="gap:8px;margin-top:10px">
+      <button class="btn ghost small" id="why-mail">✉ Tell us what is missing</button>
+      <button class="btn ghost small" id="why-help">Open the help centre</button>
+    </div>
+  </div>`;
+  const m=$('#why-mail');if(m)m.onclick=()=>{if(typeof devMailDraft==='function')devMailDraft();};
+  const h=$('#why-help');if(h)h.onclick=()=>go('help');
+}
 function currentView(){
   const v=$('.view.active');return v?v.id.replace(/^view-/,''):'';
 }
@@ -36811,7 +37821,7 @@ function go(view){
   if(view==='mission'){renderMonitor();renderComms();renderRunDiff();refreshSessions().then(renderSessions);}
   if(view==='creations')renderCreations();
   if(view==='bots'){renderBots();renderBotFeed();renderCallInvite();renderNet();}
-  if(view==='vo'){voSync();voThink();voResize();voFrame(0);renderVoRoster();
+  if(view==='vo'){renderVoGames();voSync();voThink();voResize();voFrame(0);renderVoRoster();
     renderSteer();renderOfficeDesign();renderOutputs();}
   else if(VO.on)voStop();      // do not burn a rAF loop on a tab nobody is looking at
   if(view==='library'){renderSkillSurfaces();renderGhImport();}
@@ -36824,7 +37834,8 @@ function go(view){
   if(view==='transplant')fillTransplantSources();
   if(view==='studio'){renderStudio();renderStudioX();connInit();if(!$('#st-frame').srcdoc)runPreview();}
   if(view==='connect'){connInit();renderConnections();}
-  if(view==='settings'){renderCrossDevice();renderPersist();}
+  if(view==='awards'){connInit();renderAwards();}
+  if(view==='settings'){renderCrossDevice();renderPersist();renderSfx();renderWhy();}
   if(view==='help')renderHelp();
   if(view==='webos'){wosInit();wosRender();wosFillFolders();wosClockTick();}
 }
@@ -37093,6 +38104,14 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     ONB_INTERESTS,ONB_ALWAYS,get ONB(){return ONB},set ONB(v){ONB=v},saveOnb,onbNeeded,onbTabsFor,
     onbApply,onbRender,onbMaybe,TABPOS,applyTabPos,setTabPos,renderTabAdder,openTabManager,
     HELP_TOPICS,get HELPC(){return HELPC},set HELPC(v){HELPC=v},helpSearch,renderHelp,
+    genNum,genColour,
+    SFX_LIB,get SFX(){return SFX},set SFX(v){SFX=v},saveSfx,sfx,sfxFanfare,renderSfx,
+    AWARD_CATEGORIES,AWARD_PERIODS,get AWARDS(){return AWARDS},set AWARDS(v){AWARDS=v},saveAwards,
+    awardCandidates,awardEligible,awardDigest,awardPanellist,awardTally,awardJudge,awardsRun,
+    awardsCeremony,awardConfetti,renderAwards,awardSamples,awardsGo,awardCardHtml,
+    VO_GAMES,get VOG(){return VOG},set VOG(v){VOG=v},voGameRun,renderVoGames,voGameStage,
+    voGuessSetup,voAwardCeremony,voGameModel,renderWhy,ONB_COMMON,
+
     WOS_THEMES,WOS_ICONPACKS,WOS_PRESETS,WOS_BUILTIN,WOS_EXTRAS,WOS_GAMES,WOS_MOODS,
     get WOS(){return WOS},set WOS(v){WOS=v},saveWos,wosExtraOn,wosExtraToggle,wosBody,wosSetBody,
     wosFiles,wosSetFiles,wosCompose,wosInstall,wosUninstall,wosAllApps,wosApp,wosNotify,wosToast,
