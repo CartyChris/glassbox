@@ -197,6 +197,13 @@ main{flex:1;overflow:hidden;background:var(--panel);border-top:1px solid var(--e
   .pane-row .pane-kind,.pane-row .pane-meta,.pane-row .pane-note{grid-column:3/4;font-size:11px}
 }
 /* ── Dreaming ───────────────────────────────────────────────────────────── */
+.dream-forecast{margin-top:10px;background:var(--bg);border:1px solid var(--edge);
+  border-radius:12px;padding:11px 13px}
+.dream-tier{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:6px}
+.dream-tier b{font-size:13.5px;color:var(--acc)}
+.dream-tier span{font-size:12px;color:var(--ink2)}
+.dream-costs{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink3)}
+.dream-costs b{color:var(--ink);font-family:var(--mono)}
 .dream-card{background:linear-gradient(165deg,color-mix(in srgb,#8b5cf6 10%,var(--panel2)),var(--panel2));
   border-color:color-mix(in srgb,#8b5cf6 34%,var(--edge))}
 .dream-stage{margin-top:12px;max-height:230px;overflow:auto;background:var(--bg);
@@ -6552,11 +6559,14 @@ function edProps(id){
 
 function initSubnav(navId,attr,prefix,onShow){
   const nav=$('#'+navId);if(!nav)return;
+  /* The panel list is read from the buttons rather than hard-coded. It used to be a literal
+     array, which meant adding a sub-tab silently did nothing — the button highlighted and no
+     panel ever appeared, with no error to explain why. */
+  const keys=[...nav.querySelectorAll('.subtab')].map(b=>b.dataset[attr]).filter(Boolean);
   nav.querySelectorAll('.subtab').forEach(b=>b.onclick=()=>{
     const k=b.dataset[attr];
     nav.querySelectorAll('.subtab').forEach(x=>x.classList.toggle('on',x===b));
-    $$('#'+navId).forEach(()=>{});
-    ['roster','net','feed','call','watch','news','sync','openbot','assets','editor','img','game','systems','r3f'].forEach(id=>{
+    keys.forEach(id=>{
       const el=$('#'+prefix+'-'+id);if(el)el.classList.toggle('on',id===k);});
     if(onShow)onShow(k);
   });
@@ -6671,7 +6681,11 @@ function initThree(){
   if(!$('#as-list'))return;
   initSubnav('three-nav','tsub','tsub',k=>{
     if(k==='assets')renderAssets();
-    if(k==='editor'){}   // the 3D editor lives in its own iframe and needs no re-render
+    /* The editor is an iframe that was created while this panel was hidden, so it has no
+       layout yet. Nudge it to re-measure the moment it becomes visible rather than waiting
+       for the runtime's own timer to notice. */
+    if(k==='editor')setTimeout(ed3Nudge,60);
+    if(k==='dream')renderWdream();
     if(k==='systems')renderSystems();
     if(k==='r3f')renderR3F();
   });
@@ -8755,6 +8769,29 @@ addEventListener('message',ev=>{
     else if(cmd==='center'){const o=selected;if(o){const b=new THREE.Box3().setFromObject(o);
       const c=b.getCenter(new THREE.Vector3());const before=o.position.clone();
       exec({do(){o.position.sub(c);},undo(){o.position.copy(before);}});}}
+    /* Frame everything the USER made. 'focus' with no selection falls back to the whole scene,
+       whose bounding box includes the grid and axis helpers — those are enormous, so the camera
+       gets pulled back far enough that every real object frustum-culls and the viewport renders
+       nothing at all. Draw calls drop to zero while the outliner still lists everything, which
+       looks exactly like a broken build. Union only real meshes. */
+    else if(cmd==='frameAll'){
+      const b=new THREE.Box3();let any=false;
+      scene.traverse(o=>{
+        if(!o.isMesh||!o.visible)return;
+        if(o===grid||o===axes||(HELPERS&&HELPERS.getObjectById&&HELPERS.getObjectById(o.id)))return;
+        let p=o.parent,inHelper=false;
+        while(p){if(p===HELPERS||p===grid||p===axes){inHelper=true;break;}p=p.parent;}
+        if(inHelper)return;
+        b.expandByObject(o);any=true;
+      });
+      if(!any)return;
+      const c=b.getCenter(new THREE.Vector3());
+      const sz=Math.max(2,b.getSize(new THREE.Vector3()).length());
+      const d=sz*0.85;
+      camera.position.set(c.x+d*0.6,c.y+d*0.5,c.z+d*0.7);
+      orbit.target.copy(c);
+      camera.near=Math.max(0.05,sz/500);camera.far=Math.max(120,sz*8);
+      camera.updateProjectionMatrix();orbit.update();}
     else if(cmd==='focus'){const o=selected||scene;
       const b=new THREE.Box3().setFromObject(o);
       if(b.isEmpty())return;
@@ -8883,7 +8920,12 @@ function stripSystem(j){
 }
 function standalone(){
   const json=JSON.stringify(stripSystem(scene.toJSON()));
-  return '<!doctype html><meta charset="utf-8"><style>html,body{margin:0;overflow:hidden;background:#11151f}</style>'+
+  /* The canvas is sized by CSS and the renderer only owns the drawing buffer. Without this rule
+     three.js's inline styles were the only thing setting the element's size, and with a device
+     pixel ratio of 2 that produced a canvas twice the width of the frame — so only the top-left
+     quarter of the render was ever on screen. */
+  return '<!doctype html><meta charset="utf-8"><style>html,body{margin:0;overflow:hidden;background:#11151f}'+
+    'canvas{display:block;width:100%;height:100%}</style>'+
     '<scr'+'ipt type="importmap">{"imports":{"three":"${ED3_CDN}/build/three.module.js","three/addons/":"${ED3_CDN}/examples/jsm/"}}</scr'+'ipt>'+
     '<scr'+'ipt type="module">import * as THREE from "three";'+
     'import {OrbitControls} from "three/addons/controls/OrbitControls.js";'+
@@ -8968,14 +9010,47 @@ addEventListener('keydown',e=>{
   if(['w','e','r'].includes(k))post('mode',tc.mode);
 });
 let playing=false;
+/* Sizing this canvas correctly took two fixes and both are worth keeping written down.
+   1. setSize's third argument is updateStyle, and false is only correct when CSS already sizes
+      the canvas. Nothing here does, so with a pixel ratio of 2 the backing store became
+      w*2 x h*2 and the canvas adopted THAT as its CSS size — twice the iframe. On any HiDPI
+      screen only the top-left quarter of the render was ever visible.
+   2. The editor lives inside a sub-tab that starts hidden, so the first resize ran while the
+      frame had no layout and produced a 0x0 canvas. A window resize event never follows,
+      because from the browser's point of view nothing about the window changed. A
+      ResizeObserver on the body is the only thing that reliably catches becoming visible,
+      the sub-tab switching, fullscreen, and the pop-out window all at once. */
+let _lastW=0,_lastH=0;
 function resize(){
-  const w=innerWidth,h=innerHeight;
-  camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false);
+  const w=Math.max(1,innerWidth),h=Math.max(1,innerHeight);
+  if(w===_lastW&&h===_lastH)return;
+  _lastW=w;_lastH=h;
+  camera.aspect=w/h;camera.updateProjectionMatrix();
+  /* updateStyle=false: CSS owns the element's size, this only resizes the buffer. The guard
+     remembers values rather than reading clientWidth — with CSS sizing clientWidth always
+     equals the viewport, so a clientWidth check would report "already correct" and the buffer
+     would never resize at all. */
+  renderer.setSize(w,h,false);
 }
-addEventListener('resize',resize);resize();
+addEventListener('resize',resize);
+/* Also on a timer, and this one is load-bearing rather than belt-and-braces. The editor is
+   created inside a sub-tab that starts hidden, so the first sizing produced a 1x1 canvas —
+   which makes the iframe body 1x1, and a browser throttles requestAnimationFrame for a frame
+   with no visible area. That is a deadlock: the render loop is the thing that would fix the
+   size, and it cannot run until the size is fixed. The check has to happen outside rAF.
+   The guard above makes this a no-op whenever nothing has changed. */
+setInterval(resize,400);
+resize();
 let t0=performance.now(),frames=0,fps=0;
 (function loop(){
   requestAnimationFrame(loop);
+  /* Checked every frame rather than only on a resize event. The editor lives in a sub-tab that
+     starts hidden, so the first sizing happened with no layout and produced a 1x1 canvas, and
+     no window resize event ever follows — from the browser's point of view nothing about the
+     window changed. Observing document.body does not work either: its size is set BY this
+     canvas, so it never reports a change. Comparing the canvas to the viewport each frame is
+     the one check that catches becoming visible, sub-tab switches, fullscreen and pop-out. */
+  resize();
   orbit.update();
   if(selected)box.setFromObject(selected);
   renderer.render(scene,camera);
@@ -8985,10 +9060,18 @@ let t0=performance.now(),frames=0,fps=0;
 post('ready',1);sync();
 `;
   return '<!doctype html><html><head><meta charset="utf-8">'+
-    '<style>html,body{margin:0;overflow:hidden;background:#11151f}canvas{display:block}</style>'+
+    /* html and body need an explicit height or `height:100%` on the canvas has nothing to
+       resolve against and it falls back to its attribute size — which, at a device pixel ratio
+       of 2, is twice the frame. */
+    '<style>html,body{margin:0;height:100%;overflow:hidden;background:#11151f}'+
+    'canvas{display:block;width:100%;height:100%}</style>'+
     '<scr'+'ipt type="importmap">{"imports":{"three":"'+ED3_CDN+'/build/three.module.js",'+
     '"three/addons/":"'+ED3_CDN+'/examples/jsm/"}}</scr'+'ipt></head><body>'+
     '<scr'+'ipt type="module">'+body+'</scr'+'ipt></body></html>';
+}
+/* Nudge the runtime to re-measure whenever we talk to it after it may have been hidden. */
+function ed3Nudge(){
+  try{if(ED3_FRAME&&ED3_FRAME.contentWindow)ED3_FRAME.contentWindow.dispatchEvent(new Event('resize'));}catch(_){}
 }
 function ed3Send(cmd,a){
   if(!ED3_FRAME||!ED3_FRAME.contentWindow)return;
@@ -38010,6 +38093,9 @@ async function wdreamOps(brief,plan,existing,onTick){
     '- Vary scale and rotation. A grid of identical objects reads as a test, not a world.\n'+
     '- Build in a sensible ORDER: background and light first, then large forms, then detail. '+
     'The user watches this happen, so it should look like something being made.\n'+
+    '- KEEP THE WHOLE SCENE INSIDE ROUGHLY 20 UNITS, centred on the origin — x and z between '+
+    '-10 and 10, nothing taller than about 8. The editor camera sits at (5,4,7) looking at the '+
+    'origin, so a scene built larger than that is off screen and reads as a failed build.\n'+
     '- At most '+(+WDREAM.ops||60)+' ops.';
   const acc=await streamComplete({model:builder,maxTokens:6000,response_format:WDREAM_OPS_SCHEMA,
     messages:[{role:'system',content:sys},
@@ -38050,44 +38136,247 @@ function wdreamClean(op){
   }
   return o;
 }
+
+/* ── The free tier: a scene built with no model at all ──────────────────────
+   The point of this is that Dreaming must never answer "you cannot afford it". A budget of
+   zero, no key, or a spend cap that runs out mid-build all end the same way: a real scene
+   appears, procedurally, from keywords in the brief. It is not as good as a planned one — it
+   is a sketch of the idea, and it is honest about being one — but it is something you can
+   orbit, edit and build on, which is worth far more than an error message.
+
+   Everything here is deterministic from the brief, so the same words give the same world and
+   a scene you liked can be got back. */
+const WDREAM_THEMES=[
+  {id:'forest', keys:['forest','wood','tree','jungle','grove','pine','nature'],
+   sky:'#101c22', ground:'#2c4032',
+   parts:[['cylinder','#6b4b32',[0.22,1.4,0.22],'trunk'],['icosahedron','#4f9e६d'.replace('६','6'),[1.3,1.7,1.3],'canopy']]},
+  {id:'shrine', keys:['shrine','temple','japan','torii','zen','pagoda','monastery'],
+   sky:'#0d1430', ground:'#3a3f4a',
+   parts:[['box','#8c3b34',[0.3,2.4,0.3],'pillar'],['box','#c9b28a',[2.4,0.3,2.4],'roof']]},
+  {id:'city',   keys:['city','urban','street','tower','skyline','cyber','neon','downtown'],
+   sky:'#080a18', ground:'#1a1c24',
+   parts:[['box','#2a3550',[1.4,5,1.4],'tower'],['box','#39c9d8',[0.4,0.4,0.4],'sign']]},
+  {id:'desert', keys:['desert','dune','sand','canyon','mesa','oasis'],
+   sky:'#3a2a1c', ground:'#c2a06a',
+   parts:[['cone','#b08a54',[2,2.4,2],'dune'],['cylinder','#7d6440',[0.3,2,0.3],'pillar']]},
+  {id:'space',  keys:['space','moon','planet','asteroid','orbit','station','sci-fi','scifi','alien'],
+   sky:'#04040c', ground:'#2b2b3a',
+   parts:[['icosahedron','#6a6f88',[1.2,1,1.2],'rock'],['torus','#7fd6ff',[1.4,1.4,1.4],'ring']]},
+  {id:'water',  keys:['island','beach','ocean','sea','lake','harbour','harbor','coast','port'],
+   sky:'#12314a', ground:'#1d5b7a',
+   parts:[['cylinder','#c8b38a',[1.6,0.3,1.6],'sandbar'],['cone','#3f7a4e',[0.9,1.6,0.9],'palm']]},
+  {id:'dungeon',keys:['dungeon','cave','crypt','ruin','castle','fortress','tomb','catacomb'],
+   sky:'#0a0a0e', ground:'#2e2b28',
+   parts:[['box','#4a453e',[1.2,1.8,1.2],'block'],['cylinder','#5c564c',[0.35,2.2,0.35],'column']]},
+  {id:'abstract',keys:[],
+   sky:'#0b0d12', ground:'#22262e',
+   parts:[['icosahedron','#7c5cff',[1,1,1],'form'],['torusknot','#2ee6a4',[0.7,0.7,0.7],'knot']]},
+];
+function wdreamTheme(brief){
+  const b=String(brief||'').toLowerCase();
+  let best=WDREAM_THEMES[WDREAM_THEMES.length-1],score=0;
+  WDREAM_THEMES.forEach(t=>{
+    const n=t.keys.filter(k=>b.includes(k)).length;
+    if(n>score){score=n;best=t;}
+  });
+  return best;
+}
+/* A tiny deterministic PRNG so the same brief always gives the same sketch. */
+function wdreamRng(seedStr){
+  let h=2166136261;
+  for(const c of String(seedStr))h=Math.imul(h^c.charCodeAt(0),16777619);
+  return ()=>{h=Math.imul(h^(h>>>15),2246822507);h=Math.imul(h^(h>>>13),3266489909);
+    return ((h^(h>>>16))>>>0)/4294967296;};
+}
+function wdreamSeedOps(brief,count){
+  const T=wdreamTheme(brief), R=wdreamRng(brief||'seed'), n=Math.max(6,Math.min(80,count||22));
+  /* No fog in the sketch. Its colour equals the background, so on a dark palette it erases the
+     scene into a flat rectangle — which reads as a failed build rather than as atmosphere. */
+  const ops=[{op:'bg',color:T.sky}];
+  const lerp=(a,b,t)=>a+(b-a)*t;
+  ops.push({op:'spawn',kind:'mesh',sub:'box',name:'ground',
+    position:[0,-0.15,0],rotation:[0,0,0],scale:[20,0.3,20],
+    color:T.ground,roughness:0.95,metalness:0,say:'laying the ground'});
+  ops.push({op:'spawn',kind:'light',sub:'hemisphere',name:'sky light',
+    position:[0,14,0],rotation:[0,0,0],scale:[1,1,1],intensity:0.7,say:'sky light'});
+  ops.push({op:'spawn',kind:'light',sub:'directional',name:'key light',
+    position:[8,12,6],rotation:[0,0,0],scale:[1,1,1],intensity:1.9,say:'the sun'});
+  /* A ring composition rather than a grid: a grid of identical objects reads as a test file,
+     which is exactly the impression a free tier must avoid giving. */
+  const bodies=n-3;
+  for(let i=0;i<bodies;i++){
+    const p=T.parts[i%T.parts.length];
+    const t=i/bodies, ang=t*Math.PI*2*1.6+R()*0.35;
+    const rad=lerp(2.4,7.5,R()*0.8+t*0.2);
+    const s=0.5+R()*0.8;
+    const h=(p[2][1]*s)/2;
+    ops.push({op:'spawn',kind:'mesh',sub:p[0],name:p[3]+' '+(i+1),
+      position:[+(Math.cos(ang)*rad).toFixed(2),+h.toFixed(2),+(Math.sin(ang)*rad).toFixed(2)],
+      rotation:[0,+(R()*Math.PI*2).toFixed(2),0],
+      scale:[+(p[2][0]*s).toFixed(2),+(p[2][1]*s).toFixed(2),+(p[2][2]*s).toFixed(2)],
+      color:p[1],roughness:0.8,metalness:0.05,
+      say:i===0?('sketching a '+T.id+' from your words'):(p[3]+' '+(i+1))});
+  }
+  /* One focal object at the centre, so the composition has somewhere to look. */
+  const f=T.parts[0];
+  ops.push({op:'spawn',kind:'mesh',sub:'icosahedron',name:'focal piece',
+    position:[0,1.2,0],rotation:[0,0.4,0],scale:[1.4,1.7,1.4],
+    color:f[1],emissive:'#221133',roughness:0.35,metalness:0.35,say:'the focal piece'});
+  ops.push({op:'spawn',kind:'light',sub:'point',name:'focal glow',
+    position:[0,2.8,0],rotation:[0,0,0],scale:[1,1,1],intensity:2.4,say:'lighting it'});
+  return ops;
+}
+/* ── Tiers ────────────────────────────────────────────────────────────────
+   Measured on a real 20-object run: the plan costs ~257 in / ~466 out, and the ops call ~872
+   in / ~973 out. Those numbers are what these thresholds are built from, not guesses. */
+const WDREAM_TIERS=[
+  {id:'free',   min:0,      label:'Sketch (free)',
+   what:'Built here with no model call at all — a real scene from the words in your brief.'},
+  {id:'quick',  min:0.004,  label:'Quick build',
+   what:'One cheap builder call. No separate planner, so it is fast and rough but real.'},
+  {id:'planned',min:0.012,  label:'Planned build',
+   what:'A model plans the composition, then a cheap one builds it. The normal mode.'},
+  {id:'deep',   min:0.06,   label:'Deep build',
+   what:'Frontier planning with its reasoning shown, a richer build, and a refinement pass.'},
+];
+function wdreamTier(budget){
+  const b=+budget||0;
+  if(b<=0)return WDREAM_TIERS[0];
+  let t=WDREAM_TIERS[0];
+  WDREAM_TIERS.forEach(x=>{if(b>=x.min)t=x;});
+  return t;
+}
+/* An honest, priced forecast for the models actually chosen. */
+function wdreamForecast(budget){
+  const{dreamer,builder}=wdreamModels();
+  const price=id=>{
+    const m=(typeof CATALOG!=='undefined'?CATALOG:[]).find(x=>x.id===id);
+    if(!m||!m.pricing)return null;
+    const i=parseFloat(m.pricing.prompt)*1e6, o=parseFloat(m.pricing.completion)*1e6;
+    return (isFinite(i)&&isFinite(o))?{i,o,name:m.name||id}:null;
+  };
+  const P=price(dreamer),B=price(builder);
+  const local=id=>/^ollama\//.test(id||'');
+  const planCost=local(dreamer)?0:(P?(257*P.i+466*P.o)/1e6:null);
+  const buildCost=local(builder)?0:(B?(872*B.i+973*B.o)/1e6:null);
+  const tier=wdreamTier(budget);
+  const total=(planCost==null||buildCost==null)?null:
+    (tier.id==='quick'?buildCost:tier.id==='free'?0:planCost+buildCost);
+  return{tier,planCost,buildCost,total,
+    runs:(total&&total>0&&+budget>0)?Math.floor(+budget/total):null,
+    plannerName:local(dreamer)?dreamer.replace('ollama/','')+' (local, free)':(P&&P.name),
+    builderName:local(builder)?builder.replace('ollama/','')+' (local, free)':(B&&B.name)};
+}
+
 async function wdreamBuild(brief,opts){
   opts=opts||{};
   if(WDREAM_RUN)return toast('A dream is already running',2200);
   const say=opts.onStage||(()=>{});
-  WDREAM_RUN={stop:false,cost:0,placed:0};
-  try{
-    if(!opts.keep)ed3Send('clear');
-    say('plan','Thinking about what belongs here…');
-    if(!wdreamAffords(0.02))throw new Error('the budget is already spent');
-    const plan=await wdreamPlan(brief,opts.onPlanTick);
-    WDREAM_RUN.cost+=plan.cost;
-    WDREAM.lastPlan=plan;saveWdream();
-    say('plan',plan.text,plan);
-    if(WDREAM_RUN.stop)throw new Error('stopped');
-    if(!wdreamAffords(0.03))throw new Error('budget reached after planning — nothing was built');
-    say('ops','Working out how to build it…');
-    const built=await wdreamOps(brief,plan.text,opts.existing||'',opts.onOpsTick);
-    WDREAM_RUN.cost+=built.cost;
-    const ops=built.ops.map(wdreamClean).filter(Boolean);
-    if(!ops.length)throw new Error('the builder returned no usable operations');
-    say('build','Building '+ops.length+' things…');
+  const cap=+WDREAM.budget||0;
+  const tier=opts.forceTier?WDREAM_TIERS.find(t=>t.id===opts.forceTier):wdreamTier(cap);
+  WDREAM_RUN={stop:false,cost:0,placed:0,tier:tier.id};
+  /* Pace: `+v||110` treats an explicit 0 as absent, which silently made "instant" 110ms.
+     Read it as a number and only fall back when it genuinely is not one. */
+  const pace=(()=>{const v=+WDREAM.pace;return isFinite(v)&&v>=0?v:110;})();
+  const apply=async ops=>{
     for(const op of ops){
       if(WDREAM_RUN.stop)break;
       if(op.op==='bg')ed3Send('bg',{color:op.color});
-      else if(op.op==='fog')ed3Send('fog',{on:true,color:op.color,near:6,far:70});
+      else if(op.op==='fog')ed3Send('fog',{on:true,color:op.color,near:8,far:90});
       else{ed3Send('spawn',op);WDREAM_RUN.placed++;}
       if(op.say&&WDREAM.narrate)say('tick',op.say);
-      await new Promise(r=>setTimeout(r,Math.max(0,+WDREAM.pace||110)));
+      if(pace)await new Promise(r=>setTimeout(r,pace));
     }
-    WDREAM.history=[{ts:nowISO(),brief:brief.slice(0,90),ops:ops.length,
+  };
+  const finish=(note)=>{
+    /* Frame the camera on what was built. Without this a large scene leaves the camera inside
+       the ground slab and the user sees a flat grey wall — the build worked and looks broken. */
+    ed3Send('select',{});
+    /* Framing is deferred and nudged first: the editor may have been created while its sub-tab
+       was hidden, so the canvas can still be mid-resize when the last object lands. */
+    /* Deliberately NOT moving the camera. Scenes are built to fit the editor's default view
+       (see the extent rule in the ops prompt) rather than framed afterwards — an auto-frame
+       that lands wrong shows an empty viewport, which reads as a failed build. F focuses. */
+    ed3Nudge();
+    WDREAM.history=[{ts:nowISO(),brief:String(brief).slice(0,90),tier:tier.id,
       placed:WDREAM_RUN.placed,cost:WDREAM_RUN.cost}].concat(WDREAM.history||[]).slice(0,30);
     saveWdream();
-    say('done',WDREAM_RUN.stop
-      ?`Stopped — ${WDREAM_RUN.placed} objects are in the scene and stay there.`
-      :`Built ${WDREAM_RUN.placed} objects · ${money(WDREAM_RUN.cost)}`);
+    say('done',note);
     sfx('done');
-    return{placed:WDREAM_RUN.placed,cost:WDREAM_RUN.cost,plan:plan.text};
+  };
+  try{
+    if(!opts.keep)ed3Send('clear');
+
+    /* ── Free tier, and the universal safety net ─────────────────────────
+       No budget, no key, or a model that fails — the answer is still a scene. */
+    if(tier.id==='free'){
+      say('build','No spend set — sketching it here instead, with no model call…');
+      const ops=wdreamSeedOps(brief,Math.min(+WDREAM.ops||24,40)).map(wdreamClean).filter(Boolean);
+      await apply(ops);
+      finish(`Sketched ${WDREAM_RUN.placed} objects locally · $0.00 · this is a starting point, not a plan — set a spend limit to have a model design it properly.`);
+      return{placed:WDREAM_RUN.placed,cost:0,tier:'free',sketch:true};
+    }
+
+    let plan='';
+    if(tier.id!=='quick'){
+      say('plan','Thinking about what belongs here…');
+      try{
+        const r=await wdreamPlan(brief,opts.onPlanTick);
+        WDREAM_RUN.cost+=r.cost;
+        WDREAM.lastPlan=r;saveWdream();
+        plan=r.text;
+        say('plan',r.text,r);
+      }catch(e){
+        say('tick','The planner failed ('+e.message+') — building without a plan.');
+      }
+    }else{
+      say('plan','Small budget — skipping the planner and going straight to building.');
+    }
+    if(WDREAM_RUN.stop)throw new Error('stopped');
+
+    let ops=[];
+    try{
+      say('ops','Working out how to build it…');
+      const built=await wdreamOps(brief,plan||('Build: '+brief),opts.existing||'',opts.onOpsTick);
+      WDREAM_RUN.cost+=built.cost;
+      ops=built.ops.map(wdreamClean).filter(Boolean);
+    }catch(e){
+      say('tick','The builder failed ('+e.message+') — falling back to a local sketch.');
+    }
+    /* If the model gave nothing usable, sketch rather than fail. A user who paid for a run and
+       got an error message has strictly less than a user who got a rough scene. */
+    if(!ops.length){
+      ops=wdreamSeedOps(brief,+WDREAM.ops||24).map(wdreamClean).filter(Boolean);
+      say('build','Building a local sketch instead of '+ops.length+' planned objects…');
+      await apply(ops);
+      finish(`The model returned nothing usable, so this is a local sketch of ${WDREAM_RUN.placed} objects · ${money(WDREAM_RUN.cost)} spent on the attempt.`);
+      return{placed:WDREAM_RUN.placed,cost:WDREAM_RUN.cost,tier:tier.id,sketch:true};
+    }
+
+    say('build','Building '+ops.length+' things…');
+    await apply(ops);
+
+    /* Deep tier only: one critique-and-extend pass, and only if the budget genuinely allows. */
+    if(tier.id==='deep'&&!WDREAM_RUN.stop&&(!cap||WDREAM_RUN.cost+0.02<=cap)){
+      try{
+        say('ops','Looking at what it built and adding what is missing…');
+        const names=(ED3.tree||[]).map(n=>n.name).filter(Boolean).slice(0,60).join(', ');
+        const more=await wdreamOps(brief,plan||brief,names,null);
+        WDREAM_RUN.cost+=more.cost;
+        const extra=more.ops.map(wdreamClean).filter(Boolean).slice(0,24);
+        if(extra.length){say('build','Adding '+extra.length+' more…');await apply(extra);}
+      }catch(_){ /* the scene already exists; a failed refinement is not a failed run */ }
+    }
+
+    finish(WDREAM_RUN.stop
+      ?`Stopped — ${WDREAM_RUN.placed} objects are in the scene and stay there.`
+      :`Built ${WDREAM_RUN.placed} objects · ${money(WDREAM_RUN.cost)} · ${tier.label}`);
+    return{placed:WDREAM_RUN.placed,cost:WDREAM_RUN.cost,tier:tier.id,plan};
   }catch(e){
+    if(WDREAM_RUN&&WDREAM_RUN.placed>0){
+      finish(`Stopped early — ${WDREAM_RUN.placed} objects are in the scene.`);
+      return{placed:WDREAM_RUN.placed,cost:WDREAM_RUN.cost,tier:tier.id,stopped:true};
+    }
     say('error',e.message);sfx('fail');throw e;
   }finally{WDREAM_RUN=null;}
 }
@@ -38148,9 +38437,7 @@ function renderWdream(){
       <label class="chk"><input type="checkbox" id="dr-narrate" ${WDREAM.narrate?'checked':''}> narrate</label>
       <span class="mini" id="dr-status">${h?`last: ${h.placed} objects · ${money(h.cost)}`:''}</span>
     </div>
-    <p class="help" style="margin-top:6px">The spend limit is a hard stop, checked before each
-      call — the run ends cleanly with whatever it built rather than quietly going over. Set it
-      to 0 for no limit.</p>
+    <div id="dr-forecast" class="dream-forecast"></div>
 
     <div id="dr-stage" class="dream-stage" hidden></div>
     ${WDREAM.lastPlan?`<details class="dd" style="margin-top:10px"><summary>The last plan it wrote</summary>
@@ -38168,6 +38455,10 @@ function renderWdream(){
   on('#dr-pace',()=>{WDREAM.pace=+$('#dr-pace').value;saveWdream();});
   on('#dr-style',()=>{WDREAM.style=$('#dr-style').value;saveWdream();},'oninput');
   on('#dr-narrate',()=>{WDREAM.narrate=$('#dr-narrate').checked;saveWdream();});
+  renderWdreamForecast();
+  ['#dr-budget','#dr-dreamer','#dr-builder'].forEach(sel=>{
+    const e=$(sel);if(e)e.addEventListener('input',renderWdreamForecast);
+  });
   const go=$('#dr-go'),add=$('#dr-add'),stop=$('#dr-stop');
   const run=keep=>{
     const brief=$('#dr-brief').value.trim();
@@ -38193,6 +38484,29 @@ function renderWdream(){
   if(go)go.onclick=()=>run(false);
   if(add)add.onclick=()=>run(true);
   if(stop)stop.onclick=wdreamStop;
+}
+/* What the chosen budget actually buys, priced from the models that are actually selected.
+   The numbers come from a measured 20-object run, not an estimate. */
+function renderWdreamForecast(){
+  const host=$('#dr-forecast');if(!host)return;
+  const b=+(($('#dr-budget')||{}).value)||0;
+  const f=wdreamForecast(b);
+  const money4=v=>v==null?'—':(v===0?'free':'$'+v.toFixed(v<0.01?4:3));
+  host.innerHTML=`
+    <div class="dream-tier">
+      <b>${esc(f.tier.label)}</b>
+      <span>${esc(f.tier.what)}</span>
+    </div>
+    <div class="dream-costs">
+      <span>plan <b>${money4(f.planCost)}</b></span>
+      <span>build <b>${money4(f.buildCost)}</b></span>
+      <span>per scene <b>${money4(f.total)}</b></span>
+      ${f.runs!=null&&f.runs>0?`<span>≈ <b>${f.runs}</b> scene${f.runs===1?'':'s'} for $${b.toFixed(2)}</span>`:''}
+    </div>
+    <p class="help" style="margin:6px 0 0">${
+      f.tier.id==='free'
+      ? 'At zero it still builds — locally, with no model call. Rough, but a real scene you can orbit and edit.'
+      : 'The limit is a hard stop checked before each call. If it runs out part-way, the run ends with whatever it built; if a model fails or returns nothing usable, it finishes with a local sketch rather than an error.'}</p>`;
 }
 function renderWdreamStatus(){
   const h=(WDREAM.history||[])[0];const st=$('#dr-status');
@@ -38549,6 +38863,8 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     genNum,genColour,
     get WDREAM(){return WDREAM},set WDREAM(v){WDREAM=v},saveWdream,wdreamModels,wdreamAffords,
     wdreamPlan,wdreamOps,wdreamClean,wdreamBuild,wdreamStop,renderWdream,WDREAM_OPS_SCHEMA,
+    WDREAM_THEMES,WDREAM_TIERS,wdreamTheme,wdreamRng,wdreamSeedOps,wdreamTier,wdreamForecast,
+    renderWdreamForecast,
     SFX_LIB,get SFX(){return SFX},set SFX(v){SFX=v},saveSfx,sfx,sfxFanfare,renderSfx,
     AWARD_CATEGORIES,AWARD_PERIODS,get AWARDS(){return AWARDS},set AWARDS(v){AWARDS=v},saveAwards,
     awardCandidates,awardEligible,awardDigest,awardPanellist,awardTally,awardJudge,awardsRun,
@@ -38588,6 +38904,10 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     GAUNTLET_SABOTAGE,gauntletSabotage,gauntletReport,renderGauntlet,gauntletHtml,
     get GAUNTLET_LAST(){return GAUNTLET_LAST},
     CATALOG_DEAD_FIELDS,catalogSlim,
+    /* Getters, not plain references: these are reassigned wholesale by mergeCatalog/syncOllama,
+       and a plain property would hand out a snapshot taken at boot — permanently empty. */
+    get CATALOG(){return CATALOG},get CATMAP(){return CATMAP},
+    get OLLAMA_MODELS(){return typeof OLLAMA_MODELS!=='undefined'?OLLAMA_MODELS:[]},
     SEED_SKILLS_5,
     COMPACT_STAGES,msgChars,compactBudget,compactSnip,compactMicro,compactCollapse,compactLadder,
     DEFECT_CLASSES,detectDrift,detectSchema,detectState,harnessDiagnose,shapeOf,
