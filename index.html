@@ -196,6 +196,21 @@ main{flex:1;overflow:hidden;background:var(--panel);border-top:1px solid var(--e
   .pane-row{grid-template-columns:60px 20px 1fr;row-gap:2px}
   .pane-row .pane-kind,.pane-row .pane-meta,.pane-row .pane-note{grid-column:3/4;font-size:11px}
 }
+/* ── Dreaming ───────────────────────────────────────────────────────────── */
+.dream-card{background:linear-gradient(165deg,color-mix(in srgb,#8b5cf6 10%,var(--panel2)),var(--panel2));
+  border-color:color-mix(in srgb,#8b5cf6 34%,var(--edge))}
+.dream-stage{margin-top:12px;max-height:230px;overflow:auto;background:var(--bg);
+  border:1px solid var(--edge);border-radius:12px;padding:12px;font-size:12.5px;line-height:1.6}
+.dream-stage[hidden]{display:none}
+.dream-line{display:flex;gap:9px;align-items:center;font-size:13px;margin-bottom:8px}
+.dream-dot{width:9px;height:9px;border-radius:50%;background:#8b5cf6;flex:0 0 auto;
+  animation:drPulse 1.2s ease-in-out infinite}
+@keyframes drPulse{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1.25)}}
+.dream-plan{white-space:pre-wrap;color:var(--ink2);border-left:2px solid color-mix(in srgb,#8b5cf6 55%,transparent);
+  padding:6px 0 6px 11px;margin:8px 0}
+.dream-tick{color:var(--ink3);padding:2px 0 2px 18px;position:relative;animation:drIn .25s ease}
+.dream-tick:before{content:'✦';position:absolute;left:2px;color:#8b5cf6}
+@keyframes drIn{from{opacity:0;transform:translateX(-6px)}}
 /* ── Sounds ─────────────────────────────────────────────────────────────── */
 .sfx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px}
 .sfx-row{display:flex;gap:9px;align-items:center;padding:7px 10px;border-radius:10px;
@@ -4438,6 +4453,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
         <button class="subtab" data-tsub="img">🖼 Image → 3D</button>
         <button class="subtab" data-tsub="systems">🌍 Systems</button>
         <button class="subtab" data-tsub="r3f">⚛ React / R3F</button>
+        <button class="subtab" data-tsub="dream">🌙 Dreaming</button>
         <button class="subtab" data-tsub="game">🎮 Build a game</button>
       </div>
       <div class="sub on" id="tsub-assets">
@@ -4590,6 +4606,12 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
         </div>
         <div class="card">
           <h3>📦 Generate a project</h3>
+          <p class="help">Describe the game and a model writes the actual systems into the
+            scaffold — player controller, the loop, whatever it needs. Leave it blank and you get
+            the bare scaffold plus your current editor scene, which is useful when you only want
+            the wiring.</p>
+          <textarea id="r3f-brief" rows="2" style="margin-top:6px"
+            placeholder="what the game is — e.g. a third-person collectathon: 3 pickups, a 60-second timer, double jump"></textarea>
           <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:6px">
             <input id="r3f-name" placeholder="project name" value="my-game" style="flex:0 0 170px">
             <select id="r3f-path" style="flex:0 0 210px"></select>
@@ -4599,6 +4621,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           </div>
           <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px">
             <button class="btn" id="r3f-gen">📦 Generate &amp; download</button>
+            <button class="btn good" id="r3f-ai">✦ Write the game into it</button>
             <button class="btn ghost small" id="r3f-preview">Preview file tree</button>
             <span class="mini muted" id="r3f-status"></span>
           </div>
@@ -4615,6 +4638,10 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
         </div>
       </div>
 
+      <div class="sub" id="tsub-dream">
+        <div id="dream-panel"></div>
+      </div>
+
       <div class="sub" id="tsub-game">
         <div class="card">
           <h3>🎮 Build a game with these assets</h3>
@@ -4624,11 +4651,21 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
             silently swapping in a cube.</p>
           <textarea id="g3-brief" rows="3" style="margin-top:8px"
             placeholder="the game — e.g. a low-poly third-person collectathon in a forest, 3 pickups, a timer"></textarea>
+          <div class="row" style="gap:10px;flex-wrap:wrap;margin-top:8px;align-items:center">
+            <label class="chk"><input type="checkbox" id="g3-scene" checked> use the scene I built in the Editor</label>
+            <label class="chk"><input type="checkbox" id="g3-plan" checked> plan it first with a strong model</label>
+            <label class="chk" style="gap:4px">cap $<input id="g3-budget" type="number" min="0" step="0.05" value="0.5" style="width:70px"></label>
+          </div>
           <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px">
-            <input id="g3-model" class="mono" placeholder="model (blank = builder)" style="flex:1;min-width:180px">
-            <button class="btn" id="g3-go">🎮 Build</button>
+            <input id="g3-planner" class="mono" placeholder="planner model (blank = architect)" style="flex:1;min-width:170px">
+            <input id="g3-model" class="mono" placeholder="builder model (blank = builder)" style="flex:1;min-width:170px">
+            <button class="btn good" id="g3-go">🎮 Build</button>
             <span class="mini muted" id="g3-status"></span>
           </div>
+          <p class="help" style="margin-top:6px">Planning first is the same trade as Dreaming: a
+            strong model decides what the game <i>is</i>, a cheap one writes it. The plan is shown
+            so you can see what it decided before it spends anything writing it.</p>
+          <div id="g3-plan-out"></div>
           <div id="g3-out" style="margin-top:12px"></div>
         </div>
       </div>
@@ -6696,6 +6733,43 @@ function initThree(){
     $('#g3-go').disabled=true;$('#g3-status').textContent='building…';
     const span=spanStart('game3d','llm',{});
     try{
+      const cap=+($('#g3-budget')||{}).value||0;
+      let spent=0;
+      const affords=est=>!cap||(spent+est)<=cap;
+      /* The scene the user actually built is the strongest signal about what they want, and
+         ignoring it is why "generate a game" usually returns something generic. */
+      let sceneTxt='';
+      if(($('#g3-scene')||{}).checked&&ED3._lastScene){
+        try{
+          const sc=typeof ED3._lastScene==='string'?JSON.parse(ED3._lastScene):ED3._lastScene;
+          const names=(ED3.tree||[]).map(n=>n.name).filter(Boolean).slice(0,40);
+          sceneTxt='\n\nTHE USER HAS ALREADY BUILT THIS SCENE — reuse it as the starting world '+
+            'rather than inventing a new one. Objects present: '+names.join(', ')+
+            '\n\nFull scene JSON (load it with THREE.ObjectLoader):\n'+
+            JSON.stringify(sc).slice(0,6000);
+        }catch(_){}
+      }
+      let plan='';
+      if(($('#g3-plan')||{}).checked){
+        if(!affords(0.03))throw new Error('the spend cap is too low to plan');
+        $('#g3-status').textContent='planning…';
+        const pacc=await streamComplete({model:$('#g3-planner').value.trim()||settings.archModel,
+          maxTokens:1600,
+          messages:[{role:'system',content:
+            'Design a small three.js game that one model can then write as a single HTML file. '+
+            'Decide: the core verb the player repeats, the win and lose condition, the exact '+
+            'controls, and what the first ten seconds feel like. Name the systems needed and '+
+            'nothing more. Be concrete — "collect 8 orbs before the 60s timer, double jump, orbs '+
+            'respawn once" is a design; "a fun collectathon" is not. Under 250 words, prose.'},
+            {role:'user',content:brief+sceneTxt.slice(0,1200)}]},null,null,'game3d-plan');
+        spent+=pacc.cost||0;
+        plan=String(pacc.content||'').trim();
+        const po=$('#g3-plan-out');
+        if(po)po.innerHTML=`<details class="dd" open style="margin-top:10px"><summary>The plan</summary>
+          <div class="ddb"><p class="help" style="white-space:pre-wrap">${esc(plan)}</p></div></details>`;
+      }
+      if(!affords(0.05))throw new Error('spend cap reached after planning — nothing was written');
+      $('#g3-status').textContent='writing…';
       const acc=await streamComplete({model:$('#g3-model').value.trim()||settings.buildModel,
         maxTokens:16000,
         messages:[{role:'system',content:
@@ -6704,7 +6778,9 @@ function initThree(){
           'step, no bundler, no missing files.\n\n'+
           'Include: a game loop, input, a win or lose condition, and on-screen instructions.'+
           assetBlock()+(styleBlock()?'\n\n'+styleBlock():'')},
-          {role:'user',content:brief}]},null,null,'game3d');
+          {role:'user',content:brief+(plan?'\n\nFOLLOW THIS DESIGN:\n'+plan:'')+sceneTxt}]},
+        null,null,'game3d');
+      acc.cost=(acc.cost||0)+spent;
       spanEnd(span,acc);styleNote(acc);
       const html=(acc.content||'').replace(/^```html\n?/m,'').replace(/```\s*$/,'');
       WS.files=WS.files||{};WS.files['index.html']=html;WS.entry='index.html';
@@ -8720,6 +8796,35 @@ addEventListener('message',ev=>{
     else if(cmd==='dragkind'){dragKind=a.kind||null;}
     else if(cmd==='place'){const o=add(a.kind,a.sub);
       if(o&&a.x!==undefined)placeAt(o,pointAt(a.x,a.y));}
+    /* One atomic op for AI-driven building. add-then-set would work interactively, but set
+       acts on whatever is SELECTED, and across a stream of async postMessages the selection is
+       not a reliable place to keep state — one stray click mid-build and the next twenty
+       properties land on the wrong object. spawn carries everything it needs. */
+    else if(cmd==='spawn'){
+      /* The editor's own word for a primitive is 'mesh'. Accept 'prim' too, because that is the
+         word a model reaches for and silently adding nothing is the worst possible failure —
+         the build appears to skip objects with no error anywhere. */
+      const k=(a.kind==='prim'||a.kind==='primitive')?'mesh':(a.kind||'mesh');
+      const o=add(k,a.sub||'box');
+      if(!o)return;
+      if(a.name)o.name=String(a.name).slice(0,60);
+      if(Array.isArray(a.position))o.position.fromArray(a.position);
+      if(Array.isArray(a.rotation))o.rotation.set(a.rotation[0]||0,a.rotation[1]||0,a.rotation[2]||0);
+      if(Array.isArray(a.scale))o.scale.fromArray(a.scale);
+      else if(typeof a.scale==='number')o.scale.setScalar(a.scale);
+      if(o.material){
+        if(a.color)o.material.color.set(a.color);
+        if(a.emissive)o.material.emissive.set(a.emissive);
+        if(a.metalness!==undefined)o.material.metalness=a.metalness;
+        if(a.roughness!==undefined)o.material.roughness=a.roughness;
+        if(a.opacity!==undefined){o.material.opacity=a.opacity;o.material.transparent=a.opacity<1;}
+        o.material.needsUpdate=true;
+      }
+      if(a.intensity!==undefined&&'intensity' in o)o.intensity=a.intensity;
+      if(a.distance!==undefined&&'distance' in o)o.distance=a.distance;
+      o.castShadow=a.castShadow!==false&&o.isMesh;
+      o.receiveShadow=a.receiveShadow!==false&&o.isMesh;
+      sync();post('spawned',{uuid:o.uuid,name:o.name});}
     else if(cmd==='ground'){const o=selected;if(o){
       const before=o.position.clone();
       const b=new THREE.Box3().setFromObject(o);
@@ -11192,6 +11297,55 @@ function initSystemsUI(){
     setTimeout(()=>URL.revokeObjectURL(a.href),4000);
     $('#r3f-status').textContent=`${Object.keys(files).length} files`;
     toast(`Generated ${Object.keys(files).length} files`,2600);};
+  /* The scaffold alone is a blank project — correct wiring, nothing to play. This asks a model
+     to write the actual game systems INTO it, and only replaces files it returned, so the
+     build config, package.json and the embedded editor scene all survive. */
+  const rai=$('#r3f-ai');
+  if(rai)rai.onclick=async()=>{
+    if(!hasScaffold())return toast('The R3F scaffold module is not present in this build',3400);
+    const brief=($('#r3f-brief')?$('#r3f-brief').value.trim():'');
+    if(!brief)return toast('Describe the game first, or use Generate for the bare scaffold',3200);
+    const path=$('#r3f-path').value;
+    const opts={name:$('#r3f-name').value.trim()||'my-game',
+      includePhysics:$('#r3f-phys').checked,includeUI:$('#r3f-ui').checked,
+      typescript:$('#r3f-ts').checked,sceneJSON:ED3._lastScene||null};
+    const base=path==='B'&&typeof r3fHybrid==='function'?r3fHybrid(opts):r3fProject(opts);
+    rai.disabled=true;rai.textContent='Writing…';
+    const st=$('#r3f-status');if(st)st.textContent='thinking…';
+    try{
+      const editable=Object.keys(base).filter(f=>/^src\//.test(f));
+      const acc=await streamComplete({model:settings.archModel,maxTokens:9000,
+        messages:[{role:'system',content:
+          'You are writing a React Three Fiber game into an existing scaffold. Return each file as '+
+          '===FILE: path=== followed by its full contents. Only return files you actually changed '+
+          'or added, all under src/. Do not touch package.json, vite config or index.html.\n\n'+
+          'It must run with `npm i && npm run dev` and no extra dependencies beyond what is already '+
+          'in package.json. '+(opts.typescript?'TypeScript, and it must typecheck.':'Plain JSX.')+
+          (opts.includePhysics?' Rapier is available via @react-three/rapier.':' No physics library.')+
+          '\n\nWrite a game that is actually PLAYABLE — input, a loop, a win or lose condition. A '+
+          'scene that renders but cannot be played is the failure mode here.'+skillBlockFor('threeui')},
+          {role:'user',content:'GAME: '+brief+'\n\nEXISTING FILES YOU MAY REPLACE:\n'+editable.join('\n')+
+            '\n\nCURRENT src/Game entry for reference:\n'+(base['src/Game.tsx']||base['src/Game.jsx']||'')}]},
+        null,null,'r3f-write');
+      const written=parseFiles(String(acc.content||''));
+      const n=Object.keys(written).length;
+      if(!n)throw new Error('no files came back in the expected format');
+      Object.entries(written).forEach(([f,c])=>{if(/^src\//.test(f))base[f]=c;});
+      const blob=makeZip(base);
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);a.download=opts.name+'-'+path.toLowerCase()+'.zip';a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+      if(st)st.textContent=`${Object.keys(base).length} files · ${n} written by the model`+(acc.cost?' · '+money(acc.cost):'');
+      $('#r3f-out').innerHTML='<p class="help">✓ Wrote '+n+' file'+(n===1?'':'s')+
+        ': '+Object.keys(written).map(esc).join(', ')+'</p>';
+      sfx('done');
+    }catch(e){
+      if(st)st.textContent='';
+      $('#r3f-out').innerHTML='<p class="help" style="color:var(--bad)">✗ '+esc(e.message)+'</p>';
+      sfx('fail');
+    }
+    rai.disabled=false;rai.textContent='✦ Write the game into it';
+  };
   const pv=$('#r3f-preview');
   if(pv)pv.onclick=()=>{
     if(!hasScaffold())return toast('The R3F scaffold module is not present in this build',3400);
@@ -34884,6 +35038,12 @@ function wosRender(){
         return `<button class="wos-dockb min" data-wrestore="${esc(w.id)}" title="${esc(a?a.name:'')}">${esc(a?a.icon:'▫')}</button>`;}).join('')}
     </div>`;
   wosRenderNotifs();wosRenderPet();wosFillFrames();wosQuotaMeter();
+  /* Views that need work AFTER their HTML exists. The studio's textarea and preview are built
+     empty by the template and filled here; the clock has to start ticking. Without this the
+     App Studio opened blank and the clock showed nothing. */
+  if(root.querySelector('[data-wscode]')){wosStudioSync();wosStudioPreview();}
+  if(root.querySelector('[data-wclockbig]'))wosClockTick();
+  wosFillFolders();
 }
 /* srcdoc is written after render, never inside the template: an app's HTML in an attribute
    would need escaping and un-escaping, and any mistake there is an injection. */
@@ -35566,7 +35726,14 @@ function wosInit(){
   const root=$('#wos-root');if(!root)return;
 
   root.addEventListener('click',async ev=>{
-    const g=sel=>ev.target.closest('['+sel+']');
+    /* `closest()` walks all the way up to #wos-root, and wosApplyTheme writes STATE attributes
+       there — data-wtheme, data-wchrome, data-wicons, data-wdock. A control selector that
+       shares a name with one of them therefore matched on EVERY click anywhere in the desktop.
+       That is what `[data-wtheme]` did: any click bubbled up, hit the root's own theme
+       attribute, re-rendered the desktop and returned — killing every handler below that line
+       (calculator, arcade, browser, timer, music, the studio buttons). Excluding the root here
+       fixes the whole class, not just the one that bit. */
+    const g=sel=>{const el=ev.target.closest('['+sel+']');return (el&&el!==root)?el:null;};
     let el;
     if((el=g('data-wicon'))){
       if(WOS_DRAG&&WOS_DRAG.moved)return;
@@ -37757,6 +37924,281 @@ function renderWhy(){
   const m=$('#why-mail');if(m)m.onclick=()=>{if(typeof devMailDraft==='function')devMailDraft();};
   const h=$('#why-help');if(h)h.onclick=()=>go('help');
 }
+
+/* ═══════════════════ DREAMING — LIVE WORLD BUILDING ═══════════════════
+   A model builds the scene in front of you, one object at a time, in the real editor. Not a
+   preview of a scene it describes — the actual editor, so when it stops you can select
+   anything it placed and keep working.
+
+   Two-stage on purpose, and it is the same trade this app makes everywhere: a frontier model
+   THINKS (what should be in this world, where, why), and a cheap model TYPES (turn that into
+   ops). Reasoning is the expensive part and there is a lot less of it than there is output, so
+   splitting them is most of the cost saving with none of the quality loss. One model can do
+   both if you want — set the dreamer and the builder to the same id.
+
+   The budget is a hard stop, not a hint. It is checked before every call and the run ends
+   cleanly with whatever was built rather than silently overspending. */
+const WDREAM_DEFAULTS={
+  dreamer:'',builder:'',budget:0.25,pace:110,ops:60,narrate:true,
+  style:'stylised low-poly',lastPlan:null,history:[],
+};
+let WDREAM=Object.assign({},WDREAM_DEFAULTS,store.get('ed3dream',{}));
+const saveWdream=()=>store.set('ed3dream',WDREAM);
+let WDREAM_RUN=null;                       // {stop:bool} — the cancel handle
+
+const WDREAM_OPS_SCHEMA={type:'json_schema',json_schema:{name:'ops',strict:true,schema:{
+  type:'object',additionalProperties:false,
+  properties:{
+    ops:{type:'array',items:{type:'object',additionalProperties:false,properties:{
+      op:{type:'string'},kind:{type:'string'},sub:{type:'string'},name:{type:'string'},
+      position:{type:'array',items:{type:'number'}},
+      rotation:{type:'array',items:{type:'number'}},
+      scale:{type:'array',items:{type:'number'}},
+      color:{type:'string'},emissive:{type:'string'},
+      metalness:{type:'number'},roughness:{type:'number'},opacity:{type:'number'},
+      intensity:{type:'number'},say:{type:'string'},
+    },required:['op','kind','sub','name','position','rotation','scale','color','emissive',
+      'metalness','roughness','opacity','intensity','say']}},
+  },required:['ops']}}};
+
+function wdreamModels(){
+  const c=(typeof CATALOG!=='undefined'?CATALOG:[]);
+  return{dreamer:WDREAM.dreamer||settings.archModel,builder:WDREAM.builder||settings.buildModel||settings.archModel,cat:c};
+}
+/* Cost is estimated before spending, so a budget can actually stop a run rather than being
+   noticed afterwards. */
+function wdreamSpent(){return (WDREAM.history||[]).reduce((a,h)=>a+(h.cost||0),0);}
+function wdreamAffords(est){
+  const cap=+WDREAM.budget||0;
+  if(!cap)return true;
+  return (WDREAM_RUN?WDREAM_RUN.cost:0)+ (est||0) <= cap;
+}
+async function wdreamPlan(brief,onTick){
+  const{dreamer}=wdreamModels();
+  const sys=
+    'You are designing a 3D scene that another model will build in a live editor. Think about '+
+    'what genuinely belongs in this world and WHERE — composition, scale relationships, focal '+
+    'point, negative space, how a camera would read it. Name specific objects and their rough '+
+    'positions in metres on a ground plane at y=0.\n\n'+
+    'Be concrete and spatial. "A forest" is useless; "twelve conifers of varying height ringing '+
+    'a clearing 14m across, tallest at the north edge so the low sun rakes through them" is a '+
+    'plan. Keep it under 300 words. Prose, not JSON.';
+  const acc=await streamComplete({model:dreamer,maxTokens:1400,
+    messages:[{role:'system',content:sys+skillBlockFor('threeui')},
+      {role:'user',content:'STYLE: '+(WDREAM.style||'stylised low-poly')+'\n\nBRIEF: '+brief}]},
+    onTick,null,'dream-plan');
+  return{text:String(acc.content||'').trim(),reasoning:acc.reasoning||'',cost:acc.cost||0};
+}
+async function wdreamOps(brief,plan,existing,onTick){
+  const{builder}=wdreamModels();
+  const sys=
+    'Turn a scene plan into editor operations. Return ONLY JSON.\n\n'+
+    'Each op is {"op":"spawn"|"bg"|"fog", ...}. For spawn:\n'+
+    '  kind: "mesh" | "light"\n'+
+    '  sub (mesh): '+ED3_PRIMS.join(', ')+'\n'+
+    '  sub (light): '+ED3_LIGHTS.join(', ')+'\n'+
+    '  position/rotation/scale: three numbers. Rotation in RADIANS.\n'+
+    '  color/emissive: "#rrggbb". metalness/roughness/opacity: 0..1. intensity: light only.\n'+
+    '  name: short and human ("pine 3", "lamp post").\n'+
+    '  say: a SHORT phrase shown while it appears ("planting the tall pines").\n'+
+    'For bg: {"op":"bg","color":"#rrggbb"}. For fog: {"op":"fog","color":"#rrggbb"}.\n\n'+
+    'Rules that matter:\n'+
+    '- Ground plane is y=0. Objects must SIT on it, not sink through — a sphere of radius r '+
+    'goes at y=r, a 1x1x1 box at y=0.5. Getting this wrong is the most common way these scenes '+
+    'look broken.\n'+
+    '- Always include at least one light, or the scene is black.\n'+
+    '- Vary scale and rotation. A grid of identical objects reads as a test, not a world.\n'+
+    '- Build in a sensible ORDER: background and light first, then large forms, then detail. '+
+    'The user watches this happen, so it should look like something being made.\n'+
+    '- At most '+(+WDREAM.ops||60)+' ops.';
+  const acc=await streamComplete({model:builder,maxTokens:6000,response_format:WDREAM_OPS_SCHEMA,
+    messages:[{role:'system',content:sys},
+      {role:'user',content:'STYLE: '+(WDREAM.style||'')+'\nBRIEF: '+brief+'\n\nPLAN:\n'+plan+
+        (existing?'\n\nALREADY IN THE SCENE (do not duplicate):\n'+existing:'')}]},
+    onTick,null,'dream-ops');
+  let j=null;
+  try{j=JSON.parse(acc.content);}catch(_){try{j=extractJSON(acc.content);}catch(__){}}
+  return{ops:((j&&j.ops)||[]).slice(0,+WDREAM.ops||60),cost:acc.cost||0};
+}
+/* Validate before applying. A NaN position or a sub the editor does not know would either
+   throw inside the runtime or silently place nothing, and the user would just see a build
+   that stops halfway with no explanation. */
+function wdreamClean(op){
+  if(!op||typeof op!=='object')return null;
+  const num=(v,d)=>{const n=+v;return isFinite(n)?n:d;};
+  const arr3=(v,d)=>Array.isArray(v)&&v.length>=3
+    ?[num(v[0],d[0]),num(v[1],d[1]),num(v[2],d[2])]:d;
+  const hex=(v,d)=>/^#[0-9a-f]{6}$/i.test(String(v||''))?v:d;
+  if(op.op==='bg')return{op:'bg',color:hex(op.color,'#0b0d12')};
+  if(op.op==='fog')return{op:'fog',color:hex(op.color,'#11151f')};
+  if(op.op!=='spawn')return null;
+  const kind=op.kind==='light'?'light':'mesh';
+  const list=kind==='light'?ED3_LIGHTS:ED3_PRIMS;
+  const sub=list.includes(op.sub)?op.sub:(kind==='light'?'point':'box');
+  const o={op:'spawn',kind,sub,name:String(op.name||sub).slice(0,60),
+    position:arr3(op.position,[0,0.5,0]),rotation:arr3(op.rotation,[0,0,0]),
+    scale:arr3(op.scale,[1,1,1]),say:String(op.say||'').slice(0,80)};
+  if(kind==='light'){o.intensity=Math.max(0,Math.min(20,num(op.intensity,1)));}
+  else{
+    o.color=hex(op.color,'#9aa6b2');
+    if(op.emissive)o.emissive=hex(op.emissive,'#000000');
+    o.metalness=Math.max(0,Math.min(1,num(op.metalness,0.1)));
+    o.roughness=Math.max(0,Math.min(1,num(op.roughness,0.8)));
+    if(op.opacity!==undefined)o.opacity=Math.max(0.05,Math.min(1,num(op.opacity,1)));
+    /* Scale of zero makes an invisible object, which reads to the user as "it skipped one". */
+    o.scale=o.scale.map(v=>Math.abs(v)<0.01?1:Math.min(500,Math.abs(v)));
+  }
+  return o;
+}
+async function wdreamBuild(brief,opts){
+  opts=opts||{};
+  if(WDREAM_RUN)return toast('A dream is already running',2200);
+  const say=opts.onStage||(()=>{});
+  WDREAM_RUN={stop:false,cost:0,placed:0};
+  try{
+    if(!opts.keep)ed3Send('clear');
+    say('plan','Thinking about what belongs here…');
+    if(!wdreamAffords(0.02))throw new Error('the budget is already spent');
+    const plan=await wdreamPlan(brief,opts.onPlanTick);
+    WDREAM_RUN.cost+=plan.cost;
+    WDREAM.lastPlan=plan;saveWdream();
+    say('plan',plan.text,plan);
+    if(WDREAM_RUN.stop)throw new Error('stopped');
+    if(!wdreamAffords(0.03))throw new Error('budget reached after planning — nothing was built');
+    say('ops','Working out how to build it…');
+    const built=await wdreamOps(brief,plan.text,opts.existing||'',opts.onOpsTick);
+    WDREAM_RUN.cost+=built.cost;
+    const ops=built.ops.map(wdreamClean).filter(Boolean);
+    if(!ops.length)throw new Error('the builder returned no usable operations');
+    say('build','Building '+ops.length+' things…');
+    for(const op of ops){
+      if(WDREAM_RUN.stop)break;
+      if(op.op==='bg')ed3Send('bg',{color:op.color});
+      else if(op.op==='fog')ed3Send('fog',{on:true,color:op.color,near:6,far:70});
+      else{ed3Send('spawn',op);WDREAM_RUN.placed++;}
+      if(op.say&&WDREAM.narrate)say('tick',op.say);
+      await new Promise(r=>setTimeout(r,Math.max(0,+WDREAM.pace||110)));
+    }
+    WDREAM.history=[{ts:nowISO(),brief:brief.slice(0,90),ops:ops.length,
+      placed:WDREAM_RUN.placed,cost:WDREAM_RUN.cost}].concat(WDREAM.history||[]).slice(0,30);
+    saveWdream();
+    say('done',WDREAM_RUN.stop
+      ?`Stopped — ${WDREAM_RUN.placed} objects are in the scene and stay there.`
+      :`Built ${WDREAM_RUN.placed} objects · ${money(WDREAM_RUN.cost)}`);
+    sfx('done');
+    return{placed:WDREAM_RUN.placed,cost:WDREAM_RUN.cost,plan:plan.text};
+  }catch(e){
+    say('error',e.message);sfx('fail');throw e;
+  }finally{WDREAM_RUN=null;}
+}
+function wdreamStop(){if(WDREAM_RUN){WDREAM_RUN.stop=true;toast('Stopping after this object…',2200);}}
+
+function renderWdream(){
+  const host=$('#dream-panel');if(!host)return;
+  const{cat}=wdreamModels();
+  const opt=(sel,blank)=>`<option value="">${blank}</option>`+
+    cat.slice(0,300).map(m=>`<option value="${esc(m.id)}"${m.id===sel?' selected':''}>${esc(m.name||m.id)}</option>`).join('');
+  const h=(WDREAM.history||[])[0];
+  host.innerHTML=`
+  <div class="card dream-card">
+    <h3>🌙 Dreaming — watch it build</h3>
+    <p class="help">A model builds the scene <b>in this editor, live</b>, one object at a time.
+      Not a picture of a scene it describes — the real editor, so the moment it stops you can
+      select anything it placed and keep working on it.</p>
+    <p class="help">It runs in two stages, which is the same trade this app makes everywhere: a
+      strong model <b>thinks</b> about what belongs here and where, then a cheap model <b>types</b>
+      that into operations. Reasoning is the expensive part and there is far less of it than
+      there is output, so splitting them is most of the saving at none of the quality cost. Set
+      both to the same model if you would rather not split it.</p>
+
+    <label class="field" style="margin-top:10px">What should it dream up?
+      <textarea id="dr-brief" rows="3"
+        placeholder="a moonlit shrine on a rocky outcrop, stone lanterns lining the path, mist below"></textarea></label>
+
+    <div class="row" style="gap:10px;margin-top:10px;flex-wrap:wrap;align-items:flex-end">
+      <label class="field" style="flex:1;min-width:190px">Dreamer <span class="mini muted">thinks</span>
+        <select id="dr-dreamer">${opt(WDREAM.dreamer,'— architect model —')}</select></label>
+      <label class="field" style="flex:1;min-width:190px">Builder <span class="mini muted">types</span>
+        <select id="dr-builder">${opt(WDREAM.builder,'— builder model —')}</select></label>
+    </div>
+
+    <div class="row" style="gap:12px;margin-top:10px;flex-wrap:wrap;align-items:flex-end">
+      <label class="field" style="max-width:170px">Spend limit
+        <div class="row" style="gap:4px;align-items:center">
+          <span class="mini">$</span>
+          <input id="dr-budget" type="number" min="0" step="0.05" value="${WDREAM.budget}" style="width:76px">
+        </div></label>
+      <label class="field" style="max-width:150px">Objects
+        <input id="dr-ops" type="number" min="4" max="200" value="${WDREAM.ops}"></label>
+      <label class="field" style="max-width:180px">Pace
+        <select id="dr-pace">
+          <option value="0"${WDREAM.pace==0?' selected':''}>instant</option>
+          <option value="60"${WDREAM.pace==60?' selected':''}>quick</option>
+          <option value="110"${WDREAM.pace==110?' selected':''}>watchable</option>
+          <option value="260"${WDREAM.pace==260?' selected':''}>slow &amp; cinematic</option>
+        </select></label>
+      <label class="field" style="flex:1;min-width:160px">Style
+        <input id="dr-style" value="${esc(WDREAM.style)}" placeholder="stylised low-poly"></label>
+    </div>
+
+    <div class="row" style="gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center">
+      <button class="btn good" id="dr-go">🌙 Dream it</button>
+      <button class="btn ghost" id="dr-add">＋ Add to what is there</button>
+      <button class="btn danger" id="dr-stop" disabled>■ Stop</button>
+      <label class="chk"><input type="checkbox" id="dr-narrate" ${WDREAM.narrate?'checked':''}> narrate</label>
+      <span class="mini" id="dr-status">${h?`last: ${h.placed} objects · ${money(h.cost)}`:''}</span>
+    </div>
+    <p class="help" style="margin-top:6px">The spend limit is a hard stop, checked before each
+      call — the run ends cleanly with whatever it built rather than quietly going over. Set it
+      to 0 for no limit.</p>
+
+    <div id="dr-stage" class="dream-stage" hidden></div>
+    ${WDREAM.lastPlan?`<details class="dd" style="margin-top:10px"><summary>The last plan it wrote</summary>
+      <div class="ddb"><p class="help" style="white-space:pre-wrap">${esc(WDREAM.lastPlan.text)}</p>
+      ${WDREAM.lastPlan.reasoning?`<details class="dd"><summary>and how it got there</summary>
+        <div class="ddb"><pre class="mini muted" style="white-space:pre-wrap;max-height:200px;overflow:auto">${esc(WDREAM.lastPlan.reasoning)}</pre></div></details>`:''}
+      </div></details>`:''}
+  </div>`;
+
+  const on=(id,fn,ev)=>{const e=$(id);if(e)e[ev||'onchange']=fn;};
+  on('#dr-dreamer',()=>{WDREAM.dreamer=$('#dr-dreamer').value;saveWdream();});
+  on('#dr-builder',()=>{WDREAM.builder=$('#dr-builder').value;saveWdream();});
+  on('#dr-budget',()=>{WDREAM.budget=+$('#dr-budget').value||0;saveWdream();});
+  on('#dr-ops',()=>{WDREAM.ops=+$('#dr-ops').value||60;saveWdream();});
+  on('#dr-pace',()=>{WDREAM.pace=+$('#dr-pace').value;saveWdream();});
+  on('#dr-style',()=>{WDREAM.style=$('#dr-style').value;saveWdream();},'oninput');
+  on('#dr-narrate',()=>{WDREAM.narrate=$('#dr-narrate').checked;saveWdream();});
+  const go=$('#dr-go'),add=$('#dr-add'),stop=$('#dr-stop');
+  const run=keep=>{
+    const brief=$('#dr-brief').value.trim();
+    if(!brief)return toast('Describe the world first',2200);
+    const stage=$('#dr-stage');stage.hidden=false;
+    stage.innerHTML='<div class="dream-line"><span class="dream-dot"></span><b data-drmsg>Starting…</b></div>';
+    go.disabled=true;add.disabled=true;stop.disabled=false;
+    wdreamBuild(brief,{keep,onStage:(k,msg,extra)=>{
+      const m=$('[data-drmsg]');if(m)m.textContent=msg;
+      if(k==='plan'&&extra){
+        stage.insertAdjacentHTML('beforeend',
+          `<div class="dream-plan">${esc(String(msg).slice(0,900))}</div>`);
+      }
+      if(k==='tick')stage.insertAdjacentHTML('beforeend',`<div class="dream-tick">${esc(msg)}</div>`);
+      if(k==='done'||k==='error'){
+        const st=$('#dr-status');if(st)st.textContent=msg;
+      }
+      stage.scrollTop=stage.scrollHeight;
+    }}).catch(()=>{}).then(()=>{
+      go.disabled=false;add.disabled=false;stop.disabled=true;renderWdreamStatus();
+    });
+  };
+  if(go)go.onclick=()=>run(false);
+  if(add)add.onclick=()=>run(true);
+  if(stop)stop.onclick=wdreamStop;
+}
+function renderWdreamStatus(){
+  const h=(WDREAM.history||[])[0];const st=$('#dr-status');
+  if(st&&h)st.textContent=`last: ${h.placed} objects · ${money(h.cost)}`;
+}
+
 function currentView(){
   const v=$('.view.active');return v?v.id.replace(/^view-/,''):'';
 }
@@ -37828,7 +38270,7 @@ function go(view){
   if(view==='library')renderOcrDocs();
   if(view==='study')renderStudy();
   if(view==='ops')renderStyleUI();
-  if(view==='three')renderAssets();
+  if(view==='three'){renderAssets();renderWdream();}
   if(view==='forge'&&$('#sub-brain')&&$('#sub-brain').classList.contains('on'))renderBrainMap();
   if(view==='history')renderHistory();
   if(view==='transplant')fillTransplantSources();
@@ -38105,6 +38547,8 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     onbApply,onbRender,onbMaybe,TABPOS,applyTabPos,setTabPos,renderTabAdder,openTabManager,
     HELP_TOPICS,get HELPC(){return HELPC},set HELPC(v){HELPC=v},helpSearch,renderHelp,
     genNum,genColour,
+    get WDREAM(){return WDREAM},set WDREAM(v){WDREAM=v},saveWdream,wdreamModels,wdreamAffords,
+    wdreamPlan,wdreamOps,wdreamClean,wdreamBuild,wdreamStop,renderWdream,WDREAM_OPS_SCHEMA,
     SFX_LIB,get SFX(){return SFX},set SFX(v){SFX=v},saveSfx,sfx,sfxFanfare,renderSfx,
     AWARD_CATEGORIES,AWARD_PERIODS,get AWARDS(){return AWARDS},set AWARDS(v){AWARDS=v},saveAwards,
     awardCandidates,awardEligible,awardDigest,awardPanellist,awardTally,awardJudge,awardsRun,
