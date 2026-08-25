@@ -21891,13 +21891,162 @@ function gauntletCases(g){
   const inView=(sel)=>{const el=document.querySelector(sel);return el?el.innerHTML.length:0;};
   add({id:'render-tabs-views',sub:'rendering',uses:['esc'],
     what:'every tab has a matching view (no dead tab that navigates nowhere)',
-    run:()=>{const tabs=[...document.querySelectorAll('.tab')].map(t=>t.dataset.view);
+    /* A .tab carrying data-tabaction is a control wearing tab styling and is exempt. The
+       exemption has to be DECLARED: a tab that simply lacks data-view is indistinguishable
+       from one whose view was deleted, which is the failure this case exists to catch. */
+    run:()=>{const tabs=[...document.querySelectorAll('.tab')]
+        .filter(t=>!t.dataset.tabaction).map(t=>t.dataset.view);
       const views=[...document.querySelectorAll('.view')].map(v=>v.id.replace(/^view-/,''));
       return tabs.filter(t=>!views.includes(t)).length;},expect:v=>v===0,
     antiWhat:'and no view is unreachable because it has no tab',
-    anti:()=>{const tabs=[...document.querySelectorAll('.tab')].map(t=>t.dataset.view);
+    anti:()=>{const tabs=[...document.querySelectorAll('.tab')]
+        .filter(t=>!t.dataset.tabaction).map(t=>t.dataset.view);
       const views=[...document.querySelectorAll('.view')].map(v=>v.id.replace(/^view-/,''));
       return views.filter(v=>!tabs.includes(v)).length;},antiExpect:v=>v===0});
+
+  /* ── wiring: the four bug classes this codebase actually produced ──────────
+     Every one of these shipped at least once, looked completely healthy, and was found by
+     hand-driving a browser. They are all invisible to a static scan and to check.py, which is
+     why they belong here. */
+
+  /* 1. A nav written out by hand stops matching its data. Adding a panel then silently does
+        nothing: the button never appears and nothing errors. Hit twice — initSubnav's
+        hard-coded id array and the Design Studio's literal nav markup. */
+  add({id:'wire-dsnav-derived',sub:'wiring',uses:['DS_PANELS'],
+    what:'every Design Studio panel has a nav button (the nav is derived, not hand-written)',
+    /* The nav is built by renderDesign, which normally only runs when the tab is opened. Render
+       it first, or the case passes or fails for a reason that has nothing to do with the bug. */
+    run:()=>{if(typeof g.renderDesign==='function')g.renderDesign();
+      const keys=Object.keys(g.DS_PANELS||{});
+      const btns=[...document.querySelectorAll('#ds-nav .subtab')].map(b=>b.dataset.ds);
+      return keys.filter(k=>!btns.includes(k)).length;},expect:v=>v===0,
+    antiWhat:'and the nav shows nothing that is not a real panel',
+    anti:()=>{if(typeof g.renderDesign==='function')g.renderDesign();
+      const keys=Object.keys(g.DS_PANELS||{});
+      const btns=[...document.querySelectorAll('#ds-nav .subtab')].map(b=>b.dataset.ds);
+      return btns.filter(b=>!keys.includes(b)).length;},antiExpect:v=>v===0});
+
+  add({id:'wire-subnav-derived',sub:'wiring',uses:['esc'],
+    what:'every 3D sub-tab button has a panel to show',
+    run:()=>{const keys=[...document.querySelectorAll('#three-nav .subtab')].map(b=>b.dataset.tsub);
+      return keys.filter(k=>k&&!document.getElementById('tsub-'+k)).length;},expect:v=>v===0,
+    antiWhat:'and every panel is reachable from a button',
+    anti:()=>{const keys=[...document.querySelectorAll('#three-nav .subtab')].map(b=>b.dataset.tsub);
+      return [...document.querySelectorAll('#view-three .sub')]
+        .map(p=>p.id.replace(/^tsub-/,'')).filter(id=>!keys.includes(id)).length;},antiExpect:v=>v===0});
+
+  /* 2. A delegated handler's control selector matching a STATE attribute on its own container.
+        closest() walks to the root, so every click matched and everything below that branch went
+        dead. This is the bug that made most of the WebOS unresponsive. */
+  add({id:'wire-root-attr-collision',sub:'wiring',uses:['WOS_THEMES'],
+    what:'a click on ordinary WebOS chrome does not get read as a theme swatch',
+    run:()=>{
+      const root=document.getElementById('wos-root');
+      if(!root)return 'no-root';
+      /* The delegated listener is attached by wosInit, which normally only runs when the tab is
+         first opened. Without this the case would pass for the wrong reason — no handler at all
+         looks identical to a handler that correctly ignored the click. */
+      if(typeof g.wosInit==='function')g.wosInit();
+      const before=g.WOS.theme;
+      /* The probe goes where real controls live — inside the desk — not as a direct child of the
+         root. An earlier version appended it to the root, which meant any state attribute on an
+         inner container was never in the probe's ancestor chain: the case passed even with the
+         bug deliberately reintroduced. A test that cannot fail is worse than no test. */
+      const host=document.getElementById('wos-desk')||root;
+      const probe=document.createElement('button');
+      host.appendChild(probe);
+      probe.click();
+      probe.remove();
+      return g.WOS.theme===before?'unchanged':'CHANGED';
+    },expect:v=>v==='unchanged'||v==='no-root',
+    antiWhat:'while a real swatch still does change the theme',
+    anti:()=>{
+      const root=document.getElementById('wos-root');
+      if(!root)return 'no-root';
+      if(typeof g.wosInit==='function')g.wosInit();
+      const before=g.WOS.theme;
+      const other=(g.WOS_THEMES.find(t=>t.id!==before)||{}).id;
+      const host=document.getElementById('wos-desk')||root;
+      const b=document.createElement('button');
+      b.dataset.wtheme=other;host.appendChild(b);b.click();b.remove();
+      const changed=g.WOS.theme===other;
+      g.WOS.theme=before;g.saveWos();
+      return changed?'changed':'STUCK';
+    },antiExpect:v=>v==='changed'||v==='no-root'});
+
+  /* 3. Reusing a class name that is already defined as display:none elsewhere. Hit twice —
+        `.sub` for the Create sub-tabs, and `.ed3-drop` for the model drop zone. Both rendered
+        perfectly and were invisible. */
+  add({id:'wire-visible-not-hidden',sub:'wiring',uses:['esc'],
+    what:'no visible panel class is also defined as display:none in the stylesheet',
+    run:()=>{
+      const suspects=['ed3-dropzone','dsp-wrap','plug-cap','aw-card','vog-card','wos-icon'];
+      const hidden=[];
+      for(const sheet of document.styleSheets){
+        let rules;try{rules=sheet.cssRules;}catch(_){continue;}
+        for(const r of rules||[]){
+          if(!r.selectorText||!r.style)continue;
+          if(r.style.display!=='none')continue;
+          suspects.forEach(c=>{
+            /* an exact class selector, not a descendant or state variant */
+            if(new RegExp('(^|,)\\s*\\.'+c+'\\s*(,|$)').test(r.selectorText))hidden.push(c);
+          });
+        }
+      }
+      return hidden.length;},expect:v=>v===0,
+    antiWhat:'while a class that genuinely IS hidden by default is still detected as such',
+    anti:()=>{
+      let found=0;
+      for(const sheet of document.styleSheets){
+        let rules;try{rules=sheet.cssRules;}catch(_){continue;}
+        for(const r of rules||[]){
+          if(!r.selectorText||!r.style)continue;
+          if(r.style.display==='none'&&/(^|,)\s*\.sub\s*(,|$)/.test(r.selectorText))found++;
+        }
+      }
+      return found;},antiExpect:v=>v>0});
+
+  /* 4. Exporting a reassigned `let` as a plain property hands out a snapshot taken at boot.
+        Hit with OPS, VO_DESKS, and again with CATALOG — which read as permanently empty. */
+  add({id:'wire-live-exports',sub:'wiring',uses:['CATALOG'],
+    what:'exports of reassigned state are getters, so they see the current value',
+    run:()=>{
+      const d=Object.getOwnPropertyDescriptor(window.__gb,'CATALOG');
+      return d&&typeof d.get==='function';},expect:v=>v===true,
+    antiWhat:'while a genuinely constant export stays a plain value',
+    anti:()=>{
+      const d=Object.getOwnPropertyDescriptor(window.__gb,'CONN_KINDS');
+      return !!(d&&typeof d.get!=='function'&&d.value);},antiExpect:v=>v===true});
+
+  /* 5. A plugin must never be able to reach this page — that is the whole security model. */
+  add({id:'wire-plugin-sandbox',sub:'wiring',uses:['plugDoc'],
+    what:'plugin frames are sandboxed without same-origin, so they cannot read the page',
+    run:()=>{
+      const frames=[...document.querySelectorAll('iframe[id^="pf-"]')];
+      const bad=frames.filter(f=>/allow-same-origin/.test(f.getAttribute('sandbox')||''));
+      /* also true when none are open: the check is on what plugMount writes */
+      return bad.length;},expect:v=>v===0,
+    antiWhat:'and the bridge shim is genuinely injected rather than assumed',
+    anti:()=>g.plugDoc('<p>x</p>').includes('window.glassbox')?1:0,antiExpect:v=>v===1});
+
+  /* 6. Scenes must be built to fit the default camera. An auto-frame that lands wrong shows an
+        empty viewport, which is indistinguishable from a build that did nothing. */
+  add({id:'wire-scene-extent',sub:'wiring',uses:['wdreamSeedOps'],
+    what:'a generated sketch stays inside the volume the default camera actually frames',
+    run:()=>{
+      const ops=g.wdreamSeedOps('a dense pine forest',26).map(g.wdreamClean).filter(Boolean);
+      /* Meshes only. A light is not geometry and a sky light belongs ABOVE the scene — the
+         first version of this case flagged a correctly-placed hemisphere light at y=14, which
+         would have taught me to move a light that was already right. */
+      const far=ops.filter(o=>o.op==='spawn'&&o.kind==='mesh'&&o.position&&
+        (Math.abs(o.position[0])>14||Math.abs(o.position[2])>14||o.position[1]>12));
+      return far.length;},expect:v=>v===0,
+    antiWhat:'and objects are seated on the ground rather than sunk through it',
+    anti:()=>{
+      const ops=g.wdreamSeedOps('a shrine',26).map(g.wdreamClean).filter(Boolean);
+      return ops.filter(o=>o.op==='spawn'&&o.kind==='mesh'&&o.name!=='ground'&&o.position[1]<0).length;
+    },antiExpect:v=>v===0});
+
   add({id:'render-unique-ids',sub:'rendering',uses:['esc'],
     what:'no duplicate DOM id (the second one is unreachable via $())',
     run:()=>{const seen={},d=[];document.querySelectorAll('[id]').forEach(e=>{
@@ -22192,6 +22341,11 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'seed-sprawl',export:'wdreamSeedOps',why:'sketches drift outside the default camera again',
+   broken:()=>()=>[{op:'spawn',kind:'mesh',sub:'box',name:'far',position:[400,0.5,400],
+     rotation:[0,0,0],scale:[1,1,1],color:'#888888'}]},
+  {id:'plugdoc-noshim',export:'plugDoc',why:'the plugin bridge shim stops being injected',
+   broken:()=>src=>'<!doctype html><body>'+src+'</body>'},
   {id:'loop-always',export:'loopScan',why:'detector fires on everything (stops discriminating)',
    broken:()=>()=>({loop:true,kind:'block',period:30,reps:9,sample:'x'})},
   {id:'loop-never',export:'loopScan',why:'detector never fires (the five-times-repeated bug)',
@@ -34467,6 +34621,10 @@ function renderTabAdder(){
   if(!btn){
     btn=document.createElement('button');
     btn.id='tab-add';btn.className='tab tab-add';btn.title='Add or remove sections';
+    /* Marked as an action, not a destination. It wears the tab styling but navigates nowhere,
+       and the gauntlet's dead-tab check is right to demand that be declared rather than
+       inferred from a missing attribute — which is exactly how a genuinely broken tab looks. */
+    btn.dataset.tabaction='sections';
     btn.textContent='＋';
     nav.appendChild(btn);
     btn.onclick=openTabManager;
@@ -39801,7 +39959,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     PLUG_CAPS,get PLUG(){return PLUG},savePlug,plugSource,plugSetSource,plugAdd,plugRemove,
     plugHas,plugInit,plugDoc,plugMount,plugEditor,plugRegister,renderPlugins,featureSuggest,
     DSP_TOOLS,get DSP(){return DSP},dspFill,dsPaint,get DSV(){return DSV},dsvSvg,dsVector,
-    DSS_TARGETS,get DSS(){return DSS},dsSites,
+    DSS_TARGETS,get DSS(){return DSS},dsSites,DS_PANELS,
     ED3_FORMATS,ed3Log,ed3RenderConsole,ed3ToggleConsole,ed3ImportFile,renderEd3Assets,
     get WDREAM(){return WDREAM},set WDREAM(v){WDREAM=v},saveWdream,wdreamModels,wdreamAffords,
     wdreamPlan,wdreamOps,wdreamClean,wdreamBuild,wdreamStop,renderWdream,WDREAM_OPS_SCHEMA,
