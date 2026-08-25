@@ -196,6 +196,46 @@ main{flex:1;overflow:hidden;background:var(--panel);border-top:1px solid var(--e
   .pane-row{grid-template-columns:60px 20px 1fr;row-gap:2px}
   .pane-row .pane-kind,.pane-row .pane-meta,.pane-row .pane-note{grid-column:3/4;font-size:11px}
 }
+/* ── Plugins ────────────────────────────────────────────────────────────── */
+.plug-caps{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:7px}
+.plug-cap{display:flex;gap:9px;align-items:flex-start;padding:9px 11px;border-radius:11px;
+  border:1.5px solid var(--edge);background:var(--bg);cursor:pointer}
+.plug-cap.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 9%,var(--bg))}
+.plug-cap b{display:block;font-size:12.5px}
+.plug-cap i{display:block;font-style:normal;font-size:11px;color:var(--ink3);line-height:1.35}
+.plug-cap em{display:block;font-style:normal;font-size:10.5px;color:var(--ink3);opacity:.75;margin-top:3px}
+/* ── Paint & vector ─────────────────────────────────────────────────────── */
+.dsp-bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:8px;border-radius:11px;
+  background:var(--bg);border:1px solid var(--edge);margin-bottom:10px}
+.dsp-tool{width:32px;height:32px;border-radius:8px;border:1px solid var(--edge);background:var(--panel2);
+  color:var(--ink2);cursor:pointer;font-size:14px}
+.dsp-tool.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 18%,var(--panel2));color:var(--ink)}
+.dsp-bar input[type=color]{width:30px;height:30px;padding:1px;border:1px solid var(--edge);
+  border-radius:7px;background:var(--bg);cursor:pointer}
+.dsp-wrap{overflow:auto;border:1px solid var(--edge);border-radius:12px;background:
+  repeating-conic-gradient(#e9edf3 0 25%,#f6f8fb 0 50%) 50%/18px 18px;padding:0;line-height:0}
+.dsp-wrap canvas,.dsp-wrap svg{max-width:100%;height:auto;display:block;cursor:crosshair;touch-action:none}
+/* ── Sites ──────────────────────────────────────────────────────────────── */
+.dss-tokens{display:flex;gap:7px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.dss-swatch{width:22px;height:22px;border-radius:6px;border:1px solid var(--edge)}
+/* ── 3D drop zone & console ─────────────────────────────────────────────── */
+.ed3-dropzone{display:flex;flex-direction:column;gap:7px;align-items:center;justify-content:center;
+  padding:26px;border-radius:14px;border:2px dashed var(--edge2);background:var(--bg);text-align:center}
+.ed3-dropzone.over{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 10%,var(--bg))}
+.ed3-fmts{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:7px;margin-top:10px}
+.ed3-fmt{padding:8px 10px;border-radius:9px;border:1px solid var(--edge);background:var(--bg);font-size:11.5px}
+.ed3-fmt b{display:block;font-family:var(--mono);color:var(--acc);font-size:12px}
+.ed3-fmt span{color:var(--ink3);line-height:1.4}
+#ed3-console{margin-top:12px;border:1px solid var(--edge);border-radius:11px;overflow:hidden;background:var(--bg)}
+#ed3-console[hidden]{display:none}
+.ed3c-bar{display:flex;gap:8px;align-items:center;padding:7px 10px;background:var(--panel2);
+  border-bottom:1px solid var(--edge);flex-wrap:wrap}
+.ed3c-body{max-height:240px;overflow:auto;font-family:var(--mono);font-size:11.5px}
+.ed3c-line{display:flex;gap:8px;padding:5px 10px;border-bottom:1px solid var(--edge);align-items:baseline}
+.ed3c-line span{color:var(--ink3);flex:0 0 auto}
+.ed3c-line b{flex:0 0 44px;text-transform:uppercase;font-size:10px}
+.ed3c-line.err b{color:var(--bad)}.ed3c-line.warn b{color:#ffb020}.ed3c-line.info b{color:var(--acc)}
+.ed3c-line code{white-space:pre-wrap;word-break:break-word;color:var(--ink2)}
 /* ── Dreaming ───────────────────────────────────────────────────────────── */
 .dream-forecast{margin-top:10px;background:var(--bg);border:1px solid var(--edge);
   border-radius:12px;padding:11px 13px}
@@ -2187,6 +2227,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
 
     <section class="view" id="view-library"><div class="wrap">
       <div id="ghi-panel"></div>
+      <div id="plug-panel"></div>
       <div id="sksurf-panel"></div>
       <div class="card">
         <h3>👁 OCR — give the models eyes</h3>
@@ -3173,14 +3214,9 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           <span class="help mono" id="ds-herolbl"></span>
         </div>
       </div></div>
-      <div class="subnav" id="ds-nav">
-        <button class="subtab on" data-ds="palette">🎨 Palette</button>
-        <button class="subtab" data-ds="scale">📐 Type &amp; space</button>
-        <button class="subtab" data-ds="graphics">✦ Graphics</button>
-        <button class="subtab" data-ds="comfy">🖼 ComfyUI</button>
-        <button class="subtab" data-ds="skin">🪄 Skin Glassbox Jet</button>
-        <button class="subtab" data-ds="assets">🗂 Assets</button>
-      </div>
+      <!-- Built from DS_PANELS in renderDesign, not written out here: a hand-written nav means
+           adding a panel silently does nothing, because the button never appears. -->
+      <div class="subnav" id="ds-nav"></div>
       <div id="ds-panel"></div>
     </section>
 
@@ -4464,6 +4500,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
         <button class="subtab" data-tsub="game">🎮 Build a game</button>
       </div>
       <div class="sub on" id="tsub-assets">
+        <div id="ed3-myassets"></div>
         <div class="card">
           <h2>📦 Asset library</h2>
           <p class="help">Free, genuinely reusable 3D asset sources — every entry here is CC0 or
@@ -9232,6 +9269,7 @@ function initEd3(){
   ED3_FRAME.srcdoc=ed3Doc();
   addEventListener('message',ev=>{
     const d=ev.data;if(!d||!d.__ed3)return;
+    if(d.k==='err'&&typeof ed3Log==='function')ed3Log('err',d.v);
     if(d.k==='tree'){ED3.tree=d.v.tree;ED3.undo=d.v.undo;ED3.redo=d.v.redo;ED3.stats=d.v.stats;
       ed3Tree();
       const st=$('#ed3-stats');
@@ -24462,6 +24500,7 @@ function initLocal(){
 
 /* ═══════════════════ DESIGN STUDIO — UI ═══════════════════ */
 const DS_PANELS={palette:'🎨 Palette',scale:'📐 Type & space',graphics:'✦ Graphics',
+  paint:'🖌 Paint',vector:'✒️ Vector',sites:'🌐 Sites',
   comfy:'🖼 ComfyUI',skin:'🪄 Skin Glassbox Jet',assets:'🗂 Assets'};
 function dsHeroArt(){
   const t=tokensBuild();
@@ -24475,10 +24514,17 @@ function renderDesignHero(){
 }
 function renderDesign(){
   const nav=$('#ds-nav');if(!nav)return;
+  if(nav.childElementCount!==Object.keys(DS_PANELS).length){
+    nav.innerHTML=Object.entries(DS_PANELS).map(([k,label])=>
+      `<button class="subtab" data-ds="${esc(k)}">${esc(label)}</button>`).join('');
+    nav.querySelectorAll('.subtab').forEach(b=>b.onclick=()=>{
+      DESIGN.panel=b.dataset.ds;saveDesign();renderDesign();});
+  }
   nav.querySelectorAll('.subtab').forEach(b=>b.classList.toggle('on',b.dataset.ds===DESIGN.panel));
   renderDesignHero();
   const host=$('#ds-panel');if(!host)return;
-  ({palette:dsPalette,scale:dsScale,graphics:dsGraphics,comfy:dsComfy,skin:dsSkin,assets:dsAssets}
+  ({palette:dsPalette,scale:dsScale,graphics:dsGraphics,paint:dsPaint,vector:dsVector,
+    sites:dsSites,comfy:dsComfy,skin:dsSkin,assets:dsAssets}
     [DESIGN.panel]||dsPalette)(host);
 }
 const dsChip=(on,label,attr)=>`<button class="chip${on?' on':''}" ${attr}>${esc(label)}</button>`;
@@ -38513,6 +38559,894 @@ function renderWdreamStatus(){
   if(st&&h)st.textContent=`last: ${h.placed} objects · ${money(h.cost)}`;
 }
 
+
+/* ═══════════════════ PLUGINS ═══════════════════
+   Write your own panel and it becomes a real tab in this app. Either write the code yourself,
+   or describe what you want and have a model write it.
+
+   The security decision is the whole design. A plugin runs in a sandboxed iframe WITHOUT
+   allow-same-origin, exactly like a WebOS app, so it cannot read this page's localStorage —
+   where the API keys live. It talks to the app over postMessage through a small, explicit
+   bridge, and every capability it can reach is one the user granted for that plugin. There is
+   no "run in the page" mode, because a plugin that could read the keys would make every other
+   protection in this app pointless.
+
+   Capabilities are deliberately coarse and few. A long list nobody reads is the same as no
+   list at all. */
+const PLUG_CAPS=[
+  {id:'read',   label:'Read your work',   why:'documents, projects, creations and brain notes',
+   risk:'It can see what you have made. It cannot change it.'},
+  {id:'write',  label:'Save things',      why:'add notes, documents and creations',
+   risk:'It can add to your work. It cannot delete anything.'},
+  {id:'model',  label:'Call a model',     why:'ask a model a question and read the answer',
+   risk:'This spends money from your key, so only grant it when you want that.'},
+  {id:'route',  label:'Move you around',  why:'open a tab or hand something to a studio',
+   risk:'It can navigate the app. Harmless, but surprising if unexpected.'},
+];
+const PLUG_DEFAULTS={items:[],nextId:1};
+let PLUG=Object.assign({},PLUG_DEFAULTS,store.get('plugins',{}));
+const savePlug=()=>store.set('plugins',PLUG);
+const plugCode={};                 // id -> source, kept in IDB (a panel can be large)
+
+async function plugSource(id){
+  if(plugCode[id]!=null)return plugCode[id];
+  plugCode[id]=await IDB.get('plugin:'+id,'');
+  return plugCode[id];
+}
+async function plugSetSource(id,src){
+  plugCode[id]=String(src||'');
+  const ok=await IDB.set('plugin:'+id,plugCode[id]);
+  if(ok===false)toast('Could not save the plugin — storage is full',4000);
+  return ok;
+}
+function plugAdd(o){
+  const p={id:'plug'+(PLUG.nextId++),name:o.name||'My panel',icon:o.icon||'🧩',
+    caps:o.caps||['read'],ts:nowISO(),by:o.by||'you'};
+  PLUG.items=(PLUG.items||[]).concat([p]);savePlug();
+  if(o.code)plugSetSource(p.id,o.code);
+  return p;
+}
+function plugRemove(id){
+  PLUG.items=(PLUG.items||[]).filter(p=>p.id!==id);savePlug();
+  IDB.set('plugin:'+id,'');delete plugCode[id];
+  const el=$('#view-'+id);if(el)el.remove();
+  const tb=$('.tab[data-view="'+id+'"]');if(tb)tb.remove();
+  buildRegistry();applyUI();
+}
+const plugHas=(p,cap)=>(p.caps||[]).includes(cap);
+
+/* ── The bridge ────────────────────────────────────────────────────────────
+   Every message is checked against the plugin's own grants. A plugin that was never given
+   `model` cannot call one by asking nicely. */
+function plugInit(){
+  if(plugInit._done)return;plugInit._done=true;
+  window.addEventListener('message',async ev=>{
+    const d=ev.data;
+    if(!d||d.__plug!==1||!d.id)return;
+    const p=(PLUG.items||[]).find(x=>x.id===d.id);
+    const frame=$('#pf-'+d.id);
+    if(!p||!frame||ev.source!==frame.contentWindow)return;   // only the real frame, only a real plugin
+    const reply=(ok,payload)=>{try{frame.contentWindow.postMessage(
+      {__plugres:1,rid:d.rid,ok,payload},'*');}catch(_){}};
+    const deny=cap=>reply(false,'This panel was not given the “'+cap+'” permission.');
+    try{
+      if(d.act==='read'){
+        if(!plugHas(p,'read'))return deny('read');
+        const what=String(d.what||'');
+        const out={
+          docs:()=>((typeof OFW!=='undefined'&&OFW.docs)||[]).map(x=>({name:x.name,text:(x.html||'').replace(/<[^>]+>/g,' ').slice(0,4000)})),
+          creations:()=>((typeof CREATIONS!=='undefined'&&CREATIONS)||[]).slice(0,50).map(c=>({title:c.title,kind:c.kind})),
+          brain:()=>{try{return (BRAIN&&BRAIN.docs||[]).slice(0,60).map(b=>({title:b.title,text:String(b.text||'').slice(0,1500)}));}catch(_){return[];}},
+          history:()=>((typeof HISTORY!=='undefined'&&HISTORY)||[]).slice(0,40).map(h=>({task:h.task,model:h.model})),
+        }[what];
+        return reply(!!out,out?out():'unknown data set: '+what);
+      }
+      if(d.act==='write'){
+        if(!plugHas(p,'write'))return deny('write');
+        if(d.what==='note'){connRun('brain',connMake('note',String(d.text||''),d.title||p.name,'plugin'));return reply(true,'saved');}
+        if(d.what==='doc'){connRun('writer',connMake('text',String(d.text||''),d.title||p.name,'plugin'));return reply(true,'opened');}
+        return reply(false,'unknown write target');
+      }
+      if(d.act==='model'){
+        if(!plugHas(p,'model'))return deny('model');
+        const acc=await streamComplete({model:settings.buildModel||settings.archModel,maxTokens:1200,
+          messages:[{role:'system',content:'You are answering on behalf of a user-installed panel called "'+
+            p.name+'". Be brief and concrete.'},{role:'user',content:String(d.prompt||'').slice(0,6000)}]},
+          null,null,'plugin:'+p.id);
+        return reply(true,{text:acc.content||'',cost:acc.cost||0});
+      }
+      if(d.act==='route'){
+        if(!plugHas(p,'route'))return deny('route');
+        go(String(d.tab||'lab'));return reply(true,'ok');
+      }
+      if(d.act==='toast'){toast(String(d.text||'').slice(0,140),2600);return reply(true,'ok');}
+      reply(false,'unknown action');
+    }catch(e){reply(false,String(e.message||e));}
+  });
+}
+/* The shim injected into every plugin. Small on purpose — a big API is a big surface. */
+const PLUG_SHIM=`<script>
+(function(){
+  var ID=null,seq=0,waiting={};
+  addEventListener('message',function(e){
+    var d=e.data;
+    if(d&&d.__plugid){ID=d.__plugid;dispatchEvent(new Event('glassbox-ready'));return;}
+    if(d&&d.__plugres&&waiting[d.rid]){var w=waiting[d.rid];delete waiting[d.rid];
+      d.ok?w.res(d.payload):w.rej(new Error(d.payload));}
+  });
+  function call(act,extra){
+    return new Promise(function(res,rej){
+      if(!ID)return rej(new Error('not connected yet — wait for the glassbox-ready event'));
+      var rid='r'+(seq++);waiting[rid]={res:res,rej:rej};
+      parent.postMessage(Object.assign({__plug:1,id:ID,rid:rid,act:act},extra||{}),'*');
+      setTimeout(function(){if(waiting[rid]){delete waiting[rid];rej(new Error('timed out'));}},60000);
+    });
+  }
+  window.glassbox={
+    read:function(what){return call('read',{what:what});},
+    saveNote:function(title,text){return call('write',{what:'note',title:title,text:text});},
+    openDoc:function(title,text){return call('write',{what:'doc',title:title,text:text});},
+    ask:function(prompt){return call('model',{prompt:prompt});},
+    go:function(tab){return call('route',{tab:tab});},
+    toast:function(text){return call('toast',{text:text});},
+    ready:function(fn){ID?fn():addEventListener('glassbox-ready',function(){fn();});}
+  };
+})();
+<\/script>`;
+function plugDoc(src){
+  return '<!doctype html><html><head><meta charset="utf-8">'+
+    '<style>html,body{margin:0;font:14px/1.55 system-ui,sans-serif;background:#0f1218;color:#e8ecf6}'+
+    'body{padding:16px}button{font:inherit;padding:8px 13px;border-radius:9px;border:1px solid #2a3550;'+
+    'background:#1a2233;color:inherit;cursor:pointer}button:hover{border-color:#4a5a80}'+
+    'input,textarea,select{font:inherit;padding:8px 10px;border-radius:9px;border:1px solid #2a3550;'+
+    'background:#0b0f16;color:inherit;width:100%;box-sizing:border-box}'+
+    'a{color:#6ea8ff}h1,h2,h3{margin:0 0 10px}</style>'+PLUG_SHIM+'</head><body>'+src+'</body></html>';
+}
+async function plugMount(p){
+  const host=$('#view-'+p.id);if(!host)return;
+  const src=await plugSource(p.id);
+  host.innerHTML=`<div class="wrap">
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="row" style="gap:8px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--edge)">
+        <b>${esc(p.icon)} ${esc(p.name)}</b>
+        <span class="tag">${esc(p.by)}</span>
+        ${(p.caps||[]).map(c=>`<span class="tag">${esc(c)}</span>`).join('')}
+        <span style="flex:1"></span>
+        <button class="btn ghost small" data-plugedit="${esc(p.id)}">✎ Edit</button>
+        <button class="btn ghost small" data-plugreload="${esc(p.id)}">↻</button>
+      </div>
+      <iframe id="pf-${esc(p.id)}" style="width:100%;height:calc(100vh - 260px);min-height:420px;border:0;background:#0f1218"
+        sandbox="allow-scripts allow-forms allow-modals allow-popups"></iframe>
+    </div></div>`;
+  const f=$('#pf-'+p.id);
+  f.srcdoc=plugDoc(src||'<h2>Empty panel</h2><p>Press Edit and write something.</p>');
+  /* The plugin learns its own id only after it loads, and only from us — it cannot claim to be
+     a different plugin and inherit that one's permissions. */
+  f.onload=()=>{try{f.contentWindow.postMessage({__plugid:p.id},'*');}catch(_){}};
+  $$('[data-plugedit]').forEach(b=>b.onclick=()=>plugEditor(b.dataset.plugedit));
+  $$('[data-plugreload]').forEach(b=>b.onclick=()=>plugMount(p));
+}
+
+const PLUG_STARTER=`<h2>Hello from your own panel</h2>
+<p>This is a real tab in Glassbox Jet. Edit it and press Save.</p>
+<button id="go">Ask a model something</button>
+<pre id="out" style="white-space:pre-wrap;margin-top:12px"></pre>
+<script>
+glassbox.ready(function(){
+  document.getElementById('go').onclick=async function(){
+    var o=document.getElementById('out');
+    o.textContent='thinking…';
+    try{ var r=await glassbox.ask('Give me one surprising fact about the sea.');
+         o.textContent=r.text; }
+    catch(e){ o.textContent=e.message; }
+  };
+});
+<\/script>`;
+
+async function plugEditor(id){
+  const p=(PLUG.items||[]).find(x=>x.id===id);
+  const isNew=!p;
+  const cur=p?await plugSource(id):PLUG_STARTER;
+  openModal(`<h3 style="margin-top:0">${isNew?'New panel':'Edit “'+esc(p.name)+'”'}</h3>
+    <div class="row" style="gap:8px">
+      <input id="pe-name" placeholder="Panel name" value="${esc(p?p.name:'My panel')}" style="flex:1">
+      <input id="pe-icon" value="${esc(p?p.icon:'🧩')}" style="width:64px">
+    </div>
+    <p class="help" style="margin:10px 0 4px"><b>What it may do.</b> A panel runs sandboxed and
+      cannot read this page, so it cannot reach your API keys. Everything else it needs, you grant
+      here.</p>
+    <div class="plug-caps">${PLUG_CAPS.map(c=>{
+      const on=p?plugHas(p,c.id):(c.id==='read');
+      return `<label class="plug-cap${on?' on':''}">
+        <input type="checkbox" data-pcap="${c.id}" ${on?'checked':''}>
+        <span><b>${esc(c.label)}</b><i>${esc(c.why)}</i><em>${esc(c.risk)}</em></span></label>`;}).join('')}</div>
+    <label class="field" style="margin-top:10px">HTML for the panel body
+      <textarea id="pe-code" rows="12" class="mono" style="font-size:12px">${esc(cur)}</textarea></label>
+    <p class="help">A <code>glassbox</code> object is already available:
+      <code>read()</code>, <code>ask()</code>, <code>saveNote()</code>, <code>openDoc()</code>,
+      <code>go()</code>, <code>toast()</code> — each one only works if you granted it above.</p>
+    <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">
+      <button class="btn good" id="pe-save">Save${isNew?' & add the tab':''}</button>
+      <button class="btn" id="pe-ai">✦ Have a model write it</button>
+      ${p?'<button class="btn danger" id="pe-del">Delete</button>':''}
+      <span class="mini" id="pe-status"></span>
+    </div>`);
+  $$('[data-pcap]').forEach(c=>c.onchange=()=>c.closest('.plug-cap').classList.toggle('on',c.checked));
+  const caps=()=>$$('[data-pcap]').filter(c=>c.checked).map(c=>c.dataset.pcap);
+  const sv=$('#pe-save');
+  if(sv)sv.onclick=async()=>{
+    const name=$('#pe-name').value.trim()||'My panel';
+    const icon=$('#pe-icon').value.trim()||'🧩';
+    const code=$('#pe-code').value;
+    if(isNew){
+      const np=plugAdd({name,icon,caps:caps(),code});
+      await plugSetSource(np.id,code);
+      plugRegister();closeModal();
+      go(np.id);
+      toast('Added — it is a tab now',3000);
+    }else{
+      p.name=name;p.icon=icon;p.caps=caps();savePlug();
+      await plugSetSource(p.id,code);
+      plugRegister();closeModal();
+      if(currentView()===p.id)plugMount(p);
+      toast('Saved',2000);
+    }
+  };
+  const del=$('#pe-del');
+  if(del)del.onclick=()=>{
+    if(!confirm('Delete “'+p.name+'”? Its code goes with it.'))return;
+    plugRemove(p.id);closeModal();go(firstVisibleTab());toast('Deleted',2000);
+  };
+  const ai=$('#pe-ai');
+  if(ai)ai.onclick=async()=>{
+    const want=prompt('What should this panel do?','a scratchpad that summarises my brain notes');
+    if(!want)return;
+    ai.disabled=true;const st=$('#pe-status');if(st)st.textContent='writing…';
+    try{
+      const acc=await streamComplete({model:settings.archModel,maxTokens:3000,
+        messages:[{role:'system',content:
+          'Write the BODY of a small HTML panel — no <html>, <head> or <body> tags, no markdown '+
+          'fences. Inline any CSS in a <style> tag and any JS in a <script> tag.\n\n'+
+          'A global `glassbox` object is available and is the ONLY way to reach the app:\n'+
+          '  glassbox.ready(fn)                     run fn once connected\n'+
+          '  await glassbox.read("docs"|"creations"|"brain"|"history")\n'+
+          '  await glassbox.ask(prompt) -> {text}\n'+
+          '  await glassbox.saveNote(title,text)\n'+
+          '  await glassbox.openDoc(title,text)\n'+
+          '  await glassbox.go(tabId)\n'+
+          '  glassbox.toast(text)\n'+
+          'Wrap everything in glassbox.ready(). There is no network and no external CDN — the '+
+          'panel is sandboxed. Keep it under 120 lines and make it genuinely useful.'+
+          skillBlockFor('forge')},
+          {role:'user',content:want}]},null,null,'plugin-write');
+      const code=String(acc.content||'').replace(/```(?:html)?/g,'').trim();
+      if(code)$('#pe-code').value=code;
+      if(st)st.textContent='done'+(acc.cost?' · '+money(acc.cost):'');
+    }catch(e){if(st)st.textContent=e.message;}
+    ai.disabled=false;
+  };
+}
+/* Plugins become real tabs. Registered after the built-in ones so they always sort last and a
+   plugin can never displace something the app needs. */
+function plugRegister(){
+  const nav=$('#tabs');if(!nav)return;
+  (PLUG.items||[]).forEach(p=>{
+    if(!$('#view-'+p.id)){
+      const sec=document.createElement('section');
+      sec.className='view';sec.id='view-'+p.id;
+      const main=document.querySelector('main');if(main)main.appendChild(sec);
+    }
+    let tb=$('.tab[data-view="'+p.id+'"]');
+    if(!tb){
+      tb=document.createElement('button');
+      tb.className='tab';tb.dataset.view=p.id;
+      const add=$('#tab-add');
+      if(add)nav.insertBefore(tb,add);else nav.appendChild(tb);
+    }
+    tb.textContent=p.icon+' '+p.name;
+  });
+  if(typeof renderTabAdder==='function')renderTabAdder();
+  buildRegistry();
+}
+function renderPlugins(){
+  const host=$('#plug-panel');if(!host)return;
+  const items=PLUG.items||[];
+  host.innerHTML=`
+  <div class="card">
+    <h3>🧩 Your own panels</h3>
+    <p class="help">Write a panel and it becomes a real tab in this app — yours, alongside the
+      built-in ones. Write the HTML yourself, or describe what you want and have a model write it.</p>
+    <p class="help"><b>How they are kept safe.</b> A panel runs in a sandbox <i>without</i>
+      same-origin access, exactly like a WebOS app, so it cannot read this page and cannot reach
+      your API keys. It talks to the app through a small bridge, and each thing it can do is a
+      permission you granted it. There is no "run it in the page" option, because a panel that
+      could read your keys would undo every other protection here.</p>
+    <div class="row" style="gap:8px;margin-top:10px">
+      <button class="btn good" id="plug-new">＋ New panel</button>
+      <button class="btn ghost" id="plug-ideas">✦ Suggest one from my work</button>
+    </div>
+    <div id="plug-ideas-out"></div>
+  </div>
+  <div class="card">
+    <h3>Installed (${items.length})</h3>
+    ${items.length?items.map(p=>`<div class="cx-row">
+      <b>${esc(p.icon)} ${esc(p.name)}</b>
+      <span class="tag">${esc(p.by)}</span>
+      ${(p.caps||[]).map(c=>`<span class="tag">${esc(c)}</span>`).join('')}
+      <span style="flex:1"></span>
+      <button class="btn ghost small" data-plugopen="${esc(p.id)}">Open</button>
+      <button class="btn ghost small" data-plugedit2="${esc(p.id)}">Edit</button>
+      <button class="btn ghost small" data-plugdel="${esc(p.id)}">Remove</button>
+    </div>`).join(''):'<p class="help">None yet.</p>'}
+  </div>`;
+  const nb=$('#plug-new');if(nb)nb.onclick=()=>plugEditor(null);
+  $$('[data-plugopen]').forEach(b=>b.onclick=()=>go(b.dataset.plugopen));
+  $$('[data-plugedit2]').forEach(b=>b.onclick=()=>plugEditor(b.dataset.plugedit2));
+  $$('[data-plugdel]').forEach(b=>b.onclick=()=>{
+    const p=(PLUG.items||[]).find(x=>x.id===b.dataset.plugdel);
+    if(p&&confirm('Remove “'+p.name+'”?')){plugRemove(p.id);renderPlugins();}});
+  const ib=$('#plug-ideas');
+  if(ib)ib.onclick=()=>featureSuggest($('#plug-ideas-out'));
+}
+/* ── AI feature suggestions ────────────────────────────────────────────────
+   Grounded in what the user has actually done — which tabs they kept, what they hand off, what
+   is in their brain. A suggestion invented from nothing is a horoscope. */
+async function featureSuggest(host){
+  if(!host)return;
+  host.innerHTML='<p class="help">Reading what you actually do…</p>';
+  const tabs=REGISTRY.tabs.filter(t=>!tabHidden(t.id)).map(t=>t.id);
+  const hidden=REGISTRY.tabs.filter(t=>tabHidden(t.id)).map(t=>t.id);
+  const flows=((typeof CONNX!=='undefined'&&CONNX.log)||[]).slice(0,40).map(e=>e.from+'→'+e.to+':'+e.kind);
+  let brain=[];
+  try{brain=(BRAIN&&BRAIN.docs||[]).slice(0,25).map(b=>String(b.title||'').slice(0,60));}catch(_){}
+  const have=(PLUG.items||[]).map(p=>p.name);
+  try{
+    const acc=await streamComplete({model:settings.archModel,maxTokens:1600,
+      messages:[{role:'system',content:
+        'Propose at most four small PANELS this person could add to their creation app. Each must '+
+        'be buildable as one self-contained HTML panel using only: read("docs"|"creations"|"brain"|'+
+        '"history"), ask(prompt), saveNote(), openDoc(), go(tab), toast().\n\n'+
+        'Ground every idea in the evidence given. If the evidence is thin, say so and propose '+
+        'fewer — an invented workflow is worse than no suggestion. Return JSON '+
+        '{"ideas":[{"name":"","icon":"","why":"","prompt":""}],"note":""} where `prompt` is the '+
+        'instruction that would build it and `why` cites what in the evidence suggested it.'+
+        skillBlockFor('forge')},
+        {role:'user',content:'TABS THEY KEEP: '+tabs.join(', ')+
+          '\nTABS THEY HID: '+(hidden.join(', ')||'none')+
+          '\nHAND-OFFS THEY ACTUALLY MAKE: '+(flows.join(', ')||'none yet')+
+          '\nBRAIN NOTE TITLES: '+(brain.join(' | ')||'empty')+
+          '\nPANELS THEY ALREADY HAVE: '+(have.join(', ')||'none')}]},
+      null,null,'feature-ideas');
+    let j=null;
+    try{j=JSON.parse(String(acc.content).replace(/```(?:json)?/g,'').trim());}
+    catch(_){try{j=extractJSON(acc.content);}catch(__){}}
+    const ideas=(j&&j.ideas)||[];
+    host.innerHTML=(j&&j.note?`<p class="help">${esc(j.note)}</p>`:'')+
+      (ideas.length?ideas.map((i,n)=>`<div class="cx-row">
+        <b>${esc(i.icon||'🧩')} ${esc(i.name)}</b>
+        <span class="mini muted">${esc(i.why||'')}</span>
+        <span style="flex:1"></span>
+        <button class="btn small" data-fidea="${n}">Build it</button></div>`).join('')
+        :'<p class="help">It did not find enough in your use to suggest anything honest yet. Use a few hand-offs first.</p>')+
+      feedbackWidget('forge','feature-ideas',settings.archModel);
+    $$('[data-fidea]').forEach(b=>b.onclick=async()=>{
+      const i=ideas[+b.dataset.fidea];if(!i)return;
+      b.disabled=true;b.textContent='writing…';
+      try{
+        const acc2=await streamComplete({model:settings.archModel,maxTokens:3000,
+          messages:[{role:'system',content:
+            'Write the BODY of a small HTML panel — no <html>/<head>/<body>, no markdown fences. '+
+            'Inline CSS in <style> and JS in <script>. Use only the global `glassbox` API: '+
+            'ready(fn), read("docs"|"creations"|"brain"|"history"), ask(prompt)->{text}, '+
+            'saveNote(title,text), openDoc(title,text), go(tab), toast(text). Wrap in '+
+            'glassbox.ready(). No network, no CDN. Under 120 lines.'},
+            {role:'user',content:i.prompt||i.name}]},null,null,'feature-build');
+        const code=String(acc2.content||'').replace(/```(?:html)?/g,'').trim();
+        const np=plugAdd({name:i.name,icon:i.icon||'🧩',caps:['read','model','write'],by:'AI'});
+        await plugSetSource(np.id,code);
+        plugRegister();renderPlugins();go(np.id);
+        toast('Built and added as a tab',3200);
+      }catch(e){toast(e.message,3400);b.disabled=false;b.textContent='Build it';}
+    });
+    if(typeof feedbackInit==='function')feedbackInit();
+  }catch(e){host.innerHTML=`<p class="help" style="color:var(--bad)">${esc(e.message)}</p>`;}
+}
+
+/* ═══════════════════ DESIGN STUDIO — PAINT, VECTOR, SITES ═══════════════════
+   Three panels that make this a design studio rather than a colour tool.
+
+   Paint and Vector are deliberately small and local. There is no attempt at a Photoshop
+   clone — that is a decade of work and a browser tab is the wrong place for it. What is here
+   is the part that is genuinely useful next to everything else in this app: mark something up,
+   sketch a shape, and hand it straight to Create, the 3D editor or a document. Anything
+   heavier goes to Photopea, which is already wired in and is an actual raster editor. */
+const DSP_TOOLS=[
+  {id:'brush', icon:'🖌', label:'Brush'},
+  {id:'eraser',icon:'🩹', label:'Eraser'},
+  {id:'line',  icon:'╱',  label:'Line'},
+  {id:'rect',  icon:'▭',  label:'Rectangle'},
+  {id:'ellipse',icon:'◯', label:'Ellipse'},
+  {id:'fill',  icon:'🪣', label:'Flood fill'},
+  {id:'text',  icon:'T',  label:'Text'},
+  {id:'pick',  icon:'💧', label:'Pick colour'},
+];
+const DSP_DEFAULTS={tool:'brush',size:8,colour:'#6ea8ff',alpha:1,w:900,h:560,bg:'#ffffff'};
+let DSP=Object.assign({},DSP_DEFAULTS,store.get('dspaint',{}));
+const saveDsp=()=>store.set('dspaint',DSP);
+let DSP_CTX=null,DSP_DRAW=null,DSP_UNDO=[],DSP_REDO=[];
+
+function dspSnapshot(){
+  const c=$('#dsp-canvas');if(!c)return;
+  try{DSP_UNDO.push(c.toDataURL('image/png'));}catch(_){}
+  if(DSP_UNDO.length>18)DSP_UNDO.shift();
+  DSP_REDO.length=0;
+}
+function dspRestore(url){
+  const c=$('#dsp-canvas');if(!c||!url)return;
+  const img=new Image();
+  img.onload=()=>{DSP_CTX.clearRect(0,0,c.width,c.height);DSP_CTX.drawImage(img,0,0);};
+  img.src=url;
+}
+function dspUndo(){
+  const c=$('#dsp-canvas');if(!c||!DSP_UNDO.length)return;
+  try{DSP_REDO.push(c.toDataURL('image/png'));}catch(_){}
+  dspRestore(DSP_UNDO.pop());
+}
+function dspRedo(){
+  const c=$('#dsp-canvas');if(!c||!DSP_REDO.length)return;
+  try{DSP_UNDO.push(c.toDataURL('image/png'));}catch(_){}
+  dspRestore(DSP_REDO.pop());
+}
+/* Flood fill, scanline. The tolerance matters: without it, antialiased edges leave a halo of
+   almost-matching pixels that the fill refuses to cross, and the result looks broken. */
+function dspFill(x,y,hex){
+  const c=$('#dsp-canvas');if(!c)return;
+  const w=c.width,h=c.height;
+  const img=DSP_CTX.getImageData(0,0,w,h),d=img.data;
+  const at=(px,py)=>((py*w+px)<<2);
+  const t=at(x|0,y|0);
+  const sr=d[t],sg=d[t+1],sb=d[t+2],sa=d[t+3];
+  const m=/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex)||['','6e','a8','ff'];
+  const fr=parseInt(m[1],16),fg=parseInt(m[2],16),fb=parseInt(m[3],16);
+  if(sr===fr&&sg===fg&&sb===fb&&sa===255)return;
+  const tol=42;
+  const near=i=>Math.abs(d[i]-sr)<=tol&&Math.abs(d[i+1]-sg)<=tol&&
+                Math.abs(d[i+2]-sb)<=tol&&Math.abs(d[i+3]-sa)<=tol;
+  const stack=[[x|0,y|0]];
+  while(stack.length){
+    let [px,py]=stack.pop();
+    let i=at(px,py);
+    while(py>=0&&near(at(px,py)))py--;
+    py++;
+    let up=false,down=false;
+    while(py<h&&near(at(px,py))){
+      i=at(px,py);
+      d[i]=fr;d[i+1]=fg;d[i+2]=fb;d[i+3]=255;
+      if(px>0){const l=near(at(px-1,py));if(l&&!up){stack.push([px-1,py]);up=true;}else if(!l)up=false;}
+      if(px<w-1){const r=near(at(px+1,py));if(r&&!down){stack.push([px+1,py]);down=true;}else if(!r)down=false;}
+      py++;
+    }
+  }
+  DSP_CTX.putImageData(img,0,0);
+}
+function dspPos(ev){
+  const c=$('#dsp-canvas'),r=c.getBoundingClientRect();
+  return{x:(ev.clientX-r.left)*(c.width/r.width),y:(ev.clientY-r.top)*(c.height/r.height)};
+}
+function dsPaint(host){
+  host.innerHTML=`
+  <div class="card">
+    <h3>🖌 Paint</h3>
+    <p class="help">A small raster canvas for marking things up and sketching. It is deliberately
+      not a Photoshop clone — that is a decade of work and this is a browser tab. What it is good
+      for is making something quickly and handing it straight to Create, the 3D editor or a
+      document. For real photo editing, the <b>Photopea</b> panel in Create is an actual raster
+      editor and is already wired in.</p>
+    <div class="dsp-bar">
+      ${DSP_TOOLS.map(t=>`<button class="dsp-tool${DSP.tool===t.id?' on':''}" data-dsptool="${t.id}"
+        title="${esc(t.label)}">${t.icon}</button>`).join('')}
+      <span style="width:1px;height:22px;background:var(--edge)"></span>
+      <input type="color" id="dsp-colour" value="${esc(DSP.colour)}" title="Colour">
+      <label class="mini">size <input type="range" id="dsp-size" min="1" max="80" value="${DSP.size}" style="width:90px"></label>
+      <label class="mini">opacity <input type="range" id="dsp-alpha" min="0.05" max="1" step="0.05" value="${DSP.alpha}" style="width:80px"></label>
+      <span style="flex:1"></span>
+      <button class="btn ghost small" id="dsp-undo">↶</button>
+      <button class="btn ghost small" id="dsp-redo">↷</button>
+      <button class="btn ghost small" id="dsp-clear">Clear</button>
+    </div>
+    <div class="dsp-wrap"><canvas id="dsp-canvas" width="${DSP.w}" height="${DSP.h}"></canvas></div>
+    <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap">
+      <button class="btn small" id="dsp-png">⬇ PNG</button>
+      <button class="btn ghost small" id="dsp-open">📂 Open an image</button>
+      <button class="btn ghost small" id="dsp-asset">🗂 Save to Assets</button>
+      <span id="dsp-send"></span>
+    </div>
+  </div>`;
+  const c=$('#dsp-canvas');
+  DSP_CTX=c.getContext('2d',{willReadFrequently:true});
+  DSP_CTX.fillStyle=DSP.bg;DSP_CTX.fillRect(0,0,c.width,c.height);
+  DSP_CTX.lineCap='round';DSP_CTX.lineJoin='round';
+  const send=$('#dsp-send');
+  if(send)send.innerHTML=connMenu(connMake('image','','Painting','design'));
+
+  $$('[data-dsptool]').forEach(b=>b.onclick=()=>{DSP.tool=b.dataset.dsptool;saveDsp();
+    $$('[data-dsptool]').forEach(x=>x.classList.toggle('on',x===b));});
+  const col=$('#dsp-colour');if(col)col.oninput=()=>{DSP.colour=col.value;saveDsp();};
+  const sz=$('#dsp-size');if(sz)sz.oninput=()=>{DSP.size=+sz.value;saveDsp();};
+  const al=$('#dsp-alpha');if(al)al.oninput=()=>{DSP.alpha=+al.value;saveDsp();};
+  const un=$('#dsp-undo');if(un)un.onclick=dspUndo;
+  const re=$('#dsp-redo');if(re)re.onclick=dspRedo;
+  const cl=$('#dsp-clear');if(cl)cl.onclick=()=>{dspSnapshot();
+    DSP_CTX.fillStyle=DSP.bg;DSP_CTX.fillRect(0,0,c.width,c.height);};
+
+  c.addEventListener('pointerdown',ev=>{
+    const p=dspPos(ev);
+    if(DSP.tool==='pick'){
+      const d=DSP_CTX.getImageData(p.x|0,p.y|0,1,1).data;
+      DSP.colour='#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join('');
+      saveDsp();const cc=$('#dsp-colour');if(cc)cc.value=DSP.colour;return;
+    }
+    dspSnapshot();
+    if(DSP.tool==='fill'){dspFill(p.x,p.y,DSP.colour);return;}
+    if(DSP.tool==='text'){
+      const t=prompt('Text');if(!t)return;
+      DSP_CTX.globalAlpha=DSP.alpha;DSP_CTX.fillStyle=DSP.colour;
+      DSP_CTX.font=(DSP.size*2.4)+'px system-ui, sans-serif';
+      DSP_CTX.fillText(t,p.x,p.y);DSP_CTX.globalAlpha=1;return;
+    }
+    DSP_DRAW={from:p,snap:(DSP.tool==='line'||DSP.tool==='rect'||DSP.tool==='ellipse')
+      ?DSP_CTX.getImageData(0,0,c.width,c.height):null};
+    c.setPointerCapture(ev.pointerId);
+    if(DSP.tool==='brush'||DSP.tool==='eraser'){
+      DSP_CTX.beginPath();DSP_CTX.moveTo(p.x,p.y);
+    }
+  });
+  c.addEventListener('pointermove',ev=>{
+    if(!DSP_DRAW)return;
+    const p=dspPos(ev);
+    DSP_CTX.globalAlpha=DSP.alpha;
+    DSP_CTX.lineWidth=DSP.size;
+    if(DSP.tool==='brush'||DSP.tool==='eraser'){
+      DSP_CTX.strokeStyle=DSP.tool==='eraser'?DSP.bg:DSP.colour;
+      DSP_CTX.lineTo(p.x,p.y);DSP_CTX.stroke();
+    }else{
+      /* Shapes preview live by restoring the snapshot each move — without that the drag leaves
+         a trail of every intermediate shape. */
+      DSP_CTX.putImageData(DSP_DRAW.snap,0,0);
+      DSP_CTX.strokeStyle=DSP.colour;
+      const a=DSP_DRAW.from;
+      DSP_CTX.beginPath();
+      if(DSP.tool==='line'){DSP_CTX.moveTo(a.x,a.y);DSP_CTX.lineTo(p.x,p.y);}
+      if(DSP.tool==='rect')DSP_CTX.rect(a.x,a.y,p.x-a.x,p.y-a.y);
+      if(DSP.tool==='ellipse')DSP_CTX.ellipse((a.x+p.x)/2,(a.y+p.y)/2,
+        Math.abs(p.x-a.x)/2,Math.abs(p.y-a.y)/2,0,0,Math.PI*2);
+      DSP_CTX.stroke();
+    }
+    DSP_CTX.globalAlpha=1;
+  });
+  const end=()=>{DSP_DRAW=null;};
+  c.addEventListener('pointerup',end);c.addEventListener('pointercancel',end);
+
+  const png=$('#dsp-png');
+  if(png)png.onclick=()=>{const a=document.createElement('a');
+    a.href=c.toDataURL('image/png');a.download='painting.png';a.click();};
+  const op=$('#dsp-open');
+  if(op)op.onclick=()=>{
+    const i=document.createElement('input');i.type='file';i.accept='image/*';
+    i.onchange=()=>{const f=i.files[0];if(!f)return;
+      const r=new FileReader();
+      r.onload=()=>{const img=new Image();
+        img.onload=()=>{dspSnapshot();
+          const s=Math.min(c.width/img.width,c.height/img.height,1);
+          DSP_CTX.drawImage(img,0,0,img.width*s,img.height*s);};
+        img.src=String(r.result);};
+      r.readAsDataURL(f);};
+    i.click();};
+  const as=$('#dsp-asset');
+  if(as)as.onclick=async()=>{
+    try{await assetAdd({kind:'png',name:'painting-'+Date.now()+'.png',dataUrl:c.toDataURL('image/png')});
+      toast('Saved to Assets',2400);}catch(e){toast(e.message,3000);}};
+}
+
+/* ── Vector ────────────────────────────────────────────────────────────────
+   Shapes as real SVG nodes you can reselect and re-edit, not pixels. Small on purpose, but
+   what comes out is a genuine .svg — which is what makes it useful as a design element in the
+   other studios rather than a screenshot of one. */
+const DSV_DEFAULTS={shapes:[],sel:-1,fill:'#6ea8ff',stroke:'#0b0d12',sw:2,w:900,h:560};
+let DSV=Object.assign({},DSV_DEFAULTS,store.get('dsvector',{}));
+const saveDsv=()=>store.set('dsvector',DSV);
+function dsvSvg(){
+  const body=(DSV.shapes||[]).map(s=>{
+    const a=`fill="${esc(s.fill)}" stroke="${esc(s.stroke)}" stroke-width="${+s.sw||0}"`;
+    if(s.t==='rect')return `<rect x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" rx="${s.r||0}" ${a}/>`;
+    if(s.t==='circle')return `<circle cx="${s.x}" cy="${s.y}" r="${s.r}" ${a}/>`;
+    if(s.t==='line')return `<line x1="${s.x}" y1="${s.y}" x2="${s.x2}" y2="${s.y2}" stroke="${esc(s.stroke)}" stroke-width="${+s.sw||2}"/>`;
+    if(s.t==='text')return `<text x="${s.x}" y="${s.y}" font-family="system-ui,sans-serif" font-size="${s.size||28}" fill="${esc(s.fill)}">${esc(s.text||'')}</text>`;
+    return '';
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${DSV.w} ${DSV.h}" width="${DSV.w}" height="${DSV.h}">${body}</svg>`;
+}
+function dsVector(host){
+  host.innerHTML=`
+  <div class="card">
+    <h3>✒️ Vector</h3>
+    <p class="help">Shapes as real SVG nodes rather than pixels — select one and change it again
+      later. What comes out is a genuine <code>.svg</code>, which is what makes it usable as a
+      design element elsewhere in this app instead of a picture of one.</p>
+    <div class="dsp-bar">
+      <button class="btn ghost small" data-dsvadd="rect">▭ Rect</button>
+      <button class="btn ghost small" data-dsvadd="circle">◯ Circle</button>
+      <button class="btn ghost small" data-dsvadd="line">╱ Line</button>
+      <button class="btn ghost small" data-dsvadd="text">T Text</button>
+      <span style="width:1px;height:22px;background:var(--edge)"></span>
+      <input type="color" id="dsv-fill" value="${esc(DSV.fill)}" title="Fill">
+      <input type="color" id="dsv-stroke" value="${esc(DSV.stroke)}" title="Stroke">
+      <label class="mini">stroke <input type="range" id="dsv-sw" min="0" max="24" value="${DSV.sw}" style="width:80px"></label>
+      <span style="flex:1"></span>
+      <button class="btn ghost small" id="dsv-del">Delete</button>
+      <button class="btn ghost small" id="dsv-clear">Clear</button>
+    </div>
+    <div class="dsp-wrap" id="dsv-stage">${dsvSvg()}</div>
+    <p class="help" style="margin-top:6px">${(DSV.shapes||[]).length} shape(s)${DSV.sel>=0?' · #'+(DSV.sel+1)+' selected':' · click a shape to select it'}</p>
+    <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
+      <button class="btn small" id="dsv-dl">⬇ SVG</button>
+      <button class="btn ghost small" id="dsv-asset">🗂 Save to Assets</button>
+      <span id="dsv-send"></span>
+    </div>
+  </div>`;
+  const send=$('#dsv-send');
+  if(send)send.innerHTML=connMenu(connMake('image',dsvSvg(),'Vector drawing','design'));
+  const rerender=()=>{saveDsv();dsVector(host);};
+  $$('[data-dsvadd]').forEach(b=>b.onclick=()=>{
+    const t=b.dataset.dsvadd;
+    const cx=DSV.w/2,cy=DSV.h/2;
+    const base={fill:DSV.fill,stroke:DSV.stroke,sw:DSV.sw};
+    if(t==='rect')DSV.shapes.push(Object.assign({t,x:cx-110,y:cy-70,w:220,h:140,r:10},base));
+    if(t==='circle')DSV.shapes.push(Object.assign({t,x:cx,y:cy,r:80},base));
+    if(t==='line')DSV.shapes.push(Object.assign({t,x:cx-120,y:cy,x2:cx+120,y2:cy},base));
+    if(t==='text'){const s=prompt('Text','Hello');if(!s)return;
+      DSV.shapes.push(Object.assign({t,x:cx-80,y:cy,text:s,size:34},base));}
+    DSV.sel=DSV.shapes.length-1;rerender();
+  });
+  const f=$('#dsv-fill');if(f)f.oninput=()=>{DSV.fill=f.value;
+    if(DSV.sel>=0&&DSV.shapes[DSV.sel])DSV.shapes[DSV.sel].fill=f.value;rerender();};
+  const st=$('#dsv-stroke');if(st)st.oninput=()=>{DSV.stroke=st.value;
+    if(DSV.sel>=0&&DSV.shapes[DSV.sel])DSV.shapes[DSV.sel].stroke=st.value;rerender();};
+  const sw=$('#dsv-sw');if(sw)sw.oninput=()=>{DSV.sw=+sw.value;
+    if(DSV.sel>=0&&DSV.shapes[DSV.sel])DSV.shapes[DSV.sel].sw=+sw.value;rerender();};
+  const del=$('#dsv-del');if(del)del.onclick=()=>{
+    if(DSV.sel<0)return;DSV.shapes.splice(DSV.sel,1);DSV.sel=-1;rerender();};
+  const cl=$('#dsv-clear');if(cl)cl.onclick=()=>{
+    if(confirm('Clear every shape?')){DSV.shapes=[];DSV.sel=-1;rerender();}};
+  const stage=$('#dsv-stage');
+  if(stage){
+    const svg=stage.querySelector('svg');
+    if(svg)[...svg.children].forEach((n,i)=>{
+      n.style.cursor='pointer';
+      if(i===DSV.sel)n.setAttribute('stroke-dasharray','6 4');
+      n.onclick=()=>{DSV.sel=i;rerender();};
+    });
+  }
+  const dl=$('#dsv-dl');if(dl)dl.onclick=()=>downloadText(dsvSvg(),'drawing.svg','image/svg+xml');
+  const as=$('#dsv-asset');if(as)as.onclick=async()=>{
+    try{await assetAdd({kind:'svg',name:'vector-'+Date.now()+'.svg',svg:dsvSvg()});
+      toast('Saved to Assets',2400);}catch(e){toast(e.message,3000);}};
+}
+/* ── Sites ─────────────────────────────────────────────────────────────────
+   Generate a real page or app in the framework you actually use, carrying YOUR design tokens
+   so it looks like the thing you designed here rather than a generic template. */
+const DSS_TARGETS=[
+  {id:'html',  label:'HTML + CSS',      note:'One file. Opens by double-clicking, no build.'},
+  {id:'react', label:'React + Vite',    note:'Components and a dev server.'},
+  {id:'next',  label:'Next.js (app router)',note:'Server components, file routing.'},
+  {id:'tail',  label:'HTML + Tailwind', note:'Utility classes via the CDN build.'},
+  {id:'three', label:'HTML + three.js', note:'A page with a live 3D element.'},
+];
+const DSS_KINDS=['landing page','dashboard','portfolio','documentation site','pricing page',
+  'blog index','app shell with sidebar','settings screen','onboarding flow'];
+let DSS={target:'html',kind:'landing page',brief:'',out:''};
+function dsSites(host){
+  const t=tokensBuild();
+  host.innerHTML=`
+  <div class="card">
+    <h3>🌐 Build a site</h3>
+    <p class="help">Generates a real page in the framework you use, and carries <b>your palette,
+      type scale and radii</b> into it — so what comes out looks like the thing you designed on the
+      other panels rather than a generic template.</p>
+    <div class="row" style="gap:10px;margin-top:10px;flex-wrap:wrap;align-items:flex-end">
+      <label class="field" style="flex:1;min-width:190px">Framework
+        <select id="dss-target">${DSS_TARGETS.map(x=>
+          `<option value="${x.id}"${DSS.target===x.id?' selected':''}>${esc(x.label)}</option>`).join('')}</select></label>
+      <label class="field" style="flex:1;min-width:180px">What kind
+        <select id="dss-kind">${DSS_KINDS.map(k=>
+          `<option${DSS.kind===k?' selected':''}>${esc(k)}</option>`).join('')}</select></label>
+    </div>
+    <p class="help" style="margin:6px 0">${esc((DSS_TARGETS.find(x=>x.id===DSS.target)||{}).note||'')}</p>
+    <label class="field">What is it for?
+      <textarea id="dss-brief" rows="3" placeholder="e.g. a landing page for a browser-based reasoning studio: what it is, three reasons, a screenshot slot, one call to action">${esc(DSS.brief)}</textarea></label>
+    <div class="dss-tokens">
+      ${['--bg','--panel','--acc','--acc2','--ink'].map(k=>
+        `<span class="dss-swatch" style="background:${esc(t.colour[k]||'#000')}" title="${esc(k)}"></span>`).join('')}
+      <span class="mini muted">your palette, radius ${esc(String(UI.radius||14))}px — carried into the output</span>
+    </div>
+    <div class="row" style="gap:8px;margin-top:10px">
+      <button class="btn good" id="dss-go">✦ Build it</button>
+      <span class="mini" id="dss-status"></span>
+    </div>
+    <div id="dss-out" style="margin-top:12px"></div>
+  </div>`;
+  const ts=$('#dss-target');if(ts)ts.onchange=()=>{DSS.target=ts.value;dsSites(host);};
+  const ks=$('#dss-kind');if(ks)ks.onchange=()=>{DSS.kind=ks.value;};
+  const br=$('#dss-brief');if(br)br.oninput=()=>{DSS.brief=br.value;};
+  const go2=$('#dss-go');
+  if(go2)go2.onclick=async()=>{
+    const brief=($('#dss-brief').value||'').trim();
+    if(!brief)return toast('Say what the site is for',2200);
+    go2.disabled=true;$('#dss-status').textContent='building…';
+    try{
+      const tok=Object.entries(t.colour).map(([k,v])=>k+': '+v).join('; ');
+      const multi=DSS.target==='react'||DSS.target==='next';
+      const acc=await streamComplete({model:settings.archModel,maxTokens:9000,
+        messages:[{role:'system',content:
+          'Build a '+DSS.kind+' as '+(DSS_TARGETS.find(x=>x.id===DSS.target)||{}).label+'.\n\n'+
+          (multi?'Return each file as ===FILE: path=== followed by its full contents. It must run '+
+                 'with npm i && npm run dev and no dependencies beyond the framework itself.\n'
+                :'Return ONE complete HTML document. Everything inline. No build step, no bundler. '+
+                 'No markdown fences.\n')+
+          (DSS.target==='tail'?'Use the Tailwind CDN script.\n':'')+
+          (DSS.target==='three'?'Use an importmap pointing at a real three.js CDN build.\n':'')+
+          '\nUSE THESE DESIGN TOKENS — they are the user\'s own and the point of generating here '+
+          'rather than anywhere else:\n'+tok+'\nBorder radius '+(UI.radius||14)+'px.\n\n'+
+          'Write real copy, not lorem ipsum. Make it responsive. Every interactive element needs a '+
+          'visible focus style and a real accessible name.'+skillBlockFor('design')},
+          {role:'user',content:brief}]},null,null,'dss-build');
+      const raw=String(acc.content||'').replace(/```(?:html|jsx|tsx)?/g,'').trim();
+      DSS.out=raw;
+      const out=$('#dss-out');
+      if(multi){
+        const files=parseFiles(raw);
+        const n=Object.keys(files).length;
+        out.innerHTML=`<p class="help">✓ ${n} file(s)${acc.cost?' · '+money(acc.cost):''}</p>`+
+          (n?`<table class="tbl"><tbody>${Object.keys(files).sort().map(f=>
+            `<tr><td class="mono cell-sm">${esc(f)}</td><td class="cell-sm">${files[f].length} chars</td></tr>`).join('')}</tbody></table>
+            <div class="row" style="gap:8px;margin-top:8px">
+              <button class="btn small" id="dss-zip">⬇ Download</button>
+              ${connMenu(connMake('files',Object.entries(files).map(([name,content])=>({name,content})),DSS.kind,'design'))}
+            </div>`:'<p class="help">No files came back in the expected format.</p>');
+        const z=$('#dss-zip');
+        if(z)z.onclick=()=>officeDownload(makeZip(files),DSS.kind.replace(/\W+/g,'-'),'zip');
+      }else{
+        out.innerHTML=`<p class="help">✓ built${acc.cost?' · '+money(acc.cost):''}</p>
+          <iframe style="width:100%;height:56vh;border:1px solid var(--edge);border-radius:12px;background:#fff"
+            sandbox="allow-scripts" srcdoc="${esc(raw)}"></iframe>
+          <div class="row" style="gap:8px;margin-top:8px">
+            <button class="btn small" id="dss-dl">⬇ HTML</button>
+            ${connMenu(connMake('html',raw,DSS.kind,'design'))}
+          </div>`;
+        const d=$('#dss-dl');
+        if(d)d.onclick=()=>downloadText(raw,DSS.kind.replace(/\W+/g,'-')+'.html','text/html');
+      }
+      $('#dss-status').textContent='';
+      if(typeof connInit==='function')connInit();
+    }catch(e){
+      $('#dss-out').innerHTML=`<p class="help" style="color:var(--bad)">✗ ${esc(e.message)}</p>`;
+      $('#dss-status').textContent='';
+    }
+    go2.disabled=false;
+  };
+}
+
+/* ── Your own 3D assets, and a console ─────────────────────────────────────
+   Drop in a model and it goes into the scene. Formats are the ones the editor's loaders
+   genuinely handle — offering a format that will fail on import is worse than not offering it.
+
+   The console exists because the editor is an iframe: its errors do not appear in the page's
+   own console next to everything else, so a model that fails to import used to fail invisibly. */
+const ED3_FORMATS=[
+  {ext:'glb', label:'GLB',  note:'best supported — geometry, materials and animation in one file'},
+  {ext:'gltf',label:'glTF', note:'works, but external .bin and textures will not resolve'},
+  {ext:'obj', label:'OBJ',  note:'geometry only; materials come in flat'},
+  {ext:'fbx', label:'FBX',  note:'often large; animation support varies by exporter'},
+  {ext:'stl', label:'STL',  note:'geometry only, no colour — usual for print models'},
+];
+let ED3_LOG=[];
+function ed3Log(kind,text){
+  ED3_LOG=[{ts:Date.now(),kind,text:String(text).slice(0,400)}].concat(ED3_LOG).slice(0,200);
+  const host=$('#ed3-console');
+  if(host&&!host.hidden)ed3RenderConsole();
+}
+function ed3RenderConsole(){
+  const host=$('#ed3-console');if(!host)return;
+  host.innerHTML=`<div class="ed3c-bar">
+      <b>Console</b>
+      <span class="mini muted">${ED3_LOG.length} line(s) · the editor runs in a frame, so its
+        errors do not show up in the page console</span>
+      <span style="flex:1"></span>
+      <button class="btn ghost small" id="ed3c-copy">Copy</button>
+      <button class="btn ghost small" id="ed3c-clear">Clear</button>
+      <button class="btn ghost small" id="ed3c-close">✕</button>
+    </div>
+    <div class="ed3c-body">${ED3_LOG.length?ED3_LOG.map(l=>
+      `<div class="ed3c-line ${esc(l.kind)}"><span>${esc(new Date(l.ts).toLocaleTimeString())}</span>
+       <b>${esc(l.kind)}</b><code>${esc(l.text)}</code></div>`).join('')
+      :'<p class="help" style="padding:10px">Nothing yet.</p>'}</div>`;
+  const c=$('#ed3c-copy');
+  if(c)c.onclick=()=>{const t=ED3_LOG.map(l=>l.kind+' '+l.text).join('\n');
+    navigator.clipboard&&navigator.clipboard.writeText(t);toast('Copied',1800);};
+  const cl=$('#ed3c-clear');if(cl)cl.onclick=()=>{ED3_LOG=[];ed3RenderConsole();};
+  const x=$('#ed3c-close');if(x)x.onclick=()=>{const h=$('#ed3-console');if(h)h.hidden=true;};
+}
+function ed3ToggleConsole(){
+  const h=$('#ed3-console');if(!h)return;
+  h.hidden=!h.hidden;
+  if(!h.hidden)ed3RenderConsole();
+}
+function ed3ImportFile(file){
+  if(!file)return;
+  const ext=(file.name.split('.').pop()||'').toLowerCase();
+  const known=ED3_FORMATS.find(f=>f.ext===ext);
+  if(!known){
+    ed3Log('err','Cannot import '+file.name+' — the editor loads '+
+      ED3_FORMATS.map(f=>'.'+f.ext).join(', ')+' only.');
+    toast('That format is not one the editor can load',3400);
+    return;
+  }
+  if(file.size>60e6){
+    ed3Log('err',file.name+' is '+(file.size/1e6).toFixed(0)+'MB — too large to hold in the browser.');
+    toast('That file is too big (over 60MB)',3400);
+    return;
+  }
+  ed3Log('info','importing '+file.name+' ('+(file.size/1024).toFixed(0)+'KB)');
+  const r=new FileReader();
+  r.onload=()=>{
+    ed3Send('import',{name:file.name,dataUrl:String(r.result)});
+    if(ext==='gltf')ed3Log('warn','.gltf often references separate .bin and texture files. Those '+
+      'cannot be resolved from a single dropped file — export as .glb to keep everything together.');
+  };
+  r.onerror=()=>ed3Log('err','could not read '+file.name);
+  r.readAsDataURL(file);
+}
+function renderEd3Assets(){
+  const host=$('#ed3-myassets');if(!host)return;
+  host.innerHTML=`
+  <div class="card">
+    <h3>📥 Your own models</h3>
+    <p class="help">Drop a model in and it goes straight into the scene. These are the formats the
+      editor's loaders genuinely handle — offering one that would fail on import would be worse
+      than leaving it out.</p>
+    <div class="ed3-dropzone" id="ed3-dropzone">
+      <b>Drop a model here</b>
+      <span class="mini muted">or</span>
+      <button class="btn small" id="ed3-pick">Choose a file</button>
+    </div>
+    <div class="ed3-fmts">${ED3_FORMATS.map(f=>
+      `<div class="ed3-fmt"><b>.${esc(f.ext)}</b><span>${esc(f.note)}</span></div>`).join('')}</div>
+    <div class="row" style="gap:8px;margin-top:10px">
+      <button class="btn ghost small" id="ed3-console-btn">🖥 Console</button>
+      <button class="btn ghost small" id="ed3-fs">⛶ Fullscreen</button>
+      <button class="btn ghost small" id="ed3-pop">↗ Own window</button>
+    </div>
+    <div id="ed3-console" hidden></div>
+  </div>`;
+  const pick=$('#ed3-pick');
+  if(pick)pick.onclick=()=>{
+    const i=document.createElement('input');i.type='file';
+    i.accept=ED3_FORMATS.map(f=>'.'+f.ext).join(',');
+    i.onchange=()=>ed3ImportFile(i.files[0]);
+    i.click();
+  };
+  const drop=$('#ed3-dropzone');
+  if(drop){
+    drop.ondragover=e=>{e.preventDefault();drop.classList.add('over');};
+    drop.ondragleave=()=>drop.classList.remove('over');
+    drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');
+      [...(e.dataTransfer.files||[])].slice(0,4).forEach(ed3ImportFile);};
+  }
+  const cb=$('#ed3-console-btn');if(cb)cb.onclick=ed3ToggleConsole;
+  const fs=$('#ed3-fs');if(fs)fs.onclick=toggleFullscreenView;
+  const pp=$('#ed3-pop');if(pp)pp.onclick=popOutView;
+}
+
 function currentView(){
   const v=$('.view.active');return v?v.id.replace(/^view-/,''):'';
 }
@@ -38546,6 +39480,9 @@ function applyPopRoute(){
   return true;
 }
 function go(view){
+  /* A plugin tab has no built-in section; mount it on the way in. */
+  const _pl=(typeof PLUG!=='undefined'&&PLUG.items||[]).find(p=>p.id===view);
+  if(_pl)setTimeout(()=>plugMount(_pl),0);
   if(tabHidden(view)){                       // hidden tabs are unreachable, not just invisible
     const alt=firstVisibleTab();
     if(alt===view)return;
@@ -38580,11 +39517,11 @@ function go(view){
   if(view==='vo'){renderVoGames();voSync();voThink();voResize();voFrame(0);renderVoRoster();
     renderSteer();renderOfficeDesign();renderOutputs();}
   else if(VO.on)voStop();      // do not burn a rAF loop on a tab nobody is looking at
-  if(view==='library'){renderSkillSurfaces();renderGhImport();}
+  if(view==='library'){renderSkillSurfaces();renderGhImport();renderPlugins();}
   if(view==='library')renderOcrDocs();
   if(view==='study')renderStudy();
   if(view==='ops')renderStyleUI();
-  if(view==='three'){renderAssets();renderWdream();}
+  if(view==='three'){renderAssets();renderWdream();renderEd3Assets();}
   if(view==='forge'&&$('#sub-brain')&&$('#sub-brain').classList.contains('on'))renderBrainMap();
   if(view==='history')renderHistory();
   if(view==='transplant')fillTransplantSources();
@@ -38649,7 +39586,7 @@ async function boot(){
   dreamSchedule();
   // Pop-out opens straight onto the Assistant rather than the default tab.
   if(location.hash==='#assistant')go('assistant');
-  connInit();applyTabPos();renderTabAdder();persistInit();
+  connInit();plugInit();plugRegister();applyTabPos();renderTabAdder();persistInit();
   applyPopRoute();                            // #pop=<view> — a tab opened via the ↗ button
   if(!location.hash.startsWith('#pop='))onbMaybe();
   updateKeyPill();renderHistory();fillTransplantSources();
@@ -38861,6 +39798,11 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     onbApply,onbRender,onbMaybe,TABPOS,applyTabPos,setTabPos,renderTabAdder,openTabManager,
     HELP_TOPICS,get HELPC(){return HELPC},set HELPC(v){HELPC=v},helpSearch,renderHelp,
     genNum,genColour,
+    PLUG_CAPS,get PLUG(){return PLUG},savePlug,plugSource,plugSetSource,plugAdd,plugRemove,
+    plugHas,plugInit,plugDoc,plugMount,plugEditor,plugRegister,renderPlugins,featureSuggest,
+    DSP_TOOLS,get DSP(){return DSP},dspFill,dsPaint,get DSV(){return DSV},dsvSvg,dsVector,
+    DSS_TARGETS,get DSS(){return DSS},dsSites,
+    ED3_FORMATS,ed3Log,ed3RenderConsole,ed3ToggleConsole,ed3ImportFile,renderEd3Assets,
     get WDREAM(){return WDREAM},set WDREAM(v){WDREAM=v},saveWdream,wdreamModels,wdreamAffords,
     wdreamPlan,wdreamOps,wdreamClean,wdreamBuild,wdreamStop,renderWdream,WDREAM_OPS_SCHEMA,
     WDREAM_THEMES,WDREAM_TIERS,wdreamTheme,wdreamRng,wdreamSeedOps,wdreamTier,wdreamForecast,
