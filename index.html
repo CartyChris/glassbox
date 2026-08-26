@@ -22264,6 +22264,24 @@ function gauntletCases(g){
       const after=g.timersList().length;stop();
       return after-before;},antiExpect:v=>v===1});
 
+  /* ── dreaming: the spend limit ──
+     wdreamAffords shipped defined, exported and never called, so the "hard stop" documented in
+     the DREAMING region was not enforced on either paid call. The second case here is the one
+     that matters long-term: it asserts the guard is WIRED, which is the failure that happened. */
+  add({id:'wdream-budget',sub:'dreaming',uses:['wdreamAffords'],
+    what:'a build that would cost more than the spend limit is refused before it is paid for',
+    run:()=>{const w=g.WDREAM,old=w.budget;w.budget=0.05;g.WDREAM=w;
+      const v=g.wdreamAffords(0.20);w.budget=old;g.WDREAM=w;return v;},expect:v=>v===false,
+    antiWhat:'and one that fits inside the limit is allowed through',
+    anti:()=>{const w=g.WDREAM,old=w.budget;w.budget=0.05;g.WDREAM=w;
+      const v=g.wdreamAffords(0.01);w.budget=old;g.WDREAM=w;return v;},antiExpect:v=>v===true});
+  add({id:'wdream-budget-wired',sub:'dreaming',uses:['wdreamBuild','wdreamAffords'],
+    what:'the spend guard is actually called by the builder, not merely defined next to it',
+    run:()=>(String(g.wdreamBuild).match(/wdreamAffords\(/g)||[]).length,expect:v=>v>=2,
+    antiWhat:'and a run with no limit set is never blocked by it',
+    anti:()=>{const w=g.WDREAM,old=w.budget;w.budget=0;g.WDREAM=w;
+      const v=g.wdreamAffords(999);w.budget=old;g.WDREAM=w;return v;},antiExpect:v=>v===true});
+
   return C;
 }
 /* Registration refuses a case with no negative control. That refusal is the feature: without it
@@ -38462,7 +38480,13 @@ function wdreamForecast(budget){
   const P=price(dreamer),B=price(builder);
   const local=id=>/^ollama\//.test(id||'');
   const planCost=local(dreamer)?0:(P?(257*P.i+466*P.o)/1e6:null);
-  const buildCost=local(builder)?0:(B?(872*B.i+973*B.o)/1e6:null);
+  /* The builder's OUTPUT scales with how many ops it is allowed to emit, and the schema marks
+     every field required, so one op serialises to ~265 chars (~66 tok) whatever the scene is.
+     A fixed 973 was right only for the ~20-object run it was measured on and understates a
+     60-op build fourfold — which matters the moment the builder is not a cheap model. */
+  const nOps=Math.max(6,Math.min(80,+WDREAM.ops||24));
+  const buildOutTok=Math.round(265*nOps/4);
+  const buildCost=local(builder)?0:(B?(872*B.i+buildOutTok*B.o)/1e6:null);
   const tier=wdreamTier(budget);
   const total=(planCost==null||buildCost==null)?null:
     (tier.id==='quick'?buildCost:tier.id==='free'?0:planCost+buildCost);
@@ -38521,8 +38545,16 @@ async function wdreamBuild(brief,opts){
       return{placed:WDREAM_RUN.placed,cost:0,tier:'free',sketch:true};
     }
 
+    /* wdreamAffords existed, was exported, and was never called from anywhere — so the
+       "hard stop" in this region's header was not enforced on either paid call. The planner is
+       the expensive half (often >95% of a run), so an unchecked cap was blown by the very first
+       request. Checked here, before spending, and degraded rather than refused. */
+    const fc=wdreamForecast(cap);
     let plan='';
-    if(tier.id!=='quick'){
+    const canPlan=wdreamAffords(fc.planCost||0);
+    if(tier.id!=='quick'&&!canPlan){
+      say('plan','The planner alone would pass your spend limit — building without it.');
+    }else if(tier.id!=='quick'){
       say('plan','Thinking about what belongs here…');
       try{
         const r=await wdreamPlan(brief,opts.onPlanTick);
@@ -38539,7 +38571,10 @@ async function wdreamBuild(brief,opts){
     if(WDREAM_RUN.stop)throw new Error('stopped');
 
     let ops=[];
-    try{
+    const canBuild=wdreamAffords(fc.buildCost||0);
+    if(!canBuild){
+      say('ops','Not enough of the budget left to pay a model to build — sketching instead.');
+    }else try{
       say('ops','Working out how to build it…');
       const built=await wdreamOps(brief,plan||('Build: '+brief),opts.existing||'',opts.onOpsTick);
       WDREAM_RUN.cost+=built.cost;
@@ -38551,9 +38586,14 @@ async function wdreamBuild(brief,opts){
        got an error message has strictly less than a user who got a rough scene. */
     if(!ops.length){
       ops=wdreamSeedOps(brief,+WDREAM.ops||24).map(wdreamClean).filter(Boolean);
-      say('build','Building a local sketch instead of '+ops.length+' planned objects…');
+      say('build','Building a local sketch of '+ops.length+' objects…');
       await apply(ops);
-      finish(`The model returned nothing usable, so this is a local sketch of ${WDREAM_RUN.placed} objects · ${money(WDREAM_RUN.cost)} spent on the attempt.`);
+      /* Two different reasons land here and they are not the same news. Saying "the model
+         returned nothing" when the model was never asked sends the user to debug a provider
+         that was working fine — the actual fix is a bigger limit or a cheaper builder. */
+      finish(canBuild
+        ?`The model returned nothing usable, so this is a local sketch of ${WDREAM_RUN.placed} objects · ${money(WDREAM_RUN.cost)} spent on the attempt.`
+        :`Your ${money(cap)} limit does not cover a build with these models, so this is a local sketch of ${WDREAM_RUN.placed} objects · nothing was spent. Raise the limit or pick a cheaper builder.`);
       return{placed:WDREAM_RUN.placed,cost:WDREAM_RUN.cost,tier:tier.id,sketch:true};
     }
 
