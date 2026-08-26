@@ -38481,11 +38481,14 @@ function wdreamForecast(budget){
   const local=id=>/^ollama\//.test(id||'');
   const planCost=local(dreamer)?0:(P?(257*P.i+466*P.o)/1e6:null);
   /* The builder's OUTPUT scales with how many ops it is allowed to emit, and the schema marks
-     every field required, so one op serialises to ~265 chars (~66 tok) whatever the scene is.
-     A fixed 973 was right only for the ~20-object run it was measured on and understates a
-     60-op build fourfold — which matters the moment the builder is not a cheap model. */
+     every field required, so one op costs the same wherever it lands in the scene.
+     MEASURED, not guessed: a 20-op Haiku 4.5 build billed $0.011209 against 872 in / $1 / $5,
+     which is ~2067 output tokens, or ~103 per op. Note that is well above the ~66 a chars/4
+     estimate gives — strict JSON tokenises at roughly 2.5 chars/token, not 4, because every
+     quote, brace, comma and decimal is its own token. The old fixed 973 was right only for
+     the run it came from and understates a 60-op build sixfold. */
   const nOps=Math.max(6,Math.min(80,+WDREAM.ops||24));
-  const buildOutTok=Math.round(265*nOps/4);
+  const buildOutTok=103*nOps;
   const buildCost=local(builder)?0:(B?(872*B.i+buildOutTok*B.o)/1e6:null);
   const tier=wdreamTier(budget);
   const total=(planCost==null||buildCost==null)?null:
