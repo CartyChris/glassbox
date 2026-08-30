@@ -870,6 +870,10 @@ td.num{font-family:var(--mono);text-align:right}
 #toast.show{opacity:1}
 .overlay{position:fixed;inset:0;background:rgba(4,6,12,.6);backdrop-filter:blur(3px);z-index:250;display:flex;align-items:center;justify-content:center;padding:20px}
 .modal{background:var(--panel);border:1px solid var(--edge2);border-radius:16px;max-width:680px;width:100%;max-height:86vh;overflow:auto;padding:20px}
+.panel-err{background:rgba(255,86,86,.10);border:1px solid rgba(255,86,86,.42);border-left:3px solid #ff5656;border-radius:10px;padding:11px 13px;margin:0 0 14px;font-size:13px}
+.panel-err b{color:#ff8080;display:block;margin-bottom:3px}
+.panel-err code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;opacity:.92;word-break:break-word}
+.panel-err .row{margin-top:9px;gap:8px}
 input[type=range]{flex:1;accent-color:var(--acc)}
 .help{font-size:11px;color:var(--ink3);line-height:1.5}
 .kbd{font-family:var(--mono);background:var(--bg);border:1px solid var(--edge);border-bottom-width:2px;border-radius:5px;padding:1px 6px;font-size:11px}
@@ -1802,7 +1806,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
 
   <div id="originbanner" style="display:none"></div>
 
-  <nav class="tabs" id="tabs">
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Sections">
     <button class="tab" data-view="modelhub">🎚 Models</button>
     <button class="tab" data-view="assistant">💬 Assistant</button>
     <button class="tab" data-view="vo">🏢 Virtual Office</button>
@@ -3783,6 +3787,9 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
             <select id="ofc-book" title="Workbook" style="max-width:150px"></select>
             <button class="ofw-b" id="ofc-newbook" title="New workbook">＋</button>
             <span style="width:1px;height:20px;background:var(--edge)"></span>
+            <button class="ofw-b" data-ofc="undo" title="Undo (Ctrl/Cmd+Z)">↶</button>
+            <button class="ofw-b" data-ofc="redo" title="Redo (Ctrl/Cmd+Shift+Z)">↷</button>
+            <span style="width:1px;height:20px;background:var(--edge)"></span>
             <button class="ofw-b" data-ofc="bold" title="Bold"><b>B</b></button>
             <button class="ofw-b" data-ofc="ital" title="Italic"><i>I</i></button>
             <button class="ofw-b" data-ofc="left" title="Align left">⇤</button>
@@ -4732,6 +4739,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
     <section class="view" id="view-settings"><div class="wrap" style="max-width:780px">
       <div id="sfx-panel"></div>
       <div id="persist-panel"></div>
+      <div id="pwa-panel"></div>
       <div id="xd-panel"></div>
       <div class="card" id="proj-card">
         <h3>🗂 Projects</h3>
@@ -22047,6 +22055,135 @@ function gauntletCases(g){
       return ops.filter(o=>o.op==='spawn'&&o.kind==='mesh'&&o.name!=='ground'&&o.position[1]<0).length;
     },antiExpect:v=>v===0});
 
+  /* ── This pass's four bug classes ─────────────────────────────────────────
+     Each of these guards something that was measured broken, not something imagined. */
+
+  /* A model call with no signal cannot be cancelled, and a run that cannot be cancelled wedges
+     the whole feature until a page reload. Measured at 188s of silence before this was fixed. */
+  add({id:'wire-dream-abortable',sub:'dreaming',uses:['wdreamSignal','wdreamStop'],
+    what:'Stop can abort a Dreaming call that is already in flight',
+    run:()=>{
+      const keep=g.WDREAM_RUN;
+      try{
+        g.WDREAM_RUN={stop:false,cost:0,placed:0,tier:'test',ctrl:null,timedOut:false,startedAt:Date.now()};
+        const sig=g.wdreamSignal();
+        /* The controller must be reachable FROM THE RUN, not just held in a local — that is
+           precisely what was missing: a signal existed nowhere Stop could get at it. */
+        if(!g.WDREAM_RUN.ctrl)return 'unreachable';
+        if(sig.signal.aborted)return 'pre-aborted';
+        g.wdreamStop();
+        const done=sig.signal.aborted;
+        sig.done();
+        return done?'aborts':'ignored';
+      }finally{g.WDREAM_RUN=keep;}
+    },expect:v=>v==='aborts',
+    antiWhat:'and the deadline is a real clamped number rather than absent',
+    anti:()=>{
+      const keep=g.WDREAM_RUN;
+      try{
+        g.WDREAM_RUN={stop:false,ctrl:null,startedAt:Date.now()};
+        const sig=g.wdreamSignal();const secs=sig.secs;sig.done();
+        return (typeof secs==='number'&&secs>=15)?1:0;
+      }finally{g.WDREAM_RUN=keep;}
+    },antiExpect:v=>v===1});
+
+  /* A spreadsheet with no undo is a spreadsheet people are afraid to let a model touch. */
+  add({id:'calc-undo-roundtrip',sub:'office',uses:['ofcUndo','ofcRedo','ofcSet'],
+    what:'an edit can be undone and redone exactly',
+    run:()=>{
+      /* Operates on a scratch workbook and restores the real one — a test that eats the
+         user's spreadsheet is worse than the bug it looks for. */
+      const keepBooks=JSON.parse(JSON.stringify(g.OFC.books||[])),keepActive=g.OFC.active;
+      const keepU=g.OFC_UNDO,keepR=g.OFC_REDO;
+      try{
+        g.OFC_UNDO=[];g.OFC_REDO=[];
+        g.ofcNewBook('gauntlet-scratch');
+        g.OFC.sel='A1';
+        g.ofcSet('A1','seven');
+        const wrote=(g.ofcSheet().cells||{}).A1;
+        g.ofcUndo();const undone=(g.ofcSheet().cells||{}).A1;
+        g.ofcRedo();const redone=(g.ofcSheet().cells||{}).A1;
+        return (wrote==='seven'&&undone===undefined&&redone==='seven')?'exact':
+          [wrote,undone,redone].join('/');
+      }finally{
+        g.OFC.books=keepBooks;g.OFC.active=keepActive;
+        g.OFC_UNDO=keepU;g.OFC_REDO=keepR;g.ofcSaveState();
+      }
+    },expect:v=>v==='exact',
+    antiWhat:'while an edit that changes nothing does not consume an undo step',
+    anti:()=>{
+      const keepBooks=JSON.parse(JSON.stringify(g.OFC.books||[])),keepActive=g.OFC.active;
+      const keepU=g.OFC_UNDO,keepR=g.OFC_REDO;
+      try{
+        g.OFC_UNDO=[];g.OFC_REDO=[];
+        g.ofcNewBook('gauntlet-scratch2');
+        g.OFC.sel='B2';
+        g.ofcSet('B2','x');
+        const after=g.OFC_UNDO.length;
+        g.ofcSet('B2','x');            // identical value, must not push a step
+        return g.OFC_UNDO.length-after;
+      }finally{
+        g.OFC.books=keepBooks;g.OFC.active=keepActive;
+        g.OFC_UNDO=keepU;g.OFC_REDO=keepR;g.ofcSaveState();
+      }
+    },antiExpect:v=>v===0});
+
+  /* go() was a flat chain of render calls: one throw skipped every panel after it AND aborted
+     the tab switch, so an unrelated panel would silently show stale content. */
+  add({id:'render-panel-boundary',sub:'resilience',uses:['panelGuard','panelFail'],
+    what:'a panel that throws is contained and says so instead of taking the tab down',
+    run:()=>{
+      const v=document.getElementById('view-models');if(!v)return 'no-view';
+      const had=v.querySelector(':scope > .panel-err');if(had)had.remove();
+      /* panelFail logs an error, and the log bus marks the app "busy" for ACTIVE_TTL. Left
+         alone, this case made the unrelated render-agentbar-idle case fail — a case must not
+         leave global state behind for the next one to trip over.
+         Mutated back rather than reassigned: ACTIVE is exported through a getter with no
+         setter, so `g.ACTIVE = copy` silently does nothing. */
+      const hadKeys=new Set(g.ACTIVE.keys());
+      let escaped=false;
+      try{g.panelGuard('models',()=>{throw new Error('gauntlet probe');});}
+      catch(_){escaped=true;}
+      finally{[...g.ACTIVE.keys()].forEach(k=>{if(!hadKeys.has(k))g.ACTIVE.delete(k);});}
+      const card=v.querySelector(':scope > .panel-err');
+      const shown=!!card;
+      if(card)card.remove();
+      return escaped?'escaped':(shown?'contained':'silent');
+    },expect:v=>v==='contained',
+    antiWhat:'while a panel that renders cleanly is left unmarked',
+    anti:()=>{
+      const v=document.getElementById('view-models');
+      const had=v.querySelector(':scope > .panel-err');if(had)had.remove();
+      g.panelGuard('models',()=>{/* healthy */});
+      const n=v.querySelectorAll(':scope > .panel-err').length;
+      return n;
+    },antiExpect:v=>v===0});
+
+  /* A dialog that does not hold focus walks the keyboard out behind its own backdrop. */
+  add({id:'a11y-modal-trap',sub:'a11y',uses:['openModal','closeModal'],
+    what:'a modal takes focus, keeps Tab inside it, and hands focus back on close',
+    run:()=>{
+      const anchor=document.getElementById('helpBtn');
+      if(!anchor)return 'no-anchor';
+      anchor.focus();
+      g.openModal('<button id="gt-a">A</button><button id="gt-b">B</button>');
+      const ov=document.querySelector('.overlay');
+      const inside=ov.contains(document.activeElement);
+      const f=[...ov.querySelectorAll('button')];
+      f[f.length-1].focus();
+      ov.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',bubbles:true}));
+      const wrapped=ov.contains(document.activeElement)&&document.activeElement===f[0];
+      g.closeModal();
+      const returned=document.activeElement===anchor;
+      return (inside&&wrapped&&returned)?'trapped':
+        ['inside='+inside,'wrap='+wrapped,'return='+returned].join(',');
+    },expect:v=>v==='trapped',
+    antiWhat:'and closing genuinely removes the overlay rather than hiding it',
+    anti:()=>{
+      g.openModal('<p>x</p>');g.closeModal();
+      return document.querySelectorAll('.overlay').length;
+    },antiExpect:v=>v===0});
+
   add({id:'render-unique-ids',sub:'rendering',uses:['esc'],
     what:'no duplicate DOM id (the second one is unreachable via $())',
     run:()=>{const seen={},d=[];document.querySelectorAll('[id]').forEach(e=>{
@@ -22359,6 +22496,22 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'signal-unreachable',export:'wdreamSignal',
+   why:'a Dreaming call becomes uncancellable again (the 188s hang)',
+   broken:()=>()=>({signal:new AbortController().signal,secs:150,done(){}})},
+  {id:'modal-notrap',export:'openModal',
+   why:'a dialog stops holding focus and Tab walks out behind the backdrop',
+   broken:()=>html=>{const o=document.createElement('div');o.className='overlay';
+     o.innerHTML='<div class="modal">'+html+'</div>';document.body.appendChild(o);}},
+  {id:'guard-rethrow',export:'panelGuard',
+   why:'a panel error escapes and takes the whole tab switch with it',
+   broken:()=>(name,fn)=>fn()},
+  {id:'undo-always-pushes',export:'ofcSet',
+   why:'undo stops discriminating and a no-op edit eats a step',
+   broken:()=>function(key,raw){const sh=window.__gb.ofcSheet();if(!sh)return;
+     window.__gb.ofcSnap();sh.cells=sh.cells||{};
+     if(raw===''||raw==null)delete sh.cells[key];else sh.cells[key]=raw;
+     window.__gb.ofcSaveState();window.__gb.ofcRender();}},
   {id:'seed-sprawl',export:'wdreamSeedOps',why:'sketches drift outside the default camera again',
    broken:()=>()=>[{op:'spawn',kind:'mesh',sub:'box',name:'far',position:[400,0.5,400],
      rotation:[0,0,0],scale:[1,1,1],color:'#888888'}]},
@@ -28213,6 +28366,71 @@ const OFC_DEFAULTS={books:[],active:'',sel:'A1',rows:40,cols:12};
 let OFC=Object.assign({},OFC_DEFAULTS,store.get('ofc',{}));
 const ofcSaveState=()=>store.set('ofc',OFC);
 function ofcBook(){return (OFC.books||[]).find(b=>b.id===OFC.active)||null;}
+
+/* ── Undo / redo ────────────────────────────────────────────────────────────
+   Snapshots of the sheet rather than inverse commands. A sheet is a small JSON object, and
+   the four things that mutate it (a cell, a style, a number format, a bulk write) would each
+   need their own inverse — a snapshot is one code path that cannot disagree with itself.
+   Deliberately NOT persisted: history belongs to the session, and writing 80 sheet copies
+   into localStorage is exactly the pressure the storage banner exists to warn about.
+   Selection moves are not undoable, because undoing a cursor move is not what anyone means. */
+let OFC_UNDO=[],OFC_REDO=[];
+const OFC_HIST_MAX=80;
+function ofcSnapshot(){
+  const b=ofcBook(),sh=ofcSheet();
+  if(!b||!sh)return null;
+  return{b:b.id,s:b.active,sel:OFC.sel,rows:OFC.rows,cols:OFC.cols,
+    cells:JSON.parse(JSON.stringify(sh.cells||{})),
+    fmt:JSON.parse(JSON.stringify(sh.fmt||{})),
+    style:JSON.parse(JSON.stringify(sh.style||{}))};
+}
+/* Called BEFORE a mutation — the point of the snapshot is the state being left behind. */
+function ofcSnap(){
+  const snap=ofcSnapshot();
+  if(!snap)return;
+  OFC_UNDO.push(snap);
+  if(OFC_UNDO.length>OFC_HIST_MAX)OFC_UNDO.shift();
+  OFC_REDO=[];              // a new edit forks the timeline
+  ofcHistButtons();
+}
+function ofcRestore(snap){
+  if(!snap)return false;
+  const b=(OFC.books||[]).find(x=>x.id===snap.b);
+  if(!b)return false;                       // the workbook was deleted; nothing to restore into
+  OFC.active=b.id;
+  b.active=Math.min(snap.s,b.sheets.length-1);
+  const sh=b.sheets[b.active];
+  if(!sh)return false;
+  sh.cells=JSON.parse(JSON.stringify(snap.cells));
+  sh.fmt=JSON.parse(JSON.stringify(snap.fmt));
+  sh.style=JSON.parse(JSON.stringify(snap.style));
+  OFC.sel=snap.sel;OFC.rows=snap.rows;OFC.cols=snap.cols;
+  ofcSaveState();ofcRender();ofcHistButtons();
+  return true;
+}
+function ofcUndo(){
+  if(!OFC_UNDO.length)return toast('Nothing to undo',1800);
+  const now=ofcSnapshot();
+  const prev=OFC_UNDO.pop();
+  if(!ofcRestore(prev))return toast('That edit belonged to a workbook that is gone',2600);
+  if(now)OFC_REDO.push(now);
+  ofcHistButtons();
+}
+function ofcRedo(){
+  if(!OFC_REDO.length)return toast('Nothing to redo',1800);
+  const now=ofcSnapshot();
+  const next=OFC_REDO.pop();
+  if(!ofcRestore(next))return toast('That edit belonged to a workbook that is gone',2600);
+  if(now)OFC_UNDO.push(now);
+  ofcHistButtons();
+}
+/* A disabled button is the only honest signal that there is nothing left to undo. */
+function ofcHistButtons(){
+  const u=document.querySelector('#ofc-wrap [data-ofc="undo"]');
+  const r=document.querySelector('#ofc-wrap [data-ofc="redo"]');
+  if(u){u.disabled=!OFC_UNDO.length;u.title=OFC_UNDO.length?`Undo ${OFC_UNDO.length} step${OFC_UNDO.length===1?'':'s'} (Ctrl/Cmd+Z)`:'Nothing to undo';}
+  if(r){r.disabled=!OFC_REDO.length;r.title=OFC_REDO.length?`Redo ${OFC_REDO.length} (Ctrl/Cmd+Shift+Z)`:'Nothing to redo';}
+}
 function ofcSheet(){const b=ofcBook();if(!b)return null;return b.sheets[b.active]||b.sheets[0];}
 function ofcNewBook(name){
   const b={id:uid(),name:name||('Workbook '+((OFC.books||[]).length+1)),active:0,
@@ -28276,17 +28494,25 @@ function ofcRender(){ofcRenderGrid();ofcRenderBar();ofcSendMenu();}
 function ofcSet(key,raw){
   const sh=ofcSheet();if(!sh)return;
   sh.cells=sh.cells||{};
+  /* A no-op edit (Enter on an unchanged cell, Delete on an empty one) must not eat an undo
+     step, or the button count stops meaning anything. */
+  const before=sh.cells[key];
+  const after=(raw===''||raw==null)?undefined:raw;
+  if(before===after)return;
+  ofcSnap();
   if(raw===''||raw==null)delete sh.cells[key];else sh.cells[key]=raw;
   ofcSaveState();ofcRender();
 }
 function ofcStyleSel(patch){
   const sh=ofcSheet();if(!sh)return;
+  ofcSnap();
   sh.style=sh.style||{};
   sh.style[OFC.sel]=Object.assign({},sh.style[OFC.sel],patch);
   ofcSaveState();ofcRender();
 }
 function ofcFmtSel(f){
   const sh=ofcSheet();if(!sh)return;
+  ofcSnap();
   sh.fmt=sh.fmt||{};
   if(f)sh.fmt[OFC.sel]=f;else delete sh.fmt[OFC.sel];
   ofcSaveState();ofcRender();
@@ -28345,6 +28571,7 @@ function ofcExport(fmt){
 }
 function ofcImportCsv(text){
   const sh=ofcSheet();if(!sh)return;
+  ofcSnap();
   /* A quoted CSV field can contain commas and newlines, so splitting on ',' would shred the
      data. This walks characters and tracks quote state instead. */
   const rows=[];let row=[],cur='',q=false;
@@ -28401,6 +28628,9 @@ async function ofcAI(){
     try{j=JSON.parse(String(acc.content).replace(/```(?:json)?/g,'').trim());}
     catch(_){j=extractJSON?extractJSON(acc.content):null;}
     if(!j||!j.cells)throw new Error('the model did not return usable cells');
+    /* Snapshot after the model answered, not before the request: a failed call should not
+       leave a phantom undo step for an edit that never happened. */
+    ofcSnap();
     if(act==='build')sh.cells={};
     Object.entries(j.cells).forEach(([k,v])=>{
       if(ofcRefParts(k)&&v!=='')sh.cells[k]=String(v);
@@ -28420,7 +28650,7 @@ function ofcInit(){
   const host=$('#ofc-grid');if(!host||ofcInit._done)return;ofcInit._done=true;
   if(!(OFC.books||[]).length)ofcNewBook();
   if(!ofcBook())OFC.active=OFC.books[0].id;
-  ofcRender();
+  ofcRender();ofcHistButtons();
 
   host.addEventListener('click',e=>{
     const td=e.target.closest('.ofc-c');if(!td)return;
@@ -28448,6 +28678,9 @@ function ofcInit(){
     const map={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]};
     if(map[e.key]){e.preventDefault();ofcMove(...map[e.key]);}
     if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();ofcSet(OFC.sel,'');}
+    if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){
+      e.preventDefault();e.shiftKey?ofcRedo():ofcUndo();}
+    if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='y'){e.preventDefault();ofcRedo();}
   });
   $$('#ofc-wrap [data-ofc]').forEach(b=>b.onclick=()=>{
     const a=b.dataset.ofc;
@@ -28458,7 +28691,9 @@ function ofcInit(){
     if(a==='right')ofcStyleSel({a:'right'});
     if(a==='addrow'){OFC.rows++;ofcSaveState();ofcRender();}
     if(a==='addcol'){OFC.cols++;ofcSaveState();ofcRender();}
-    if(a==='clear'){if(confirm('Clear every cell in this sheet?')){ofcSheet().cells={};ofcSaveState();ofcRender();}}
+    if(a==='clear'){if(confirm('Clear every cell in this sheet?')){ofcSnap();ofcSheet().cells={};ofcSaveState();ofcRender();}}
+    if(a==='undo')ofcUndo();
+    if(a==='redo')ofcRedo();
   });
   const bgi=$('#ofc-bg');if(bgi)bgi.oninput=()=>ofcStyleSel({bg:bgi.value});
   const fgi=$('#ofc-fg');if(fgi)fgi.oninput=()=>ofcStyleSel({fg:fgi.value});
@@ -33756,16 +33991,46 @@ function importHistory(){
     }catch(e){toast('Invalid file');}};
     rd.readAsText(f);};
   i.click();}
+/* Elements a keyboard can actually land on. offsetParent skips anything display:none, which
+   matters because these modals are built from templates with conditional sections. */
+const FOCUSABLE='a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),'+
+  'textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+function focusablesIn(root){
+  return [...root.querySelectorAll(FOCUSABLE)].filter(el=>el.offsetParent!==null||el===document.activeElement);
+}
+let MODAL_RETURN=null;
 function openModal(html){
   /* Replace rather than stack. Several panels here (onboarding, the section manager) re-open
      themselves on every click to re-render, and appending each time buried the page under
      dead overlays that only the topmost Close could clear. */
   document.querySelectorAll('.overlay').forEach(x=>x.remove());
+  /* Remember where focus came from BEFORE the overlay exists, so closing can hand it back
+     rather than dumping the user at the top of the document. */
+  MODAL_RETURN=document.activeElement;
   const o=document.createElement('div');o.className='overlay';
-  o.innerHTML=`<div class="modal">${html}<div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn ghost" data-close>Close</button></div></div>`;
-  o.onclick=e=>{if(e.target===o||e.target.hasAttribute('data-close'))o.remove();};
-  document.body.appendChild(o);}
-function closeModal(){const o=document.querySelector('.overlay');if(o)o.remove();}
+  o.innerHTML=`<div class="modal" role="dialog" aria-modal="true" tabindex="-1">${html}<div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn ghost" data-close>Close</button></div></div>`;
+  o.onclick=e=>{if(e.target===o||e.target.hasAttribute('data-close'))closeModal();};
+  /* Without containment, Tab walks straight out of the dialog and onto the page behind it,
+     where the focus ring is invisible under the backdrop — the user is typing somewhere they
+     cannot see. Escape is the expected way out of any dialog. */
+  o.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){e.preventDefault();closeModal();return;}
+    if(e.key!=='Tab')return;
+    const f=focusablesIn(o);
+    if(!f.length)return;
+    const first=f[0],last=f[f.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+  });
+  document.body.appendChild(o);
+  const f=focusablesIn(o);
+  (f[0]||o.querySelector('.modal')).focus();
+}
+function closeModal(){
+  const o=document.querySelector('.overlay');if(o)o.remove();
+  if(MODAL_RETURN&&document.contains(MODAL_RETURN)&&MODAL_RETURN.focus)MODAL_RETURN.focus();
+  MODAL_RETURN=null;
+}
 
 /* ===================== nav / boot ===================== */
 /* ═══════════════════ UI CUSTOMISATION ═══════════════════
@@ -35141,12 +35406,19 @@ function wosOpen(appId,opts){
   w.closed=false;w.min=false;w.z=++WOS.z;
   if(opts.arg)w.arg=opts.arg;
   saveWos();wosRender();
+  wosFocusEl(w.id);
   return w;
 }
 function wosClose(id){
   const w=(WOS.wins||[]).find(x=>x.id===id);if(!w)return;
   sfx('close');
   w.closed=true;saveWos();wosRender();
+}
+/* Without this the window appears but the keyboard is still wherever it was, so Escape and
+   Tab act on the page behind the desktop. */
+function wosFocusEl(id){
+  setTimeout(()=>{const el=document.querySelector('.wos-win[data-w="'+id+'"]');
+    if(el&&el.focus)el.focus({preventScroll:true});},30);
 }
 function wosFocus(id){
   const w=(WOS.wins||[]).find(x=>x.id===id);if(!w)return;
@@ -35282,7 +35554,8 @@ function wosRender(){
     const a=wosApp(w.app);
     const style=w.max?'left:0;top:0;width:100%;height:100%'
       :`left:${w.x}px;top:${w.y}px;width:${w.w}px;height:${w.h}px`;
-    return `<div class="wos-win${w.max?' max':''}" data-w="${esc(w.id)}" style="${style};z-index:${w.z}">
+    return `<div class="wos-win${w.max?' max':''}" data-w="${esc(w.id)}" style="${style};z-index:${w.z}"
+      role="dialog" tabindex="-1" aria-label="${esc(a?a.name:'Missing app')}">
       <div class="wos-bar" data-wbar="${esc(w.id)}">
         <span class="wos-dots">
           <button class="wd close" data-wclose="${esc(w.id)}" title="Close"></button>
@@ -36026,6 +36299,17 @@ function wosChannelInit(){
 function wosInit(){
   if(wosInit._done)return;wosInit._done=true;
   wosChannelInit();
+  /* Windows were mouse-only: no way to close one from the keyboard, and nothing announced them
+     as anything. They are deliberately NOT focus-trapped — a desktop window is not modal, and
+     trapping Tab inside one would strand a keyboard user on their own desktop. */
+  document.addEventListener('keydown',e=>{
+    if(e.key!=='Escape')return;
+    const v=$('.view.active');if(!v||v.id!=='view-webos')return;
+    if(/^(INPUT|TEXTAREA|SELECT)$/.test((e.target&&e.target.tagName)||''))return;
+    const win=e.target&&e.target.closest&&e.target.closest('.wos-win');
+    const id=win?win.dataset.w:(((WOS.wins||[]).slice().sort((a,b)=>(b.z||0)-(a.z||0))[0]||{}).id);
+    if(id){e.preventDefault();wosClose(id);}
+  });
   if(typeof LOG_LISTENERS!=='undefined'&&Array.isArray(LOG_LISTENERS))LOG_LISTENERS.push(wosFromLog);
   if(!WOS_STUDIO.files['index.html'])WOS_STUDIO.files['index.html']=WOS_SAMPLE;
   const root=$('#wos-root');if(!root)return;
@@ -36687,6 +36971,92 @@ async function persistInit(){
     setInterval(()=>{if(PERSIST.auto)persistBackupNow();},Math.max(5,PERSIST.everyMin||15)*60000);
     window.addEventListener('beforeunload',()=>{ /* best effort, no await available here */ });
   }
+}
+
+/* ═══════════════════ INSTALL & OFFLINE ═══════════════════
+   This app is one HTML file, and it must keep working as one — opened straight from disk, with
+   no server. A service worker cannot exist in that world: registration needs an http(s) origin,
+   and it needs a REAL script file (a blob: URL is rejected outright — measured, not assumed).
+
+   So offline support is strictly an enhancement of the served copy. When sw.js is missing, or
+   the page came from file://, nothing here fails — it reports honestly that offline is not
+   available and why. */
+const PWA={reg:null,state:'unknown',why:'',prompt:null};
+async function pwaInit(){
+  if(!('serviceWorker' in navigator)){PWA.state='unsupported';PWA.why='This browser has no service worker support.';return;}
+  if(!/^https?:$/.test(location.protocol)){
+    PWA.state='file';
+    PWA.why='Opened as a local file, so the browser will not allow offline caching. Serve it over http(s) — or use the backup folder above, which works either way.';
+    return;
+  }
+  /* Probe before registering: a 404 would otherwise log a console error on every single boot of
+     anyone running the single file from their own static server without sw.js next to it. */
+  let ok=false;
+  try{const r=await fetch('./sw.js',{method:'GET',cache:'no-store'});ok=r.ok;}catch(_){ok=false;}
+  if(!ok){PWA.state='nosw';PWA.why='No sw.js next to this page, so there is nothing to install. It ships with the deployed copy.';return;}
+  try{
+    PWA.reg=await navigator.serviceWorker.register('./sw.js',{scope:'./'});
+    PWA.state='ready';
+    if(!document.querySelector('link[rel="manifest"]')){
+      const l=document.createElement('link');l.rel='manifest';l.href='./manifest.webmanifest';
+      document.head.appendChild(l);
+    }
+  }catch(e){PWA.state='failed';PWA.why=e.message;}
+  if($('#pwa-panel')&&$('#view-settings')&&$('#view-settings').classList.contains('active'))renderPwa();
+}
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();PWA.prompt=e;
+  if($('#pwa-panel'))renderPwa();
+});
+async function pwaInstall(){
+  if(!PWA.prompt)return toast('Your browser has not offered an install yet',3000);
+  PWA.prompt.prompt();
+  const r=await PWA.prompt.userChoice.catch(()=>null);
+  PWA.prompt=null;
+  toast(r&&r.outcome==='accepted'?'Installed':'Install dismissed',2400);
+  renderPwa();
+}
+/* Offline caching is the one feature here that can make a NEW deploy look like it did not land,
+   so the way out has to be one button and not a support article. */
+async function pwaReset(){
+  try{
+    const regs=await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map(r=>r.unregister()));
+    const ks=await caches.keys();
+    await Promise.all(ks.filter(k=>/^glassbox-/.test(k)).map(k=>caches.delete(k)));
+    PWA.reg=null;PWA.state='nosw';PWA.why='Offline copy removed. Reload to start fresh.';
+    toast('Offline copy cleared — reload for the newest version',3200);
+    renderPwa();
+  }catch(e){toast('Could not clear: '+e.message,3200);}
+}
+function renderPwa(){
+  const host=$('#pwa-panel');if(!host)return;
+  const standalone=matchMedia('(display-mode: standalone)').matches;
+  const label={
+    ready:'<b style="color:var(--good)">✓ Offline ready.</b> The app shell is cached, so it opens without a connection. Your work was already local; this makes the app itself local too.',
+    file:'<b>Not available here.</b>',
+    nosw:'<b>Not installed.</b>',
+    failed:'<b style="color:var(--bad)">✗ Registration failed.</b>',
+    unsupported:'<b>Not supported.</b>',
+    unknown:'Checking…',
+  }[PWA.state]||'Checking…';
+  host.innerHTML=`
+    <div class="card">
+      <h3>📲 Install it, and keep it working offline</h3>
+      <p class="help">${label} ${PWA.why?esc(PWA.why):''}</p>
+      ${standalone?'<p class="help"><b style="color:var(--good)">Running as an installed app.</b></p>':''}
+      <p class="help">Updates are fetched from the network first and the cache is only used when
+        there is no connection — so an offline copy can never leave you looking at an old version
+        of the app while you are online.</p>
+      <div class="row" style="gap:8px">
+        <button class="btn" id="pwa-install"${PWA.prompt?'':' disabled'}>${PWA.prompt?'Install app':'Install (browser has not offered yet)'}</button>
+        <button class="btn ghost" id="pwa-reset">Clear the offline copy</button>
+      </div>
+      <p class="help" style="margin-top:8px">Nothing you type is cached — only the app's own files.
+        Model calls go straight to your provider and are never stored by the offline layer.</p>
+    </div>`;
+  const i=$('#pwa-install');if(i)i.onclick=pwaInstall;
+  const r=$('#pwa-reset');if(r)r.onclick=pwaReset;
 }
 
 function renderPersist(){
@@ -38244,12 +38614,36 @@ function renderWhy(){
    The budget is a hard stop, not a hint. It is checked before every call and the run ends
    cleanly with whatever was built rather than silently overspending. */
 const WDREAM_DEFAULTS={
-  dreamer:'',builder:'',budget:0.25,pace:110,ops:60,narrate:true,
+  dreamer:'',builder:'',budget:0.25,pace:110,ops:60,narrate:true,timeout:150,
   style:'stylised low-poly',lastPlan:null,history:[],
 };
 let WDREAM=Object.assign({},WDREAM_DEFAULTS,store.get('ed3dream',{}));
 const saveWdream=()=>store.set('ed3dream',WDREAM);
-let WDREAM_RUN=null;                       // {stop:bool} — the cancel handle
+let WDREAM_RUN=null;                       // {stop:bool,ctrl:AbortController} — the cancel handle
+
+/* Neither Dreaming call passed a signal, so `stop` only ever took effect BETWEEN objects and a
+   request already in flight could not be cancelled at all. Measured: a valid-but-dead model id
+   hung for 188s with no error and no feedback past "Working out how to build it…", and because
+   the await never returned, the `finally` that clears WDREAM_RUN never ran — so every later run
+   was refused by the already-running guard until the page was reloaded. One controller per call,
+   registered on the run so Stop can reach it, plus a deadline so a silent provider ends as a
+   real error rather than never ending. */
+function wdreamSignal(){
+  const ctrl=new AbortController();
+  const secs=Math.max(15,+WDREAM.timeout||150);
+  const timer=setTimeout(()=>{if(WDREAM_RUN)WDREAM_RUN.timedOut=true;ctrl.abort();},secs*1000);
+  if(WDREAM_RUN)WDREAM_RUN.ctrl=ctrl;
+  return{signal:ctrl.signal,secs,done(){clearTimeout(timer);
+    if(WDREAM_RUN&&WDREAM_RUN.ctrl===ctrl)WDREAM_RUN.ctrl=null;}};
+}
+/* An abort reads as a generic "Failed to fetch" otherwise, which sends the user to check their
+   key for something that was actually their own Stop, or a provider that went quiet. */
+function wdreamAbortErr(e,g,what){
+  const n=e&&e.name;
+  if(n==='AbortError'||n==='TimeoutError')
+    return new Error(WDREAM_RUN&&WDREAM_RUN.timedOut?'no answer within '+g.secs+'s':'stopped');
+  return e;
+}
 
 const WDREAM_OPS_SCHEMA={type:'json_schema',json_schema:{name:'ops',strict:true,schema:{
   type:'object',additionalProperties:false,
@@ -38288,11 +38682,15 @@ async function wdreamPlan(brief,onTick){
     'Be concrete and spatial. "A forest" is useless; "twelve conifers of varying height ringing '+
     'a clearing 14m across, tallest at the north edge so the low sun rakes through them" is a '+
     'plan. Keep it under 300 words. Prose, not JSON.';
-  const acc=await streamComplete({model:dreamer,maxTokens:1400,
-    messages:[{role:'system',content:sys+skillBlockFor('threeui')},
-      {role:'user',content:'STYLE: '+(WDREAM.style||'stylised low-poly')+'\n\nBRIEF: '+brief}]},
-    onTick,null,'dream-plan');
-  return{text:String(acc.content||'').trim(),reasoning:acc.reasoning||'',cost:acc.cost||0};
+  const g=wdreamSignal();
+  try{
+    const acc=await streamComplete({model:dreamer,maxTokens:1400,
+      messages:[{role:'system',content:sys+skillBlockFor('threeui')},
+        {role:'user',content:'STYLE: '+(WDREAM.style||'stylised low-poly')+'\n\nBRIEF: '+brief}]},
+      onTick,g.signal,'dream-plan');
+    return{text:String(acc.content||'').trim(),reasoning:acc.reasoning||'',cost:acc.cost||0};
+  }catch(e){throw wdreamAbortErr(e,g,'planner');}
+  finally{g.done();}
 }
 async function wdreamOps(brief,plan,existing,onTick){
   const{builder}=wdreamModels();
@@ -38319,11 +38717,16 @@ async function wdreamOps(brief,plan,existing,onTick){
     '-10 and 10, nothing taller than about 8. The editor camera sits at (5,4,7) looking at the '+
     'origin, so a scene built larger than that is off screen and reads as a failed build.\n'+
     '- At most '+(+WDREAM.ops||60)+' ops.';
-  const acc=await streamComplete({model:builder,maxTokens:6000,response_format:WDREAM_OPS_SCHEMA,
-    messages:[{role:'system',content:sys},
-      {role:'user',content:'STYLE: '+(WDREAM.style||'')+'\nBRIEF: '+brief+'\n\nPLAN:\n'+plan+
-        (existing?'\n\nALREADY IN THE SCENE (do not duplicate):\n'+existing:'')}]},
-    onTick,null,'dream-ops');
+  const g=wdreamSignal();
+  let acc;
+  try{
+    acc=await streamComplete({model:builder,maxTokens:6000,response_format:WDREAM_OPS_SCHEMA,
+      messages:[{role:'system',content:sys},
+        {role:'user',content:'STYLE: '+(WDREAM.style||'')+'\nBRIEF: '+brief+'\n\nPLAN:\n'+plan+
+          (existing?'\n\nALREADY IN THE SCENE (do not duplicate):\n'+existing:'')}]},
+      onTick,g.signal,'dream-ops');
+  }catch(e){throw wdreamAbortErr(e,g,'builder');}
+  finally{g.done();}
   let j=null;
   try{j=JSON.parse(acc.content);}catch(_){try{j=extractJSON(acc.content);}catch(__){}}
   return{ops:((j&&j.ops)||[]).slice(0,+WDREAM.ops||60),cost:acc.cost||0};
@@ -38501,11 +38904,18 @@ function wdreamForecast(budget){
 
 async function wdreamBuild(brief,opts){
   opts=opts||{};
-  if(WDREAM_RUN)return toast('A dream is already running',2200);
+  if(WDREAM_RUN){
+    /* Before the calls were abortable a wedged run could only be cleared by reloading the page.
+       Both halves are fixed now, but a run that has outlived twice its own deadline is stuck by
+       definition, so recover rather than refusing the user forever. */
+    const lim=Math.max(15,+WDREAM.timeout||150)*2000;
+    if(Date.now()-(WDREAM_RUN.startedAt||0)>lim){wdreamStop();WDREAM_RUN=null;}
+    else return toast('A dream is already running — press Stop to cancel it',2600);
+  }
   const say=opts.onStage||(()=>{});
   const cap=+WDREAM.budget||0;
   const tier=opts.forceTier?WDREAM_TIERS.find(t=>t.id===opts.forceTier):wdreamTier(cap);
-  WDREAM_RUN={stop:false,cost:0,placed:0,tier:tier.id};
+  WDREAM_RUN={stop:false,cost:0,placed:0,tier:tier.id,ctrl:null,timedOut:false,startedAt:Date.now()};
   /* Pace: `+v||110` treats an explicit 0 as absent, which silently made "instant" 110ms.
      Read it as a number and only fall back when it genuinely is not one. */
   const pace=(()=>{const v=+WDREAM.pace;return isFinite(v)&&v>=0?v:110;})();
@@ -38566,6 +38976,7 @@ async function wdreamBuild(brief,opts){
         plan=r.text;
         say('plan',r.text,r);
       }catch(e){
+        if(WDREAM_RUN.stop)throw e;   // their Stop, not a broken planner
         say('tick','The planner failed ('+e.message+') — building without a plan.');
       }
     }else{
@@ -38583,6 +38994,7 @@ async function wdreamBuild(brief,opts){
       WDREAM_RUN.cost+=built.cost;
       ops=built.ops.map(wdreamClean).filter(Boolean);
     }catch(e){
+      if(WDREAM_RUN.stop)throw e;
       say('tick','The builder failed ('+e.message+') — falling back to a local sketch.');
     }
     /* If the model gave nothing usable, sketch rather than fail. A user who paid for a run and
@@ -38627,7 +39039,14 @@ async function wdreamBuild(brief,opts){
     say('error',e.message);sfx('fail');throw e;
   }finally{WDREAM_RUN=null;}
 }
-function wdreamStop(){if(WDREAM_RUN){WDREAM_RUN.stop=true;toast('Stopping after this object…',2200);}}
+function wdreamStop(){
+  if(!WDREAM_RUN)return;
+  WDREAM_RUN.stop=true;
+  /* The flag alone only ended the run between objects; a call already in flight kept going and
+     held the run open. Aborting it is what makes Stop mean stop. */
+  if(WDREAM_RUN.ctrl){try{WDREAM_RUN.ctrl.abort();}catch(_){}}
+  toast('Stopping…',2200);
+}
 
 function renderWdream(){
   const host=$('#dream-panel');if(!host)return;
@@ -39680,6 +40099,42 @@ function applyPopRoute(){
   go(m[1]);
   return true;
 }
+/* ── Per-panel error boundaries ─────────────────────────────────────────────
+   go() was a flat chain of unguarded render calls, so one panel throwing did not just break
+   that panel — it skipped every render call after it in the same chain, leaving unrelated
+   panels silently stale. Worse, the throw escaped go() itself, so the tab switch never
+   finished. Each panel now fails alone and says so where the user is actually looking. */
+function panelGuard(name,fn){
+  try{fn();}catch(e){panelFail(name,e);}
+}
+function panelFail(name,e){
+  const msg=String((e&&e.message)||e||'unknown error');
+  console.error('[panel:'+name+']',e);
+  try{logEvent('error',{what:'panel:'+name,error:msg});}catch(_){}
+  const view=document.getElementById('view-'+name);
+  if(!view)return;                      // a panel with no section of its own; the log has it
+  let box=view.querySelector(':scope > .panel-err');
+  if(!box){box=document.createElement('div');box.className='panel-err';view.prepend(box);}
+  box.innerHTML='<b>This panel failed to draw</b>'+
+    '<code>'+esc(msg)+'</code>'+
+    '<div class="row"><button class="btn ghost" data-panelretry="'+esc(name)+'">Try again</button>'+
+    '<button class="btn ghost" data-panelcopy="'+esc(name)+'">Copy details</button></div>';
+  box._err=e;
+}
+/* Retry re-runs the whole tab, which is the only honest "try again" — a panel's render is not
+   independently re-entrant, and pretending otherwise would show a half-drawn tab. */
+document.addEventListener('click',e=>{
+  const r=e.target.closest('[data-panelretry]');
+  if(r){const v=r.dataset.panelretry;
+    const box=r.closest('.panel-err');if(box)box.remove();
+    go(v);return;}
+  const c=e.target.closest('[data-panelcopy]');
+  if(c){const box=c.closest('.panel-err');
+    const err=box&&box._err;
+    const txt='panel: '+c.dataset.panelcopy+'\n'+((err&&err.stack)||(err&&err.message)||'no stack');
+    navigator.clipboard.writeText(txt).then(()=>toast('Details copied',2000),
+      ()=>toast('Could not copy',2000));}
+});
 function go(view){
   /* A plugin tab has no built-in section; mount it on the way in. */
   const _pl=(typeof PLUG!=='undefined'&&PLUG.items||[]).find(p=>p.id===view);
@@ -39689,49 +40144,70 @@ function go(view){
     if(alt===view)return;
     toast(`“${view}” is switched off in Customise`,2600);view=alt;
   }
-  $$('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===view));
+  $$('.tab').forEach(t=>{
+    const on=t.dataset.view===view;
+    t.classList.toggle('active',on);
+    /* A screen reader gets "selected" from aria-selected, not from a CSS class. The section
+       manager button lives in this bar too but is a button, not a tab, so it is left alone. */
+    if(t.dataset.view){t.setAttribute('role','tab');t.setAttribute('aria-selected',on?'true':'false');
+      t.setAttribute('aria-controls','view-'+t.dataset.view);t.tabIndex=on?0:-1;}
+  });
   /* With this many tabs the active one is frequently scrolled out of sight, which makes the
      app feel like it did not respond to the click. */
   const _at=$$('.tab').find(t=>t.dataset.view===view);
   if(_at&&_at.scrollIntoView)_at.scrollIntoView({block:'nearest',inline:'nearest'});
   tabEdges();
-  $$('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+view));
-  if(view==='models')renderModels();
-  if(view==='modelhub')renderModelHub();
-  if(view==='office')officeRender();
-  if(view==='metrics')renderMetrics();
-  if(view==='pane'){renderPane();renderPaneLive();}
-  if(view==='terminal')renderTerm();
-  if(view==='assistant')renderAsst();
-  if(view==='brain'){renderBrainDomains();renderBrainConsole();renderTraces();}
-  if(view==='settings')renderProjects();
-  if(view==='graphs')renderGraphs();
-  if(view==='factory')renderFactory();
-  if(view==='viz')vizRender('#viz-canvas',VIZ.source);
-  if(view==='local')renderLocal();
-  if(view==='gen'){feedbackInit();renderGenStudio();}
-  if(view==='design'){renderDesign();const l=$('#ds-herolbl');if(l)l.textContent=DESIGN.gen+' · seed '+DESIGN.genSeed;}
-  if(view==='guards')renderGuards();
-  if(view==='mission'){renderMonitor();renderComms();renderRunDiff();refreshSessions().then(renderSessions);}
-  if(view==='creations')renderCreations();
-  if(view==='bots'){renderBots();renderBotFeed();renderCallInvite();renderNet();}
-  if(view==='vo'){renderVoGames();voSync();voThink();voResize();voFrame(0);renderVoRoster();
-    renderSteer();renderOfficeDesign();renderOutputs();}
+  $$('.view').forEach(v=>{
+    v.classList.toggle('active',v.id==='view-'+view);
+    if(!v.getAttribute('role'))v.setAttribute('role','tabpanel');
+  });
+  const _av=document.getElementById('view-'+view);
+  if(_av&&!_av.getAttribute('aria-label')){
+    const _t=$$('.tab').find(t=>t.dataset.view===view);
+    if(_t)_av.setAttribute('aria-label',(_t.textContent||view).trim());
+  }
+  /* A stale error card from a previous visit would claim the panel is still broken. */
+  const _pv=document.getElementById('view-'+view);
+  if(_pv){const _pe=_pv.querySelector(':scope > .panel-err');if(_pe)_pe.remove();}
+  if(view==='models')panelGuard(view,()=>renderModels());
+  if(view==='modelhub')panelGuard(view,()=>renderModelHub());
+  if(view==='office')panelGuard(view,()=>officeRender());
+  if(view==='metrics')panelGuard(view,()=>renderMetrics());
+  if(view==='pane')panelGuard(view,()=>{renderPane();renderPaneLive();});
+  if(view==='terminal')panelGuard(view,()=>renderTerm());
+  if(view==='assistant')panelGuard(view,()=>renderAsst());
+  if(view==='brain')panelGuard(view,()=>{renderBrainDomains();renderBrainConsole();renderTraces();});
+  if(view==='settings')panelGuard(view,()=>renderProjects());
+  if(view==='graphs')panelGuard(view,()=>renderGraphs());
+  if(view==='factory')panelGuard(view,()=>renderFactory());
+  if(view==='viz')panelGuard(view,()=>vizRender('#viz-canvas',VIZ.source));
+  if(view==='local')panelGuard(view,()=>renderLocal());
+  if(view==='gen')panelGuard(view,()=>{feedbackInit();renderGenStudio();});
+  if(view==='design')panelGuard(view,()=>{renderDesign();const l=$('#ds-herolbl');if(l)l.textContent=DESIGN.gen+' · seed '+DESIGN.genSeed;});
+  if(view==='guards')panelGuard(view,()=>renderGuards());
+  /* refreshSessions is async, so its rejection cannot reach a try/catch here — it needs its
+     own catch or a dead bridge would surface as an unhandled rejection and nothing on screen. */
+  if(view==='mission')panelGuard(view,()=>{renderMonitor();renderComms();renderRunDiff();
+    refreshSessions().then(renderSessions).catch(e=>panelFail('mission',e));});
+  if(view==='creations')panelGuard(view,()=>renderCreations());
+  if(view==='bots')panelGuard(view,()=>{renderBots();renderBotFeed();renderCallInvite();renderNet();});
+  if(view==='vo')panelGuard(view,()=>{renderVoGames();voSync();voThink();voResize();voFrame(0);renderVoRoster();
+    renderSteer();renderOfficeDesign();renderOutputs();});
   else if(VO.on)voStop();      // do not burn a rAF loop on a tab nobody is looking at
-  if(view==='library'){renderSkillSurfaces();renderGhImport();renderPlugins();}
-  if(view==='library')renderOcrDocs();
-  if(view==='study')renderStudy();
-  if(view==='ops')renderStyleUI();
-  if(view==='three'){renderAssets();renderWdream();renderEd3Assets();}
-  if(view==='forge'&&$('#sub-brain')&&$('#sub-brain').classList.contains('on'))renderBrainMap();
-  if(view==='history')renderHistory();
-  if(view==='transplant')fillTransplantSources();
-  if(view==='studio'){renderStudio();renderStudioX();connInit();if(!$('#st-frame').srcdoc)runPreview();}
-  if(view==='connect'){connInit();renderConnections();}
-  if(view==='awards'){connInit();renderAwards();}
-  if(view==='settings'){renderCrossDevice();renderPersist();renderSfx();renderWhy();}
-  if(view==='help')renderHelp();
-  if(view==='webos'){wosInit();wosRender();wosFillFolders();wosClockTick();}
+  if(view==='library')panelGuard(view,()=>{renderSkillSurfaces();renderGhImport();renderPlugins();});
+  if(view==='library')panelGuard(view,()=>renderOcrDocs());
+  if(view==='study')panelGuard(view,()=>renderStudy());
+  if(view==='ops')panelGuard(view,()=>renderStyleUI());
+  if(view==='three')panelGuard(view,()=>{renderAssets();renderWdream();renderEd3Assets();});
+  if(view==='forge'&&$('#sub-brain')&&$('#sub-brain').classList.contains('on'))panelGuard(view,()=>renderBrainMap());
+  if(view==='history')panelGuard(view,()=>renderHistory());
+  if(view==='transplant')panelGuard(view,()=>fillTransplantSources());
+  if(view==='studio')panelGuard(view,()=>{renderStudio();renderStudioX();connInit();if(!$('#st-frame').srcdoc)runPreview();});
+  if(view==='connect')panelGuard(view,()=>{connInit();renderConnections();});
+  if(view==='awards')panelGuard(view,()=>{connInit();renderAwards();});
+  if(view==='settings')panelGuard(view,()=>{renderCrossDevice();renderPersist();renderPwa();renderSfx();renderWhy();});
+  if(view==='help')panelGuard(view,()=>renderHelp());
+  if(view==='webos')panelGuard(view,()=>{wosInit();wosRender();wosFillFolders();wosClockTick();});
 }
 async function boot(){
   document.documentElement.setAttribute('data-theme',settings.theme);
@@ -39804,6 +40280,9 @@ async function boot(){
   if(settings.ollamaAuto!==false)syncOllama(true).then(n=>{if(!n)showOriginBanner();});
   else if(opaqueOrigin())showOriginBanner();
   if(settings.bridgeAuto!==false)probeBridge(true);
+  /* Last, and never blocking: offline support is an enhancement, so a failure here must not
+     touch boot. It resolves on its own and repaints the Settings card if it is open. */
+  pwaInit();
   window.__gb={streamChat,streamComplete,mergeAcc,buildReasoning,applyDelta,accInit,detailsArray,extractJSON,
     diffHTML,reasoningFamily,extractSection,routeFor,splitThinkTags,syncOllama,architectSys,builderMessage,
     probeOllama,ollamaCandidates,renderOllamaHelp,settings,opaqueOrigin,showOriginBanner,store,
@@ -40006,6 +40485,12 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     ED3_FORMATS,ed3Log,ed3RenderConsole,ed3ToggleConsole,ed3ImportFile,renderEd3Assets,
     get WDREAM(){return WDREAM},set WDREAM(v){WDREAM=v},saveWdream,wdreamModels,wdreamAffords,
     wdreamPlan,wdreamOps,wdreamClean,wdreamBuild,wdreamStop,renderWdream,WDREAM_OPS_SCHEMA,
+    wdreamSignal,wdreamAbortErr,get WDREAM_RUN(){return WDREAM_RUN},set WDREAM_RUN(v){WDREAM_RUN=v},
+    ofcUndo,ofcRedo,ofcSnap,ofcSnapshot,ofcRestore,ofcHistButtons,
+    panelGuard,panelFail,PWA,pwaInit,pwaInstall,pwaReset,renderPwa,
+    openModal,closeModal,focusablesIn,FOCUSABLE,wosFocusEl,
+    get OFC_UNDO(){return OFC_UNDO},set OFC_UNDO(v){OFC_UNDO=v},
+    get OFC_REDO(){return OFC_REDO},set OFC_REDO(v){OFC_REDO=v},
     WDREAM_THEMES,WDREAM_TIERS,wdreamTheme,wdreamRng,wdreamSeedOps,wdreamTier,wdreamForecast,
     renderWdreamForecast,
     SFX_LIB,get SFX(){return SFX},set SFX(v){SFX=v},saveSfx,sfx,sfxFanfare,renderSfx,
