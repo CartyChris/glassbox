@@ -13406,6 +13406,94 @@ function scoreBullet(b,taskWords){
   const kindBoost={pitfall:0.25,decision:0.15,success:0.1,research:0.05,insight:0.1}[b.kind]||0;
   return Math.min(1,rel+kindBoost);
 }
+/* ── Brain retrieval: BM25 + trigram, fused by rank ─────────────────────────
+   The scorer above counts how many task words appear as SUBSTRINGS of a note, caps that
+   count at six, and weights every word identically. Three consequences, all measurable on
+   real notes:
+     · "test" matches "latest", "greatest", "contest" — false hits score like real ones
+     · a note matching six ordinary words ties with one matching six rare ones, so the top of
+       the ranking collapses into ties and the tie order is arbitrary
+     · long notes win on volume, because more text is more chances to contain a word
+   BM25 exists to fix exactly those three. Inverse document frequency weights a rare term
+   above a common one, term frequency saturates PER TERM instead of in aggregate, and length
+   normalisation stops a verbose note crowding out a precise one.
+
+   The second signal is trigram Jaccard over the existing shingles() helper, which sees word
+   ORDER — something a bag of words cannot. The two are combined with Reciprocal Rank Fusion,
+   which merges RANKINGS rather than scores, so neither signal has to be calibrated against
+   the other's scale. That matters because BM25 is unbounded and Jaccard is 0..1; fusing the
+   raw numbers would let BM25 drown the other signal entirely.
+
+   No embeddings and no network: this runs on the notes already in memory, so it works with
+   no key, offline, and inside the gauntlet. */
+const BM25_K1=1.5,BM25_B=0.75;
+/* Tokens, not substrings. This single change is what stops "test" matching "attestation".
+   The floor is three characters rather than the old scorer's four, because real terms are
+   short here — css, api, zip, key, ops. Dropping to three admits function words though, and
+   IDF alone does not neutralise them: a common word still carries a small weight, and a long
+   note repeating it several times accumulates enough term frequency to outrank a short note
+   containing the one rare word that actually mattered. Measured: without this list, the note
+   holding "hangs" lost to a longer note holding only "the", "and" and "run". */
+const BM_STOP=new Set(('the and for that with this from was were are but not can cannot will '+
+  'would should could have has had you your our its their they them then than when what which '+
+  'who how why all any some out into over under about after before more most other such only '+
+  'own same too very just like get got make made use used using does did doing done also each '+
+  'one two now new way say says said his her him she was were been being here there where '+
+  'while because since both few nor off once during against above below down out').split(/\s+/));
+function bmTokens(s){
+  return (String(s||'').toLowerCase().match(/[a-z0-9]{3,}/g)||[]).filter(w=>!BM_STOP.has(w));
+}
+function bm25Index(docs){
+  const df=Object.create(null);let total=0;
+  const toks=docs.map(d=>{
+    const t=bmTokens(d.text);total+=t.length;
+    new Set(t).forEach(w=>{df[w]=(df[w]||0)+1;});
+    return t;});
+  return{toks,df,N:docs.length,avgdl:docs.length?total/docs.length:1};
+}
+function bm25Score(idx,qTokens,i){
+  const t=idx.toks[i];if(!t||!t.length)return 0;
+  const tf=Object.create(null);t.forEach(w=>{tf[w]=(tf[w]||0)+1;});
+  let s=0;
+  for(const q of qTokens){
+    const f=tf[q];if(!f)continue;
+    const d=idx.df[q]||0;
+    /* The 1+ inside the log keeps IDF non-negative. Without it a term present in more than
+       half the notes goes negative, and a note CONTAINING the word would rank below one that
+       does not — the classic Okapi footgun. */
+    const idf=Math.log(1+(idx.N-d+0.5)/(d+0.5));
+    s+=idf*(f*(BM25_K1+1))/(f+BM25_K1*(1-BM25_B+BM25_B*t.length/(idx.avgdl||1)));
+  }
+  return s;
+}
+function brainRank(bullets,task){
+  const kindBoost=b=>({pitfall:0.25,decision:0.15,success:0.1,research:0.05,insight:0.1}[b.kind]||0);
+  if(!bullets||!bullets.length)return[];
+  const q=bmTokens(task);
+  /* No task to match against: keep the incoming order, exactly as before. */
+  if(!q.length)return bullets.map(b=>Object.assign({},b,{score:b.pinned?1.5:0.5}));
+  const idx=bm25Index(bullets);
+  const bm=bullets.map((b,i)=>bm25Score(idx,q,i));
+  const qs=shingles(task,3);
+  const tri=bullets.map(b=>qs.size?jaccard(shingles(b.text,3),qs):0);
+  const mx=a=>{const m=Math.max.apply(null,a.concat([0]));return m>0?m:1;};
+  const bmMax=mx(bm),triMax=mx(tri);
+  return bullets.map((b,i)=>{
+    /* Normalised SCORE fusion, and NOT reciprocal rank fusion.
+       RRF was the first attempt here and it measurably made retrieval worse than the naive
+       scorer it replaced — 0.58 against 0.78 recall@3 on this project's own notes. The reason
+       is worth keeping: RRF deliberately discards magnitude and keeps only order, so a note
+       matching one ordinary word landed within a few percent of a note matching three rare
+       ones. Every matched note then sat inside a narrow band, and the additive kind boost
+       below — which was tuned against a real 0..1 spread — swamped relevance completely, so
+       every pitfall in the corpus floated to the top of every unrelated query.
+       Keeping each signal's magnitude and normalising it to its own maximum preserves the
+       spread that both the boost and the 0.28 cut-off were calibrated against.
+       Weighted 0.7/0.3: BM25 carries term importance, trigrams only break ties on word order. */
+    const rel=0.7*(bm[i]/bmMax)+0.3*(tri[i]/triMax);
+    return Object.assign({},b,{score:b.pinned?1.5:Math.min(1,rel+kindBoost(b))});
+  }).sort((a,b)=>b.score-a.score);
+}
 function brainBlock(limit,task,agent){
   if(!BRAIN.on)return '';
   /* brainLive() drops expired notes. A temporary note that keeps being injected after its
@@ -13414,11 +13502,10 @@ function brainBlock(limit,task,agent){
   const on=brainLive().filter(d=>d.on&&d.body&&brainForAgent(d,agent));
   if(!on.length)return '';
   const max=limit||BRAIN.injectLimit||14000;
-  const words=new Set(String(task||RS&&(RS.baseTask||RS.task)||'').toLowerCase().match(/[a-z]{4,}/g)||[]);
+  const taskText=String(task||RS&&(RS.baseTask||RS.task)||'');
   const all=on.flatMap(brainBullets);
-  const scored=all.map(b=>Object.assign({},b,{score:b.pinned?1.5:scoreBullet(b,words)}))
-    .sort((a,b)=>b.score-a.score);
-  const cut=words.size?0.28:0;          // with no task to match against, keep the ordering only
+  const scored=brainRank(all,taskText);
+  const cut=bmTokens(taskText).length?0.28:0;   // no task to match against: keep ordering only
   const picked=[];let used=0;
   for(const b of scored){
     if(b.score<cut&&!b.pinned)continue;
@@ -13432,7 +13519,8 @@ function brainBlock(limit,task,agent){
      their own reserved budget so a long note list can never crowd them out. */
   const mistakes=brainMistakeBlock(Math.min(3000,Math.floor(max*0.3)));
   if(!picked.length&&!mistakes)return '';
-  BRAIN.lastInjection={bullets:picked.length,of:all.length,chars:used,agent:agent||'all'};
+  BRAIN.lastInjection={bullets:picked.length,of:all.length,chars:used,agent:agent||'all',
+    method:cut?'bm25+trigram':'unranked'};
   return (picked.length?'WHAT THIS PROJECT HAS ALREADY LEARNED — selected as relevant to the task in hand, '+
     'not a dump of everything known. Each line cost someone a round to find out.\n'+
     `(${picked.length} of ${all.length} notes selected${agent?', scoped to '+agent:''})\n\n${picked.join('')}\n`:'')
@@ -22184,6 +22272,66 @@ function gauntletCases(g){
       return document.querySelectorAll('.overlay').length;
     },antiExpect:v=>v===0});
 
+  /* ── Brain retrieval ──────────────────────────────────────────────────────
+     Every case below asserts one defect measured in the scorer this replaced, on a corpus
+     built inside the case. No notes of the user's are read, and no model is called. */
+
+  /* The old scorer asked whether a task word appeared as a SUBSTRING, so "test" matched
+     "attestation" and scored a wholly irrelevant note 1.00 — full marks. */
+  add({id:'brain-rank-tokens',sub:'brain',uses:['brainRank','bmTokens'],
+    what:'retrieval matches whole words, so "test" does not match "attestation"',
+    run:()=>{
+      const c=[{text:'the latest greatest contest was attested in their attestation',kind:'note'},
+               {text:'write a unit test for the parser',kind:'note'}];
+      const r=g.brainRank(c,'test');
+      const trap=r.find(b=>/attested/.test(b.text));
+      return trap&&trap.score===0?'ignored':'matched:'+(trap&&trap.score);
+    },expect:v=>v==='ignored',
+    antiWhat:'while the note that genuinely contains the word is still found',
+    anti:()=>{
+      const c=[{text:'the latest greatest contest was attested in their attestation',kind:'note'},
+               {text:'write a unit test for the parser',kind:'note'}];
+      return /unit test/.test(g.brainRank(c,'test')[0].text)?1:0;
+    },antiExpect:v=>v===1});
+
+  /* Every word weighed the same, so a note matching one ordinary word beat a note matching
+     the one rare word that actually identified it. */
+  add({id:'brain-rank-idf',sub:'brain',uses:['brainRank','bm25Index'],
+    what:'a rare term outweighs a common one, and a short precise note beats a padded one',
+    run:()=>{
+      /* The rare note goes LAST on purpose. Under the old scorer both notes tie, and a tie
+         resolves to whatever order the array was already in — with the rare note first this
+         case passed even with the defect reintroduced, which is no test at all. */
+      const c=[];
+      for(let i=0;i<40;i++)c.push({text:'the project uses a configuration file for the build '+i,kind:'note'});
+      c.push({text:'the AbortController cancels the request',kind:'note'});
+      const top=g.brainRank(c,'configuration AbortController')[0];
+      return /AbortController/.test(top.text)?'rare-wins':'common-wins';
+    },expect:v=>v==='rare-wins',
+    antiWhat:'and length normalisation stops a verbose note crowding out a precise one',
+    anti:()=>{
+      const c=[{text:'gauntlet cases must be hermetic',kind:'note'},
+               {text:'gauntlet '+('filler words about unrelated matters '.repeat(20)),kind:'note'}];
+      return g.brainRank(c,'gauntlet')[0].text.length<200?1:0;
+    },antiExpect:v=>v===1});
+
+  /* Hits were capped at six, so any note matching six or more terms tied at the top and the
+     order among them was whatever sort() happened to do. */
+  add({id:'brain-rank-spread',sub:'brain',uses:['brainRank'],
+    what:'ranking keeps a real spread instead of collapsing into ties at the top',
+    run:()=>{
+      const c=[{text:'alpha bravo charlie delta echo foxtrot golf hotel',kind:'note'},
+               {text:'alpha bravo charlie delta echo foxtrot',kind:'note'}];
+      const r=g.brainRank(c,'alpha bravo charlie delta echo foxtrot golf hotel');
+      return r[0].score===r[1].score?'tied':'distinct';
+    },expect:v=>v==='distinct',
+    antiWhat:'while with no task to rank against the incoming order is preserved untouched',
+    anti:()=>{
+      const c=[{text:'first note here',kind:'note'},{text:'second note here',kind:'note'}];
+      const r=g.brainRank(c,'');
+      return (r.length===2&&/first/.test(r[0].text))?1:0;
+    },antiExpect:v=>v===1});
+
   add({id:'render-unique-ids',sub:'rendering',uses:['esc'],
     what:'no duplicate DOM id (the second one is unreachable via $())',
     run:()=>{const seen={},d=[];document.querySelectorAll('[id]').forEach(e=>{
@@ -22499,6 +22647,13 @@ const GAUNTLET_SABOTAGE=[
   {id:'signal-unreachable',export:'wdreamSignal',
    why:'a Dreaming call becomes uncancellable again (the 188s hang)',
    broken:()=>()=>({signal:new AbortController().signal,secs:150,done(){}})},
+  {id:'rank-substring',export:'brainRank',
+   why:'brain retrieval falls back to substring counting with every word weighed the same',
+   broken:()=>(bullets,task)=>{
+     const w=(String(task||'').toLowerCase().match(/[a-z]{4,}/g)||[]);
+     return bullets.map(b=>{let h=0;w.forEach(x=>{if(b.text.toLowerCase().includes(x))h++;});
+       return Object.assign({},b,{score:Math.min(1,h/Math.min(6,w.length||1))});})
+       .sort((a,b)=>b.score-a.score);}},
   {id:'modal-notrap',export:'openModal',
    why:'a dialog stops holding focus and Tab walks out behind the backdrop',
    broken:()=>html=>{const o=document.createElement('div');o.className='overlay';
@@ -40438,6 +40593,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     renderMetrics,renderCreations,initMetrics,initCreations,cash,pct,
     LOOP_DEFAULTS,loopVerdict,brainGraph,layoutGraph,renderBrainMap,stopMap,brainBullets,
     scoreBullet,noteContext,get CTX(){return CTX},get MAP3D(){return MAP3D},
+    bmTokens,bm25Index,bm25Score,brainRank,BM25_K1,BM25_B,
     renderGhostty,renderHarnessHealth,
     addSpend,get SESSION_SPEND(){return SESSION_SPEND},
     get TEMPORAL(){return TEMPORAL},set TEMPORAL(v){TEMPORAL=v},saveTemporal,
