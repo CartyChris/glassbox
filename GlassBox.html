@@ -5132,6 +5132,28 @@ const DEFAULT_PROVIDERS=[
      '"insufficient balance" here almost always means the general endpoint was used instead. '+
      'Pay-as-you-go keys use '+ZAI_GENERAL_BASE+'. Z.ai also exposes an Anthropic-shaped '+
      'endpoint at /api/anthropic for Claude Code.'},
+  /* The only provider here that needs NOTHING — no key, no account, no card. Verified live
+     against the real endpoint rather than taken from a blog post: /v1/models returns a full
+     catalogue anonymously, and a completion without a key is refused for RATE LIMIT, not for
+     authorization, which is what proves the anonymous tier is real.
+
+     Ships ON by default, because a first-run user with no key currently has nothing that works,
+     and something rate-limited beats an empty app.
+
+     The 2 requests/minute is stated in the label rather than buried, because it is the whole
+     character of this provider: fine for asking one question, and NOT enough for a multi-turn
+     stream or a group chat, both of which fire several calls in quick succession. Better to say
+     so than to let someone discover it as a wall of failures.
+
+     Checked the same day: Pollinations, widely listed as key-free, now answers
+     401 UNAUTHORIZED "A valid API key is required" — so it is deliberately not shipped here. */
+  {id:'ovh',label:'OVHcloud — free, no key (2 req/min)',
+   base:'https://oai.endpoints.kepler.ai.cloud.ovh.net/v1',
+   key:'',on:true,viaBridge:false,anonymous:true,
+   models:['Mistral-7B-Instruct-v0.3','gpt-oss-20b','Qwen3.6-27B','Mistral-Nemo-Instruct-2407'],
+   hint:'Works with no account at all — the anonymous tier is rate limited to about 2 requests '+
+     'per minute per IP, so it is good for a single question and will not sustain a group chat '+
+     'or a stream. Add a key from any provider above for real throughput.'},
   {id:'moonshot',label:'Moonshot — Kimi',base:'https://api.moonshot.ai/v1',
    key:'',on:false,viaBridge:true,models:['kimi-k2-0905-preview','kimi-k2-turbo-preview','moonshot-v1-128k'],
    hint:'Use api.moonshot.cn instead if your account is on the mainland endpoint.'},
@@ -5199,7 +5221,12 @@ let PROVIDER_MODELS=[];
 function rebuildProviderModels(){
   PROVIDER_MODELS=[];
   for(const p of PROVIDERS){
-    if(!p.on||!p.key)continue;
+    /* `!p.key` is the right test for every provider that needs one — a keyed provider with no
+       key cannot answer, so listing its models would be a menu of guaranteed failures. It is
+       exactly WRONG for an anonymous provider, which is the one case where having no key is the
+       normal state. The guard was excluding precisely the input the free tier exists to serve. */
+    if(!p.on)continue;
+    if(!p.key&&!p.anonymous)continue;
     // shipped defaults, whatever the live sync found, and anything typed in by hand
     const all=[...new Set([].concat(p.models||[],p.synced||[],p.custom||[]))];
     for(const m of all){
