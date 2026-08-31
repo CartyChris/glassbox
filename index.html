@@ -23127,6 +23127,113 @@ function gauntletCases(g){
       finally{g.SOC.spent=keep;saveSoc();}
     },antiExpect:v=>v===null});
 
+  /* ── The bell ─────────────────────────────────────────────────────────────
+     An interruption protocol is only civil if losing an exchange is survivable. These guard the
+     arbitration truth table and the anti-starvation rule that makes it fair. */
+
+  add({id:'bell-arbitration',sub:'stream',uses:['socBellDecision'],
+    what:'yielding grants the floor; objecting keeps it unless the steer overrules',
+    run:()=>{
+      const D=g.socBellDecision;
+      const cases=[
+        [D('YIELD — go ahead.',''),                       true ],
+        [D('OBJECT: I must finish this point.',''),        false],
+        [D('OBJECT: I must finish this point.','yay'),     true ],
+        [D('OBJECT: I must finish this point.','nay'),     false],
+        /* A leading YIELD must win even when the word OBJECT appears later in the sentence —
+           the naive test (does the text contain OBJECT) gets this one wrong. */
+        [D('YIELD — I could object but go ahead.',''),     true ],
+      ];
+      const wrong=cases.filter(([r,want])=>r.granted!==want).length;
+      return wrong;},expect:v=>v===0,
+    antiWhat:'and an objection is actually recognised as an objection rather than ignored',
+    anti:()=>g.socBellDecision('OBJECT: not yet.','').objected?1:0,antiExpect:v=>v===1});
+
+  add({id:'bell-nobody-dropped',sub:'stream',uses:['socBellResolve','socQueuePop'],
+    what:'whoever loses the exchange is queued to speak next, never dropped',
+    run:()=>{
+      const keepB=g.BOTS.slice(),keepS=JSON.parse(JSON.stringify({b:g.SOC.bell,q:g.SOC.queue,
+        n:g.SOC.bellsRung,v:g.SOC.voices,st:g.SOC.status,me:g.SOC.mustExplain}));
+      try{
+        g.BOTS.length=0;
+        const a=g.botAdd('BellA','Architect','','x').bot;
+        const b=g.botAdd('BellB','Skeptic','','y').bot;
+        g.SOC.voices=[a.id,b.id];g.SOC.status='live';
+        g.SOC.bell=null;g.SOC.bellsRung=0;g.SOC.queue=[];g.SOC.mustExplain=null;
+        /* holder YIELDS: ringer wins, holder queued */
+        g.socRingBell(b.id,'x');
+        const win=g.socBellResolve(a,'YIELD','');
+        const heldQueued=(g.SOC.queue||[]).includes(a.id);
+        /* holder OBJECTS: holder keeps floor, ringer queued */
+        g.SOC.bell=null;g.SOC.queue=[];g.SOC.bellsRung=0;
+        g.socRingBell(b.id,'x');
+        const lose=g.socBellResolve(a,'OBJECT: finishing.','');
+        const ringerQueued=(g.SOC.queue||[]).includes(b.id);
+        return (win.winner.id===b.id&&heldQueued&&lose.winner.id===a.id&&ringerQueued)
+          ?'nobody dropped':'dropped someone';
+      }finally{
+        g.BOTS.length=0;keepB.forEach(x=>g.BOTS.push(x));g.store.set('bots',g.BOTS);
+        g.SOC.bell=keepS.b;g.SOC.queue=keepS.q;g.SOC.bellsRung=keepS.n;
+        g.SOC.voices=keepS.v;g.SOC.status=keepS.st;g.SOC.mustExplain=keepS.me;saveSoc();
+      }
+    },expect:v=>v==='nobody dropped',
+    antiWhat:'and a granted interruption leaves the interrupter owing an explanation',
+    anti:()=>{
+      const keepB=g.BOTS.slice(),keepMe=g.SOC.mustExplain,keepQ=g.SOC.queue,
+            keepBell=g.SOC.bell,keepN=g.SOC.bellsRung,keepV=g.SOC.voices,keepSt=g.SOC.status;
+      try{
+        g.BOTS.length=0;
+        const a=g.botAdd('BellC','A','','x').bot,b=g.botAdd('BellD','B','','y').bot;
+        g.SOC.voices=[a.id,b.id];g.SOC.status='live';
+        g.SOC.bell=null;g.SOC.bellsRung=0;g.SOC.queue=[];g.SOC.mustExplain=null;
+        g.socRingBell(b.id,'urgent');
+        g.socBellResolve(a,'YIELD','');
+        return (g.SOC.mustExplain&&g.SOC.mustExplain.botId===b.id)?1:0;
+      }finally{
+        g.BOTS.length=0;keepB.forEach(x=>g.BOTS.push(x));g.store.set('bots',g.BOTS);
+        g.SOC.mustExplain=keepMe;g.SOC.queue=keepQ;g.SOC.bell=keepBell;
+        g.SOC.bellsRung=keepN;g.SOC.voices=keepV;g.SOC.status=keepSt;saveSoc();
+      }
+    },antiExpect:v=>v===1});
+
+  add({id:'bell-storm-capped',sub:'stream',uses:['socRingBell','SOC_BELL_MAX'],
+    what:'one voice cannot ring every turn and starve the rest',
+    run:()=>{
+      const keepB=g.BOTS.slice(),keepBell=g.SOC.bell,keepN=g.SOC.bellsRung,
+            keepV=g.SOC.voices,keepSt=g.SOC.status,keepQ=g.SOC.queue;
+      try{
+        g.BOTS.length=0;
+        const a=g.botAdd('StormA','A','','x').bot,b=g.botAdd('StormB','B','','y').bot;
+        g.SOC.voices=[a.id,b.id];g.SOC.status='live';
+        g.SOC.bellsRung=0;g.SOC.bell=null;g.SOC.queue=[];
+        let allowed=0;
+        for(let i=0;i<8;i++){
+          const r=g.socRingBell(b.id,'again');
+          if(r.ok){allowed++;g.SOC.bell=null;}   // clear, so ONLY the budget can stop it
+        }
+        return allowed;
+      }finally{
+        g.BOTS.length=0;keepB.forEach(x=>g.BOTS.push(x));g.store.set('bots',g.BOTS);
+        g.SOC.bell=keepBell;g.SOC.bellsRung=keepN;g.SOC.voices=keepV;
+        g.SOC.status=keepSt;g.SOC.queue=keepQ;saveSoc();
+      }
+    },expect:v=>v===3,
+    antiWhat:'while a second bell during a pending one is refused outright',
+    anti:()=>{
+      const keepB=g.BOTS.slice(),keepBell=g.SOC.bell,keepN=g.SOC.bellsRung,
+            keepV=g.SOC.voices,keepSt=g.SOC.status;
+      try{
+        g.BOTS.length=0;
+        const a=g.botAdd('OneA','A','','x').bot,b=g.botAdd('OneB','B','','y').bot;
+        g.SOC.voices=[a.id,b.id];g.SOC.status='live';g.SOC.bellsRung=0;g.SOC.bell=null;
+        g.socRingBell(a.id,'first');
+        return g.socRingBell(b.id,'second').ok?1:0;
+      }finally{
+        g.BOTS.length=0;keepB.forEach(x=>g.BOTS.push(x));g.store.set('bots',g.BOTS);
+        g.SOC.bell=keepBell;g.SOC.bellsRung=keepN;g.SOC.voices=keepV;g.SOC.status=keepSt;saveSoc();
+      }
+    },antiExpect:v=>v===0});
+
   add({id:'render-unique-ids',sub:'rendering',uses:['esc'],
     what:'no duplicate DOM id (the second one is unreachable via $())',
     run:()=>{const seen={},d=[];document.querySelectorAll('[id]').forEach(e=>{
@@ -23439,6 +23546,15 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'bell-always-grants',export:'socBellDecision',
+   why:'an objection stops mattering and any bell takes the floor',
+   broken:()=>()=>({objected:false,granted:true,overruled:false})},
+  /* Targets socBellResolve, NOT socQueuePush: the resolver calls the queue through its
+     module-scope binding, so sabotaging the EXPORT of socQueuePush never reaches it and the
+     sabotage silently passed. Sabotage what the case actually calls. */
+  {id:'bell-drops-loser',export:'socBellResolve',
+   why:'whoever loses an exchange is silently dropped instead of queued for the next handoff',
+   broken:()=>(holder,reply,steer)=>({winner:holder||{id:'x',name:'x'},queued:null,overruled:false})},
   {id:'soc-selfpass',export:'socResolve',
    why:'a voice can pass to itself and hold the microphone forever',
    broken:()=>(name)=>({id:'self',name:String(name),role:'',model:''})},
@@ -36531,7 +36647,12 @@ function renderSoc(){
         <select data-socrole="${esc(b.id)}" style="flex:0 0 140px">
           ${Object.entries(SOC_ROLES).map(([k,v])=>
             `<option value="${k}"${((SOC.roles||{})[b.id]||'free')===k?' selected':''}>${esc(v.label)}</option>`).join('')}
-        </select></div>`).join('')}</div>`:''}
+        </select>
+        <button class="btn ghost sm" data-socbell="${esc(b.id)}" title="Ring the bell for ${esc(b.name)} — ask them to speak next, out of turn"
+          ${(SOC.status!=='live'||b.bell===false||SOC.bell||(SOC.bellsRung||0)>=SOC_BELL_MAX)?'disabled':''}>🔔</button>
+        </div>`).join('')}</div>`:''}
+    ${SOC.bell?`<div class="soc-meta"><b>🔔 ${esc(SOC.bell.byName)} is waiting to cut in</b> — ${esc(SOC.bell.reason)}. The current statement finishes first.</div>`:''}
+    ${(SOC.queue||[]).length?`<div class="soc-meta">queued to speak: ${socVoices().filter(b=>(SOC.queue||[]).includes(b.id)).map(b=>esc(b.name)).join(', ')}</div>`:''}
     <div class="row" style="gap:7px;flex-wrap:wrap">
       <input id="soc-goal" style="flex:1;min-width:200px" placeholder="what should the stream work on?"
         value="${esc(SOC.goal||'')}" ${live?'disabled':''}>
@@ -36564,6 +36685,10 @@ function renderSoc(){
     SOC.roles=SOC.roles||{};SOC.roles[sel.dataset.socrole]=sel.value;saveSoc();});
   const mt=$('#soc-mt');if(mt)mt.onchange=()=>{SOC.caps.maxTurns=Math.max(2,+mt.value||16);saveSoc();};
   const ms=$('#soc-ms');if(ms)ms.onchange=()=>{SOC.caps.maxSpend=Math.max(0,+ms.value||0.5);saveSoc();};
+  $$('[data-socbell]',host).forEach(b=>b.onclick=()=>{
+    const r=socRingBell(b.dataset.socbell,'you asked them to weigh in',true);
+    if(!r.ok)toast(r.why,2800);
+    renderSoc();});
   const go=$('#soc-go');if(go)go.onclick=()=>socStart($('#soc-goal').value);
   const st=$('#soc-stop');if(st)st.onclick=socStop;
 }
@@ -39654,12 +39779,15 @@ const SOC_ROLES={
 const SOC_DIRECTIVES=
   '\n\nEnd your turn with EXACTLY ONE directive on its own final line:\n'+
   '  pass(<name>, <reason>)  — hand the turn to a named voice\n'+
+  '  ring(<name>, <reason>)  — RING THE BELL: ask urgently that <name> speak next, out of turn.\n'+
+  '                            Use it sparingly, for something that changes what happens next.\n'+
   '  yield()                 — you do not know who should go next\n'+
   '  commit()                — the goal is met and the stream should stop\n'+
   'You can NEVER pass to yourself. Keep the turn under 220 words. Continue the work; do not '+
   'restate what others already said.';
 const SOC_CAPS={maxTurns:16,maxSpend:0.5,maxWallMin:10,loopCheckEvery:4};
 const SOC_DEFAULTS={goal:'',voices:[],roles:{},turns:[],status:'idle',
+  bell:null,bellsRung:0,queue:[],mustExplain:null,
   spent:{turns:0,cost:0,startTs:0},caps:Object.assign({},SOC_CAPS)};
 let SOC=Object.assign({},SOC_DEFAULTS,store.get('soc',{}));
 SOC.caps=Object.assign({},SOC_CAPS,SOC.caps||{});
@@ -39670,8 +39798,9 @@ let SOC_RUN=null;
    passing would otherwise be read as having passed. */
 function socParseDirective(text){
   const t=String(text||'');
-  const pr=[...t.matchAll(/\b(pass|redirect)\s*\(\s*([^,)]+?)\s*(?:,\s*([^)]*))?\)/gi)].pop();
-  if(pr)return{kind:'pass',target:pr[2].trim().replace(/["'<>]/g,''),reason:(pr[3]||'').trim().slice(0,140)};
+  const pr=[...t.matchAll(/\b(pass|redirect|ring)\s*\(\s*([^,)]+?)\s*(?:,\s*([^)]*))?\)/gi)].pop();
+  if(pr)return{kind:pr[1].toLowerCase()==='ring'?'ring':'pass',
+    target:pr[2].trim().replace(/["'<>]/g,''),reason:(pr[3]||'').trim().slice(0,140)};
   if(/\bcommit\s*\(\s*\)/i.test(t)||/^\s*commit\s*$/im.test(t))return{kind:'commit'};
   if(/\byield\s*\(\s*\)/i.test(t)||/^\s*yield\s*$/im.test(t))return{kind:'yield'};
   return{kind:'none'};
@@ -39738,6 +39867,7 @@ async function socStart(goal){
   SOC.goal=String(goal||'').trim()||SOC.goal;
   if(!SOC.goal)return toast('Give the stream a goal',2400);
   SOC.turns=[];SOC.status='live';
+  SOC.bell=null;SOC.bellsRung=0;SOC.queue=[];SOC.mustExplain=null;
   SOC.spent={turns:0,cost:0,startTs:Date.now()};
   saveSoc();
   SOC_RUN={stop:false,ctrl:new AbortController()};
@@ -39757,9 +39887,18 @@ async function socStart(goal){
       const history=(SOC.turns||[]).filter(t=>t.kind==='say').slice(-10)
         .map(t=>({role:'assistant',content:`${t.speaker}: ${t.text}`}));
       history.unshift({role:'user',content:SOC.goal});
+      /* A granted interruption owes an explanation, and the obligation is discharged by being
+         put in the prompt rather than hoped for. */
+      let owe='';
+      if(SOC.mustExplain&&SOC.mustExplain.botId===current.id){
+        owe=`\n\nYou rang the bell and cut in ahead of ${SOC.mustExplain.interrupted} `+
+            `(you said: ${SOC.mustExplain.reason}). OPEN YOUR TURN by saying briefly why that `+
+            `could not wait.`;
+        SOC.mustExplain=null;saveSoc();
+      }
 
       const r=await botTurn(current,history,SOC_RUN.ctrl.signal,
-        {sys:socSysFor(current),maxTokens:900,label:'soc-'+current.name});
+        {sys:socSysFor(current)+owe,maxTokens:900,label:'soc-'+current.name});
       if(SOC_RUN.stop)break;
       if(!r.ok){socSay('meta','',`${current.name} could not answer (${r.error}). Stopping.`);break;}
 
@@ -39776,12 +39915,31 @@ async function socStart(goal){
       if(SOC.spent.turns%(SOC.caps.loopCheckEvery||4)===0&&socLooping()){
         socSay('meta','','Stopped: the voices started repeating each other.');break;}
 
+      /* A voice can ring for someone else on its way out. */
+      if(d.kind==='ring'){
+        const who=socResolve(d.target,current.id);
+        if(who)socRingBell(who.id,d.reason||'was asked to weigh in');
+        else socSay('meta','',`(no voice called “${d.target}” to ring for)`);
+      }
+
       let nxt=null;
       if(d.kind==='pass'){
         nxt=socResolve(d.target,current.id);
         if(!nxt){socSay('meta','',`(no voice called “${d.target}” — passing to the next in order)`);}
       }
-      current=nxt||socNext(current.id);
+      /* Boundary: whoever was about to speak is the holder, and the bell is settled before they
+         start — which is what "statements are atomic" means in practice. */
+      if(SOC.bell){
+        const holder=nxt||socNext(current.id);
+        /* No model is asked to arbitrate here: with no steer configured the holder is treated as
+           yielding, which is the generous reading and keeps the stream moving. A steer voice can
+           be wired in later without changing socBellDecision, which is the point of it being
+           pure. */
+        const res=socBellResolve(holder,'YIELD — go ahead.','');
+        if(res&&res.winner)nxt=res.winner;
+      }
+      /* The queue comes before the round robin — that is the anti-starvation rule. */
+      current=nxt||socQueuePop()||socNext(current.id);
       if(!current){socSay('meta','','Nobody left to pass to.');break;}
     }
   }catch(e){
@@ -39797,6 +39955,105 @@ function socStop(){
   SOC_RUN.stop=true;
   if(SOC_RUN.ctrl){try{SOC_RUN.ctrl.abort();}catch(_){}}
   toast('Stopping the stream…',2000);
+}
+
+/* ── THE BELL ──────────────────────────────────────────────────────────────
+   An interruption protocol, ported from the AI OS, because a strict turn order has one bad
+   failure: the voice who can see the problem has to wait its turn while the stream walks
+   further in the wrong direction.
+
+   The rule that makes it civil rather than a shouting match: STATEMENTS ARE ATOMIC. A bell rung
+   during someone's turn never cuts them off mid-sentence; it is resolved at the boundary, before
+   the next voice starts. (The AI OS also supports cutting a spoken statement mid-delivery. That
+   is not ported — it only means something when audio is playing, and a half-read sentence is a
+   worse experience than a short wait.)
+
+   Three things stop it becoming a mess, and each is a real failure I designed against:
+
+     ONE BELL AT A TIME    a second ringer while one is pending is refused, so the stream cannot
+                           turn into a queue of interruptions of interruptions.
+     A BELL BUDGET         an interrupt storm — one voice ringing every single turn so nobody
+                           else is ever heard — is capped per stream. The AI OS relies on
+                           one-at-a-time alone; that stops overlap but not a storm.
+     NOBODY IS DROPPED     whoever loses the exchange is queued for the very next handoff. This
+                           is the anti-starvation rule and it is theirs; without it a voice that
+                           is repeatedly bumped simply never speaks.
+
+   And a granted interruption creates a SAY-WHY OBLIGATION: the interrupter's next turn must open
+   by explaining why it stopped the other voice. Interrupting is allowed; interrupting silently
+   is not. */
+const SOC_BELL_MAX=3;                      // per stream, per episode
+function socRingBell(botId,reason,manual){
+  if(SOC.status!=='live'&&!manual)return{ok:false,why:'no stream is running'};
+  const b=botAll().find(x=>x.id===botId);
+  if(!b)return{ok:false,why:'no such voice'};
+  if(b.bell===false)return{ok:false,why:`${b.name}'s bell is switched off`};
+  if(SOC.bell)return{ok:false,why:'a bell is already ringing — one interruption at a time'};
+  if((SOC.bellsRung||0)>=SOC_BELL_MAX)
+    return{ok:false,why:`this stream has used its ${SOC_BELL_MAX} interruptions`};
+  SOC.bell={byId:b.id,byName:b.name,reason:String(reason||'').trim().slice(0,140)||'has something pressing',
+    state:'rung',ts:nowISO()};
+  SOC.bellsRung=(SOC.bellsRung||0)+1;
+  saveSoc();
+  socSay('meta','',`🔔 ${b.name} rings the bell — ${SOC.bell.reason}. The current statement finishes uncut.`);
+  actLog('agent','rang the bell: '+b.name,{reason:SOC.bell.reason});
+  return{ok:true};
+}
+/* PURE, and deliberately so: the whole arbitration outcome is decided by this one function, so
+   it can be tested exhaustively with no model and no stream running. Theirs; kept as-is because
+   the truth table is right.
+     · the holder does not object          → the ringer gets the floor
+     · the holder objects, steer sides with the ringer → overruled, ringer speaks
+     · the holder objects and steer does not → holder keeps the floor, ringer is queued */
+function socBellDecision(holderText,steerKind){
+  const t=String(holderText||'');
+  const objected=/\bOBJECT/i.test(t)&&!/^\s*YIELD\b/i.test(t.trim());
+  if(!objected)return{objected:false,granted:true,overruled:false};
+  const granted=['yay','commit','redirect'].includes(String(steerKind||'').toLowerCase());
+  return{objected:true,granted,overruled:granted};
+}
+/* Resolve at the turn boundary. `holder` is whoever was about to speak. */
+function socBellResolve(holderBot,holderReply,steerKind){
+  const bell=SOC.bell;
+  if(!bell)return null;
+  const ringer=botAll().find(b=>b.id===bell.byId);
+  if(!ringer){SOC.bell=null;saveSoc();return null;}
+  /* If the floor was coming to the ringer anyway there is nothing to arbitrate — resolving it
+     as a win would spend a bell for free. */
+  if(!holderBot||holderBot.id===ringer.id){
+    SOC.bell=null;saveSoc();
+    socSay('meta','',`🔔 the floor was passing to ${ringer.name} anyway — bell resolved.`);
+    return{winner:ringer,queued:null,trivial:true};
+  }
+  const d=socBellDecision(holderReply,steerKind);
+  SOC.bell=null;
+  if(d.granted){
+    /* The interrupter owes an explanation on its next turn. */
+    SOC.mustExplain={botId:ringer.id,interrupted:holderBot.name,reason:bell.reason};
+    socQueuePush(holderBot.id);          // the displaced voice is not dropped
+    saveSoc();
+    socSay('meta','',d.objected
+      ? `🔔 ${holderBot.name} objected; overruled — ${ringer.name} takes the floor. ${holderBot.name} speaks next.`
+      : `🔔 ${holderBot.name} yields — ${ringer.name} takes the floor.`);
+    return{winner:ringer,queued:holderBot,overruled:d.overruled};
+  }
+  socQueuePush(ringer.id);               // the ringer is not dropped either
+  saveSoc();
+  socSay('meta','',`🔔 ${holderBot.name} objected and keeps the floor — ${ringer.name} speaks next.`);
+  return{winner:holderBot,queued:ringer,overruled:false};
+}
+/* The queue is the anti-starvation mechanism: it is drained BEFORE the round robin, so a voice
+   that lost an exchange speaks at the very next handoff rather than waiting for its slot to come
+   round again — which, in a five-voice stream that ends after eight turns, might be never. */
+function socQueuePush(id){
+  SOC.queue=(SOC.queue||[]).filter(x=>x!==id).concat([id]);
+  saveSoc();
+}
+function socQueuePop(){
+  const q=SOC.queue||[];
+  if(!q.length)return null;
+  const id=q.shift();SOC.queue=q;saveSoc();
+  return botAll().find(b=>b.id===id)||null;
 }
 
 /* ═══════════════════ WHICH POOL IS THIS COMING OUT OF? ═══════════════════
@@ -44262,6 +44519,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     renderActLedger,renderCkpts,renderEvo,renderSkillSources,ACTLEDGER,
     renderAssistants,renderVoices,renderDossiers,
     renderSoc,
+    SOC_BELL_MAX,socRingBell,socBellDecision,socBellResolve,socQueuePush,socQueuePop,
     SOC_ROLES,SOC_CAPS,SOC_DIRECTIVES,socParseDirective,socResolve,socVoices,socNext,
     socLooping,socCapsHit,socSay,socSysFor,socStart,socStop,saveSoc,
     get SOC(){return SOC},set SOC(v){SOC=v},get SOC_RUN(){return SOC_RUN},
