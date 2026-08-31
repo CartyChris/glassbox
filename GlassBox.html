@@ -72,6 +72,39 @@ nav.tabs::-webkit-scrollbar{display:none}
 .tab.active{color:var(--ink);background:var(--panel);border-color:var(--edge)}
 .tab:hover:not(.active){color:var(--ink2);background:color-mix(in srgb,var(--panel) 55%,transparent)}
 .tab{transition:color .12s,background .12s}
+/* Tab grouping. A group chip is deliberately NOT a .tab — it carries no data-view, and the
+   gauntlet flags any .tab that navigates nowhere. */
+.tabgroup{display:none;align-self:center;white-space:nowrap;font-size:10px;font-weight:800;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);opacity:.62;
+  padding:3px 9px;margin:0 2px 0 8px;border-left:1px solid var(--edge);pointer-events:none}
+.tabgroup:first-child{border-left:none;margin-left:0}
+body[data-tabmode=grouped] .tabgroup{display:inline-block}
+/* Simple mode hides the rest, but never the tab you are actually on — landing somewhere with
+   no visible tab would read as the app losing your place. */
+body[data-tabmode=simple] #tabs .tab[data-essential="0"]:not(.active){display:none}
+body[data-tabmode=simple] .tabgroup{display:none}
+body[data-tabpos=left] .tabgroup,body[data-tabpos=right] .tabgroup{
+  border-left:none;border-top:1px solid var(--edge);margin:8px 0 2px;width:100%}
+.modemenu{display:grid;gap:9px;margin-top:6px}
+.modeopt{display:flex;gap:11px;align-items:flex-start;text-align:left;padding:12px 13px;
+  border:1px solid var(--edge);border-radius:12px;background:var(--panel2);cursor:pointer;width:100%}
+.modeopt:hover{border-color:var(--edge2)}
+.modeopt.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.modeopt b{display:block;font-size:14px;margin-bottom:2px}
+.modeopt span{font-size:12px;color:var(--ink3);line-height:1.45}
+.modeopt i{font-size:19px;font-style:normal;line-height:1}
+.spl-stage{position:relative;margin-top:11px;height:min(58vh,540px);border:1px solid var(--edge);
+  border-radius:13px;overflow:hidden;background:linear-gradient(180deg,#0e1119,#0a0c12)}
+.spl-stage canvas{display:block;width:100%;height:100%}
+.spl-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:8px}
+.spl-status{margin-top:9px;font-size:12.5px;color:var(--ink3);min-height:18px}
+.spl-status.error{color:var(--bad)}
+.spl-status.ready{color:var(--good)}
+.spl-editor{width:100%;height:min(70vh,660px);margin-top:11px;border:1px solid var(--edge);
+  border-radius:13px;background:#0a0c12}
+.spl-shot img{max-width:100%;border-radius:11px;border:1px solid var(--edge);margin-top:11px}
+.spl-objs{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;max-height:150px;overflow:auto}
 /* Keyboard users could not see where they were: there was no focus style anywhere in the
    app. This is the one ring, applied to every interactive element at once. */
 :where(button,a,input,select,textarea,[tabindex],.tab,.chip,.mh-chip,.of-rev,.am-offer):focus-visible{
@@ -1801,6 +1834,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
     <button class="icon-btn" id="fsBtn" title="Fullscreen this tab (F11-style, in-page)">⛶</button>
     <button class="icon-btn" id="popBtn" title="Open this tab in its own window, synced live">↗</button>
     <button class="icon-btn" id="themeBtn" title="Theme">◐</button>
+    <button class="icon-btn" id="modeBtn" title="How much to show">◱</button>
     <button class="icon-btn" id="helpBtn" title="Help (?)">?</button>
   </header>
 
@@ -1835,6 +1869,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
     <button class="tab" data-view="reverse">🔩 Reverse</button>
     <button class="tab" data-view="devices">📱 Devices</button>
     <button class="tab" data-view="handoff">🚀 Handoff</button>
+    <button class="tab" data-view="spline">🌀 Spline</button>
     <button class="tab" data-view="three">🧊 3D Editor</button>
     <button class="tab" data-view="studio">🛠 Studio</button>
     <button class="tab" data-view="council">🏛 Council</button>
@@ -1851,6 +1886,11 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
   <div id="agentbar" class="agentbar"></div>
 
   <main>
+    <!-- ============ SPLINE ============ -->
+    <section class="view" id="view-spline"><div class="wrap">
+      <div id="spl-panel"></div>
+    </div></section>
+
     <!-- ============ REASON LAB ============ -->
     <section class="view active" id="view-lab"><div class="wrap split">
       <div class="col">
@@ -22332,6 +22372,69 @@ function gauntletCases(g){
       return (r.length===2&&/first/.test(r[0].text))?1:0;
     },antiExpect:v=>v===1});
 
+  /* ── Spline, tab density, and the hand-off that was silently dropping work ── */
+
+  /* A wrong KIND of Spline link is the failure people will actually hit. Loading nothing and
+     saying nothing would send them to check their scene instead of their URL. */
+  add({id:'spline-url-kinds',sub:'spline',uses:['splNormalise'],
+    what:'a scene URL is accepted and the wrong kind of Spline link is refused with a reason',
+    run:()=>{
+      const ok1=g.splNormalise('https://prod.spline.design/AbcDEF123456/scene.splinecode');
+      const ok2=g.splNormalise('AbcDEF123456');
+      const ed=g.splNormalise('https://app.spline.design/file/xyz');
+      if(!ok1.ok||!ok2.ok)return 'rejected-valid';
+      if(ok2.url!==ok1.url)return 'id-mismatch';
+      if(ed.ok)return 'accepted-editor-link';
+      return (ed.why&&/Export/.test(ed.why))?'guided':'no-reason';
+    },expect:v=>v==='guided',
+    antiWhat:'while plain nonsense is refused too, so the check is not just waving links through',
+    anti:()=>{
+      const j=g.splNormalise('hello world');
+      const e=g.splNormalise('');
+      return (!j.ok&&!e.ok&&!!j.why&&!!e.why)?1:0;
+    },antiExpect:v=>v===1});
+
+  /* A tab missing from every group vanishes from the bar in grouped and simple mode. */
+  add({id:'tabs-groups-cover',sub:'rendering',uses:['TAB_GROUPS','TAB_ESSENTIALS'],
+    what:'every tab belongs to exactly one group, so none can fall out of the bar',
+    run:()=>{
+      const views=[...document.querySelectorAll('#tabs .tab[data-view]')].map(t=>t.dataset.view);
+      const flat=g.TAB_GROUPS.flatMap(x=>x.views);
+      const missing=views.filter(v=>!flat.includes(v));
+      const dupes=flat.filter((v,i)=>flat.indexOf(v)!==i);
+      const ghost=flat.filter(v=>!views.includes(v));
+      return [missing.length,dupes.length,ghost.length].join(',');
+    },expect:v=>v==='0,0,0',
+    antiWhat:'and every tab Simple mode promises to keep is a real tab',
+    anti:()=>{
+      const views=[...document.querySelectorAll('#tabs .tab[data-view]')].map(t=>t.dataset.view);
+      return g.TAB_ESSENTIALS.filter(e=>!views.includes(e)).length;
+    },antiExpect:v=>v===0});
+
+  /* connToCreations guarded on two function names that do not exist in this file, so both
+     branches were false, nothing was saved, and it announced success anyway. */
+  add({id:'conn-creations-saves',sub:'wiring',uses:['connToCreations','creationSave'],
+    what:'sending to Creations actually writes something, rather than only saying it did',
+    run:()=>{
+      const keep=g.CREATIONS.slice();
+      try{
+        const before=g.CREATIONS.length;
+        g.connToCreations({kind:'html',data:'<h1>gauntlet</h1>',title:'gauntlet probe',from:'gauntlet'});
+        const grew=g.CREATIONS.length-before;
+        const top=g.CREATIONS[0];
+        return (grew===1&&top&&top.files&&top.files['index.html'])?'saved':'lost:'+grew;
+      }finally{g.CREATIONS=keep;saveCreations();}
+    },expect:v=>v==='saved',
+    antiWhat:'and an image arrives as a real file rather than an empty shell',
+    anti:()=>{
+      const keep=g.CREATIONS.slice();
+      try{
+        g.connToCreations({kind:'image',data:'data:image/png;base64,iVBORw0KGgo=',title:'probe',from:'gauntlet'});
+        const top=g.CREATIONS[0];
+        return (top&&top.entry==='asset.png'&&String(top.files['asset.png']).startsWith('data:image/png'))?1:0;
+      }finally{g.CREATIONS=keep;saveCreations();}
+    },antiExpect:v=>v===1});
+
   add({id:'render-unique-ids',sub:'rendering',uses:['esc'],
     what:'no duplicate DOM id (the second one is unreachable via $())',
     run:()=>{const seen={},d=[];document.querySelectorAll('[id]').forEach(e=>{
@@ -22647,6 +22750,19 @@ const GAUNTLET_SABOTAGE=[
   {id:'signal-unreachable',export:'wdreamSignal',
    why:'a Dreaming call becomes uncancellable again (the 188s hang)',
    broken:()=>()=>({signal:new AbortController().signal,secs:150,done(){}})},
+  {id:'creations-drop',export:'connToCreations',
+   why:'the Creations hand-off goes back to announcing a save it never made',
+   broken:()=>p=>{toast&&toast('Saved to Creations',600);}},
+  {id:'groups-lose-tab',export:'TAB_GROUPS',
+   /* broken() takes no arguments — the runner assigns its RETURN value. The original is read
+      off the export here, which is still the real one because the right-hand side is
+      evaluated before the assignment lands. */
+   why:'a tab stops belonging to any group and falls out of the bar',
+   broken:()=>window.__gb.TAB_GROUPS.map((gr,i)=>
+     i===0?Object.assign({},gr,{views:gr.views.slice(1)}):gr)},
+  {id:'spline-accepts-anything',export:'splNormalise',
+   why:'Spline stops telling you WHICH kind of link you pasted',
+   broken:()=>v=>({ok:true,url:String(v)})},
   {id:'rank-substring',export:'brainRank',
    why:'brain retrieval falls back to substring counting with every word weighed the same',
    broken:()=>(bullets,task)=>{
@@ -34457,6 +34573,327 @@ function stripEdges(n){
   n.classList.toggle('more-l',n.scrollLeft>4);
   n.classList.toggle('more-r',max>4&&n.scrollLeft<max-4);
 }
+/* ═══════════════════ SPLINE ═══════════════════
+   Spline scenes, running inside GlassBox and able to leave again.
+
+   Three things were measured before any of this was written, because each one would have
+   been an expensive wrong assumption:
+
+   1. The <spline-viewer> WEB COMPONENT — which is what every doc, blog and README shows —
+      defines itself correctly from unpkg and then silently never loads the scene. No
+      load-start event, no network request, canvas left at its default 300x150, nothing
+      drawn, no error anywhere. The @splinetool/runtime Application class loads the same
+      scene in about 1.8s and reports failures as a rejected promise you can actually catch.
+      So this uses the runtime, and the popular snippet is deliberately not used.
+   2. WebGL canvases usually read back BLANK from toDataURL unless the context was made with
+      preserveDrawingBuffer. Spline's runtime sets it: a 320x200 snapshot came back as a
+      323KB PNG with real pixels, so exporting a still genuinely works.
+   3. app.spline.design sends no X-Frame-Options, so the editor itself CAN be framed — but
+      this app's own Content-Security-Policy sets frame-src 'self' blob: data:, which blocks
+      it in production. vercel.json now allows that one origin, and nothing else changed.
+
+   The scene URL must be the .splinecode one from Spline's Export → Code panel. A published
+   my.spline.design link cannot be resolved to it from the browser: that host answers 403
+   without the user's session, which was checked rather than assumed. */
+const SPL_RUNTIME='https://unpkg.com/@splinetool/runtime@1.9.28/build/runtime.js';
+const SPL_DEFAULTS={url:'',scenes:[],autoload:true,editor:false};
+let SPL=Object.assign({},SPL_DEFAULTS,store.get('spline',{}));
+const saveSpl=()=>store.set('spline',SPL);
+let SPL_APP=null,SPL_MOD=null,SPL_STATE={status:'idle',msg:'',objects:[],ms:0};
+
+/* Accepts what people actually have in their clipboard, and says plainly when a link is the
+   wrong KIND of Spline link rather than silently loading nothing. */
+function splNormalise(input){
+  const v=String(input||'').trim();
+  if(!v)return{ok:false,why:'Paste a scene URL first.'};
+  if(/^https?:\/\/prod\.spline\.design\/[A-Za-z0-9_-]+\/scene\.splinecode\/?$/.test(v))
+    return{ok:true,url:v.replace(/\/$/,'')};
+  if(/^[A-Za-z0-9_-]{8,}$/.test(v))
+    return{ok:true,url:`https://prod.spline.design/${v}/scene.splinecode`};
+  if(/app\.spline\.design/.test(v))
+    return{ok:false,why:'That is the editor link. In Spline open Export → Code and copy the .splinecode URL.'};
+  if(/my\.spline\.design/.test(v))
+    return{ok:false,why:'That is a published page, and it cannot be turned into a scene URL from the browser — that host refuses the request without your Spline session. Use Export → Code and copy the .splinecode URL.'};
+  if(/\.splinecode/.test(v))return{ok:true,url:v};
+  return{ok:false,why:'Not a Spline scene URL. It should end in /scene.splinecode.'};
+}
+async function splLoad(input){
+  const n=splNormalise(input===undefined?SPL.url:input);
+  if(!n.ok){SPL_STATE={status:'error',msg:n.why,objects:[],ms:0};renderSpline();return null;}
+  SPL.url=n.url;saveSpl();
+  const host=$('#spl-stage');if(!host)return null;
+  SPL_STATE={status:'loading',msg:'Fetching the runtime and the scene…',objects:[],ms:0};
+  splStatus();
+  const t0=Date.now();
+  try{
+    /* Imported on demand rather than at boot: it is a 3.5MB module, and someone who never
+       opens this tab should never pay for it. */
+    if(!SPL_MOD)SPL_MOD=await import(SPL_RUNTIME);
+    host.innerHTML='<canvas id="spl-canvas"></canvas>';
+    const cv=$('#spl-canvas');
+    const r=host.getBoundingClientRect();
+    cv.width=Math.max(320,Math.floor(r.width));cv.height=Math.max(240,Math.floor(r.height));
+    if(SPL_APP&&SPL_APP.dispose){try{SPL_APP.dispose();}catch(_){}}
+    SPL_APP=new SPL_MOD.Application(cv);
+    await SPL_APP.load(n.url);
+    const objs=(SPL_APP.getAllObjects&&SPL_APP.getAllObjects()||[]).map(o=>o.name).filter(Boolean);
+    SPL_STATE={status:'ready',msg:'',objects:objs,ms:Date.now()-t0};
+    if(!SPL.scenes.some(x=>x.url===n.url)){
+      SPL.scenes=[{url:n.url,name:'Scene '+(SPL.scenes.length+1),ts:nowISO()}].concat(SPL.scenes).slice(0,20);
+      saveSpl();
+    }
+    sfx('done');
+  }catch(e){
+    /* The two failures that actually happen are a dead CDN and a scene URL that is not
+       public. They need different advice, so they are not collapsed into one message. */
+    const m=String(e&&e.message||e);
+    SPL_STATE={status:'error',objects:[],ms:Date.now()-t0,
+      msg:/import|fetch|network|Failed to fetch/i.test(m)&&!SPL_MOD
+        ? 'Could not fetch the Spline runtime from unpkg. That needs a connection the first time — after it is cached this works offline.'
+        : 'Spline could not load that scene: '+m+'. Check the scene is published and the URL came from Export → Code.'};
+    sfx('fail');
+  }
+  renderSpline();
+  return SPL_APP;
+}
+/* A still of whatever is on screen right now. This is the bridge to the rest of the app:
+   every tab that takes an image will take this. */
+function splShot(){
+  const cv=$('#spl-canvas');
+  if(!cv||SPL_STATE.status!=='ready')return null;
+  try{return cv.toDataURL('image/png');}catch(e){toast('Could not read the canvas: '+e.message,3200);return null;}
+}
+/* A standalone page that renders the scene with no GlassBox around it — what you hand to
+   Studio, install into the WebOS, or keep in Creations. */
+function splEmbedHtml(){
+  const u=SPL.url;
+  return `<!doctype html><html><head><meta charset="utf-8">
+<title>Spline scene</title>
+<style>html,body{margin:0;height:100%;background:#0b0d12;overflow:hidden}canvas{display:block;width:100%;height:100%}</style>
+</head><body><canvas id="splscene"></canvas>
+<script type="module">
+import {Application} from '${SPL_RUNTIME}';
+const app=new Application(document.getElementById('splscene'));
+app.load(${JSON.stringify(u)});
+<\/script></body></html>`;
+}
+function splStatus(){
+  const el=$('#spl-status');if(!el)return;
+  const st=SPL_STATE;
+  el.className='spl-status '+st.status;
+  el.innerHTML=
+    st.status==='loading'?'<span class="spin"></span> '+esc(st.msg):
+    st.status==='error'?'⚠ '+esc(st.msg):
+    st.status==='ready'?`✓ Loaded in ${(st.ms/1000).toFixed(1)}s · ${st.objects.length} objects in the scene`:
+    'Nothing loaded yet.';
+}
+function renderSpline(){
+  const host=$('#spl-panel');if(!host)return;
+  const st=SPL_STATE;
+  /* A loaded canvas has to SURVIVE a re-render. Rewriting innerHTML destroys the element and
+     its WebGL context with it, which left the scene reporting "ready" — 27 objects, no
+     errors — while the canvas it drew into no longer existed and snapshots came back empty.
+     Detached first, re-attached below: the context belongs to the node, not to its position
+     in the document, so Spline's render loop carries on untouched. */
+  const live=$('#spl-canvas');
+  if(live)live.remove();
+  const recent=(SPL.scenes||[]).slice(0,8).map(sc=>
+    `<button class="btn ghost sm" data-splopen="${esc(sc.url)}">${esc(sc.name)}</button>`).join('');
+  host.innerHTML=`
+  <div class="card">
+    <h3>🌀 Spline</h3>
+    <p class="help">Run a Spline scene here, then send a still or a runnable page anywhere else
+      in GlassBox. In Spline: <b>Export → Code</b>, copy the <code>.splinecode</code> URL, paste it below.</p>
+    <div class="row" style="gap:8px">
+      <input id="spl-url" class="in" style="flex:1;min-width:260px"
+        placeholder="https://prod.spline.design/…/scene.splinecode  (or just the scene id)"
+        value="${esc(SPL.url||'')}">
+      <button class="btn" id="spl-load">Load scene</button>
+    </div>
+    <div id="spl-status" class="spl-status ${st.status}"></div>
+    ${recent?`<div class="row" style="gap:6px;margin-top:9px;flex-wrap:wrap">
+      <span class="help" style="margin:0">Recent:</span>${recent}</div>`:''}
+    <div id="spl-stage" class="spl-stage">${st.status==='ready'?'':`
+      <div class="spl-empty">
+        <div style="font-size:34px;opacity:.5">🌀</div>
+        <p class="help" style="max-width:420px;text-align:center">Nothing loaded. Paste a
+          <code>.splinecode</code> URL above, or open the editor below to make one.</p>
+      </div>`}</div>
+    <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap">
+      <button class="btn ghost" id="spl-shot"${st.status==='ready'?'':' disabled'}>📸 Snapshot</button>
+      <button class="btn ghost" id="spl-embed"${st.status==='ready'?'':' disabled'}>🧩 Embed page</button>
+      <button class="btn ghost" id="spl-objs"${st.status==='ready'?'':' disabled'}>🗂 Objects</button>
+      <span id="spl-send"></span>
+    </div>
+    <div id="spl-out"></div>
+  </div>
+
+  <div class="card">
+    <h3>✏️ The Spline editor</h3>
+    <p class="help">Spline itself, signed in as you. Build a scene, publish it, then paste its
+      <code>.splinecode</code> URL above to bring it back in here. It is their app in a frame —
+      if your browser blocks third-party sign-in, use the button to open it in its own tab.</p>
+    <div class="row" style="gap:8px">
+      <button class="btn" id="spl-toggle">${SPL.editor?'Hide the editor':'Open the editor here'}</button>
+      <a class="btn ghost" href="https://app.spline.design/home" target="_blank" rel="noopener noreferrer">Open in a new tab ↗</a>
+    </div>
+    ${SPL.editor?`<iframe id="spl-editor" class="spl-editor" src="https://app.spline.design/home"
+       referrerpolicy="no-referrer-when-downgrade"></iframe>
+     <p class="help" id="spl-ednote">If this stays blank, Spline is refusing to run in a frame in
+       your browser — open it in a tab instead. Nothing is lost either way.</p>`:''}
+  </div>`;
+
+  const stage=$('#spl-stage');
+  if(live&&st.status==='ready'&&stage){stage.innerHTML='';stage.appendChild(live);}
+  splStatus();
+  const inp=$('#spl-url');
+  $('#spl-load').onclick=()=>splLoad(inp.value);
+  if(inp)inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();splLoad(inp.value);}};
+  $$('[data-splopen]').forEach(b=>b.onclick=()=>splLoad(b.dataset.splopen));
+  $('#spl-toggle').onclick=()=>{SPL.editor=!SPL.editor;saveSpl();renderSpline();};
+  const out=$('#spl-out');
+  $('#spl-shot').onclick=()=>{
+    const d=splShot();
+    if(!d)return toast('Load a scene first',2200);
+    out.innerHTML=`<div class="spl-shot"><img src="${d}" alt="Snapshot of the Spline scene">
+      <div class="row" style="gap:8px;margin-top:8px">
+        <button class="btn ghost sm" id="spl-dl">Download PNG</button>
+        <span id="spl-shotsend"></span></div></div>`;
+    $('#spl-dl').onclick=()=>{const a=document.createElement('a');
+      a.href=d;a.download='spline-'+Date.now()+'.png';a.click();};
+    const sh=$('#spl-shotsend');
+    if(sh){sh.innerHTML=connMenu(connMake('image',d,'Spline still','spline'));connInit();}
+    sfx('done');
+  };
+  $('#spl-embed').onclick=()=>{
+    const html=splEmbedHtml();
+    out.innerHTML=`<p class="help" style="margin-top:10px">A standalone page that renders this
+      scene. Send it to Studio to edit, or install it into the WebOS as an app.</p>
+      <textarea class="in" rows="7" readonly style="width:100%;font-family:ui-monospace,monospace;font-size:11px">${esc(html)}</textarea>
+      <div class="row" style="gap:8px;margin-top:8px"><span id="spl-embedsend"></span></div>`;
+    const es=$('#spl-embedsend');
+    if(es){es.innerHTML=connMenu(connMake('html',html,'Spline scene page','spline'));connInit();}
+  };
+  $('#spl-objs').onclick=()=>{
+    const o=SPL_STATE.objects;
+    out.innerHTML=`<p class="help" style="margin-top:10px">${o.length} objects Spline reports in
+      this scene. Useful for checking the scene loaded what you expected.</p>
+      <div class="spl-objs">${o.map(n=>`<span class="tag">${esc(n)}</span>`).join('')||'<span class="help">none</span>'}</div>`;
+  };
+  const send=$('#spl-send');
+  if(send&&st.status==='ready'){
+    send.innerHTML=connMenu(connMake('text',SPL.url,'Spline scene URL','spline'));
+    connInit();
+  }
+}
+
+/* ═══════════════════ HOW MUCH TO SHOW ═══════════════════
+   Forty tabs is the right number for someone who has lived in this app for a month and the
+   wrong number for someone opening it for the first time. Rather than cutting features, the
+   bar has three densities, and every one of them can reach everything — Simple hides tabs
+   from the STRIP, it does not disable them, so a hand-off can still send you to a hidden tab
+   and the tab you are on is always visible whatever mode you are in.
+
+   Deliberately separate from Customise's hiddenTabs. That is a considered per-tab choice the
+   user made; this is a single reversible dial. Overloading one onto the other would mean
+   switching density silently discarded a configuration someone had built by hand. */
+const TAB_GROUPS=[
+  {id:'talk',  label:'Chat & reasoning', icon:'💬',
+   views:['assistant','lab','council','compare','relay','transplant','pane','history']},
+  {id:'make',  label:'Create',           icon:'🎨',
+   views:['gen','design','studio','three','spline','office','creations']},
+  {id:'build', label:'Build & ship',     icon:'🏗',
+   views:['factory','forge','library','handoff','webos','connect']},
+  {id:'models',label:'Models & cost',    icon:'🎚',
+   views:['modelhub','models','local','metrics','graphs','viz']},
+  {id:'agents',label:'Agents & teams',   icon:'🤖',
+   views:['vo','bots','mission','awards','study']},
+  {id:'know',  label:'Knowledge & ops',  icon:'🧠',
+   views:['brain','terminal','ops','guards','reverse','devices']},
+  {id:'setup', label:'Setup',            icon:'⚙️',
+   views:['customise','settings','help']},
+];
+/* The ten a new person needs before any of the rest makes sense: somewhere to talk, the
+   reasoning view this app exists for, one place to make something, one to write, the notes,
+   the model list, and the way back out. */
+const TAB_ESSENTIALS=['assistant','lab','gen','office','brain','modelhub','webos','settings','help'];
+const TAB_MODES={
+  simple:{label:'Simple',icon:'◱',
+    what:'Nine tabs — the ones you need to get going. Everything else is one click away.'},
+  grouped:{label:'Grouped',icon:'▤',
+    what:'All of it, sorted under headings so the bar reads as sections instead of a wall.'},
+  full:{label:'Everything',icon:'▦',
+    what:'Every tab, in the original order. Best once you know where things live.'},
+};
+let TABMODE=store.get('tabmode','grouped');
+let TAB_ORDER0=null;                       // the original DOM order, captured once
+function tabGroupOf(view){
+  const g=TAB_GROUPS.find(g=>g.views.includes(view));
+  return g?g.id:null;
+}
+function applyTabMode(){
+  const nav=$('#tabs');if(!nav)return;
+  const mode=TAB_MODES[TABMODE]?TABMODE:'grouped';
+  /* Captured before anything is moved, so "Everything" can put the bar back exactly as it
+     shipped rather than leaving it in group order for good. */
+  if(!TAB_ORDER0)TAB_ORDER0=[...nav.children];
+  document.body.setAttribute('data-tabmode',mode);
+  nav.querySelectorAll('.tabgroup').forEach(x=>x.remove());
+  const tabs=[...nav.querySelectorAll('.tab[data-view]')];
+  tabs.forEach(t=>t.setAttribute('data-essential',TAB_ESSENTIALS.includes(t.dataset.view)?'1':'0'));
+  const extras=[...nav.children].filter(c=>!c.matches('.tab[data-view]'));
+  if(mode==='full'){
+    /* Restore, rather than re-sort: appendChild MOVES the same buttons, so identity,
+       listeners and focus all survive the round trip. */
+    TAB_ORDER0.forEach(el=>nav.appendChild(el));
+    /* Anything created AFTER the snapshot — the section-manager button is added during boot,
+       after this first runs — is not in TAB_ORDER0, so restoring alone left it stranded at
+       the FRONT of the bar. Re-append the strays so they land last, as they do in the other
+       two modes. */
+    [...nav.children].filter(c=>!TAB_ORDER0.includes(c)&&!c.matches('.tabgroup'))
+      .forEach(c=>nav.appendChild(c));
+  }else{
+    const seen=new Set();
+    TAB_GROUPS.forEach(g=>{
+      const mine=tabs.filter(t=>g.views.includes(t.dataset.view));
+      if(!mine.length)return;
+      const chip=document.createElement('span');
+      chip.className='tabgroup';chip.dataset.tabgroup=g.id;
+      chip.textContent=g.icon+' '+g.label;
+      nav.appendChild(chip);
+      mine.forEach(t=>{nav.appendChild(t);seen.add(t);});
+    });
+    /* A tab in no group would silently vanish from the bar. Belt and braces behind the
+       gauntlet case that asserts the groups cover every view. */
+    tabs.filter(t=>!seen.has(t)).forEach(t=>nav.appendChild(t));
+    extras.forEach(e=>nav.appendChild(e));      // the section-manager button stays last
+  }
+  tabEdges();
+}
+function setTabMode(m){
+  TABMODE=TAB_MODES[m]?m:'grouped';
+  store.set('tabmode',TABMODE);
+  applyTabMode();
+  const b=$('#modeBtn');if(b){b.textContent=TAB_MODES[TABMODE].icon;
+    b.title='Showing: '+TAB_MODES[TABMODE].label;}
+  toast(TAB_MODES[TABMODE].label+' — '+TAB_MODES[TABMODE].what,3200);
+}
+function openTabModeMenu(){
+  const opts=Object.keys(TAB_MODES).map(k=>{
+    const m=TAB_MODES[k];
+    const n=k==='simple'?TAB_ESSENTIALS.length:$$('#tabs .tab[data-view]').length;
+    return `<button class="modeopt${k===TABMODE?' on':''}" data-mode="${k}">
+      <i>${m.icon}</i><span style="flex:1"><b>${esc(m.label)} · ${n} tabs</b>
+      <span>${esc(m.what)}</span></span></button>`;}).join('');
+  openModal(`<h3>How much do you want on screen?</h3>
+    <p class="help">This only changes what the tab bar SHOWS. Nothing is switched off, and
+      anything hidden here is still one search away with ⌘K — or reachable when another tab
+      hands work to it.</p>
+    <div class="modemenu">${opts}</div>
+    <p class="help" style="margin-top:12px">Want a specific tab gone for good instead?
+      That lives in <b>Customise</b>, and this dial will not touch it.</p>`);
+  $$('.modeopt').forEach(b=>b.onclick=()=>{setTabMode(b.dataset.mode);closeModal();});
+}
 function tabEdges(){
   stripEdges($('#tabs'));
   $$('.subnav').forEach(stripEdges);
@@ -34731,11 +35168,37 @@ function connToTransplant(p){
   if(typeof fillTransplantSources==='function')fillTransplantSources();
   toast('Opened in Transplant',2200);
 }
+/* This guarded on `creationAdd` and `saveCreation`. NEITHER EXISTS anywhere in this file —
+   the real function has always been creationSave — so both branches were false, nothing was
+   ever written, and it then said "Saved to Creations" and navigated you to a tab where your
+   work was not. Every producer offering Creations as a destination lost whatever it sent.
+   The guard-with-no-true-branch, followed by a success message, is this codebase's most
+   expensive recurring shape: grep that a name is DEFINED, not merely called. */
 function connToCreations(p){
-  if(typeof creationAdd==='function')creationAdd({title:p.title||'Untitled',kind:p.kind,body:p.data});
-  else if(typeof saveCreation==='function')saveCreation(p.title||'Untitled',p.data);
+  const t=p.title||'Untitled';
+  let files,entry,type='other';
+  if(p.kind==='files'&&Array.isArray(p.data)){
+    files={};p.data.forEach(f=>{if(f&&f.name)files[f.name]=String(f.content||'');});
+    entry=Object.keys(files).find(n=>/\.html?$/i.test(n))||Object.keys(files)[0]||'';
+    type=creationTypeOf(files,null);
+  }else if(p.kind==='html'){
+    entry='index.html';files={'index.html':String(p.data||'')};
+    type=creationTypeOf(files,null);
+  }else if(p.kind==='image'||p.kind==='video'){
+    /* A data: URL is the whole asset, so it IS the file. Named by kind so the gallery and
+       the exporter can both tell what they are holding. */
+    const ext=p.kind==='image'?'png':'mp4';
+    entry='asset.'+ext;files={[entry]:String(p.data||'')};
+  }else if(p.kind==='model3d'){
+    entry='model.txt';files={'model.txt':typeof p.data==='string'?p.data:JSON.stringify(p.data,null,2)};
+  }else{
+    entry='content.txt';
+    files={'content.txt':typeof p.data==='string'?p.data:JSON.stringify(p.data,null,2)};
+  }
+  const c=creationSave({title:t,type,files,entry,notes:'Sent from '+(p.from||'elsewhere')});
   go('creations');
-  toast('Saved to Creations',2200);
+  if(typeof renderCreations==='function')renderCreations();
+  toast(c?`Saved “${t}” to Creations`:'Could not save to Creations',2400);
 }
 /* ── User-made and AI-suggested connections ────────────────────────────────
    A "custom connection" is a saved shortcut: this kind, from here, always goes there —
@@ -34905,10 +35368,10 @@ const ONB_INTERESTS=[
    core:['office'],                   more:['brain','creations','library']},
   {id:'media',   icon:'🎬', label:'Images & video',
    why:'Generate and edit media',
-   core:['gen'],                      more:['design','creations','viz']},
+   core:['gen'],                      more:['design','spline','creations','viz']},
   {id:'3d',      icon:'🧊', label:'3D & games',
    why:'Scenes, models, ThreeUI',
-   core:['three'],                    more:['gen','studio','webos']},
+   core:['three'],                    more:['spline','gen','studio','webos']},
   {id:'research',icon:'🔬', label:'Research & reasoning',
    why:'See models actually think',
    core:['lab'],                      more:['council','compare','transplant','pane']},
@@ -40354,6 +40817,7 @@ function go(view){
   if(view==='study')panelGuard(view,()=>renderStudy());
   if(view==='ops')panelGuard(view,()=>renderStyleUI());
   if(view==='three')panelGuard(view,()=>{renderAssets();renderWdream();renderEd3Assets();});
+  if(view==='spline')panelGuard(view,()=>{renderSpline();connInit();});
   if(view==='forge'&&$('#sub-brain')&&$('#sub-brain').classList.contains('on'))panelGuard(view,()=>renderBrainMap());
   if(view==='history')panelGuard(view,()=>renderHistory());
   if(view==='transplant')panelGuard(view,()=>fillTransplantSources());
@@ -40379,6 +40843,10 @@ async function boot(){
     if(e.key==='?'){e.preventDefault();showHelp();}
   });
   $('#helpBtn').onclick=showHelp;
+  $('#modeBtn').onclick=openTabModeMenu;
+  applyTabMode();
+  const _mb=$('#modeBtn');
+  if(_mb){_mb.textContent=TAB_MODES[TABMODE].icon;_mb.title='Showing: '+TAB_MODES[TABMODE].label;}
   $('#fsBtn').onclick=toggleFullscreenView;
   $('#popBtn').onclick=popOutView;
   document.addEventListener('fullscreenchange',()=>{
@@ -40644,6 +41112,13 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     wdreamSignal,wdreamAbortErr,get WDREAM_RUN(){return WDREAM_RUN},set WDREAM_RUN(v){WDREAM_RUN=v},
     ofcUndo,ofcRedo,ofcSnap,ofcSnapshot,ofcRestore,ofcHistButtons,
     panelGuard,panelFail,PWA,pwaInit,pwaInstall,pwaReset,renderPwa,
+    SPL_RUNTIME,splNormalise,splLoad,splShot,splEmbedHtml,renderSpline,splStatus,
+    connToCreations,creationSave,saveCreations,
+    get CREATIONS(){return CREATIONS},set CREATIONS(v){CREATIONS=v},
+    get SPL(){return SPL},set SPL(v){SPL=v},
+    get SPL_STATE(){return SPL_STATE},set SPL_STATE(v){SPL_STATE=v},
+    TAB_GROUPS,TAB_ESSENTIALS,TAB_MODES,tabGroupOf,applyTabMode,setTabMode,openTabModeMenu,
+    get TABMODE(){return TABMODE},set TABMODE(v){TABMODE=v},
     openModal,closeModal,focusablesIn,FOCUSABLE,wosFocusEl,
     get OFC_UNDO(){return OFC_UNDO},set OFC_UNDO(v){OFC_UNDO=v},
     get OFC_REDO(){return OFC_REDO},set OFC_REDO(v){OFC_REDO=v},

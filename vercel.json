@@ -18,7 +18,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; img-src * data: blob:; media-src * blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://unpkg.com https://cdn.jsdelivr.net; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src *; frame-src 'self' blob: data:"
+          "value": "default-src 'self'; img-src * data: blob:; media-src * blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://unpkg.com https://cdn.jsdelivr.net; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src *; frame-src 'self' blob: data: https://app.spline.design https://my.spline.design"
         }
       ]
     },
