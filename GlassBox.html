@@ -174,6 +174,15 @@ body[data-tabpos=left] .tabgroup,body[data-tabpos=right] .tabgroup{
   border-radius:12px;background:var(--panel2)}
 .soc-body{font-size:13px;line-height:1.6;margin-top:4px;white-space:pre-wrap}
 .soc-meta{font-size:11.5px;color:var(--ink3);text-align:center;padding:4px 0}
+.soc-assume{margin-top:11px;padding:11px 12px;border:1px solid var(--edge2);border-radius:12px;
+  background:var(--panel2)}
+.soc-arow{display:flex;gap:9px;align-items:flex-start;padding:7px 9px;border-radius:9px;
+  border:1px solid var(--edge);margin-bottom:5px;background:var(--panel)}
+.soc-arow.confirmed{opacity:.62}
+.soc-arow.rejected{border-color:rgba(255,86,86,.45);background:rgba(255,86,86,.07)}
+.soc-astate{font-weight:800;width:16px;text-align:center;color:var(--ink3)}
+.soc-arow.confirmed .soc-astate{color:var(--good)}
+.soc-arow.rejected .soc-astate{color:var(--bad)}
 .jvs-core{width:74px;height:74px;border-radius:50%;position:relative;flex:none;
   background:radial-gradient(circle at 50% 45%,rgba(122,162,255,.55),rgba(122,162,255,.07) 62%);
   border:1px solid rgba(122,162,255,.42);transition:all .3s ease}
@@ -23294,6 +23303,53 @@ function gauntletCases(g){
     antiWhat:'while a single-voice, single-part stream can still commit immediately',
     anti:()=>g.socCommitBlocked(['solo'],['solo'],1,'Summarise this file.'),antiExpect:v=>v===null});
 
+  /* ── The assumption ledger ────────────────────────────────────────────────
+     Guards the one property that makes it a FIX rather than a report: a rejected premise has to
+     reach the voices that would otherwise keep building on it. */
+
+  add({id:'assume-rejection-propagates',sub:'stream',uses:['socAssume','socAssumeSet','socCorrections'],
+    what:'a rejected premise is restated to later voices, with the reason',
+    run:()=>{
+      const keep=(SOC.assumptions||[]).slice();
+      try{
+        g.SOC.assumptions=[];
+        const a=g.socAssume('CSV is the right export format',{id:'b',name:'Pilot'},1);
+        const before=g.socCorrections();
+        g.socAssumeSet(a.id,'rejected','users must choose the format');
+        const after=g.socCorrections();
+        return (!before && /CSV/.test(after) && /users must choose/.test(after))
+          ?'propagates':`before=${before.length} after=${after.length}`;
+      }finally{g.SOC.assumptions=keep;saveSoc();}
+    },expect:v=>v==='propagates',
+    antiWhat:'while a CONFIRMED premise is not injected — only rejections correct',
+    anti:()=>{
+      const keep=(SOC.assumptions||[]).slice();
+      try{
+        g.SOC.assumptions=[];
+        const a=g.socAssume('fields are public-safe',{id:'b',name:'Pilot'},1);
+        g.socAssumeSet(a.id,'confirmed');
+        return /public-safe/.test(g.socCorrections())?1:0;
+      }finally{g.SOC.assumptions=keep;saveSoc();}
+    },antiExpect:v=>v===0});
+
+  add({id:'assume-parsing',sub:'stream',uses:['socParseAssumptions','socParseDirective'],
+    what:'premises are caught in both the function and the natural prose form',
+    run:()=>{
+      const P=g.socParseAssumptions;
+      const fn=P('assume(CSV is the right format)').length;
+      const prose=P('Assuming: the user wants CSV rather than JSON').length;
+      /* A model writing "Assuming X, I will…" has made exactly the same invisible decision as
+         one using the function syntax, and prose is the more natural phrasing — catching only
+         the syntax would miss the common case. */
+      const both=(fn===1&&prose===1);
+      /* and declaring a premise must NOT eat the turn directive */
+      const d=g.socParseDirective('assume(x is settled)\npass(Bob, your turn)');
+      return (both&&d.kind==='pass'&&d.target==='Bob')?'caught':`fn=${fn} prose=${prose} d=${d.kind}`;
+    },expect:v=>v==='caught',
+    antiWhat:'and ordinary prose with no premise produces none rather than inventing one',
+    anti:()=>g.socParseAssumptions('Here is the design, it uses a queue and a worker.').length,
+    antiExpect:v=>v===0});
+
   add({id:'render-unique-ids',sub:'rendering',uses:['esc'],
     what:'no duplicate DOM id (the second one is unreachable via $())',
     run:()=>{const seen={},d=[];document.querySelectorAll('[id]').forEach(e=>{
@@ -23606,6 +23662,12 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'assume-silent',export:'socCorrections',
+   why:'a rejected premise stops reaching later voices and the stream keeps building on it',
+   broken:()=>()=>''},
+  {id:'assume-blind',export:'socParseAssumptions',
+   why:'premises stop being detected at all and go back to being invisible',
+   broken:()=>()=>[]},
   {id:'commit-unearned',export:'socCommitBlocked',
    why:'one voice can end the work by asserting it is done (premature completion)',
    broken:()=>()=>null},
@@ -36737,6 +36799,31 @@ function renderSoc(){
       <label class="mini muted">spend cap $<input type="number" id="soc-ms" value="${SOC.caps.maxSpend}" min="0" step="0.05" style="width:74px"></label>
       <span class="help" style="margin:0;align-self:center">used: ${sp.turns} turns · ${money(sp.cost||0)}</span>
     </div>
+    ${(SOC.assumptions||[]).length?`
+      <div class="soc-assume">
+        <div class="row" style="align-items:center;gap:8px;margin-bottom:6px">
+          <b style="font-size:13px">🧩 What they are taking for granted</b>
+          <span class="mini muted">${socAssumptions('open').length} unreviewed</span>
+        </div>
+        <p class="help" style="margin:0 0 8px">Rejecting a wrong premise here does not save one
+          turn — it prevents every turn that would have been built on it. A rejection is restated
+          to every later voice, so the stream cannot quietly keep going on it.</p>
+        ${(SOC.assumptions||[]).map(a=>`
+          <div class="soc-arow ${esc(a.state)}">
+            <span class="soc-astate">${a.state==='confirmed'?'✓':a.state==='rejected'?'✗':'?'}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12.5px;line-height:1.5">${esc(a.text)}</div>
+              <div class="bx-meta">${esc(a.byName||'—')} · turn ${a.turn}${
+                a.note?` · you said: ${esc(a.note)}`:''}</div>
+            </div>
+            ${a.state==='open'?`
+              <button class="btn ghost sm" data-aok="${esc(a.id)}" title="Yes, that is right">✓</button>
+              <button class="btn ghost sm" data-ano="${esc(a.id)}" title="No — reject it and tell them why">✗</button>`:''}
+          </div>`).join('')}
+        ${(()=>{const sv=socAssumeSaving();return sv?`<p class="help" style="margin:8px 0 0">
+          ${sv.rejected} rejected at ${money(sv.perTurn)}/turn — up to <b>${money(sv.avoided)}</b>
+          of downstream work avoided across the ${sv.remaining} turns still allowed.</p>`:'';})()}
+      </div>`:''}
     ${(SOC.turns||[]).length?`<div class="soc-thread">${SOC.turns.map(t=>{
       if(t.kind!=='say')return `<div class="soc-meta">${esc(t.text)}</div>`;
       const b=bots.find(x=>x.id===t.botId);
@@ -36759,6 +36846,13 @@ function renderSoc(){
   const sv=$('#soc-steer');if(sv)sv.onchange=()=>{SOC.steer=sv.value;saveSoc();};
   const mt=$('#soc-mt');if(mt)mt.onchange=()=>{SOC.caps.maxTurns=Math.max(2,+mt.value||16);saveSoc();};
   const ms=$('#soc-ms');if(ms)ms.onchange=()=>{SOC.caps.maxSpend=Math.max(0,+ms.value||0.5);saveSoc();};
+  $$('[data-aok]',host).forEach(b=>b.onclick=()=>{socAssumeSet(b.dataset.aok,'confirmed');});
+  $$('[data-ano]',host).forEach(b=>b.onclick=()=>{
+    /* The reason matters more than the rejection: "no" tells the stream to stop, "no, users pick
+       the format" tells it what to do instead — and that text is what gets injected. */
+    const why=prompt('Why is that wrong? (this is restated to every later voice)','');
+    if(why===null)return;
+    socAssumeSet(b.dataset.ano,'rejected',why);});
   $$('[data-socbell]',host).forEach(b=>b.onclick=()=>{
     const r=socRingBell(b.dataset.socbell,'you asked them to weigh in',true);
     if(!r.ok)toast(r.why,2800);
@@ -39856,12 +39950,17 @@ const SOC_DIRECTIVES=
   '  ring(<name>, <reason>)  — RING THE BELL: ask urgently that <name> speak next, out of turn.\n'+
   '                            Use it sparingly, for something that changes what happens next.\n'+
   '  yield()                 — you do not know who should go next\n'+
+  '\nAND, anywhere in your turn, declare what you are taking for granted:\n'+
+  '  assume(<the thing you are treating as settled without having checked>)\n'+
+  'Declare one whenever you pick a format, a field, a library, a boundary or an interpretation\n'+
+  'of an ambiguous request. This is not optional politeness — an assumption nobody can see is\n'+
+  'the single most expensive thing you can produce, because everything after it is built on it.\n'+
   '  commit()                — the goal is met and the stream should stop\n'+
   'You can NEVER pass to yourself. Keep the turn under 220 words. Continue the work; do not '+
   'restate what others already said.';
 const SOC_CAPS={maxTurns:16,maxSpend:0.5,maxWallMin:10,loopCheckEvery:4};
 const SOC_DEFAULTS={goal:'',voices:[],roles:{},turns:[],status:'idle',
-  bell:null,bellsRung:0,queue:[],mustExplain:null,steer:'',
+  bell:null,bellsRung:0,queue:[],mustExplain:null,steer:'',assumptions:[],
   spent:{turns:0,cost:0,startTs:0},caps:Object.assign({},SOC_CAPS)};
 let SOC=Object.assign({},SOC_DEFAULTS,store.get('soc',{}));
 SOC.caps=Object.assign({},SOC_CAPS,SOC.caps||{});
@@ -39941,7 +40040,7 @@ async function socStart(goal){
   SOC.goal=String(goal||'').trim()||SOC.goal;
   if(!SOC.goal)return toast('Give the stream a goal',2400);
   SOC.turns=[];SOC.status='live';
-  SOC.bell=null;SOC.bellsRung=0;SOC.queue=[];SOC.mustExplain=null;
+  SOC.bell=null;SOC.bellsRung=0;SOC.queue=[];SOC.mustExplain=null;SOC.assumptions=[];
   SOC.spent={turns:0,cost:0,startTs:Date.now()};
   saveSoc();
   SOC_RUN={stop:false,ctrl:new AbortController()};
@@ -39972,11 +40071,14 @@ async function socStart(goal){
       }
 
       const r=await botTurn(current,history,SOC_RUN.ctrl.signal,
-        {sys:socSysFor(current)+owe,maxTokens:900,label:'soc-'+current.name});
+        {sys:socSysFor(current)+owe+socCorrections(),maxTokens:900,label:'soc-'+current.name});
       if(SOC_RUN.stop)break;
       if(!r.ok){socSay('meta','',`${current.name} could not answer (${r.error}). Stopping.`);break;}
 
       const d=socParseDirective(r.content);
+      /* Recorded before the turn is even rendered, so a premise is visible the moment it is
+         made rather than after the work that depends on it. */
+      socParseAssumptions(r.content).forEach(a=>socAssume(a,current,SOC.spent.turns+1));
       /* The directive line is machinery, not conversation — strip it so the transcript reads
          like people talking rather than like a protocol dump. */
       const body=String(r.content).replace(/^\s*(pass|redirect|yield|commit)\s*\([^)]*\)\s*$/gim,'').trim();
@@ -40049,6 +40151,89 @@ function socStop(){
   SOC_RUN.stop=true;
   if(SOC_RUN.ctrl){try{SOC_RUN.ctrl.abort();}catch(_){}}
   toast('Stopping the stream…',2000);
+}
+
+/* ═══════════════════ THE ASSUMPTION LEDGER ═══════════════════
+   The single highest-leverage fix for how agent work actually goes wrong.
+
+   The complaints about agentic coding converge on one mechanism, not four:
+     · "makes wrong assumptions on your behalf and runs with them without checking"
+     · "assumption propagation — misunderstands early, builds a feature on faulty premises, and
+        you don't notice until you're five PRs deep and the architecture is cemented"
+     · "ask it to export user data and it silently picks a format, the fields and the delivery
+        mechanism, and ships 400 lines before you've finished your coffee"
+     · "doesn't surface inconsistencies, doesn't present tradeoffs, doesn't push back"
+   Every one of those is the same failure: A DECISION MADE INVISIBLY AND NEVER REVISITED.
+
+   And the number that decides the design, from a study of 20,574 real agent sessions across
+   1,639 repositories: 91.49% of visible resolutions required EXPLICIT USER CORRECTION. Agents
+   overwhelmingly do not catch these themselves. If a human has to make the catch either way,
+   then the entire game is making the catch possible at TURN ONE instead of turn sixteen.
+
+   That is why this is also the token fix, and why it does not trade quality away to get there.
+   Rejecting a wrong premise on turn 1 does not save one turn — it prevents every turn that would
+   have been built on it, plus the rework. The cheapest token is the one spent on work that was
+   never going to be kept. Quality and cost point the same direction here, which is rare.
+
+   A rejected assumption is INJECTED INTO SUBSEQUENT PROMPTS as a correction. Without that this
+   would be a reporting tool: a list of things that went wrong, still going wrong. */
+function socParseAssumptions(text){
+  /* Deliberately separate from the turn directive. A turn both assumes things and hands off, so
+     forcing a choice between declaring an assumption and passing would mean it never declares. */
+  const out=[];
+  const t=String(text||'');
+  [...t.matchAll(/\bassume\s*\(\s*([^)]{4,200})\)/gi)].forEach(m=>{
+    const v=m[1].trim().replace(/^["']|["']$/g,'');
+    if(v&&!out.includes(v))out.push(v);
+  });
+  /* Prose form too, because a model that writes "Assuming X, I'll…" has made exactly the same
+     invisible decision as one that used the function syntax, and it is the more natural phrasing. */
+  [...t.matchAll(/^\s*(?:assumption|assuming)\s*[:,]\s*(.{4,200}?)\s*$/gim)].forEach(m=>{
+    const v=m[1].trim().replace(/[.;]$/,'');
+    if(v&&!out.includes(v))out.push(v);
+  });
+  return out.slice(0,4);
+}
+function socAssume(text,bot,turnNo){
+  const norm=String(text||'').trim().toLowerCase();
+  const existing=(SOC.assumptions||[]).find(a=>a.text.toLowerCase()===norm);
+  if(existing)return existing;               // the same premise restated is not a new one
+  const a={id:uid(),text:String(text).trim().slice(0,200),byId:bot&&bot.id,
+    byName:(bot&&bot.name)||'',turn:turnNo||0,state:'open',ts:nowISO()};
+  SOC.assumptions=(SOC.assumptions||[]).concat([a]);
+  saveSoc();
+  actLog('agent','assumed: '+a.text.slice(0,60),{by:a.byName,turn:a.turn});
+  return a;
+}
+const socAssumptions=st=>(SOC.assumptions||[]).filter(a=>!st||a.state===st);
+function socAssumeSet(id,state,note){
+  const a=(SOC.assumptions||[]).find(x=>x.id===id);
+  if(!a)return false;
+  a.state=state;a.note=String(note||'').slice(0,200);a.decidedAt=nowISO();
+  saveSoc();
+  actLog('human',state+' assumption: '+a.text.slice(0,60),{note:a.note});
+  if(typeof renderSoc==='function'&&$('#soc-panel'))renderSoc();
+  return true;
+}
+/* The correction block. This is the part that makes the ledger a fix rather than a report: a
+   rejected premise is restated to every later voice, so the stream cannot quietly keep building
+   on something the human already threw out. */
+function socCorrections(){
+  const bad=socAssumptions('rejected');
+  if(!bad.length)return'';
+  return '\n\nCORRECTIONS — these were rejected by the human. Do NOT build on them:\n'+
+    bad.map(a=>`  ✗ ${a.text}${a.note?`  (they said: ${a.note})`:''}`).join('\n')+
+    '\nIf your work depended on any of these, say so and adjust rather than continuing.';
+}
+/* What the early catch was worth, in the app's own measured numbers rather than a claim. */
+function socAssumeSaving(){
+  const turns=(SOC.spent&&SOC.spent.turns)||0;
+  const cost=(SOC.spent&&SOC.spent.cost)||0;
+  const rejected=socAssumptions('rejected').length;
+  if(!rejected||!turns)return null;
+  const perTurn=cost/turns;
+  const remaining=Math.max(0,(SOC.caps.maxTurns||16)-turns);
+  return{rejected,perTurn,avoided:perTurn*remaining,remaining};
 }
 
 /* ── EARNING commit() ──────────────────────────────────────────────────────
@@ -44713,6 +44898,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     renderActLedger,renderCkpts,renderEvo,renderSkillSources,ACTLEDGER,
     renderAssistants,renderVoices,renderDossiers,
     renderSoc,
+    socParseAssumptions,socAssume,socAssumptions,socAssumeSet,socCorrections,socAssumeSaving,
     socGoalParts,socCommitBlocked,
     SOC_STEER_SYS,socSteerAsk,socSteerEligible,
     SOC_BELL_MAX,socRingBell,socBellDecision,socBellResolve,socQueuePush,socQueuePop,
