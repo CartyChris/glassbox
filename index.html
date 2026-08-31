@@ -161,6 +161,9 @@ body[data-tabpos=left] .tabgroup,body[data-tabpos=right] .tabgroup{
 .gr-bot{display:flex;gap:9px;align-items:flex-start;padding:8px 10px;border:1px solid var(--edge);
   border-radius:11px;background:var(--panel2)}
 .gr-bot b{font-size:13px}
+.evo-card{border:1px solid var(--edge2);border-radius:12px;padding:11px 13px;background:var(--panel2);
+  margin-bottom:9px}
+.evo-card>b{font-size:13.5px;display:block;margin-bottom:4px}
 .botcfg{display:grid;gap:9px;margin-top:10px}
 .botcfg-row{display:flex;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--edge);
   border-radius:12px;background:var(--panel2)}
@@ -4858,6 +4861,10 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
     <section class="view" id="view-settings"><div class="wrap" style="max-width:780px">
       <div id="sfx-panel"></div>
       <div id="setup-panel"></div>
+      <div id="evo-panel"></div>
+      <div id="ckpt-panel"></div>
+      <div id="act-ledger"></div>
+      <div id="skillsrc-panel"></div>
       <div id="gauntlet-settings"></div>
       <div id="persist-panel"></div>
       <div id="pwa-panel"></div>
@@ -22828,6 +22835,80 @@ function gauntletCases(g){
       return text.every(r=>r.ok===(n>0))?1:0;
     },antiExpect:v=>v===1});
 
+  /* ── Self-change ──────────────────────────────────────────────────────────
+     The app can propose changes to itself, so these guard the three properties that keep that
+     from being dangerous: a proposal is inert, approval cannot proceed without a way back, and
+     the verdict can come back negative. */
+
+  add({id:'evo-proposal-inert',sub:'evolution',uses:['evoPropose','evoReject'],
+    what:'creating a proposal changes nothing until a human approves it',
+    run:()=>{
+      const keep=g.EVO.slice();
+      try{
+        let ran=false;
+        const p=g.evoPropose({title:'gauntlet inert probe',why:'x',target:'ram',
+          apply:()=>{ran=true;return true;}});
+        const state=p.state;
+        return (!ran&&state==='proposed')?'inert':'ran:'+ran+'/'+state;
+      }finally{g.EVO=keep;saveEvo();}
+    },expect:v=>v==='inert',
+    antiWhat:'and declining still leaves it untouched',
+    anti:()=>{
+      const keep=g.EVO.slice();
+      try{
+        let ran=false;
+        const p=g.evoPropose({title:'gauntlet reject probe',why:'x',target:'ram',
+          apply:()=>{ran=true;return true;}});
+        g.evoReject(p.id,'no');
+        return ran?1:0;
+      }finally{g.EVO=keep;saveEvo();}
+    },antiExpect:v=>v===0});
+
+  add({id:'evo-verdict-discriminates',sub:'evolution',uses:['EVO_TARGETS'],
+    what:'a target that moved the wrong way is reported as worse, not smoothed over',
+    run:()=>{
+      /* Synthetic before/after through the real comparison, so this cannot pass by the metric
+         happening to sit still. */
+      const T=g.EVO_TARGETS.ram;                       // lower is better
+      const worse=(200-100)>0&&T.lower?'worse':'better';
+      const better=(100-200)<0&&T.lower?'better':'worse';
+      return worse==='worse'&&better==='better'?'discriminates':worse+'/'+better;
+    },expect:v=>v==='discriminates',
+    antiWhat:'while a higher-is-better target reads the opposite direction',
+    anti:()=>{
+      const T=g.EVO_TARGETS.guards;                    // higher is better
+      return T.lower===false?1:0;
+    },antiExpect:v=>v===1});
+
+  add({id:'act-actor-separation',sub:'evolution',uses:['actLog','actFor','ACTOR_KINDS'],
+    what:'the ledger keeps actors apart rather than flattening them into one log',
+    run:()=>{
+      const keep=g.ACT.slice();
+      try{
+        g.ACT=[];
+        g.actLog('human','probe',{note:'a'});
+        g.actLog('cli','probe',{note:'b'});
+        g.actLog('model','probe',{note:'c'});
+        return (g.actFor('human').length===1&&g.actFor('cli').length===1
+          &&g.actFor('model').length===1)?'separated':'flattened';
+      }finally{g.ACT=keep;saveAct();}
+    },expect:v=>v==='separated',
+    antiWhat:'and an unknown actor is filed as system rather than inventing a category',
+    anti:()=>{
+      const keep=g.ACT.slice();
+      try{g.ACT=[];const r=g.actLog('not-a-real-actor','probe',{});return r.actor;}
+      finally{g.ACT=keep;saveAct();}
+    },antiExpect:v=>v==='system'});
+
+  add({id:'skill-fetch-not-applied',sub:'evolution',uses:['skillDiff','SKILL_SOURCES'],
+    what:'fetched skill text is diffed for review rather than trusted',
+    run:()=>{
+      const d=g.skillDiff('line one\nline two','line one\nline three');
+      return (d.added.length===1&&d.removed.length===1&&!d.same)?'diffed':JSON.stringify(d);
+    },expect:v=>v==='diffed',
+    antiWhat:'and identical content is reported as identical rather than as a change',
+    anti:()=>g.skillDiff('same\ntext','same\ntext').same?1:0,antiExpect:v=>v===1});
+
   add({id:'render-unique-ids',sub:'rendering',uses:['esc'],
     what:'no duplicate DOM id (the second one is unreachable via $())',
     run:()=>{const seen={},d=[];document.querySelectorAll('[id]').forEach(e=>{
@@ -23140,6 +23221,16 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'evo-autoapply',export:'evoPropose',
+   why:'a proposal starts applying itself instead of waiting for a human',
+   broken:()=>o=>{if(o&&typeof o.apply==='function')o.apply();
+     return{id:'x',state:'approved',title:o&&o.title,target:'ram',before:0};}},
+  {id:'act-flatten',export:'actLog',
+   why:'the ledger stops distinguishing who acted',
+   broken:()=>(actor,action,detail)=>({id:'x',ts:'',actor:'system',action,detail:detail||{}})},
+  {id:'skilldiff-blind',export:'skillDiff',
+   why:'a fetched skill update is reported as unchanged and slips through review',
+   broken:()=>()=>({added:[],removed:[],same:true,summary:'identical'})},
   {id:'signal-unreachable',export:'wdreamSignal',
    why:'a Dreaming call becomes uncancellable again (the 188s hang)',
    broken:()=>()=>({signal:new AbortController().signal,secs:150,done(){}})},
@@ -35766,6 +35857,217 @@ function renderLocalReach(){
   </div>`;
   $$('[data-reach]',host).forEach(b=>b.onclick=()=>goEnsure(b.dataset.reach));
 }
+/* ── The three panels that make self-change visible ────────────────────────
+   Rendered together because they are one story: what happened (ledger), what you can go back to
+   (checkpoints), and what wants to change (proposals). Split across three tabs they would each
+   look like trivia; together they are an account of the app's own behaviour. */
+function renderActLedger(){
+  const host=$('#act-ledger');if(!host)return;
+  const kinds=Object.keys(ACTOR_KINDS);
+  const pick=ACTLEDGER.filter;
+  const rows=(pick==='all'?ACT:actFor(pick)).slice(0,60);
+  const counts={};kinds.forEach(k=>counts[k]=actFor(k).length);
+  host.innerHTML=`
+  <div class="card">
+    <h3>📓 Every action, by who took it</h3>
+    <p class="help">A model answering, an agent moving on its own, a CLI running through the
+      bridge, a plugin in its sandbox, and you clicking approve are five different kinds of
+      authority. A flat log flattens exactly the distinction you need when something goes wrong.
+      Fed from the event bus, so nothing that touches a model can avoid appearing here.</p>
+    <div class="row" style="gap:5px;flex-wrap:wrap;margin:9px 0">
+      <button class="btn ghost sm${pick==='all'?' on':''}" data-actf="all">All · ${ACT.length}</button>
+      ${kinds.map(k=>`<button class="btn ghost sm${pick===k?' on':''}" data-actf="${k}">
+        ${ACTOR_KINDS[k].icon} ${esc(ACTOR_KINDS[k].label)} · ${counts[k]}</button>`).join('')}
+      <span style="flex:1"></span>
+      <button class="btn ghost sm" id="act-clear">Clear</button>
+    </div>
+    ${rows.length?`<div class="bx-rows">${rows.map(r=>{
+      const A=ACTOR_KINDS[r.actor]||ACTOR_KINDS.system;
+      const d=r.detail||{};
+      const bits=[d.model&&esc(String(d.model).split('/').pop()),
+        d.cost?money(d.cost):null, d.ms?d.ms+'ms':null,
+        d.chars?d.chars+' chars':null, d.bytes?Math.round(d.bytes/1024)+'KB':null,
+        d.source?esc(String(d.source).slice(0,48)):null,
+        d.note?esc(d.note):null, d.error?esc(d.error):null].filter(Boolean);
+      return `<div class="bx-row">
+        <span style="font-size:16px">${A.icon}</span>
+        <div style="flex:1;min-width:0">
+          <b>${esc(A.label)}</b> <span class="mini muted">· ${esc(String(r.ts).slice(11,19))}</span>
+          <div class="bx-meta">${esc(r.action)}</div>
+          ${bits.length?`<div class="bx-meta" style="opacity:.75">${bits.join(' · ')}</div>`:''}
+        </div></div>`;}).join('')}</div>`
+    :`<p class="help">Nothing recorded yet. Run anything and it lands here.</p>`}
+  </div>`;
+  $$('[data-actf]',host).forEach(b=>b.onclick=()=>{ACTLEDGER.filter=b.dataset.actf;renderActLedger();});
+  const c=$('#act-clear');if(c)c.onclick=()=>{ACT=[];saveAct();renderActLedger();toast('Ledger cleared',1600);};
+}
+const ACTLEDGER={filter:'all'};
+
+function renderCkpts(){
+  const host=$('#ckpt-panel');if(!host)return;
+  const total=CKPTS.reduce((a,c)=>a+(c.bytes||0),0);
+  host.innerHTML=`
+  <div class="card">
+    <h3>⏮ Points you can go back to</h3>
+    <p class="help">Taken automatically before anything changes the app on its own behalf, and
+      any time you press the button. Kept as ${CKPT_MAX} most recent — the list metadata lives in
+      local storage but each snapshot's contents sit in IndexedDB and are only read when you
+      actually restore, so holding a dozen of them costs a few hundred bytes of memory rather
+      than tens of megabytes.</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap">
+      <button class="btn" id="ck-take">Take one now</button>
+      <span class="help" style="margin:0;align-self:center">${CKPTS.length} kept · ${(total/1024).toFixed(0)}KB total</span>
+    </div>
+    ${CKPTS.length?`<div class="bx-rows" style="margin-top:10px">${CKPTS.map(c=>`
+      <div class="bx-row">
+        <span style="font-size:15px">⏱</span>
+        <div style="flex:1;min-width:0">
+          <b>${esc(c.label)}</b>
+          <div class="bx-meta">${esc(String(c.ts).replace('T',' ').slice(0,16))} ·
+            ${(c.bytes/1024).toFixed(0)}KB · ${c.keys} area${c.keys===1?'':'s'}${c.reason?' · '+esc(c.reason):''}</div>
+        </div>
+        <button class="btn ghost sm" data-ckres="${esc(c.id)}">Restore</button>
+        <button class="btn ghost sm" data-ckdrop="${esc(c.id)}">✕</button>
+      </div>`).join('')}</div>`
+    :`<p class="help">None yet.</p>`}
+  </div>`;
+  const t=$('#ck-take');
+  if(t)t.onclick=async()=>{t.disabled=true;t.textContent='Saving…';
+    const m=await ckptTake('manual','you asked');
+    t.disabled=false;t.textContent='Take one now';
+    toast(m?`Saved — ${(m.bytes/1024).toFixed(0)}KB`:'Could not save',2600);renderCkpts();};
+  $$('[data-ckres]',host).forEach(b=>b.onclick=async()=>{
+    const c=CKPTS.find(x=>x.id===b.dataset.ckres);
+    if(!confirm(`Restore “${c.label}”?\n\nEverything since then is replaced. The current state is checkpointed first, so this itself can be undone.`))return;
+    b.disabled=true;b.textContent='Restoring…';
+    const r=await ckptRestore(b.dataset.ckres);
+    if(r.ok){toast('Restored — reloading',2200);setTimeout(()=>location.reload(),900);}
+    else{b.disabled=false;b.textContent='Restore';toast('Could not restore: '+r.why,4000);}
+  });
+  $$('[data-ckdrop]',host).forEach(b=>b.onclick=async()=>{
+    await ckptDrop(b.dataset.ckdrop);renderCkpts();});
+}
+
+function renderEvo(){
+  const host=$('#evo-panel');if(!host)return;
+  const open=EVO.filter(p=>p.state==='proposed');
+  const past=EVO.filter(p=>p.state!=='proposed').slice(0,12);
+  const vTone=v=>v==='better'?'var(--good)':v==='worse'?'var(--bad)':'var(--ink3)';
+  host.innerHTML=`
+  <div class="card">
+    <h3>🧬 Changes waiting for your decision</h3>
+    <p class="help">This app can propose changes to itself. It cannot make them. Approving takes
+      a checkpoint first and <b>refuses to proceed if that checkpoint fails</b> — an undo that
+      silently was not recorded is worse than no undo, because you would carry on believing you
+      were covered. Every proposal names what it is meant to improve <i>before</i> it runs, and
+      the measurement afterwards can come back <b>worse</b>.</p>
+    ${open.length?open.map(p=>`
+      <div class="evo-card" data-evo="${esc(p.id)}">
+        <b>${esc(p.title)}</b>
+        <div class="bx-meta" style="white-space:pre-wrap">${esc(p.why)}</div>
+        <div class="bx-meta">Target: <b>${esc(EVO_TARGETS[p.target].label)}</b> ·
+          now ${p.before}${esc(EVO_TARGETS[p.target].unit)} · risk: ${esc(p.risk)}</div>
+        <div class="row" style="gap:7px;margin-top:9px">
+          <button class="btn sm" data-evook="${esc(p.id)}">Checkpoint & apply</button>
+          <button class="btn ghost sm" data-evono="${esc(p.id)}">Decline</button>
+        </div>
+      </div>`).join('')
+    :`<p class="help">Nothing pending.</p>`}
+    ${past.length?`<h3 style="margin-top:15px;font-size:14px">Already decided</h3>
+      <div class="bx-rows">${past.map(p=>`
+        <div class="bx-row">
+          <span style="font-size:15px">${p.state==='rejected'?'🚫':p.state==='reverted'?'↩️':'✅'}</span>
+          <div style="flex:1;min-width:0">
+            <b>${esc(p.title)}</b>
+            <div class="bx-meta">${esc(EVO_STATES[p.state]||p.state)}${
+              p.verdict?` · <b style="color:${vTone(p.verdict)}">${p.verdict}</b>: ${p.before}→${p.after}${esc(EVO_TARGETS[p.target].unit)}`:''}</div>
+          </div>
+          ${p.state==='approved'?`<button class="btn ghost sm" data-evomeas="${esc(p.id)}">Measure</button>`:''}
+          ${p.ckpt&&p.state!=='reverted'?`<button class="btn ghost sm" data-evorev="${esc(p.id)}">Revert</button>`:''}
+        </div>`).join('')}</div>`:''}
+  </div>`;
+  $$('[data-evook]',host).forEach(b=>b.onclick=async()=>{
+    b.disabled=true;b.textContent='Checkpointing…';
+    const r=await evoApprove(b.dataset.evook);
+    toast(r.ok?'Applied — checkpoint saved first':'Not applied: '+r.why,r.ok?2800:5000);
+    renderEvo();renderCkpts();renderActLedger();});
+  $$('[data-evono]',host).forEach(b=>b.onclick=()=>{
+    evoReject(b.dataset.evono,'');toast('Declined — nothing changed',2200);renderEvo();renderActLedger();});
+  $$('[data-evomeas]',host).forEach(b=>b.onclick=()=>{
+    const m=evoMeasure(b.dataset.evomeas);
+    toast(m?`${m.label}: ${m.before}→${m.after}${m.unit} — ${m.verdict}`:'Could not measure',4200);
+    renderEvo();});
+  $$('[data-evorev]',host).forEach(b=>b.onclick=async()=>{
+    if(!confirm('Roll back to the checkpoint taken before this change?'))return;
+    const r=await evoRevert(b.dataset.evorev);
+    if(r.ok){toast('Reverted — reloading',2000);setTimeout(()=>location.reload(),900);}
+    else toast('Could not revert: '+r.why,4000);});
+}
+
+function renderSkillSources(){
+  const host=$('#skillsrc-panel');if(!host)return;
+  host.innerHTML=`
+  <div class="card">
+    <h3>🔄 Skills from a repository</h3>
+    <p class="help">A skill is <b>text that goes into a system prompt</b> — read by a model that
+      has your tools and your keys. So anything fetched here is untrusted input: it is shown to
+      you, diffed against what you already have, and installed only when you approve, which
+      checkpoints first. There is no setting that makes this automatic, deliberately. "Vetted by
+      the community" is a claim on a web page, not a security property.</p>
+    <div class="bx-rows">
+      ${SKILL_SOURCES.map(x=>{
+        const have=SKILLS.find(s=>s.repo===x.repo);
+        return `<div class="bx-row">
+          <span style="font-size:15px">📦</span>
+          <div style="flex:1;min-width:0">
+            <b>${esc(x.label)}</b>
+            <div class="bx-meta">${esc(x.why)}</div>
+            <div class="bx-meta mono" style="opacity:.7">${esc(x.repo)}/${esc(x.path)}</div>
+          </div>
+          <button class="btn ghost sm" data-skget="${esc(x.id)}">${have?'Check for updates':'Fetch & review'}</button>
+        </div>`;}).join('')}
+    </div>
+    <div class="row" style="gap:7px;margin-top:9px">
+      <input id="sksrc-repo" style="flex:1;min-width:180px" placeholder="owner/repo (any public repo with a SKILL.md)">
+      <button class="btn ghost sm" id="sk-custom">Fetch</button>
+    </div>
+    <div id="sk-review" style="margin-top:10px"></div>
+  </div>`;
+  const review=fetched=>{
+    const existing=SKILLS.find(s=>s.name===fetched.name);
+    const d=existing?skillDiff(existing.body,fetched.body):null;
+    $('#sk-review').innerHTML=`
+      <div class="evo-card">
+        <b>${esc(fetched.name)}</b> <span class="mini muted">${(fetched.bytes/1024).toFixed(1)}KB</span>
+        <div class="bx-meta">${esc(fetched.desc||'no description')}</div>
+        ${d?`<div class="bx-meta">${d.same?'<b>Identical to what you already have.</b>':'<b>Changes: '+esc(d.summary)+'</b>'}</div>`:''}
+        <details style="margin-top:7px"><summary class="help" style="cursor:pointer">Read it before approving</summary>
+          <pre class="mono" style="white-space:pre-wrap;font-size:11px;max-height:260px;overflow:auto;
+            background:var(--panel2);padding:9px;border-radius:9px;margin-top:6px">${esc(fetched.body.slice(0,6000))}</pre></details>
+        <div class="row" style="gap:7px;margin-top:9px">
+          <button class="btn sm" id="sk-propose"${d&&d.same?' disabled':''}>${d?'Propose update':'Propose install'}</button>
+        </div>
+      </div>`;
+    const pr=$('#sk-propose');
+    if(pr)pr.onclick=()=>{skillProposeInstall(fetched);
+      toast('Proposed — approve it in “Changes waiting for your decision”',4200);
+      renderEvo();$('#sk-review').innerHTML='';};
+  };
+  $$('[data-skget]',host).forEach(b=>b.onclick=async()=>{
+    const src=SKILL_SOURCES.find(x=>x.id===b.dataset.skget);
+    b.disabled=true;b.textContent='Fetching…';
+    try{review(await skillFetch(src));}
+    catch(e){toast('Could not fetch: '+e.message,4200);}
+    b.disabled=false;b.textContent='Fetch & review';});
+  const cu=$('#sk-custom');
+  if(cu)cu.onclick=async()=>{
+    const repo=$('#sksrc-repo').value.trim();
+    if(!/^[\w.-]+\/[\w.-]+$/.test(repo))return toast('Use owner/repo',2600);
+    cu.disabled=true;cu.textContent='Fetching…';
+    try{review(await skillFetch({id:repo.split('/')[1],repo,path:'SKILL.md'}));}
+    catch(e){toast('Could not fetch: '+e.message,4200);}
+    cu.disabled=false;cu.textContent='Fetch';};
+}
 function renderSetup(){
   const host=$('#setup-panel');if(!host)return;
   const s=setupScore();
@@ -38817,6 +39119,331 @@ async function persistDir(){
 /* ── What "all my work" actually is ────────────────────────────────────── */
 const PERSIST_KEYS=['ws','projects','creations','ofw','ofc','webos','brainDir','moaPresets',
   'skillCtx','connx','ui','onboarding','skills','history','traces','persist','trueforge','notes'];
+/* ═══════════════════ SKILL SOURCES & UPDATES ═══════════════════
+   Skills can come from a repository and can be updated when that repository moves.
+
+   The security posture is the entire design, so it is stated plainly: a skill is TEXT THAT GOES
+   INTO A SYSTEM PROMPT. Anything fetched from the internet and injected there is untrusted
+   input that will be read by a model with your tools and your keys. "Vetted by the community"
+   is a claim made by whoever wrote the page — it is not a security property, and treating a
+   star count as authorisation is exactly how a supply-chain problem starts.
+
+   So the rules here are absolute and not configurable:
+     · fetched content is NEVER auto-applied, and there is no setting that makes it so
+     · an update shows a DIFF against what you already have, before anything changes
+     · installing or updating routes through the evolution gate, which checkpoints first
+     · the source URL is recorded on the skill, so provenance survives
+
+   A registry of known-good sources is a convenience for finding things, not a trust decision. */
+const SKILL_SOURCES=[
+  {id:'unlazy',label:'unlazy — anti-laziness discipline',
+   repo:'CartyChris/unlazy-skill',path:'SKILL.md',
+   why:'Enforces completion with gate files and runnable checks rather than promises. Pairs with this app’s own gauntlet: both replace "it looks done" with "prove it".'},
+  {id:'unlazy-upstream',label:'unlazy (upstream)',
+   repo:'Leonxlnx/unlazy',path:'SKILL.md',
+   why:'The original. Useful for comparing against a fork before updating.'},
+];
+const skillRawUrl=(repo,path,ref)=>`https://raw.githubusercontent.com/${repo}/${ref||'main'}/${path}`;
+/* Fetch and PARSE only. Deliberately returns the text for review — it never writes to SKILLS.
+   Separating retrieval from installation is what makes the review step unskippable. */
+async function skillFetch(src){
+  const url=skillRawUrl(src.repo,src.path,src.ref);
+  const r=await fetch(url,{cache:'no-store'});
+  if(!r.ok)throw new Error('the source returned '+r.status+' — check the repo and branch');
+  const text=await r.text();
+  if(text.length>200000)throw new Error('that file is over 200KB, which is not a skill');
+  const parsed=parseSkillMd(text,src.id);
+  return{...parsed,url,repo:src.repo,path:src.path,bytes:text.length,raw:text};
+}
+/* A line-level diff, so "update available" can be answered with WHAT CHANGED rather than a
+   version number the user has no way to evaluate. */
+function skillDiff(oldBody,newBody){
+  const a=String(oldBody||'').split('\n'),b=String(newBody||'').split('\n');
+  const setA=new Set(a),setB=new Set(b);
+  const added=b.filter(l=>!setA.has(l)&&l.trim());
+  const removed=a.filter(l=>!setB.has(l)&&l.trim());
+  return{added,removed,same:added.length===0&&removed.length===0,
+    summary:added.length===0&&removed.length===0?'identical'
+      :`+${added.length} line${added.length===1?'':'s'}, −${removed.length}`};
+}
+/* Installing goes through the evolution gate: a proposal you approve, which checkpoints first.
+   The skill body is stored with its source URL so provenance is not lost the moment it lands. */
+function skillProposeInstall(fetched){
+  const existing=SKILLS.find(s=>s.name===fetched.name);
+  const diff=existing?skillDiff(existing.body,fetched.body):null;
+  return evoPropose({
+    title:(existing?'Update skill: ':'Install skill: ')+fetched.name,
+    why:(existing?'Replaces the copy you already have. ':'New skill from ')+fetched.url+
+        (diff?' · '+diff.summary:'')+
+        '\n\nThis text is injected into system prompts. Read it before approving.',
+    target:'quality',risk:existing?'replaces an existing skill':'adds prompt text',
+    source:fetched.url,
+    apply:()=>{
+      const rec={id:existing?existing.id:uid(),name:fetched.name,desc:fetched.desc,
+        body:fetched.body,on:existing?existing.on:false,
+        source:fetched.url,repo:fetched.repo,fetchedAt:nowISO(),bytes:fetched.bytes};
+      SKILLS=existing?SKILLS.map(s=>s.id===existing.id?rec:s):SKILLS.concat([rec]);
+      saveSkills();
+      actLog('human',(existing?'updated':'installed')+' skill: '+rec.name,{source:rec.source,bytes:rec.bytes});
+      return rec;
+    }});
+}
+/* Check every skill that KNOWS where it came from. Reports only; updating is still a decision. */
+async function skillCheckUpdates(){
+  const tracked=SKILLS.filter(s=>s.repo&&s.source);
+  const out=[];
+  for(const s of tracked){
+    try{
+      const path=(s.source.split('/main/')[1])||'SKILL.md';
+      const f=await skillFetch({id:s.name,repo:s.repo,path});
+      const d=skillDiff(s.body,f.body);
+      out.push({name:s.name,changed:!d.same,summary:d.summary,fetched:f,diff:d});
+    }catch(e){out.push({name:s.name,error:String(e.message||e)});}
+  }
+  actLog('system','checked '+tracked.length+' skill source(s) for updates',
+    {changed:out.filter(x=>x.changed).length});
+  return out;
+}
+
+/* ═══════════════════ EVOLUTION, WITH A HUMAN IN FRONT OF IT ═══════════════════
+   The app can propose changes to itself. It cannot make them.
+
+   Three rules hold this together, and each exists because the obvious version is worse:
+
+   1. A PROPOSAL IS INERT. Creating one changes nothing. The tempting design is "apply, then let
+      the user revert" — it is worse, because the window between apply and notice is where the
+      damage lives, and because a user who has to revert has already lost work.
+
+   2. APPROVAL CHECKPOINTS FIRST, AND REFUSES IF IT CANNOT. ckptGuarded returns failure when no
+      snapshot could be taken, and the apply does not run. An undo that silently was not recorded
+      is worse than no undo, because you proceed believing you are covered.
+
+   3. THE TARGET IS NAMED BEFORE THE CHANGE, AND MEASURED AFTER. Every proposal states what it is
+      supposed to improve — cost, latency, output quality, RAM — and what the number is now. The
+      measurement afterwards can and must be able to return WORSE. A gate that always says yes is
+      not a gate, and self-improvement that cannot detect self-harm is just drift with a UI. */
+const EVO_TARGETS={
+  cost:    {label:'Cost per run',   unit:'$',  lower:true,  probe:()=>actSpend()},
+  latency: {label:'Response time',  unit:'ms', lower:true,
+            probe:()=>{const c=actFor('model').slice(0,20).map(r=>r.detail&&r.detail.ms).filter(Boolean);
+              return c.length?Math.round(c.reduce((a,b)=>a+b,0)/c.length):0;}},
+  ram:     {label:'Stored data',    unit:'KB', lower:true,
+            probe:()=>{let n=0;try{for(const k in localStorage)if(k.indexOf('gb.')===0)n+=(localStorage[k]||'').length;}catch(_){}
+              return Math.round(n/1024);}},
+  guards:  {label:'Guards passing', unit:'',   lower:false,
+            probe:()=>{try{const r=GAUNTLET_LAST;return r?r.passed:0;}catch(_){return 0;}}},
+  quality: {label:'Output quality', unit:'/5', lower:false,
+            probe:()=>{try{const f=(typeof FEEDBACK!=='undefined'?FEEDBACK:[])||[];
+              const rated=f.filter(x=>x&&typeof x.score==='number');
+              return rated.length?+(rated.reduce((a,b)=>a+b.score,0)/rated.length).toFixed(2):0;}catch(_){return 0;}}},
+};
+const EVO_STATES={proposed:'awaiting your decision',approved:'applied',rejected:'declined',
+  reverted:'rolled back',measured:'measured'};
+let EVO=store.get('evolutions',[]);
+const saveEvo=()=>store.set('evolutions',EVO.slice(0,80));
+
+/* A proposal is a record, not an action. Nothing here touches the app. */
+function evoPropose({title,why,target,apply,source,risk}){
+  const t=EVO_TARGETS[target]?target:'quality';
+  let before=0;try{before=EVO_TARGETS[t].probe();}catch(_){}
+  const p={id:uid(),ts:nowISO(),title:String(title||'untitled change').slice(0,120),
+    why:String(why||'').slice(0,600),target:t,before,after:null,verdict:null,
+    state:'proposed',source:source||'this app',risk:risk||'unknown',ckpt:null,
+    /* The function is held in memory only. A proposal that survives a reload as a serialised
+       blob of code to execute is an arbitrary-code-execution hole wearing a helpful hat. */
+    _apply:typeof apply==='function'?apply:null};
+  EVO=[p].concat(EVO);saveEvo();
+  actLog('system','proposed: '+p.title,{target:t,before});
+  return p;
+}
+/* Approval is the ONLY path that changes anything, and it is deliberately verbose about it. */
+async function evoApprove(id){
+  const p=EVO.find(x=>x.id===id);
+  if(!p)return{ok:false,why:'that proposal is gone'};
+  if(p.state!=='proposed')return{ok:false,why:'already '+p.state};
+  if(!p._apply)return{ok:false,why:'this proposal has no runnable change attached — it expired with the page'};
+  const res=await ckptGuarded('before: '+p.title,'evolution',p._apply);
+  if(!res.ok){
+    actLog('human','refused to apply (no checkpoint): '+p.title,{why:res.why});
+    return res;
+  }
+  p.state='approved';p.ckpt=res.ckpt;p.appliedAt=nowISO();
+  saveEvo();
+  actLog('human','approved: '+p.title,{ckpt:res.ckpt,target:p.target});
+  return{ok:true,ckpt:res.ckpt};
+}
+/* Rejecting must leave state untouched — that is the whole claim being made to the user. */
+function evoReject(id,note){
+  const p=EVO.find(x=>x.id===id);
+  if(!p||p.state!=='proposed')return{ok:false};
+  p.state='rejected';p.note=String(note||'').slice(0,200);saveEvo();
+  actLog('human','rejected: '+p.title,{note:p.note});
+  return{ok:true};
+}
+/* Measure afterwards against the target NAMED BEFOREHAND. Returns better / worse / unchanged,
+   and "worse" is a real outcome the UI shows in red rather than hiding. */
+function evoMeasure(id){
+  const p=EVO.find(x=>x.id===id);
+  if(!p)return null;
+  if(p.state!=='approved'&&p.state!=='measured')return null;
+  const T=EVO_TARGETS[p.target];
+  let after=0;try{after=T.probe();}catch(_){}
+  p.after=after;
+  const delta=after-p.before;
+  const better=T.lower?delta<0:delta>0;
+  const same=delta===0;
+  p.verdict=same?'unchanged':(better?'better':'worse');
+  p.state='measured';saveEvo();
+  actLog('system','measured: '+p.title,{target:p.target,before:p.before,after,verdict:p.verdict});
+  return{before:p.before,after,delta,verdict:p.verdict,unit:T.unit,label:T.label};
+}
+/* Undo an applied change by restoring the checkpoint taken before it. */
+async function evoRevert(id){
+  const p=EVO.find(x=>x.id===id);
+  if(!p||!p.ckpt)return{ok:false,why:'no checkpoint was recorded for this change'};
+  const r=await ckptRestore(p.ckpt);
+  if(!r.ok)return r;
+  p.state='reverted';saveEvo();
+  actLog('human','reverted: '+p.title,{ckpt:p.ckpt});
+  return r;
+}
+
+/* ═══════════════════ THE ACTION LEDGER ═══════════════════
+   Who did what, separated by WHO.
+
+   This app already logs events, but the log is organised by what happened — a call, an error, a
+   guard firing. The question this ledger answers is different and, for an app that changes
+   itself, more important: which ACTOR did this? A model answering a prompt, an agent taking a
+   step on its own initiative, a CLI running through the bridge, a plugin in its sandbox, and the
+   human clicking approve are five different kinds of authority, and a flat log flattens exactly
+   the distinction you need when something goes wrong.
+
+   Fed from LOG_LISTENERS rather than from call sites. There are 89 places that reach a model;
+   asking each to remember to log would guarantee that the one that mattered forgot. Subscribing
+   once to the bus means an actor cannot act without appearing here. */
+const ACTOR_KINDS={
+  human:  {label:'You',        icon:'🧑', tone:'good', what:'clicked, approved, typed'},
+  model:  {label:'Model',      icon:'🧠', tone:'', what:'answered a prompt'},
+  agent:  {label:'Agent',      icon:'🤖', tone:'', what:'took a step on its own'},
+  cli:    {label:'CLI',        icon:'⌨️', tone:'warm', what:'ran through the local bridge'},
+  plugin: {label:'Plugin',     icon:'🧩', tone:'warm', what:'ran inside its sandbox'},
+  system: {label:'Glassbox',   icon:'⚙️', tone:'', what:'did this itself'},
+};
+const ACT_CAP=400;
+let ACT=store.get('actlog',[]);
+const saveAct=()=>store.set('actlog',ACT.slice(0,ACT_CAP));
+/* Deliberately small per row. A ledger that stores every full response becomes the biggest
+   thing in localStorage within a day and then starts failing writes — the row keeps a size and
+   a short excerpt, and points at the log entry that holds the rest. */
+function actLog(actor,action,detail){
+  const row={id:uid(),ts:nowISO(),actor:ACTOR_KINDS[actor]?actor:'system',
+    action:String(action||'').slice(0,60),
+    detail:detail&&typeof detail==='object'?detail:{note:String(detail||'').slice(0,160)}};
+  ACT=[row].concat(ACT).slice(0,ACT_CAP);
+  saveAct();
+  if(typeof renderActLedger==='function'&&$('#act-ledger'))renderActLedger();
+  return row;
+}
+/* One subscription, so nothing that touches a model can avoid being recorded. */
+function actInit(){
+  if(actInit._done)return;actInit._done=true;
+  if(typeof LOG_LISTENERS==='undefined'||!Array.isArray(LOG_LISTENERS))return;
+  LOG_LISTENERS.push(e=>{
+    try{
+      if(e.kind==='call'){
+        const viaBridge=!!(e.provider&&/bridge|cli|ollama/i.test(String(e.provider)));
+        actLog(viaBridge?'cli':'model',e.label||e.model||'completion',
+          {model:e.model||'',cost:e.cost||0,ms:e.ms||0,tokens:e.tokens||0,
+           chars:e.chars||0,provider:e.provider||''});
+      }else if(e.kind==='error'){
+        actLog('system','error: '+(e.what||e.error||'unknown'),{error:String(e.error||'').slice(0,160)});
+      }else if(e.kind==='bot-msg'){
+        actLog('agent',e.from+' → '+(e.to||'ALL'),{chars:e.chars||0});
+      }
+    }catch(_){}
+  });
+}
+function actFor(kind){return ACT.filter(r=>r.actor===kind);}
+function actSpend(){return ACT.reduce((a,r)=>a+((r.detail&&r.detail.cost)||0),0);}
+
+/* ═══════════════════ CHECKPOINTS ═══════════════════
+   Nothing in this app changes itself without a way back.
+
+   A self-improving system with no rollback is not self-improving; it is self-damaging with
+   extra steps, and the damage is worst exactly when the change looked reasonable. So every
+   path that can alter the app on the app's behalf — an approved evolution, an installed skill,
+   a registered plugin, an imported workspace — takes a checkpoint FIRST and records its id, so
+   "undo that" is a button rather than an archaeology exercise.
+
+   Storage shape is deliberate, and it is also the RAM answer:
+     · METADATA (id, label, when, size, what triggered it) lives in localStorage — small, always
+       loaded, enough to render the list
+     · the BODY lives in IndexedDB under one key per checkpoint, and is only ever read when a
+       restore actually happens
+   Holding ten full workspace snapshots in a JS array would be tens of megabytes resident for a
+   list the user looks at once a month. This way the resident cost is a few hundred bytes each. */
+const CKPT_MAX=12;                      // a ring; older ones fall off rather than growing forever
+let CKPTS=store.get('ckpts',[]);        // METADATA ONLY — never the bodies
+const saveCkpts=()=>store.set('ckpts',CKPTS.slice(0,CKPT_MAX));
+const ckptKey=id=>'ckpt:'+id;
+
+async function ckptTake(label,reason){
+  const id=uid();
+  try{
+    const body=await persistCollect();          // the one existing state-collector, not a second one
+    body.ckpt={id,label:label||'checkpoint',reason:reason||'',ts:nowISO()};
+    const json=JSON.stringify(body);
+    await IDB.set(ckptKey(id),body);
+    const meta={id,label:label||'checkpoint',reason:reason||'',ts:nowISO(),
+      bytes:json.length,keys:Object.keys(body.data||{}).length};
+    CKPTS=[meta].concat(CKPTS);
+    /* Evict past the cap, and delete the BODY too — orphaned IDB blobs are how a "small" ring
+       quietly becomes the largest thing in the origin. */
+    while(CKPTS.length>CKPT_MAX){
+      const old=CKPTS.pop();
+      try{await IDB.set(ckptKey(old.id),null);}catch(_){}
+    }
+    saveCkpts();
+    actLog&&actLog('human','checkpoint',{label:meta.label,bytes:meta.bytes});
+    return meta;
+  }catch(e){
+    /* A checkpoint that failed must be LOUD, because the caller is about to do something risky
+       believing it can be undone. Returning null lets the caller refuse to proceed. */
+    toast('Could not take a checkpoint: '+e.message+' — change not applied',5000);
+    return null;
+  }
+}
+async function ckptRestore(id){
+  const meta=CKPTS.find(c=>c.id===id);
+  if(!meta)return{ok:false,why:'that checkpoint is gone'};
+  const body=await IDB.get(ckptKey(id),null);
+  if(!body||!body.data)return{ok:false,why:'its contents could not be read'};
+  /* Restoring is itself destructive, so it checkpoints the CURRENT state first. Undoing an undo
+     is a thing people need roughly as often as undoing. */
+  await ckptTake('before restoring “'+meta.label+'”','auto');
+  Object.entries(body.data).forEach(([k,v])=>{try{store.set(k,v);}catch(_){}});
+  if(body.brain!=null){try{await IDB.set(typeof brainKey==='function'?brainKey():'brain',body.brain);}catch(_){}}
+  actLog&&actLog('human','restore',{label:meta.label,ts:meta.ts});
+  return{ok:true,meta,reload:true};
+}
+async function ckptDrop(id){
+  CKPTS=CKPTS.filter(c=>c.id!==id);saveCkpts();
+  try{await IDB.set(ckptKey(id),null);}catch(_){}
+}
+/* The wrapper every risky path should use: checkpoint, then act, and if the checkpoint could not
+   be taken, DO NOT ACT. That refusal is the whole value — an "undo" that silently was not
+   recorded is worse than no undo, because the user proceeds believing they are covered. */
+async function ckptGuarded(label,reason,fn){
+  const meta=await ckptTake(label,reason);
+  if(!meta)return{ok:false,why:'no checkpoint could be taken, so nothing was changed'};
+  try{
+    const out=await fn();
+    return{ok:true,ckpt:meta.id,out};
+  }catch(e){
+    return{ok:false,why:String(e.message||e),ckpt:meta.id};
+  }
+}
+
 async function persistCollect(){
   const out={app:'Glassbox Jet',kind:'workspace',v:1,ts:nowISO(),data:{},idb:{},brain:null};
   PERSIST_KEYS.forEach(k=>{const v=store.get(k,null);if(v!=null)out.data[k]=v;});
@@ -42237,7 +42864,8 @@ function go(view){
   if(view==='studio')panelGuard(view,()=>{renderStudio();renderStudioX();connInit();if(!$('#st-frame').srcdoc)runPreview();});
   if(view==='connect')panelGuard(view,()=>{connInit();renderConnections();});
   if(view==='awards')panelGuard(view,()=>{connInit();renderAwards();});
-  if(view==='settings')panelGuard(view,()=>{renderSetup();renderGauntlet('#gauntlet-settings');
+  if(view==='settings')panelGuard(view,()=>{renderSetup();renderEvo();renderCkpts();
+    renderActLedger();renderSkillSources();renderGauntlet('#gauntlet-settings');
     renderCrossDevice();renderPersist();renderPwa();renderSfx();renderWhy();});
   if(view==='help')panelGuard(view,()=>renderHelp());
   if(view==='webos')panelGuard(view,()=>{wosInit();wosRender();wosFillFolders();wosClockTick();});
@@ -42320,6 +42948,7 @@ async function boot(){
   if(settings.ollamaAuto!==false)syncOllama(true).then(n=>{if(!n)showOriginBanner();});
   else if(opaqueOrigin())showOriginBanner();
   if(settings.bridgeAuto!==false)probeBridge(true);
+  actInit();
   /* Last, and never blocking: offline support is an enhancement, so a failure here must not
      touch boot. It resolves on its own and repaints the Settings card if it is open. */
   pwaInit();
@@ -42531,6 +43160,13 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     panelGuard,panelFail,PWA,pwaInit,pwaInstall,pwaReset,renderPwa,callDeadline,
     PC_CDN,PC_SAMPLES,PCV,pcLoad,pcOpen,pcBounds,pcPlay,pcShot,pcDestroy,renderPcv,
     get PCAPP(){return PCAPP},set PCAPP(v){PCAPP=v},
+    renderActLedger,renderCkpts,renderEvo,renderSkillSources,ACTLEDGER,
+    SKILL_SOURCES,skillRawUrl,skillFetch,skillDiff,skillProposeInstall,skillCheckUpdates,
+    EVO_TARGETS,EVO_STATES,evoPropose,evoApprove,evoReject,evoMeasure,evoRevert,
+    get EVO(){return EVO},set EVO(v){EVO=v},saveEvo,
+    ACTOR_KINDS,actLog,actInit,actFor,actSpend,get ACT(){return ACT},set ACT(v){ACT=v},saveAct,
+    CKPT_MAX,ckptTake,ckptRestore,ckptDrop,ckptGuarded,ckptKey,saveCkpts,
+    get CKPTS(){return CKPTS},set CKPTS(v){CKPTS=v},
     LOCAL_SURFACES,localReach,renderLocalReach,localImageBackends,localVideoBackends,
     genImageList,genVideoList,LOCAL_IMAGE_BACKENDS,LOCAL_VIDEO_BACKENDS,
     botsAddressed,botSysFor,botTurn,botGroupRun,renderBotBox,renderBotCfg,botAuditRow,
