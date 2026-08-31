@@ -97,6 +97,14 @@ body[data-tabpos=left] .tabgroup,body[data-tabpos=right] .tabgroup{
 .tabs.tab-reordering .tab{transition:none}
 .tab.tab-dragging{opacity:.85;transform:scale(1.04);box-shadow:0 6px 20px rgba(0,0,0,.4);
   border-color:var(--acc)!important;z-index:5;position:relative}
+.tab.tg-hidden{display:none!important}
+.tabgroup{cursor:pointer;border:1px solid transparent;background:none;font:inherit;
+  display:inline-flex;align-items:center;gap:5px}
+.tabgroup:hover{border-color:var(--edge2);background:var(--panel2)}
+.tabgroup:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.tabgroup.folded{border-color:var(--edge2);background:var(--panel2)}
+.tg-car{font-size:9px;opacity:.75}
+.tg-n{font-size:10px;padding:0 5px;border-radius:99px;background:var(--edge2);color:var(--ink3)}
 .spl-stage{position:relative;margin-top:11px;height:min(58vh,540px);border:1px solid var(--edge);
   border-radius:13px;overflow:hidden;background:linear-gradient(180deg,#0e1119,#0a0c12)}
 .spl-stage canvas{display:block;width:100%;height:100%}
@@ -148,6 +156,11 @@ body[data-tabpos=left] .tabgroup,body[data-tabpos=right] .tabgroup{
   color:var(--ink3);font-family:ui-monospace,monospace}
 .bx-chain span.used{border-color:var(--good);color:var(--good)}
 .bx-chain span.dead{opacity:.5;text-decoration:line-through}
+.gr-room{margin-top:14px;padding-top:12px;border-top:1px solid var(--edge)}
+.gr-list{display:grid;gap:7px}
+.gr-bot{display:flex;gap:9px;align-items:flex-start;padding:8px 10px;border:1px solid var(--edge);
+  border-radius:11px;background:var(--panel2)}
+.gr-bot b{font-size:13px}
 .botcfg{display:grid;gap:9px;margin-top:10px}
 .botcfg-row{display:flex;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--edge);
   border-radius:12px;background:var(--panel2)}
@@ -799,6 +812,15 @@ main{flex:1;overflow:hidden;background:var(--panel);border-top:1px solid var(--e
 @media(max-width:860px){.hc{grid-template-columns:1fr}}
 .hc-side{display:flex;flex-direction:column;gap:4px;position:sticky;top:8px}
 .hc-search{margin-bottom:6px}
+/* Below 860px the Help grid collapses to ONE column, so the sidebar stacks ABOVE the article —
+   and the sticky above then pins the topic list in place while the article scrolls underneath
+   it. The help text was unreadable on a phone, which is the device most likely to need it.
+   This block must live AFTER .hc-side: same specificity, so the later rule is the one that
+   wins, and my first attempt at this sat above it and did nothing. */
+@media(max-width:860px){
+  .hc-side{position:static;top:auto}
+  .hc-main{min-width:0}
+}
 .hc-nav{display:flex;gap:10px;align-items:flex-start;padding:9px 11px;border-radius:11px;cursor:pointer;
   border:1px solid transparent;background:transparent;text-align:left;width:100%}
 .hc-nav:hover{background:var(--panel2)}
@@ -30308,6 +30330,9 @@ async function botTurn(b,history,signal){
     tried.push(model);
     try{
       const acc=await streamComplete({model,maxTokens:ASST_MODES.group.maxTokens,
+        /* Per-bot effort: a reviewer that thinks hard and a scout that answers fast are the
+           point of having separate bots at all. */
+        reasoning:(b.effort&&b.effort!=='medium')?{effort:b.effort}:undefined,
         messages:[{role:'system',content:botSysFor(b)+skillBlockFor('bots')},...history]},
         null,signal,'bot-'+b.name);
       const content=String(acc.content||'').trim();
@@ -31048,6 +31073,103 @@ function initAsst(){
   $('#asst-settings-btn').onclick=()=>{$('#asst-settings').classList.toggle('open');renderAsstSettings();};
   renderAsstSettings();renderAsst();
 }
+/* ── The room, editable from inside the room ───────────────────────────────
+   Group chat settings used to show only the generic Model / System prompt fields, which are the
+   wrong fields entirely: in this mode the model that matters is the one on each BOT, and there
+   was no way to see who was in the room or add anyone without leaving for the Bots tab.
+
+   Same roster as the Bots tab — one BOTS array, two views of it. This is the fast path (who is
+   here, add someone, mute someone); the Bots tab is the deep one (audit trail, wiring, history). */
+const BOT_EFFORTS=['low','medium','high'];
+const BOT_QUICK=[
+  {name:'Scout',   role:'Researcher', purpose:'You find what is already known before anyone builds. Cite what you actually read; flag recollection as recollection.'},
+  {name:'Maker',   role:'Builder',    purpose:'You implement. Complete code, no placeholders. Ask rather than guess when a requirement is ambiguous.'},
+  {name:'Sceptic', role:'Reviewer',   purpose:'You look for the defect everyone missed. Be specific: the input that breaks it. Say plainly when you cannot tell.'},
+  {name:'Pilot',   role:'Planner',    purpose:'You decide order and say no to scope. What must exist first, and which decisions are expensive to reverse.'},
+];
+function groupRosterHTML(){
+  const bots=botAll();
+  const models=(CATALOG||[]).slice(0,300);
+  const opt=sel=>`<option value="">default model</option>`+models.map(m=>
+    `<option value="${esc(m.id)}"${m.id===sel?' selected':''}>${esc(m.name||m.id)}</option>`).join('');
+  return `
+  <div class="gr-room">
+    <div class="row" style="align-items:center;gap:8px;margin-bottom:6px">
+      <h4 style="margin:0;flex:1">Who is in the room</h4>
+      <button class="btn ghost sm" id="grp-tobots" title="Open the Bots tab">Bots tab ↗</button>
+    </div>
+    <p class="help" style="margin-top:0">Each bot answers with its own model. Mute one and it
+      stays in the roster but sits this conversation out. <b>@name</b> in a message and only that
+      bot replies.</p>
+    ${bots.length?`<div class="gr-list">${bots.map(b=>`
+      <div class="gr-bot" data-grbot="${esc(b.id)}">
+        <span class="bt-face">${botSprite(b.avatar,36)}</span>
+        <div style="flex:1;min-width:0">
+          <b>${esc(b.name)}</b> <span class="mini muted">${esc(b.role||'')}</span>
+          <div class="row" style="gap:5px;margin-top:5px;flex-wrap:wrap">
+            <select data-grmodel="${esc(b.id)}" style="flex:1;min-width:130px">${opt(b.model)}</select>
+            <select data-greffort="${esc(b.id)}" title="Reasoning effort" style="flex:0 0 96px">
+              ${BOT_EFFORTS.map(e=>`<option value="${e}"${(b.effort||'medium')===e?' selected':''}>${e}</option>`).join('')}
+            </select>
+            <button class="btn ghost sm" data-grface="${esc(b.id)}" title="New face">🎲</button>
+            <button class="btn ghost sm" data-grmute="${esc(b.id)}">${b.on===false?'muted':'active'}</button>
+            <button class="btn ghost sm" data-grdrop="${esc(b.id)}" title="Remove">✕</button>
+          </div>
+        </div>
+      </div>`).join('')}</div>`
+    :`<p class="help">Nobody yet. Add one below, or drop in a starter team.</p>`}
+    <div class="row" style="gap:6px;margin-top:9px;flex-wrap:wrap">
+      <input id="grp-name" placeholder="name" style="flex:0 0 110px">
+      <input id="grp-role" placeholder="role — e.g. Reviewer" style="flex:1;min-width:130px">
+      <button class="btn sm" id="grp-add">＋ Add</button>
+    </div>
+    <div class="row" style="gap:5px;margin-top:6px;flex-wrap:wrap">
+      <span class="mini muted" style="align-self:center">quick add:</span>
+      ${BOT_QUICK.map(q=>`<button class="btn ghost sm" data-grquick="${esc(q.name)}">${esc(q.name)}</button>`).join('')}
+      <button class="btn ghost sm" id="grp-team">＋ whole starter team</button>
+    </div>
+  </div>`;
+}
+/* Wired separately from the Save button: these take effect immediately, because a roster you
+   have to press Save to keep is a roster people will lose. */
+function wireGroupRoster(){
+  const box=$('#asst-settings');if(!box||!$('.gr-room',box))return;
+  const redraw=()=>{saveBots();renderAsstSettings();};
+  const j=$('#grp-tobots');if(j)j.onclick=()=>goEnsure('bots');
+  $$('[data-grmodel]',box).forEach(sel=>sel.onchange=()=>{
+    const b=botAll().find(x=>x.id===sel.dataset.grmodel);if(b){b.model=sel.value;saveBots();}});
+  $$('[data-greffort]',box).forEach(sel=>sel.onchange=()=>{
+    const b=botAll().find(x=>x.id===sel.dataset.greffort);if(b){b.effort=sel.value;saveBots();}});
+  $$('[data-grface]',box).forEach(btn=>btn.onclick=()=>{
+    const b=botAll().find(x=>x.id===btn.dataset.grface);
+    if(b){b.avatar=b.id+':'+Math.floor(Math.random()*1e6);redraw();}});
+  $$('[data-grmute]',box).forEach(btn=>btn.onclick=()=>{
+    const b=botAll().find(x=>x.id===btn.dataset.grmute);
+    if(b){b.on=b.on===false;redraw();}});
+  $$('[data-grdrop]',box).forEach(btn=>btn.onclick=()=>{
+    const b=botAll().find(x=>x.id===btn.dataset.grdrop);
+    if(b&&confirm('Remove '+b.name+' from the roster? Their past turns stay in the black box.')){
+      BOTS=BOTS.filter(x=>x.id!==b.id);redraw();}});
+  const add=$('#grp-add');
+  if(add)add.onclick=()=>{
+    const n=$('#grp-name').value.trim(),r=$('#grp-role').value.trim();
+    if(!n)return toast('Give them a name',2000);
+    const res=botAdd(n,r||'Generalist','','');
+    if(!res.ok)return toast(res.why,2600);
+    redraw();toast(n+' joined the room',2000);
+  };
+  $$('[data-grquick]',box).forEach(btn=>btn.onclick=()=>{
+    const q=BOT_QUICK.find(x=>x.name===btn.dataset.grquick);if(!q)return;
+    const res=botAdd(q.name,q.role,'',q.purpose);
+    if(!res.ok)return toast(res.why,2600);
+    redraw();toast(q.name+' joined',1800);
+  });
+  const team=$('#grp-team');
+  if(team)team.onclick=()=>{
+    let n=0;BOT_QUICK.forEach(q=>{if(botAdd(q.name,q.role,'',q.purpose).ok)n++;});
+    redraw();toast(n?`${n} joined the room`:'They are all here already',2400);
+  };
+}
 function renderAsstSettings(){
   const box=$('#asst-settings');if(!box)return;
   const cfg=asstCfg();
@@ -31064,7 +31186,9 @@ function renderAsstSettings(){
       <label class="chk"><input type="checkbox" id="as-tools" ${ASST.useTools?'checked':''}> use Tools/MCP</label>
       <label class="chk"><input type="checkbox" id="as-think" ${ASST.showThinking?'checked':''}> show thinking</label>
     </div>
-    <button class="btn small" id="as-save">Save</button>`;
+    <button class="btn small" id="as-save">Save</button>
+    ${asstMode().group?groupRosterHTML():''}`;
+  wireGroupRoster();
   $('#as-save').onclick=()=>{
     ASST.perMode=ASST.perMode||{};
     ASST.perMode[ASST.mode]={model:$('#as-model').value.trim(),sys:$('#as-sys').value,
@@ -34885,7 +35009,7 @@ const UI_FX={
 };
 const UI_DEFAULTS={
   fx:'none',fxReduce:true,userCss:'',
-  hiddenTabs:[],hiddenCards:[],tabOrder:[],
+  hiddenTabs:[],hiddenCards:[],tabOrder:[],foldedGroups:[],
   theme:'dark',tokens:{},density:'comfortable',scale:1,radius:14,
   font:'system',mono:'system',motion:true,
   showTabIcons:true,showTabLabels:true,stickySubnav:true,profile:'standard',profiles:{},
@@ -35927,6 +36051,20 @@ const TAB_MODES={
 };
 let TABMODE=store.get('tabmode','grouped');
 let TAB_ORDER0=null;                       // the shipped DOM order, captured once
+/* Which groups are folded shut. Persisted, because the whole point is arranging the bar once
+   and having it stay that way. */
+const tabGroupFolded=id=>(UI.foldedGroups||[]).includes(id);
+function tabGroupToggle(id){
+  const cur=UI.foldedGroups||[];
+  UI.foldedGroups=cur.includes(id)?cur.filter(x=>x!==id):cur.concat([id]);
+  saveUI();applyTabMode();
+  const chip=$(`#tabs .tabgroup[data-tabgroup="${id}"]`);
+  if(chip){chip.focus();chip.scrollIntoView({block:'nearest',inline:'nearest'});}
+}
+function tabGroupsAll(fold){
+  UI.foldedGroups=fold?TAB_GROUPS.map(g=>g.id):[];
+  saveUI();applyTabMode();
+}
 /* THE single source of truth for tab order.
    applyUI() used to re-append every tab by UI.tabOrder while applyTabMode() re-appended them by
    group. Both were right on their own and together they fought: whichever ran last won, so
@@ -35972,7 +36110,9 @@ function applyTabMode(){
   const extras=[...nav.children].filter(c=>!c.matches('.tab[data-view]'));
   if(mode==='full'){
     /* appendChild MOVES the same buttons, so identity, listeners and focus survive. */
-    tabs.forEach(el=>nav.appendChild(el));
+    /* Folding belongs to grouped mode; leaving the class on would hide tabs in a mode that has
+       no chips to unfold them with — a tab you cannot reach and cannot explain. */
+    tabs.forEach(el=>{el.classList.remove('tg-hidden');nav.appendChild(el);});
     /* Anything created AFTER boot — the section-manager button — is not a .tab, so re-append
        the strays to keep them last rather than stranded at the front. */
     [...nav.children].filter(c=>!c.matches('.tab[data-view]')&&!c.matches('.tabgroup'))
@@ -35982,15 +36122,31 @@ function applyTabMode(){
     TAB_GROUPS.forEach(g=>{
       const mine=tabs.filter(t=>g.views.includes(t.dataset.view));
       if(!mine.length)return;
-      const chip=document.createElement('span');
-      chip.className='tabgroup';chip.dataset.tabgroup=g.id;
-      chip.textContent=g.icon+' '+g.label;
+      /* The chip is a real button now, not a label: pressing it folds the group away. With
+         41 tabs the bar is a scrolling wall even when sorted, and the fix people actually want
+         is to put the six groups they are not using right now out of sight. */
+      const folded=tabGroupFolded(g.id);
+      const chip=document.createElement('button');
+      chip.className='tabgroup'+(folded?' folded':'');
+      chip.dataset.tabgroup=g.id;
+      chip.type='button';
+      chip.setAttribute('aria-expanded',folded?'false':'true');
+      chip.title=(folded?'Show':'Hide')+' the '+g.label.toLowerCase()+' tabs';
+      chip.innerHTML=`<span class="tg-car">${folded?'▸':'▾'}</span>${esc(g.icon)} ${esc(g.label)}`+
+        (folded?`<span class="tg-n">${mine.length}</span>`:'');
       nav.appendChild(chip);
-      mine.forEach(t=>{nav.appendChild(t);seen.add(t);});
+      mine.forEach(t=>{
+        nav.appendChild(t);seen.add(t);
+        /* The tab you are LOOKING AT is never folded away. Collapsing the group you are inside
+           and watching your own tab disappear reads as the app losing your place, so the active
+           one stays out while the rest of its group folds. */
+        const keep=t.classList.contains('active');
+        t.classList.toggle('tg-hidden',folded&&!keep);
+      });
     });
     /* A tab in no group would silently vanish from the bar. Belt and braces behind the
        gauntlet case that asserts the groups cover every view. */
-    tabs.filter(t=>!seen.has(t)).forEach(t=>nav.appendChild(t));
+    tabs.filter(t=>!seen.has(t)).forEach(t=>{t.classList.remove('tg-hidden');nav.appendChild(t);});
     extras.forEach(e=>nav.appendChild(e));      // the section-manager button stays last
   }
   tabEdges();
@@ -42021,6 +42177,16 @@ function go(view){
   const _at=$$('.tab').find(t=>t.dataset.view===view);
   if(_at&&_at.scrollIntoView)_at.scrollIntoView({block:'nearest',inline:'nearest'});
   tabEdges();
+  /* Arriving at a tab whose group is folded — from the palette, a hand-off, or a suggestion —
+     used to leave the active tab hidden behind a closed chip. Opening the group is the only
+     honest answer: the user asked to be here. */
+  /* tabGroupOf returns the group ID as a string, not a group object — reading `.id` off it
+     silently produced undefined, so this guard existed and never once fired. */
+  const _grp=typeof tabGroupOf==='function'?tabGroupOf(view):null;
+  if(_grp&&tabGroupFolded(_grp)&&TABMODE!=='full'){
+    UI.foldedGroups=(UI.foldedGroups||[]).filter(x=>x!==_grp);
+    saveUI();setTimeout(applyTabMode,0);
+  }
   $$('.view').forEach(v=>{
     v.classList.toggle('active',v.id==='view-'+view);
     if(!v.getAttribute('role'))v.setAttribute('role','tabpanel');
@@ -42078,7 +42244,10 @@ function go(view){
 }
 async function boot(){
   document.documentElement.setAttribute('data-theme',settings.theme);
-  $('#tabs').onclick=e=>{const t=e.target.closest('.tab');if(t)go(t.dataset.view);};
+  $('#tabs').onclick=e=>{
+    const g=e.target.closest('.tabgroup');
+    if(g){tabGroupToggle(g.dataset.tabgroup);return;}
+    const t=e.target.closest('.tab');if(t)go(t.dataset.view);};
   $('#themeBtn').onclick=()=>{UI.theme=UI.theme==='dark'?'light':'dark';
     saveUI();applyUI();if(typeof renderCustomise==='function'&&$('#cz-themes'))renderCustomise();};
   // ⌘K / Ctrl-K anywhere, and ? for help when not typing
@@ -42365,6 +42534,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     LOCAL_SURFACES,localReach,renderLocalReach,localImageBackends,localVideoBackends,
     genImageList,genVideoList,LOCAL_IMAGE_BACKENDS,LOCAL_VIDEO_BACKENDS,
     botsAddressed,botSysFor,botTurn,botGroupRun,renderBotBox,renderBotCfg,botAuditRow,
+    BOT_QUICK,BOT_EFFORTS,groupRosterHTML,wireGroupRoster,
     SETUP_CHECKS,setupScore,renderSetup,setupFocus,goEnsure,gauntletQuickRun,tabDropTarget,
     botRng,botSprite,botModelChain,botNorm,botAll,botAudit,botRunsFor,BOT_PALETTES,
     get BOT_RUNS(){return BOT_RUNS},set BOT_RUNS(v){BOT_RUNS=v},saveBotRuns,
@@ -42374,7 +42544,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     get SPL(){return SPL},set SPL(v){SPL=v},
     get SPL_STATE(){return SPL_STATE},set SPL_STATE(v){SPL_STATE=v},
     TAB_GROUPS,TAB_ESSENTIALS,TAB_MODES,tabGroupOf,applyTabMode,setTabMode,openTabModeMenu,
-    tabOrderedIds,tabMove,initTabDrag,
+    tabOrderedIds,tabMove,initTabDrag,tabGroupFolded,tabGroupToggle,tabGroupsAll,
     get TABMODE(){return TABMODE},set TABMODE(v){TABMODE=v},
     openModal,closeModal,focusablesIn,FOCUSABLE,wosFocusEl,
     get OFC_UNDO(){return OFC_UNDO},set OFC_UNDO(v){OFC_UNDO=v},
