@@ -3205,6 +3205,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
 
         <section class="view" id="view-local"><div class="wrap">
       <!-- Two of the first things anyone sets up, so they lead rather than trail. -->
+      <div id="local-reach"></div>
       <div id="gauntlet-panel"></div>
       <div id="notify-panel"></div>
       <div class="card">
@@ -4598,6 +4599,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
         <button class="subtab" data-tsub="r3f">⚛ React / R3F</button>
         <button class="subtab" data-tsub="dream">🌙 Dreaming</button>
         <button class="subtab" data-tsub="game">🎮 Build a game</button>
+        <button class="subtab" data-tsub="pc">🅿️ PlayCanvas</button>
       </div>
       <div class="sub on" id="tsub-assets">
         <div id="ed3-myassets"></div>
@@ -4785,6 +4787,8 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
       <div class="sub" id="tsub-dream">
         <div id="dream-panel"></div>
       </div>
+
+      <div class="sub" id="tsub-pc"><div id="pcv"></div></div>
 
       <div class="sub" id="tsub-game">
         <div class="card">
@@ -4991,7 +4995,7 @@ const store={
       try{if(typeof logEvent==='function')logEvent('storage',{msg:'write failed for '+k});}catch(_){}
       return false;}},
 };
-const settings=Object.assign({base:'https://openrouter.ai/api/v1',title:'Glassbox Jet',referer:'glassbox.local',
+const settings=Object.assign({callTimeout:240,base:'https://openrouter.ai/api/v1',title:'Glassbox Jet',referer:'glassbox.local',
   archModel:'anthropic/claude-fable-5',buildModel:'deepseek/deepseek-v4-flash-0731',guard:0.5,theme:'dark',
   ollama:'http://127.0.0.1:11434',ollamaAuto:true,
   bridge:'http://127.0.0.1:8791',bridgeAuto:true},store.get('settings',{}));
@@ -15219,7 +15223,43 @@ function mergeAcc(base,cont,prefix){
   return m;
 }
 /* Use this instead of streamChat wherever the output must be complete. */
+/* ── A deadline on EVERY model call ────────────────────────────────────────
+   Fourteen call sites passed `null` for the signal, so none of them could be cancelled and none
+   could time out: a provider that accepted the connection and then went quiet hung that feature
+   until a page reload. I fixed this once for Dreaming and then rebuilt the same defect in the
+   bot group chat, which is the tell that it does not belong at the call sites at all.
+
+   So the deadline lives HERE, where every call already passes through. A caller's own signal
+   still works — the two are combined, so whichever fires first wins, and Stop keeps working
+   exactly as before. Generous by default because deep research and long builds are legitimately
+   slow; this exists to catch infinity, not to police slowness. */
+function callDeadline(signal,secs){
+  const limit=secs!=null?secs:(+settings.callTimeout||240);
+  if(!limit)return{signal,done(){}};                 // 0 disables it, deliberately
+  const ctrl=new AbortController();
+  let timedOut=false;
+  const timer=setTimeout(()=>{timedOut=true;ctrl.abort();},limit*1000);
+  const onParent=()=>ctrl.abort();
+  if(signal){
+    if(signal.aborted)ctrl.abort();
+    else signal.addEventListener('abort',onParent,{once:true});
+  }
+  return{signal:ctrl.signal,limit,
+    get timedOut(){return timedOut;},
+    done(){clearTimeout(timer);if(signal)signal.removeEventListener('abort',onParent);}};
+}
 async function streamComplete(opts,onUpdate,signal,label){
+  const _dl=callDeadline(signal,opts&&opts.timeout);
+  try{
+    return await streamCompleteInner(opts,onUpdate,_dl.signal,label);
+  }catch(e){
+    /* An abort reads as a bare "Failed to fetch", which sends people to check their key for a
+       provider that simply never answered. Name what actually happened. */
+    if(_dl.timedOut)throw new Error('no answer within '+_dl.limit+'s — the model accepted the request and never replied');
+    throw e;
+  }finally{_dl.done();}
+}
+async function streamCompleteInner(opts,onUpdate,signal,label){
   /* Every completion becomes a span, so the run tree and the reasoning checks get their data
      from the one place all calls pass through rather than from scattered instrumentation. */
   const _span=spanStart(label||opts.model,'llm',{model:opts.model});
@@ -19685,14 +19725,46 @@ const GEN_PROVIDERS={
   replicate:{label:'Replicate',keyField:'replicateKey',viaBridge:true,
     base:'https://api.replicate.com/v1'},
   comfy:{label:'ComfyUI (local)',keyField:null,viaBridge:true,base:''},
+  a1111:{label:'Automatic1111 (local)',keyField:null,viaBridge:true,base:''},
   none:{label:'unavailable',keyField:null,viaBridge:false,base:''},
 };
 const GENCFG_DEFAULTS={imageModel:'google/gemini-3.7-flash-image',videoModel:'google/veo-3.1',
   size:'1024x1024',count:1,geminiKey:'',replicateKey:'',negative:'',seed:''};
 let GENCFG=Object.assign({},GENCFG_DEFAULTS,store.get('genstudio',{}));
 const saveGenCfg=()=>store.set('genstudio',GENCFG);
-const genImageModel=id=>GEN_IMAGE_MODELS.find(m=>m.id===(id||GENCFG.imageModel))||GEN_IMAGE_MODELS[0];
-const genVideoModel=id=>GEN_VIDEO_MODELS.find(m=>m.id===(id||GENCFG.videoModel))||GEN_VIDEO_MODELS[0];
+/* ── Local image and video generators ──────────────────────────────────────
+   Text models reach every tab already, because they arrive through mergeCatalog and every text
+   picker is built from CATALOG. Image and video did not: those two lists were hardcoded, so a
+   local generator could never appear in them no matter what was running on the machine.
+
+   These are DETECTED, never assumed. Nothing is listed as available because it might be
+   installed — each entry appears only when something actually answered, and the picker says
+   plainly when nothing did. Listing a generator the user does not have would send them to a
+   Run button that fails. */
+const LOCAL_IMAGE_BACKENDS=[
+  {id:'local/comfyui',label:'ComfyUI (local)',via:'comfy',kind:'image',
+   sizes:['512x512','768x768','1024x1024'],
+   detect:()=>!!(typeof COMFY_INFO!=='undefined'&&COMFY_INFO),
+   note:'Your own checkpoints, on your machine. Needs the bridge — ComfyUI sends no CORS headers.'},
+  {id:'local/a1111',label:'Automatic1111 / SD WebUI (local)',via:'a1111',kind:'image',
+   sizes:['512x512','768x768','1024x1024'],
+   detect:()=>!!(BRIDGE_INFO&&(BRIDGE_INFO.services||[]).includes('a1111')),
+   note:'Detected through the bridge on its default port.'},
+];
+const LOCAL_VIDEO_BACKENDS=[
+  {id:'local/comfyui-video',label:'ComfyUI video (local)',via:'comfy',kind:'video',async:true,maxSec:6,
+   detect:()=>!!(typeof COMFY_INFO!=='undefined'&&COMFY_INFO&&/animatediff|svd|wan|cogvideo/i.test(
+     JSON.stringify(COMFY_INFO).slice(0,20000))),
+   note:'An AnimateDiff, SVD, WAN or CogVideo workflow was found in your ComfyUI install.'},
+];
+const localImageBackends=()=>LOCAL_IMAGE_BACKENDS.filter(b=>{try{return b.detect();}catch(_){return false;}});
+const localVideoBackends=()=>LOCAL_VIDEO_BACKENDS.filter(b=>{try{return b.detect();}catch(_){return false;}});
+/* The lists the pickers actually render. Hosted first because most people have a key before
+   they have a local rig; detected local ones append rather than replace. */
+const genImageList=()=>GEN_IMAGE_MODELS.filter(m=>m.via!=='comfy').concat(localImageBackends());
+const genVideoList=()=>GEN_VIDEO_MODELS.concat(localVideoBackends());
+const genImageModel=id=>genImageList().find(m=>m.id===(id||GENCFG.imageModel))||genImageList()[0];
+const genVideoModel=id=>genVideoList().find(m=>m.id===(id||GENCFG.videoModel))||genVideoList()[0];
 /* Readiness is reported per model rather than as one global "configured" flag, because the answer
    genuinely differs: a Gemini key does nothing for Replicate, and the bridge matters for one and
    not the other. A single flag would be wrong for most rows. */
@@ -20611,7 +20683,7 @@ function genUiImage(host){
   <div class="card">
     <h3>Image generation</h3>
     <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
-      <select id="gen-imodel" style="flex:1;min-width:220px">${GEN_IMAGE_MODELS.map(x=>
+      <select id="gen-imodel" style="flex:1;min-width:220px">${genImageList().map(x=>
         `<option value="${esc(x.id)}"${x.id===m.id?' selected':''}>${esc(x.label)}</option>`).join('')}</select>
       <select id="gen-size" style="flex:0 0 150px">${(m.sizes||['1024x1024']).map(sz=>
         `<option value="${sz}"${sz===GENCFG.size?' selected':''}>${sz}</option>`).join('')}</select>
@@ -20650,7 +20722,7 @@ function genUiVideo(host){
       real queued jobs below with the elapsed time shown, rather than a progress bar that is really
       a timer pretending to know how long it will take.</p>
     <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
-      <select id="gen-vmodel" style="flex:1;min-width:220px">${GEN_VIDEO_MODELS.map(x=>
+      <select id="gen-vmodel" style="flex:1;min-width:220px">${genVideoList().map(x=>
         `<option value="${esc(x.id)}"${x.id===m.id?' selected':''}${x.unavailable?' disabled':''}>${esc(x.label)}${x.unavailable?' — no public API':''}</option>`).join('')}</select>
       ${genReadyBadge(m)}
     </div>
@@ -20825,7 +20897,7 @@ function genUiKeys(host){
       <input id="gen-rkey" type="password" value="${esc(GENCFG.replicateKey||'')}" placeholder="r8_…"></label>
     <button class="btn small" id="gen-savekeys">Save keys</button>
     <div class="ds-audit" style="margin-top:12px">
-      ${GEN_IMAGE_MODELS.concat(GEN_VIDEO_MODELS).map(m=>{
+      ${genImageList().concat(genVideoList()).map(m=>{
         const r=genReady(m);
         return `<div class="ds-arow${r.ok?'':(r.fixable?'':' fail')}">
           <div style="flex:1"><b>${esc(m.label)}</b>
@@ -22605,6 +22677,135 @@ function gauntletCases(g){
       }finally{g.CREATIONS=keep;saveCreations();if(view)go(view.replace(/^view-/,''));}
     },antiExpect:v=>v===1});
 
+  /* ── This pass: reachability, order, faces, deadlines, local reach ─────────
+     Each guards something that was measured broken, not imagined. */
+
+  /* The screenshot bug: pick the smallest tab set and four health suggestions pointed at a tab
+     you were never given, so the action toasted "switched off in Customise" and dumped you
+     elsewhere. An explicit action must never dead-end. */
+  add({id:'wire-no-dead-actions',sub:'wiring',uses:['goEnsure','tabHidden'],
+    what:'an explicit action re-enables the tab it needs instead of bouncing you',
+    run:()=>{
+      const keep=UI.hiddenTabs.slice(),view=(document.querySelector('.view.active')||{}).id;
+      try{
+        UI.hiddenTabs=['local'];
+        g.goEnsure('local');
+        return tabHidden('local')?'still-hidden':'reachable';
+      }finally{UI.hiddenTabs=keep;saveUI();applyUI();if(view)go(view.replace(/^view-/,''));}
+    },expect:v=>v==='reachable',
+    antiWhat:'while plain navigation still refuses a switched-off tab rather than resurrecting it',
+    anti:()=>{
+      const keep=UI.hiddenTabs.slice(),view=(document.querySelector('.view.active')||{}).id;
+      try{
+        UI.hiddenTabs=['metrics'];
+        go('metrics');
+        return tabHidden('metrics')?1:0;      // go() must NOT un-hide
+      }finally{UI.hiddenTabs=keep;saveUI();applyUI();if(view)go(view.replace(/^view-/,''));}
+    },antiExpect:v=>v===1});
+
+  /* applyUI and applyTabMode both re-appended the tabs, so whichever ran last won and a custom
+     order was silently discarded whenever the density changed. */
+  add({id:'wire-one-order-authority',sub:'wiring',uses:['tabOrderedIds','tabMove'],
+    what:'a custom tab order survives a density change and a full applyUI',
+    run:()=>{
+      const keep=(UI.tabOrder||[]).slice(),mode=TABMODE;
+      try{
+        UI.tabOrder=[];
+        /* Through g., not the module binding. Sabotage swaps the EXPORT, so a case that calls
+           the module-scope function directly tests the real one no matter what was swapped —
+           it passes under sabotage and the hole stays invisible. That is exactly how this case
+           went uncaught the first time it was run against its own sabotage. */
+        const last=g.tabOrderedIds().slice(-1)[0];
+        g.tabMove(last,-999);                       // drag it to the front
+        const moved=g.tabOrderedIds()[0]===last;
+        setTabMode('grouped');setTabMode('full');applyUI();
+        const stillFirst=g.tabOrderedIds()[0]===last;
+        return (moved&&stillFirst)?'survives':(moved?'lost-on-remode':'never-moved');
+      }finally{UI.tabOrder=keep;saveUI();setTabMode(mode);}
+    },expect:v=>v==='survives',
+    antiWhat:'and every real tab appears exactly once in that order, with none invented',
+    anti:()=>{
+      const ids=g.tabOrderedIds(),real=REGISTRY.tabs.map(t=>t.id);
+      const dupes=ids.length-new Set(ids).size;
+      const ghosts=ids.filter(i=>!real.includes(i)).length;
+      const missing=real.filter(i=>!ids.includes(i)).length;
+      return dupes+ghosts+missing;
+    },antiExpect:v=>v===0});
+
+  /* A face that changed on reload would read as a different bot. */
+  add({id:'bots-faces-stable',sub:'bots',uses:['botSprite','botRng'],
+    what:'a bot face is deterministic from its seed and distinct between bots',
+    run:()=>{
+      const a=g.botSprite('seed-one',40),b=g.botSprite('seed-one',40);
+      if(a!==b)return 'unstable';
+      if(/NaN|undefined/.test(a))return 'nan-in-svg';
+      const many=new Set(Array.from({length:24},(_,i)=>g.botSprite('s'+i,40)));
+      return many.size>=22?'stable-and-varied':'only-'+many.size+'-distinct';
+    },expect:v=>v==='stable-and-varied',
+    antiWhat:'while a different seed genuinely produces a different face rather than one template',
+    anti:()=>g.botSprite('alpha',40)===g.botSprite('beta',40)?1:0,antiExpect:v=>v===0});
+
+  /* The chat says what a bot SAID; the audit says what it did. A turn that reports success
+     while recording nothing is the failure this guards. */
+  add({id:'bots-audit-records',sub:'bots',uses:['botAudit','botModelChain'],
+    what:'every bot turn leaves an audit row, and the model chain falls back in order',
+    run:()=>{
+      const keep=g.BOT_RUNS.slice();
+      try{
+        g.BOT_RUNS=[];
+        g.botAudit({botId:'x',botName:'Probe',model:'m/b',tried:['m/a','m/b'],fellBack:true,ms:5,ok:true});
+        const r=g.BOT_RUNS[0];
+        const chain=g.botModelChain({model:'m/a',fallbacks:['m/b','m/a']});
+        const dedup=chain.filter(x=>x==='m/a').length===1;
+        return (r&&r.fellBack&&r.tried.length===2&&chain[0]==='m/a'&&chain[1]==='m/b'&&dedup)
+          ?'recorded':'thin';
+      }finally{g.BOT_RUNS=keep;g.saveBotRuns();}
+    },expect:v=>v==='recorded',
+    antiWhat:'and a bot with no configured model still gets a usable chain from the defaults',
+    anti:()=>g.botModelChain({}).length>0?1:0,antiExpect:v=>v===1});
+
+  /* Fourteen call sites passed null for the signal, so a provider that went quiet hung that
+     feature until a reload — and I rebuilt the same defect twice before moving it here. */
+  add({id:'calls-have-deadlines',sub:'resilience',uses:['callDeadline'],
+    what:'every model call runs under a deadline that a caller can still pre-empt',
+    run:()=>{
+      const d=g.callDeadline(null,30);
+      const ok=d.signal&&!d.signal.aborted&&d.limit===30;
+      d.done();
+      return ok?'guarded':'unguarded';
+    },expect:v=>v==='guarded',
+    antiWhat:"while a caller's own abort still wins, so Stop keeps working",
+    anti:()=>{
+      const c=new AbortController();
+      const d=g.callDeadline(c.signal,999);
+      c.abort();
+      const won=d.signal.aborted;
+      d.done();
+      return won?1:0;
+    },antiExpect:v=>v===1});
+
+  /* "Do my local models work everywhere" has to be answered from the catalogue, and a surface
+     must never claim a local generator the machine does not have. */
+  add({id:'local-reach-honest',sub:'local runtimes',uses:['localReach','genImageList'],
+    what:'local reach is reported per surface and never claims an undetected generator',
+    run:()=>{
+      const rows=g.localReach();
+      if(!rows.length)return 'no-surfaces';
+      const img=g.localImageBackends().length;
+      const listed=g.genImageList().filter(m=>String(m.id).startsWith('local/')).length;
+      /* The picker may only offer local backends that actually answered. */
+      return listed<=img?'honest':'claims-'+listed+'-has-'+img;
+    },expect:v=>v==='honest',
+    antiWhat:'and text surfaces are reported from the shared catalogue rather than hardcoded',
+    anti:()=>{
+      const rows=g.localReach();
+      const text=rows.filter(r=>r.kind==='text');
+      const n=(CATALOG||[]).filter(m=>m._local).length;
+      /* Every text surface must agree with the catalogue — one saying yes while another says no
+         would mean a picker built from its own list again. */
+      return text.every(r=>r.ok===(n>0))?1:0;
+    },antiExpect:v=>v===1});
+
   add({id:'render-unique-ids',sub:'rendering',uses:['esc'],
     what:'no duplicate DOM id (the second one is unreachable via $())',
     run:()=>{const seen={},d=[];document.querySelectorAll('[id]').forEach(e=>{
@@ -22940,6 +23141,28 @@ const GAUNTLET_SABOTAGE=[
      return bullets.map(b=>{let h=0;w.forEach(x=>{if(b.text.toLowerCase().includes(x))h++;});
        return Object.assign({},b,{score:Math.min(1,h/Math.min(6,w.length||1))});})
        .sort((a,b)=>b.score-a.score);}},
+  {id:'audit-forgets',export:'botAudit',
+   why:'a bot turn reports success while recording nothing, so the black box goes blind',
+   broken:()=>rec=>Object.assign({id:'x',tried:[],tools:[]},rec,{fellBack:false})},
+  /* Aimed at genImageList, not localImageBackends: the case reads the PICKER, and genImageList
+     calls the module-scope detector, so swapping the detector's export left the picker honest
+     and the sabotage went uncaught. Break what the case actually reads. */
+  {id:'reach-overclaims',export:'genImageList',
+   why:'the picker offers a local generator the machine does not actually have',
+   broken:()=>()=>window.__gb.GEN_IMAGE_MODELS.concat(
+     [{id:'local/imaginary',label:'Imaginary local',via:'comfy',kind:'image',sizes:['512x512']}])},
+  {id:'goensure-bounces',export:'goEnsure',
+   why:'an explicit action dead-ends on a switched-off tab again (the screenshot bug)',
+   broken:()=>view=>window.__gb.go(view)},
+  {id:'order-ignored',export:'tabOrderedIds',
+   why:'tab order stops being a single authority and a custom order is discarded',
+   broken:()=>()=>window.__gb.REGISTRY.tabs.map(t=>t.id)},
+  {id:'faces-one-template',export:'botSprite',
+   why:'every bot gets the same face, so the roster stops being readable at a glance',
+   broken:()=>()=>'<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="20"/></svg>'},
+  {id:'deadline-off',export:'callDeadline',
+   why:'model calls can hang forever again — the defect that wedged Dreaming and the bot room',
+   broken:()=>(signal)=>({signal,limit:0,timedOut:false,done(){}})},
   {id:'modal-notrap',export:'openModal',
    why:'a dialog stops holding focus and Tab walks out behind the backdrop',
    broken:()=>html=>{const o=document.createElement('div');o.className='overlay';
@@ -34925,6 +35148,212 @@ function stripEdges(n){
   n.classList.toggle('more-l',n.scrollLeft>4);
   n.classList.toggle('more-r',max>4&&n.scrollLeft<max-4);
 }
+/* ═══════════════════ PLAYCANVAS ═══════════════════
+   A SECOND engine, deliberately, not a second editor.
+
+   The three.js editor here authors scenes out of primitives — boxes, spheres, lights you place.
+   That is a different job from opening a real asset someone exported, and the two engines are
+   genuinely good at different halves. PlayCanvas loads glTF/GLB with its materials and, the
+   part that matters, its ANIMATION CLIPS — which the primitive editor has no concept of. GLB is
+   also the format everything upstream actually produces: Spline exports it, Tripo exports it,
+   Blender exports it.
+
+   MIT licensed, and it loads as a real ES module from the two CDNs this app's CSP already
+   allows, so it needs no policy change. 2.4MB, fetched on first use and never at boot — nobody
+   pays for it by opening the app.
+
+   Deliberately NOT wired into the Dreaming pipeline or the primitive editor: two engines
+   sharing one scene graph would be a synchronisation problem with no payoff, and the honest
+   framing is "open this asset in the other engine", not "replace the editor". */
+const PC_CDN='https://unpkg.com/playcanvas@2.21.4/build/playcanvas.min.mjs';
+const PC_SAMPLES=[
+  {label:'Damaged Helmet (glTF sample)',url:'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb'},
+  {label:'Animated Fox (has 3 clips)',url:'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Fox/glTF-Binary/Fox.glb'},
+];
+let PC=null;                 // the module, once
+let PCAPP=null;              // the running Application
+const PCV={url:'',name:'',status:'idle',meshes:0,materials:0,clips:[],clip:'',tris:0,err:''};
+async function pcLoad(){
+  if(PC)return PC;
+  PCV.status='loading engine';renderPcv();
+  try{PC=await import(PC_CDN);}
+  catch(e){PCV.status='failed';PCV.err='the engine could not be fetched — '+e.message;renderPcv();throw e;}
+  return PC;
+}
+function pcDestroy(){
+  /* An Application keeps a rAF loop and a WebGL context alive. Leaving the old one running while
+     a second starts is how a viewer quietly eats a core and then loses its context entirely.
+     The observer has to go with it or it keeps a reference to the dead app. */
+  if(pcDestroy._ro){try{pcDestroy._ro.disconnect();}catch(_){}pcDestroy._ro=null;}
+  if(PCAPP){try{PCAPP.destroy();}catch(_){}PCAPP=null;}
+}
+async function pcOpen(url,name){
+  const src=String(url||'').trim();
+  if(!src)return toast('Paste a .glb or .gltf URL first',2600);
+  PCV.url=src;PCV.name=name||src.split('/').pop().split('?')[0];
+  PCV.err='';PCV.clips=[];PCV.clip='';PCV.meshes=0;PCV.materials=0;PCV.tris=0;
+  try{
+    const pc=await pcLoad();
+    PCV.status='loading asset';renderPcv();
+    const cv=$('#pc-canvas');if(!cv)return;
+    pcDestroy();
+    const app=new pc.Application(cv,{graphicsDeviceOptions:{alpha:false,antialias:true}});
+    PCAPP=app;
+    app.setCanvasFillMode(pc.FILLMODE_NONE);
+    app.setCanvasResolution(pc.RESOLUTION_AUTO);
+    /* FILLMODE_NONE means PlayCanvas will NOT size the backing store for us, so without this the
+       canvas stays at the 300x150 HTML default while its CSS box is full width — the model
+       renders into a tiny buffer that is then stretched, or off screen entirely. Observed rather
+       than reasoned about: the canvas measured 300x150 with a full-width CSS box.
+       A ResizeObserver rather than a window listener, because this panel changes size when a
+       sub-tab opens or the tab bar moves, not only when the window does. */
+    const fit=()=>{
+      const w=Math.max(1,Math.round(cv.clientWidth||cv.parentElement&&cv.parentElement.clientWidth||0));
+      const h=Math.max(1,Math.round(cv.clientHeight||380));
+      if(!w||!h)return;                       // hidden panel: nothing sensible to size to yet
+      try{app.resizeCanvas(w,h);}catch(_){}
+    };
+    fit();
+    if(window.ResizeObserver){
+      pcDestroy._ro=new ResizeObserver(fit);
+      try{pcDestroy._ro.observe(cv);}catch(_){}
+    }
+    app.start();
+    const cam=new pc.Entity('camera');
+    cam.addComponent('camera',{clearColor:new pc.Color(0.06,0.07,0.09)});
+    cam.setPosition(0,1.2,4);app.root.addChild(cam);
+    const light=new pc.Entity('light');
+    light.addComponent('light',{type:'directional',intensity:1.4});
+    light.setEulerAngles(45,30,0);app.root.addChild(light);
+    const amb=new pc.Entity('fill');
+    amb.addComponent('light',{type:'omni',intensity:0.7,range:40});
+    amb.setPosition(-3,4,3);app.root.addChild(amb);
+
+    const asset=new pc.Asset(PCV.name,'container',{url:src});
+    app.assets.add(asset);
+    await new Promise((res,rej)=>{
+      asset.once('load',res);
+      asset.once('error',e=>rej(new Error(String(e||'the file could not be parsed'))));
+      app.assets.load(asset);
+    });
+    const ent=asset.resource.instantiateRenderEntity();
+    app.root.addChild(ent);
+
+    /* Frame it. A model authored in millimetres and one authored in metres differ by a factor of
+       a thousand, so a fixed camera shows either a speck or the inside of a wall. */
+    const aabb=pcBounds(ent,pc);
+    const r=Math.max(0.001,aabb.halfExtents.length());
+    cam.setPosition(aabb.center.x+r*1.9,aabb.center.y+r*1.1,aabb.center.z+r*2.4);
+    cam.lookAt(aabb.center.x,aabb.center.y,aabb.center.z);
+
+    let meshes=0,tris=0;const mats=new Set();
+    ent.findComponents('render').forEach(rc=>{
+      (rc.meshInstances||[]).forEach(mi=>{
+        meshes++;
+        if(mi.material)mats.add(mi.material.id!=null?mi.material.id:mi.material.name);
+        const m=mi.mesh;
+        if(m&&m.primitive&&m.primitive[0])tris+=Math.floor((m.primitive[0].count||0)/3);
+      });
+    });
+    PCV.meshes=meshes;PCV.materials=mats.size;PCV.tris=tris;
+
+    /* Animation is the reason this engine is here — the primitive editor has no notion of a
+       clip, so a rigged export looked like a static model in it. */
+    const anims=(asset.resource.animations||[]).map(a=>a.resource||a).filter(Boolean);
+    if(anims.length){
+      ent.addComponent('anim',{activate:true});
+      anims.forEach((clip,i)=>{
+        const nm=clip.name||('clip '+(i+1));
+        try{ent.anim.assignAnimation(nm,clip);PCV.clips.push(nm);}catch(_){}
+      });
+      if(PCV.clips.length){PCV.clip=PCV.clips[0];try{ent.anim.baseLayer.play(PCV.clip);}catch(_){}}
+    }
+    PCV.status='ready';renderPcv();
+    ed3Log&&ed3Log('info','PlayCanvas loaded '+PCV.name+' — '+meshes+' meshes, '+PCV.clips.length+' clips');
+  }catch(e){
+    PCV.status='failed';PCV.err=String(e.message||e);renderPcv();
+    toast('Could not open that model: '+PCV.err,4200);
+  }
+}
+/* PlayCanvas has no one-call world-bounds helper for an arbitrary hierarchy, so union the mesh
+   instance AABBs. Falls back to a unit box for a file with no renderable geometry, which keeps
+   the camera maths finite instead of producing NaN positions. */
+function pcBounds(ent,pc){
+  const box=new pc.BoundingBox();
+  let first=true;
+  ent.findComponents('render').forEach(rc=>(rc.meshInstances||[]).forEach(mi=>{
+    if(!mi.aabb)return;
+    if(first){box.copy(mi.aabb);first=false;}else box.add(mi.aabb);
+  }));
+  if(first)box.setMinMax(new pc.Vec3(-0.5,-0.5,-0.5),new pc.Vec3(0.5,0.5,0.5));
+  return box;
+}
+function pcPlay(name){
+  PCV.clip=name;
+  try{
+    const ent=PCAPP&&PCAPP.root.findComponents('anim')[0];
+    if(ent)ent.baseLayer.play(name);
+  }catch(_){}
+  renderPcv();
+}
+function pcShot(){
+  const cv=$('#pc-canvas');
+  if(!cv||PCV.status!=='ready')return toast('Load a model first',2400);
+  try{return cv.toDataURL('image/png');}catch(e){toast('Could not read the canvas',2600);return '';}
+}
+function renderPcv(){
+  const host=$('#pcv');if(!host)return;
+  const busy=/loading/.test(PCV.status);
+  host.innerHTML=`
+  <div class="card">
+    <h3>🅿️ PlayCanvas — open a real asset</h3>
+    <p class="help">A second engine alongside the three.js editor, because they are good at
+      different halves. That one authors scenes from primitives; this one opens a
+      <b>.glb / .gltf</b> someone exported, with its materials and its <b>animation clips</b> —
+      which the primitive editor has no concept of. GLB is what Spline, Tripo and Blender all
+      produce, so this is usually where an imported asset should land first.</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap">
+      <input id="pc-url" style="flex:1;min-width:240px" placeholder="https://…/model.glb"
+        value="${esc(PCV.url)}">
+      <button class="btn" id="pc-open"${busy?' disabled':''}>${busy?'Loading…':'Open'}</button>
+      <button class="btn ghost" id="pc-file">Choose a file</button>
+    </div>
+    <div class="row" style="gap:6px;margin-top:7px;flex-wrap:wrap">
+      ${PC_SAMPLES.map(x=>`<button class="btn ghost sm" data-pcsample="${esc(x.url)}">${esc(x.label)}</button>`).join('')}
+    </div>
+    <canvas id="pc-canvas" style="width:100%;height:380px;border:1px solid var(--edge);
+      border-radius:12px;margin-top:11px;background:#0e1119;display:block"></canvas>
+    ${PCV.status==='failed'?`<p class="help"><b style="color:var(--bad)">Could not open it.</b> ${esc(PCV.err)}</p>`:''}
+    ${PCV.status==='ready'?`
+      <p class="help"><b>${esc(PCV.name)}</b> — ${PCV.meshes} mesh${PCV.meshes===1?'':'es'} ·
+        ${PCV.materials} material${PCV.materials===1?'':'s'} · ~${PCV.tris.toLocaleString()} triangles ·
+        ${PCV.clips.length} animation${PCV.clips.length===1?'':'s'}</p>
+      ${PCV.clips.length?`<div class="row" style="gap:6px;flex-wrap:wrap">
+        ${PCV.clips.map(c=>`<button class="btn ghost sm${c===PCV.clip?' on':''}" data-pcclip="${esc(c)}">▶ ${esc(c)}</button>`).join('')}
+      </div>`:''}
+      <div class="row" style="gap:8px;margin-top:9px;flex-wrap:wrap">
+        <button class="btn ghost sm" id="pc-send">Send the frame to…</button>
+      </div>`:''}
+    ${PCV.status==='idle'?'<p class="help">Nothing loaded yet — try one of the samples above.</p>':''}
+  </div>`;
+  const o=$('#pc-open');if(o)o.onclick=()=>pcOpen($('#pc-url').value);
+  $$('[data-pcsample]',host).forEach(b=>b.onclick=()=>{$('#pc-url').value=b.dataset.pcsample;pcOpen(b.dataset.pcsample);});
+  $$('[data-pcclip]',host).forEach(b=>b.onclick=()=>pcPlay(b.dataset.pcclip));
+  const f=$('#pc-file');
+  if(f)f.onclick=()=>{
+    const i=document.createElement('input');i.type='file';i.accept='.glb,.gltf';
+    i.onchange=()=>{const file=i.files[0];if(!file)return;
+      /* A blob: URL rather than a data: URL — a 40MB model as base64 is a 53MB string that has
+         to be parsed as one token. */
+      pcOpen(URL.createObjectURL(file),file.name);};
+    i.click();};
+  const sd=$('#pc-send');
+  if(sd)sd.onclick=()=>{
+    const png=pcShot();
+    if(png&&typeof connMenu==='function')connMenu({kind:'image',data:png,title:PCV.name||'playcanvas frame',from:'playcanvas'});
+  };
+}
+
 /* ═══════════════════ SETUP METER ═══════════════════
    What can this install actually DO right now, and what is stopping the rest.
 
@@ -35135,6 +35564,83 @@ function renderBotCfg(){
     openModal(`<h3>${esc((botAll().find(b=>b.id===id)||{}).name||'Bot')} — every turn</h3>`+
       (rows.length?`<div class="bx-rows">${rows.slice(0,50).map(botAuditRow).join('')}</div>`
                   :'<p class="help">This one has not spoken yet.</p>'));});
+}
+/* ── Where your local models actually reach ────────────────────────────────
+   "Do my local models work everywhere?" deserves a real answer rather than a promise. Every
+   surface that consumes a model is listed with HOW it gets its list, because that is what
+   decides the answer:
+
+     · a picker built from CATALOG sees local models automatically, since mergeCatalog folds
+       Ollama, bridge and custom endpoints into the same catalogue as hosted ones
+     · a picker with its own hardcoded list does not, and image/video were exactly that until
+       the detected-backend lists above replaced them
+
+   Nothing here claims a capability the machine cannot do. With no local image generator
+   installed, the image row says so and explains what would satisfy it — which is more useful
+   than hiding the row and leaving the user wondering whether it is supported at all. */
+const LOCAL_SURFACES=[
+  {id:'assistant',label:'Chat & Deep research',tab:'assistant',kind:'text'},
+  {id:'group',    label:'Bot group chat',      tab:'assistant',kind:'text'},
+  {id:'lab',      label:'Reason Lab',          tab:'lab',      kind:'text'},
+  {id:'relay',    label:'Relay',               tab:'relay',    kind:'text'},
+  {id:'bots',     label:'Bots',                tab:'bots',     kind:'text'},
+  {id:'studio',   label:'Studio',              tab:'studio',   kind:'text'},
+  {id:'office',   label:'Writer & Calc',       tab:'office',   kind:'text'},
+  {id:'brain',    label:'Brain',               tab:'brain',    kind:'text'},
+  {id:'three',    label:'3D & Dreaming',       tab:'three',    kind:'text'},
+  {id:'webos',    label:'WebOS apps',          tab:'webos',    kind:'text'},
+  {id:'awards',   label:'Awards panel',        tab:'awards',   kind:'text'},
+  {id:'gen-img',  label:'Image generation',    tab:'gen',      kind:'image'},
+  {id:'gen-vid',  label:'Video generation',    tab:'gen',      kind:'video'},
+];
+function localReach(){
+  const text=(CATALOG||[]).filter(m=>m._local);
+  const img=localImageBackends(), vid=localVideoBackends();
+  return LOCAL_SURFACES.map(s=>{
+    if(s.kind==='text')return Object.assign({},s,{
+      ok:text.length>0,
+      detail:text.length?`${text.length} local model${text.length===1?'':'s'} in the picker`
+                        :'no local models detected — start Ollama or add an endpoint',
+      how:'built from the shared catalogue, so anything local appears automatically'});
+    if(s.kind==='image')return Object.assign({},s,{
+      ok:img.length>0,
+      detail:img.length?img.map(b=>b.label).join(', ')
+                       :'no local image generator detected',
+      how:img.length?'detected backend':'ComfyUI or Automatic1111 through the bridge would appear here'});
+    return Object.assign({},s,{
+      ok:vid.length>0,
+      detail:vid.length?vid.map(b=>b.label).join(', ')
+                       :'no local video generator detected',
+      how:vid.length?'detected backend':'an AnimateDiff, SVD or WAN workflow in ComfyUI would appear here'});
+  });
+}
+function renderLocalReach(){
+  const host=$('#local-reach');if(!host)return;
+  const rows=localReach();
+  const on=rows.filter(r=>r.ok).length;
+  host.innerHTML=`
+  <div class="card">
+    <h3>🔌 Where your local models reach</h3>
+    <p class="help">Text models flow into every surface below automatically, because each one
+      builds its picker from the shared catalogue rather than its own list. Image and video are
+      detected separately — those need a generator running on your machine, and nothing is
+      listed here unless something actually answered.</p>
+    <div class="setup-meter"><span class="${on===rows.length?'good':on?'warm':'bad'}"
+      style="width:${Math.max(3,Math.round(on/rows.length*100))}%"></span></div>
+    <p class="help"><b>${on} of ${rows.length}</b> surfaces can use a local model right now.</p>
+    <div class="setup-rows">
+      ${rows.map(r=>`<div class="setup-row${r.ok?' on':''}">
+        <span class="setup-dot">${r.ok?'✓':'○'}</span>
+        <span style="flex:1;min-width:0">
+          <b>${esc(r.label)}</b>
+          <i>${esc(r.detail)}</i>
+          <u>${esc(r.how)}</u>
+        </span>
+        <button class="btn ghost sm" data-reach="${esc(r.tab)}">Open →</button>
+      </div>`).join('')}
+    </div>
+  </div>`;
+  $$('[data-reach]',host).forEach(b=>b.onclick=()=>goEnsure(b.dataset.reach));
 }
 function renderSetup(){
   const host=$('#setup-panel');if(!host)return;
@@ -41539,7 +42045,7 @@ function go(view){
   if(view==='graphs')panelGuard(view,()=>renderGraphs());
   if(view==='factory')panelGuard(view,()=>renderFactory());
   if(view==='viz')panelGuard(view,()=>vizRender('#viz-canvas',VIZ.source));
-  if(view==='local')panelGuard(view,()=>renderLocal());
+  if(view==='local')panelGuard(view,()=>{renderLocal();renderLocalReach();});
   if(view==='gen')panelGuard(view,()=>{feedbackInit();renderGenStudio();});
   if(view==='design')panelGuard(view,()=>{renderDesign();const l=$('#ds-herolbl');if(l)l.textContent=DESIGN.gen+' · seed '+DESIGN.genSeed;});
   if(view==='guards')panelGuard(view,()=>renderGuards());
@@ -41557,7 +42063,7 @@ function go(view){
   if(view==='library')panelGuard(view,()=>renderOcrDocs());
   if(view==='study')panelGuard(view,()=>renderStudy());
   if(view==='ops')panelGuard(view,()=>renderStyleUI());
-  if(view==='three')panelGuard(view,()=>{renderAssets();renderWdream();renderEd3Assets();});
+  if(view==='three')panelGuard(view,()=>{renderAssets();renderWdream();renderEd3Assets();renderPcv();});
   if(view==='spline')panelGuard(view,()=>{renderSpline();connInit();});
   if(view==='forge'&&$('#sub-brain')&&$('#sub-brain').classList.contains('on'))panelGuard(view,()=>renderBrainMap());
   if(view==='history')panelGuard(view,()=>renderHistory());
@@ -41853,7 +42359,11 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     wdreamPlan,wdreamOps,wdreamClean,wdreamBuild,wdreamStop,renderWdream,WDREAM_OPS_SCHEMA,
     wdreamSignal,wdreamAbortErr,get WDREAM_RUN(){return WDREAM_RUN},set WDREAM_RUN(v){WDREAM_RUN=v},
     ofcUndo,ofcRedo,ofcSnap,ofcSnapshot,ofcRestore,ofcHistButtons,
-    panelGuard,panelFail,PWA,pwaInit,pwaInstall,pwaReset,renderPwa,
+    panelGuard,panelFail,PWA,pwaInit,pwaInstall,pwaReset,renderPwa,callDeadline,
+    PC_CDN,PC_SAMPLES,PCV,pcLoad,pcOpen,pcBounds,pcPlay,pcShot,pcDestroy,renderPcv,
+    get PCAPP(){return PCAPP},set PCAPP(v){PCAPP=v},
+    LOCAL_SURFACES,localReach,renderLocalReach,localImageBackends,localVideoBackends,
+    genImageList,genVideoList,LOCAL_IMAGE_BACKENDS,LOCAL_VIDEO_BACKENDS,
     botsAddressed,botSysFor,botTurn,botGroupRun,renderBotBox,renderBotCfg,botAuditRow,
     SETUP_CHECKS,setupScore,renderSetup,setupFocus,goEnsure,gauntletQuickRun,tabDropTarget,
     botRng,botSprite,botModelChain,botNorm,botAll,botAudit,botRunsFor,BOT_PALETTES,
