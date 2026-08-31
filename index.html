@@ -23278,6 +23278,22 @@ function gauntletCases(g){
     antiWhat:'and an empty verdict leaves the objection standing rather than being read as consent',
     anti:()=>g.socBellDecision('OBJECT: I must finish.','').granted?1:0,antiExpect:v=>v===0});
 
+  add({id:'soc-commit-earned',sub:'stream',uses:['socCommitBlocked','socGoalParts'],
+    what:'commit() is refused while the goal is demonstrably unfinished',
+    run:()=>{
+      /* The fixture is a REAL RUN, not an invented one. First live relay: three voices
+         convened, Pilot spoke, Sceptic spoke and called commit on turn 2, Maker never spoke,
+         and the goal's second clause — agree on a concrete test — was never addressed. */
+      const goal='Name the single riskiest assumption in shipping a browser-only AI studio, '+
+                 'then agree on one concrete test for it.';
+      const realRun=g.socCommitBlocked(['pilot','sceptic'],['pilot','maker','sceptic'],2,goal);
+      /* and the same stream once everyone has spoken and the parts are covered */
+      const settled=g.socCommitBlocked(['pilot','maker','sceptic'],['pilot','maker','sceptic'],4,goal);
+      return (realRun&&!settled)?'earned':`blocked=${realRun} settled=${settled}`;
+    },expect:v=>v==='earned',
+    antiWhat:'while a single-voice, single-part stream can still commit immediately',
+    anti:()=>g.socCommitBlocked(['solo'],['solo'],1,'Summarise this file.'),antiExpect:v=>v===null});
+
   add({id:'render-unique-ids',sub:'rendering',uses:['esc'],
     what:'no duplicate DOM id (the second one is unreachable via $())',
     run:()=>{const seen={},d=[];document.querySelectorAll('[id]').forEach(e=>{
@@ -23590,6 +23606,9 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'commit-unearned',export:'socCommitBlocked',
+   why:'one voice can end the work by asserting it is done (premature completion)',
+   broken:()=>()=>null},
   {id:'steer-self-vote',export:'socSteerEligible',
    why:'the arbiter stops recusing itself and votes on its own dispute',
    broken:()=>()=>true},
@@ -39966,7 +39985,15 @@ async function socStart(goal){
       SOC.spent.turns++;SOC.spent.cost+=(r.cost||0);saveSoc();
       if(TTS.on)ttsSayAs(current.id,body.slice(0,400));
 
-      if(d.kind==='commit'){socSay('meta','',current.name+' called it done.');break;}
+      if(d.kind==='commit'){
+        const spoken=(SOC.turns||[]).filter(t=>t.kind==='say'&&t.botId).map(t=>t.botId);
+        const block=socCommitBlocked(spoken,SOC.voices,SOC.spent.turns,SOC.goal);
+        if(!block){socSay('meta','',current.name+' called it done.');break;}
+        /* Written into the transcript, not just swallowed — the next voice can see the stream is
+           still going and why, which is the difference between a guard and a silent override. */
+        socSay('meta','',`${current.name} called it done, but ${block} — continuing.`);
+        actLog('system','commit refused',{by:current.name,reason:block});
+      }
       if(SOC.spent.turns%(SOC.caps.loopCheckEvery||4)===0&&socLooping()){
         socSay('meta','','Stopped: the voices started repeating each other.');break;}
 
@@ -40022,6 +40049,57 @@ function socStop(){
   SOC_RUN.stop=true;
   if(SOC_RUN.ctrl){try{SOC_RUN.ctrl.abort();}catch(_){}}
   toast('Stopping the stream…',2000);
+}
+
+/* ── EARNING commit() ──────────────────────────────────────────────────────
+   Found by running the thing rather than reasoning about it. First real relay:
+
+     goal    "Name the single riskiest assumption ... THEN AGREE ON ONE CONCRETE TEST for it."
+     turn 1  Pilot names an assumption, passes
+     turn 2  Sceptic disagrees with it, calls commit()
+     result  stream over in 2 turns. No test agreed. Maker never spoke at all.
+
+   commit() was taken at face value, so one voice could end the work by asserting it was done —
+   which is premature completion, the exact failure this app's own /unlazy skill exists to fight,
+   showing up inside a feature I wrote.
+
+   The fix is not to argue with the model about whether it is finished. It is to make commit()
+   something that has to be EARNED, using facts already on hand and no extra model call:
+
+     · EVERY configured voice must have spoken at least once. If you convened three voices, a
+       goal is not settled by two of them — and in the observed run the implementer, the one who
+       would have proposed the concrete test, was the one who never got a turn.
+     · A multi-part goal needs more turns than it has parts. "Name X, then agree on Y" cannot be
+       satisfied in fewer turns than it has clauses.
+
+   A refused commit is not a failure — the stream simply continues, and the refusal is written
+   into the transcript so the next voice can see why it is still going. */
+function socGoalParts(goal){
+  /* Conjunctions that genuinely separate deliverables. Deliberately conservative: over-counting
+     parts would keep a finished stream running, which costs money for no reason. */
+  /* Counting SEGMENTS, not matches. Adding up several regexes double-counted the common case:
+     "…, then agree on X" scored 3 for a two-clause goal, because it matched both the bare `then`
+     and the comma rule. Over-counting keeps a finished stream running, which is the opposite of
+     the conservative behaviour this function is supposed to have. Splitting cannot double-count
+     by construction. */
+  const t=String(goal||'').toLowerCase();
+  const segs=t.split(/\b(?:and\s+then|then|afterwards)\b|;/)
+    .map(x=>x.trim()).filter(x=>x.length>3);
+  return Math.max(1,Math.min(4,segs.length));
+}
+/* PURE, so the whole rule is testable without a stream or a model. Returns null when commit is
+   allowed, or the reason it is refused. */
+function socCommitBlocked(spokenIds,voiceIds,turns,goal){
+  const voices=(voiceIds||[]).length;
+  const spoken=new Set(spokenIds||[]).size;
+  if(voices>1&&spoken<voices){
+    const silent=voices-spoken;
+    return `${silent} voice${silent===1?' has':'s have'} not spoken yet`;
+  }
+  const parts=socGoalParts(goal);
+  if(parts>1&&(turns||0)<parts)
+    return `the goal has ${parts} parts and only ${turns} turn${turns===1?'':'s'} have happened`;
+  return null;
 }
 
 /* ── THE STEER ─────────────────────────────────────────────────────────────
@@ -44635,6 +44713,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     renderActLedger,renderCkpts,renderEvo,renderSkillSources,ACTLEDGER,
     renderAssistants,renderVoices,renderDossiers,
     renderSoc,
+    socGoalParts,socCommitBlocked,
     SOC_STEER_SYS,socSteerAsk,socSteerEligible,
     SOC_BELL_MAX,socRingBell,socBellDecision,socBellResolve,socQueuePush,socQueuePop,
     SOC_ROLES,SOC_CAPS,SOC_DIRECTIVES,socParseDirective,socResolve,socVoices,socNext,
