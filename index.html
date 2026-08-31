@@ -169,6 +169,11 @@ body[data-tabpos=left] .tabgroup,body[data-tabpos=right] .tabgroup{
 .bill-b.subscription{border-color:rgba(57,217,138,.5);color:var(--good)}
 .bill-b.local{border-color:rgba(122,162,255,.5);color:#7aa2ff}
 .bill-b.free{border-color:rgba(57,217,138,.35);color:var(--good)}
+.soc-thread{margin-top:11px;display:grid;gap:8px;max-height:460px;overflow:auto}
+.soc-turn{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--edge);
+  border-radius:12px;background:var(--panel2)}
+.soc-body{font-size:13px;line-height:1.6;margin-top:4px;white-space:pre-wrap}
+.soc-meta{font-size:11.5px;color:var(--ink3);text-align:center;padding:4px 0}
 .jvs-core{width:74px;height:74px;border-radius:50%;position:relative;flex:none;
   background:radial-gradient(circle at 50% 45%,rgba(122,162,255,.55),rgba(122,162,255,.07) 62%);
   border:1px solid rgba(122,162,255,.42);transition:all .3s ease}
@@ -4363,8 +4368,11 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
         <button class="subtab" data-bsub="news">📰 News</button>
         <button class="subtab" data-bsub="openbot">🤖 OpenBot</button>
         <button class="subtab" data-bsub="sync">🔗 Sync</button>
+        <button class="subtab" data-bsub="stream">🌊 Stream</button>
         <button class="subtab" data-bsub="box">🔍 Black box</button>
       </div>
+
+      <div class="sub" id="bsub-stream"><div id="soc-panel"></div></div>
 
       <div class="sub" id="bsub-box">
         <div id="botbox"></div>
@@ -23027,6 +23035,98 @@ function gauntletCases(g){
       finally{g.BOTS.length=0;keep.forEach(x=>g.BOTS.push(x));g.store.set('bots',g.BOTS);}
     },antiExpect:v=>v===0});
 
+  /* ── Stream of consciousness ──────────────────────────────────────────────
+     An unbounded relay of models handing work to each other spends money while looking like
+     progress, so the guards are the feature and each one is tested here. */
+
+  add({id:'soc-no-self-pass',sub:'stream',uses:['socResolve'],
+    what:'a voice cannot keep the microphone by naming itself',
+    run:()=>{
+      const keep=g.BOTS.slice(),keepV=(g.SOC.voices||[]).slice();
+      try{
+        g.BOTS.length=0;
+        const a=g.botAdd('Alpha','Architect','','x').bot;
+        const b=g.botAdd('Beta','Skeptic','','y').bot;
+        g.SOC.voices=[a.id,b.id];
+        const self=g.socResolve('Alpha',a.id);
+        const other=g.socResolve('Beta',a.id);
+        return (self===null&&other&&other.name==='Beta')?'blocked':
+          (self?('self-pass allowed: '+self.name):'other-pass broken');
+      }finally{g.BOTS.length=0;keep.forEach(x=>g.BOTS.push(x));g.store.set('bots',g.BOTS);
+        g.SOC.voices=keepV;saveSoc();}
+    },expect:v=>v==='blocked',
+    antiWhat:'while the round robin also never hands back to the current speaker',
+    anti:()=>{
+      const keep=g.BOTS.slice(),keepV=(g.SOC.voices||[]).slice();
+      try{
+        g.BOTS.length=0;
+        const a=g.botAdd('Alpha','A','','x').bot,b=g.botAdd('Beta','B','','y').bot;
+        g.SOC.voices=[a.id,b.id];
+        const n=g.socNext(a.id);
+        return (n&&n.id===a.id)?1:0;
+      }finally{g.BOTS.length=0;keep.forEach(x=>g.BOTS.push(x));g.store.set('bots',g.BOTS);
+        g.SOC.voices=keepV;saveSoc();}
+    },antiExpect:v=>v===0});
+
+  add({id:'soc-directive-last-wins',sub:'stream',uses:['socParseDirective'],
+    what:'the directive is the LAST one written, not the first one mentioned',
+    run:()=>{
+      /* A model that discusses passing before actually passing would otherwise be read as
+         having passed to whoever it merely named first. */
+      const d=g.socParseDirective('I could pass(Alpha, no) but instead\npass(Beta, yes)');
+      return (d.kind==='pass'&&d.target==='Beta')?'last':d.kind+'/'+d.target;
+    },expect:v=>v==='last',
+    antiWhat:'and prose with no directive is reported as none rather than guessed at',
+    anti:()=>g.socParseDirective('just thinking out loud about the design').kind,
+    antiExpect:v=>v==='none'});
+
+  add({id:'soc-loop-detector',sub:'stream',uses:['socLooping'],
+    what:'two voices repeating each other is caught',
+    run:()=>{
+      const keep=(g.SOC.turns||[]).slice();
+      try{
+        g.SOC.turns=[];
+        const say=(sp,t)=>g.SOC.turns.push({kind:'say',speaker:sp,text:t});
+        say('A','we should cache the responses to reduce latency and cost significantly');
+        say('B','caching responses would reduce latency and cost significantly indeed');
+        say('A','we should cache the responses to reduce latency and cost significantly');
+        say('B','caching responses would reduce latency and cost significantly indeed');
+        return g.socLooping()?'caught':'missed';
+      }finally{g.SOC.turns=keep;saveSoc();}
+    },expect:v=>v==='caught',
+    antiWhat:'while a genuine conversation that moves forward is NOT flagged',
+    anti:()=>{
+      const keep=(g.SOC.turns||[]).slice();
+      try{
+        g.SOC.turns=[];
+        const say=(sp,t)=>g.SOC.turns.push({kind:'say',speaker:sp,text:t});
+        say('A','the renderer needs a viewport check before it measures anything');
+        say('B','disagree, the measurement problem is about device pixel ratio');
+        say('C','I will write the resize observer and wire the canvas backing store');
+        say('A','good, then we should test on a phone viewport specifically');
+        return g.socLooping()?1:0;
+      }finally{g.SOC.turns=keep;saveSoc();}
+    },antiExpect:v=>v===0});
+
+  add({id:'soc-caps-stop',sub:'stream',uses:['socCapsHit'],
+    what:'turn and spend limits each stop the stream',
+    run:()=>{
+      const keep=Object.assign({},g.SOC.spent);
+      try{
+        g.SOC.spent={turns:9999,cost:0,startTs:Date.now()};
+        const t=g.socCapsHit();
+        g.SOC.spent={turns:0,cost:9999,startTs:Date.now()};
+        const c=g.socCapsHit();
+        return (t&&c&&t!==c)?'both':String(t)+'/'+String(c);
+      }finally{g.SOC.spent=keep;saveSoc();}
+    },expect:v=>v==='both',
+    antiWhat:'and a stream inside its limits is not stopped for no reason',
+    anti:()=>{
+      const keep=Object.assign({},g.SOC.spent);
+      try{g.SOC.spent={turns:0,cost:0,startTs:Date.now()};return g.socCapsHit();}
+      finally{g.SOC.spent=keep;saveSoc();}
+    },antiExpect:v=>v===null});
+
   add({id:'render-unique-ids',sub:'rendering',uses:['esc'],
     what:'no duplicate DOM id (the second one is unreachable via $())',
     run:()=>{const seen={},d=[];document.querySelectorAll('[id]').forEach(e=>{
@@ -23339,6 +23439,15 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'soc-selfpass',export:'socResolve',
+   why:'a voice can pass to itself and hold the microphone forever',
+   broken:()=>(name)=>({id:'self',name:String(name),role:'',model:''})},
+  {id:'soc-loopblind',export:'socLooping',
+   why:'the ping-pong detector stops firing and a repeating stream runs to its cap',
+   broken:()=>()=>false},
+  {id:'soc-capsoff',export:'socCapsHit',
+   why:'the turn and spend limits stop being enforced',
+   broken:()=>()=>null},
   {id:'billing-blind',export:'modelBilling',
    why:'subscription models stop being distinguished from pay-as-you-go',
    broken:()=>()=>({kind:'payg'})},
@@ -30537,7 +30646,8 @@ function botSysFor(b){
 /* One bot turn, down its own model chain, with the audit record written whatever happens.
    The chain is the point: a retired or rate-limited model should cost you a slower answer, not
    a dead bot — and the record says which model actually replied, because that is what you paid. */
-async function botTurn(b,history,signal){
+async function botTurn(b,history,signal,opts){
+  const o=opts||{};
   const chain=botModelChain(b);
   const tried=[];
   const t0=Date.now();
@@ -30545,12 +30655,12 @@ async function botTurn(b,history,signal){
     const model=chain[i];
     tried.push(model);
     try{
-      const acc=await streamComplete({model,maxTokens:ASST_MODES.group.maxTokens,
+      const acc=await streamComplete({model,maxTokens:o.maxTokens||ASST_MODES.group.maxTokens,
         /* Per-bot effort: a reviewer that thinks hard and a scout that answers fast are the
            point of having separate bots at all. */
         reasoning:(b.effort&&b.effort!=='medium')?{effort:b.effort}:undefined,
-        messages:[{role:'system',content:botSysFor(b)+skillBlockFor('bots')},...history]},
-        null,signal,'bot-'+b.name);
+        messages:[{role:'system',content:(o.sys||botSysFor(b))+skillBlockFor('bots')},...history]},
+        null,signal,o.label||('bot-'+b.name));
       const content=String(acc.content||'').trim();
       if(!content)throw new Error('empty answer');
       const run=botAudit({botId:b.id,botName:b.name,model,tried,fellBack:i>0,
@@ -30598,6 +30708,9 @@ async function botGroupRun(text,c,signal){
       cost:r.cost,ms:r.ms,runId:r.runId,reasoning:r.reasoning});
       c.cost=(c.cost||0)+(r.cost||0);
       botMsg(b.name,'ALL',r.content,'say');
+      /* Each bot speaks in the voice assigned to it. Capped, because a model that returns nine
+         paragraphs should not hold the room hostage while it reads them all out. */
+      if(TTS.on)ttsSayAs(b.id,String(r.content).slice(0,400));
     }else{Object.assign(slot,{error:r.error,runId:r.runId,model:(r.tried||[]).slice(-1)[0]||''});}
     saveAChats();renderAsst();
   }
@@ -36388,6 +36501,72 @@ function renderDossiers(){
     toast(r.ok?'Portrait generated':'No portrait: '+r.why+(r.fix?' — '+r.fix:''),r.ok?2400:4200);
     renderDossiers();});
 }
+function renderSoc(){
+  const host=$('#soc-panel');if(!host)return;
+  const bots=botAll();
+  const live=SOC.status==='live';
+  const sp=SOC.spent||{turns:0,cost:0};
+  host.innerHTML=`
+  <div class="card">
+    <h3>🌊 Stream of consciousness</h3>
+    <p class="help"><b>Turn-passing, not message-passing.</b> Group chat asks everyone the same
+      question and collects the answers. A stream has <b>one voice holding the mic</b>: it works,
+      then hands off on purpose — <code>pass(name, why)</code> — and the next voice continues the
+      same thought instead of restarting it. It runs until someone calls <code>commit()</code> or
+      a guard stops it.</p>
+    <p class="help">Voices are your existing bots, so their models, fallbacks, faces and audit
+      trail all apply here. Give at least two.</p>
+    <div class="row" style="gap:6px;flex-wrap:wrap;margin:9px 0">
+      ${bots.length?bots.map(b=>{
+        const on=(SOC.voices||[]).includes(b.id);
+        return `<button class="btn ghost sm${on?' on':''}" data-socv="${esc(b.id)}">
+          ${on?'✓ ':''}${esc(b.name)}</button>`;}).join('')
+        :'<span class="help" style="margin:0">No bots yet — add some in the Bots tab.</span>'}
+    </div>
+    ${(SOC.voices||[]).length?`<div class="setup-rows" style="margin-bottom:9px">
+      ${socVoices().map(b=>`<div class="setup-row on">
+        <span class="bt-face">${botFace(b,30)}</span>
+        <span style="flex:1;min-width:0"><b>${esc(b.name)}</b>
+          <i>${esc(String(b.model||'default model').split('/').pop())}</i></span>
+        <select data-socrole="${esc(b.id)}" style="flex:0 0 140px">
+          ${Object.entries(SOC_ROLES).map(([k,v])=>
+            `<option value="${k}"${((SOC.roles||{})[b.id]||'free')===k?' selected':''}>${esc(v.label)}</option>`).join('')}
+        </select></div>`).join('')}</div>`:''}
+    <div class="row" style="gap:7px;flex-wrap:wrap">
+      <input id="soc-goal" style="flex:1;min-width:200px" placeholder="what should the stream work on?"
+        value="${esc(SOC.goal||'')}" ${live?'disabled':''}>
+      ${live?`<button class="btn ghost" id="soc-stop">■ Stop</button>`
+            :`<button class="btn" id="soc-go">Start the stream</button>`}
+    </div>
+    <div class="row" style="gap:10px;margin-top:7px;flex-wrap:wrap">
+      <label class="mini muted">turns <input type="number" id="soc-mt" value="${SOC.caps.maxTurns}" min="2" max="60" style="width:62px"></label>
+      <label class="mini muted">spend cap $<input type="number" id="soc-ms" value="${SOC.caps.maxSpend}" min="0" step="0.05" style="width:74px"></label>
+      <span class="help" style="margin:0;align-self:center">used: ${sp.turns} turns · ${money(sp.cost||0)}</span>
+    </div>
+    ${(SOC.turns||[]).length?`<div class="soc-thread">${SOC.turns.map(t=>{
+      if(t.kind!=='say')return `<div class="soc-meta">${esc(t.text)}</div>`;
+      const b=bots.find(x=>x.id===t.botId);
+      return `<div class="soc-turn">
+        <span class="bt-face">${b?botFace(b,30):''}</span>
+        <div style="flex:1;min-width:0">
+          <b>${esc(t.speaker)}</b>
+          <span class="mini muted">· ${esc(String(t.model||'').split('/').pop())}${t.fellBack?' · fell back':''}${t.cost?' · '+money(t.cost):''}</span>
+          ${t.directive&&t.directive!=='none'?`<span class="tag">${esc(t.directive)}</span>`:''}
+          <div class="soc-body">${esc(t.text)}</div>
+        </div></div>`;}).join('')}</div>`
+    :'<p class="help" style="margin-top:9px">Nothing yet.</p>'}
+  </div>`;
+  $$('[data-socv]',host).forEach(b=>b.onclick=()=>{
+    const id=b.dataset.socv;
+    SOC.voices=(SOC.voices||[]).includes(id)?SOC.voices.filter(x=>x!==id):(SOC.voices||[]).concat([id]);
+    saveSoc();renderSoc();});
+  $$('[data-socrole]',host).forEach(sel=>sel.onchange=()=>{
+    SOC.roles=SOC.roles||{};SOC.roles[sel.dataset.socrole]=sel.value;saveSoc();});
+  const mt=$('#soc-mt');if(mt)mt.onchange=()=>{SOC.caps.maxTurns=Math.max(2,+mt.value||16);saveSoc();};
+  const ms=$('#soc-ms');if(ms)ms.onchange=()=>{SOC.caps.maxSpend=Math.max(0,+ms.value||0.5);saveSoc();};
+  const go=$('#soc-go');if(go)go.onclick=()=>socStart($('#soc-goal').value);
+  const st=$('#soc-stop');if(st)st.onclick=socStop;
+}
 function renderSetup(){
   const host=$('#setup-panel');if(!host)return;
   const s=setupScore();
@@ -39439,6 +39618,187 @@ async function persistDir(){
 /* ── What "all my work" actually is ────────────────────────────────────── */
 const PERSIST_KEYS=['ws','projects','creations','ofw','ofc','webos','brainDir','moaPresets',
   'skillCtx','connx','ui','onboarding','skills','history','traces','persist','trueforge','notes'];
+/* ═══════════════════ STREAM OF CONSCIOUSNESS ═══════════════════
+   Adapted from the AI OS's SoC engine. Its own one-line description is the clearest statement of
+   what makes this different from the group chat next door:
+
+       TURN-PASSING, NOT MESSAGE-PASSING.
+
+   Group chat: you ask, every active bot answers in turn, done. One round, many replies.
+   Stream:     one shared transcript with exactly ONE voice holding the mic. That voice works,
+               then hands off deliberately — pass(name, why) — and the next voice continues the
+               same thought rather than answering the same question again. It keeps going until
+               someone calls commit(), or a guard stops it.
+
+   The voice pool is the existing BOTS roster, not a second list of personas. A bot's model,
+   fallback chain, effort, face, voice and audit trail therefore all apply here for free, and
+   there is exactly one place to edit who exists.
+
+   THE GUARDS ARE THE FEATURE. An unbounded relay of models handing work to each other is a
+   money incinerator that looks like progress, so five separate things can stop it, and each is
+   tested:
+     · a hop cap                       (maxTurns)
+     · a spend cap, checked BEFORE each call, not after
+     · a wall-clock cap
+     · no-self-pass, so a voice cannot keep the mic by naming itself
+     · a ping-pong detector — A,B,A,B saying the same thing in different words
+   Their version uses token-overlap similarity between turn N and turn N-2; that is kept,
+   because it needs no model call and catches the common case. */
+const SOC_ROLES={
+  architect:  {label:'Architect',   sys:'You are the ARCHITECT voice: shape the approach, name the tradeoffs, keep the design coherent. You do not write implementation code.'},
+  implementer:{label:'Implementer', sys:'You are the IMPLEMENTER voice: produce the concrete work — code, steps, artifacts. Complete, no placeholders.'},
+  skeptic:    {label:'Skeptic',     sys:'You are the SKEPTIC voice: attack the weakest assumption, find what breaks, demand proof. Be specific about the input that fails.'},
+  advocate:   {label:'Advocate',    sys:'You are the USER-ADVOCATE voice: represent the person who has to use this — simplicity, shipping, no gold-plating.'},
+  free:       {label:'Own persona', sys:''},
+};
+const SOC_DIRECTIVES=
+  '\n\nEnd your turn with EXACTLY ONE directive on its own final line:\n'+
+  '  pass(<name>, <reason>)  — hand the turn to a named voice\n'+
+  '  yield()                 — you do not know who should go next\n'+
+  '  commit()                — the goal is met and the stream should stop\n'+
+  'You can NEVER pass to yourself. Keep the turn under 220 words. Continue the work; do not '+
+  'restate what others already said.';
+const SOC_CAPS={maxTurns:16,maxSpend:0.5,maxWallMin:10,loopCheckEvery:4};
+const SOC_DEFAULTS={goal:'',voices:[],roles:{},turns:[],status:'idle',
+  spent:{turns:0,cost:0,startTs:0},caps:Object.assign({},SOC_CAPS)};
+let SOC=Object.assign({},SOC_DEFAULTS,store.get('soc',{}));
+SOC.caps=Object.assign({},SOC_CAPS,SOC.caps||{});
+const saveSoc=()=>store.set('soc',SOC);
+let SOC_RUN=null;
+
+/* One directive per turn, LAST match wins — a model that talks about passing before actually
+   passing would otherwise be read as having passed. */
+function socParseDirective(text){
+  const t=String(text||'');
+  const pr=[...t.matchAll(/\b(pass|redirect)\s*\(\s*([^,)]+?)\s*(?:,\s*([^)]*))?\)/gi)].pop();
+  if(pr)return{kind:'pass',target:pr[2].trim().replace(/["'<>]/g,''),reason:(pr[3]||'').trim().slice(0,140)};
+  if(/\bcommit\s*\(\s*\)/i.test(t)||/^\s*commit\s*$/im.test(t))return{kind:'commit'};
+  if(/\byield\s*\(\s*\)/i.test(t)||/^\s*yield\s*$/im.test(t))return{kind:'yield'};
+  return{kind:'none'};
+}
+/* Alias-aware, and no-self-pass is enforced HERE rather than trusted to the prompt: a model that
+   names itself keeps the mic forever, which is the cheapest possible infinite loop. */
+function socResolve(name,currentId){
+  const pool=socVoices().filter(b=>b.id!==currentId);
+  if(!pool.length)return null;
+  const want=String(name||'').toLowerCase().replace(/[^a-z0-9 ]/g,'').trim();
+  if(!want)return null;
+  return pool.find(b=>b.name.toLowerCase()===want)
+      || pool.find(b=>b.name.toLowerCase().startsWith(want))
+      || pool.find(b=>want.includes(b.name.toLowerCase()))
+      || pool.find(b=>String(b.model||'').toLowerCase().includes(want))
+      || pool.find(b=>String(b.role||'').toLowerCase().includes(want))
+      || null;
+}
+const socVoices=()=>botAll().filter(b=>(SOC.voices||[]).includes(b.id));
+function socNext(currentId){
+  const pool=socVoices();
+  if(pool.length<2)return null;
+  const i=pool.findIndex(b=>b.id===currentId);
+  return pool[(i+1)%pool.length];
+}
+/* Token-overlap ping-pong detector, from their implementation. No model call, so it can run
+   every few turns for free. Compares N against N-2 — the shape of A,B,A,B repetition. */
+function socLooping(){
+  const last=(SOC.turns||[]).filter(t=>t.kind==='say').slice(-4)
+    .map(t=>String(t.text||'').toLowerCase().split(/\W+/).filter(w=>w.length>4));
+  if(last.length<4)return false;
+  const sim=(a,b)=>{const B=new Set(b);const o=a.filter(w=>B.has(w)).length;
+    return o/Math.max(1,Math.min(a.length,b.length));};
+  return sim(last[0],last[2])>0.72&&sim(last[1],last[3])>0.72;
+}
+function socCapsHit(){
+  const sp=SOC.spent||{turns:0,cost:0,startTs:0};
+  if(sp.turns>=SOC.caps.maxTurns)return'the turn limit';
+  if(sp.cost>=SOC.caps.maxSpend)return'the spend limit';
+  if(sp.startTs&&(Date.now()-sp.startTs)/60000>=SOC.caps.maxWallMin)return'the time limit';
+  return null;
+}
+function socSay(kind,speaker,text,extra){
+  const t=Object.assign({id:uid(),ts:nowISO(),kind,speaker:speaker||'',text:String(text||'')},extra||{});
+  SOC.turns=(SOC.turns||[]).concat([t]).slice(-120);
+  saveSoc();
+  if(typeof renderSoc==='function'&&$('#soc-panel'))renderSoc();
+  return t;
+}
+function socSysFor(b){
+  const role=SOC_ROLES[(SOC.roles||{})[b.id]||'free']||SOC_ROLES.free;
+  const others=socVoices().filter(x=>x.id!==b.id).map(x=>`${x.name} (${x.role||'generalist'})`);
+  return `You are ${b.name} in a shared working stream. `+
+    (role.sys?role.sys+' ':'')+
+    (b.purpose||b.brief||'')+
+    `\n\nGOAL: ${SOC.goal}\n`+
+    `OTHER VOICES YOU MAY PASS TO: ${others.join(' · ')||'(none — use commit() when done)'}`+
+    SOC_DIRECTIVES;
+}
+async function socStart(goal){
+  if(SOC_RUN)return toast('A stream is already running',2400);
+  const pool=socVoices();
+  if(pool.length<2)return toast('Pick at least two voices for a stream',3000);
+  SOC.goal=String(goal||'').trim()||SOC.goal;
+  if(!SOC.goal)return toast('Give the stream a goal',2400);
+  SOC.turns=[];SOC.status='live';
+  SOC.spent={turns:0,cost:0,startTs:Date.now()};
+  saveSoc();
+  SOC_RUN={stop:false,ctrl:new AbortController()};
+  actLog('human','started a stream',{goal:SOC.goal.slice(0,80),voices:pool.length});
+  socSay('meta','','Goal: '+SOC.goal);
+  let current=pool[0];
+  try{
+    while(!SOC_RUN.stop){
+      const cap=socCapsHit();
+      if(cap){socSay('meta','','Stopped at '+cap+'.');break;}
+      /* Spend is checked BEFORE the call, not after — checking afterwards means the cap is
+         always breached by exactly one call, which is the call that mattered. */
+      const est=0.01;
+      if((SOC.spent.cost+est)>SOC.caps.maxSpend){
+        socSay('meta','','Stopping: the next turn would pass the spend limit.');break;}
+
+      const history=(SOC.turns||[]).filter(t=>t.kind==='say').slice(-10)
+        .map(t=>({role:'assistant',content:`${t.speaker}: ${t.text}`}));
+      history.unshift({role:'user',content:SOC.goal});
+
+      const r=await botTurn(current,history,SOC_RUN.ctrl.signal,
+        {sys:socSysFor(current),maxTokens:900,label:'soc-'+current.name});
+      if(SOC_RUN.stop)break;
+      if(!r.ok){socSay('meta','',`${current.name} could not answer (${r.error}). Stopping.`);break;}
+
+      const d=socParseDirective(r.content);
+      /* The directive line is machinery, not conversation — strip it so the transcript reads
+         like people talking rather than like a protocol dump. */
+      const body=String(r.content).replace(/^\s*(pass|redirect|yield|commit)\s*\([^)]*\)\s*$/gim,'').trim();
+      socSay('say',current.name,body,{botId:current.id,model:r.model,cost:r.cost,
+        ms:r.ms,runId:r.runId,directive:d.kind,fellBack:r.fellBack});
+      SOC.spent.turns++;SOC.spent.cost+=(r.cost||0);saveSoc();
+      if(TTS.on)ttsSayAs(current.id,body.slice(0,400));
+
+      if(d.kind==='commit'){socSay('meta','',current.name+' called it done.');break;}
+      if(SOC.spent.turns%(SOC.caps.loopCheckEvery||4)===0&&socLooping()){
+        socSay('meta','','Stopped: the voices started repeating each other.');break;}
+
+      let nxt=null;
+      if(d.kind==='pass'){
+        nxt=socResolve(d.target,current.id);
+        if(!nxt){socSay('meta','',`(no voice called “${d.target}” — passing to the next in order)`);}
+      }
+      current=nxt||socNext(current.id);
+      if(!current){socSay('meta','','Nobody left to pass to.');break;}
+    }
+  }catch(e){
+    socSay('meta','','The stream stopped: '+(e.message||e));
+  }finally{
+    SOC.status='idle';saveSoc();SOC_RUN=null;
+    actLog('system','stream ended',{turns:SOC.spent.turns,cost:SOC.spent.cost});
+    if(typeof renderSoc==='function')renderSoc();
+  }
+}
+function socStop(){
+  if(!SOC_RUN)return;
+  SOC_RUN.stop=true;
+  if(SOC_RUN.ctrl){try{SOC_RUN.ctrl.abort();}catch(_){}}
+  toast('Stopping the stream…',2000);
+}
+
 /* ═══════════════════ WHICH POOL IS THIS COMING OUT OF? ═══════════════════
    Three ways a model call gets paid for, and the app should never leave you guessing which:
 
@@ -43586,7 +43946,7 @@ function go(view){
     refreshSessions().then(renderSessions).catch(e=>panelFail('mission',e));});
   if(view==='creations')panelGuard(view,()=>renderCreations());
   if(view==='bots')panelGuard(view,()=>{renderBots();renderBotFeed();renderCallInvite();renderNet();
-    renderBotBox();renderDossiers();renderBotCfg();});
+    renderBotBox();renderDossiers();renderBotCfg();renderSoc();});
   if(view==='vo')panelGuard(view,()=>{renderVoGames();voSync();voThink();voResize();voFrame(0);renderVoRoster();
     renderSteer();renderOfficeDesign();renderOutputs();});
   else if(VO.on)voStop();      // do not burn a rAF loop on a tab nobody is looking at
@@ -43901,6 +44261,10 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     get PCAPP(){return PCAPP},set PCAPP(v){PCAPP=v},
     renderActLedger,renderCkpts,renderEvo,renderSkillSources,ACTLEDGER,
     renderAssistants,renderVoices,renderDossiers,
+    renderSoc,
+    SOC_ROLES,SOC_CAPS,SOC_DIRECTIVES,socParseDirective,socResolve,socVoices,socNext,
+    socLooping,socCapsHit,socSay,socSysFor,socStart,socStop,saveSoc,
+    get SOC(){return SOC},set SOC(v){SOC=v},get SOC_RUN(){return SOC_RUN},
     SUB_BILLED,BILLING,modelBilling,billingBadge,subModelsAvailable,renderSubModels,
     botDossier,voToBot,botToVo,botPortrait,botFace,
     ttsVoices,ttsPick,ttsSpeak,ttsStop,ttsSpeaking,ttsSayAs,get TTS(){return TTS},saveTts,
