@@ -23234,6 +23234,23 @@ function gauntletCases(g){
       }
     },antiExpect:v=>v===0});
 
+  add({id:'bell-steer-recusal',sub:'stream',uses:['socSteerAsk','socBellDecision'],
+    what:'a steer cannot arbitrate a dispute it is itself part of',
+    run:()=>{
+      /* Synchronous on purpose: the suite runs cases synchronously, and an async run() returns a
+         PROMISE to expect(), which then compares a Promise to a string and fails for a reason
+         that has nothing to do with the behaviour. Testing the pure rule avoids that entirely. */
+      const E=g.socSteerEligible;
+      const asHolder=E('a','a','b');     // steer is the holder    -> ineligible
+      const asRinger=E('b','a','b');     // steer is the ringer    -> ineligible
+      const none=E('','a','b');          // no steer configured    -> ineligible
+      const third=E('c','a','b');        // an uninvolved third    -> eligible
+      return (!asHolder&&!asRinger&&!none&&third)?'recused':
+        [asHolder,asRinger,none,third].join('/');
+    },expect:v=>v==='recused',
+    antiWhat:'and an empty verdict leaves the objection standing rather than being read as consent',
+    anti:()=>g.socBellDecision('OBJECT: I must finish.','').granted?1:0,antiExpect:v=>v===0});
+
   add({id:'render-unique-ids',sub:'rendering',uses:['esc'],
     what:'no duplicate DOM id (the second one is unreachable via $())',
     run:()=>{const seen={},d=[];document.querySelectorAll('[id]').forEach(e=>{
@@ -23546,6 +23563,9 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'steer-self-vote',export:'socSteerEligible',
+   why:'the arbiter stops recusing itself and votes on its own dispute',
+   broken:()=>()=>true},
   {id:'bell-always-grants',export:'socBellDecision',
    why:'an objection stops mattering and any bell takes the floor',
    broken:()=>()=>({objected:false,granted:true,overruled:false})},
@@ -36653,6 +36673,13 @@ function renderSoc(){
         </div>`).join('')}</div>`:''}
     ${SOC.bell?`<div class="soc-meta"><b>🔔 ${esc(SOC.bell.byName)} is waiting to cut in</b> — ${esc(SOC.bell.reason)}. The current statement finishes first.</div>`:''}
     ${(SOC.queue||[]).length?`<div class="soc-meta">queued to speak: ${socVoices().filter(b=>(SOC.queue||[]).includes(b.id)).map(b=>esc(b.name)).join(', ')}</div>`:''}
+    ${(SOC.voices||[]).length>1?`<div class="row" style="gap:7px;margin-bottom:8px;align-items:center">
+      <span class="mini muted">tie-breaker when someone objects to being interrupted:</span>
+      <select id="soc-steer" style="flex:0 0 170px">
+        <option value="">— none (objection wins) —</option>
+        ${socVoices().map(b=>`<option value="${esc(b.id)}"${SOC.steer===b.id?' selected':''}>${esc(b.name)}</option>`).join('')}
+      </select>
+    </div>`:''}
     <div class="row" style="gap:7px;flex-wrap:wrap">
       <input id="soc-goal" style="flex:1;min-width:200px" placeholder="what should the stream work on?"
         value="${esc(SOC.goal||'')}" ${live?'disabled':''}>
@@ -36683,6 +36710,7 @@ function renderSoc(){
     saveSoc();renderSoc();});
   $$('[data-socrole]',host).forEach(sel=>sel.onchange=()=>{
     SOC.roles=SOC.roles||{};SOC.roles[sel.dataset.socrole]=sel.value;saveSoc();});
+  const sv=$('#soc-steer');if(sv)sv.onchange=()=>{SOC.steer=sv.value;saveSoc();};
   const mt=$('#soc-mt');if(mt)mt.onchange=()=>{SOC.caps.maxTurns=Math.max(2,+mt.value||16);saveSoc();};
   const ms=$('#soc-ms');if(ms)ms.onchange=()=>{SOC.caps.maxSpend=Math.max(0,+ms.value||0.5);saveSoc();};
   $$('[data-socbell]',host).forEach(b=>b.onclick=()=>{
@@ -39787,7 +39815,7 @@ const SOC_DIRECTIVES=
   'restate what others already said.';
 const SOC_CAPS={maxTurns:16,maxSpend:0.5,maxWallMin:10,loopCheckEvery:4};
 const SOC_DEFAULTS={goal:'',voices:[],roles:{},turns:[],status:'idle',
-  bell:null,bellsRung:0,queue:[],mustExplain:null,
+  bell:null,bellsRung:0,queue:[],mustExplain:null,steer:'',
   spent:{turns:0,cost:0,startTs:0},caps:Object.assign({},SOC_CAPS)};
 let SOC=Object.assign({},SOC_DEFAULTS,store.get('soc',{}));
 SOC.caps=Object.assign({},SOC_CAPS,SOC.caps||{});
@@ -39931,11 +39959,23 @@ async function socStart(goal){
          start — which is what "statements are atomic" means in practice. */
       if(SOC.bell){
         const holder=nxt||socNext(current.id);
-        /* No model is asked to arbitrate here: with no steer configured the holder is treated as
-           yielding, which is the generous reading and keeps the stream moving. A steer voice can
-           be wired in later without changing socBellDecision, which is the point of it being
-           pure. */
-        const res=socBellResolve(holder,'YIELD — go ahead.','');
+        const ringer=botAll().find(b=>b.id===SOC.bell.byId);
+        /* Ask the displaced voice whether it yields, then — only if it objects — pay for one
+           arbiter word. The steer is never consulted when there is nothing to arbitrate. */
+        let holderReply='YIELD — go ahead.',steerVerdict='';
+        if(holder&&ringer&&holder.id!==ringer.id){
+          const hr=await botTurn(holder,[{role:'user',content:
+            `${ringer.name} rang the bell to speak before you: "${SOC.bell.reason}".
+`+
+            `Reply exactly YIELD to hand over, or OBJECT: <one sentence on why you must speak first>.`}],
+            SOC_RUN.ctrl.signal,{sys:socSysFor(holder),maxTokens:120,label:'soc-yieldcheck'});
+          if(hr.ok)holderReply=String(hr.content||'').trim();
+          if(/OBJECT/i.test(holderReply)&&!/^\s*YIELD/i.test(holderReply))
+            steerVerdict=await socSteerAsk(holder,ringer,SOC.bell.reason,holderReply,SOC_RUN.ctrl.signal);
+          socSay('meta','',`${holder.name}: ${holderReply.slice(0,160)}`+
+            (steerVerdict?` · steer says ${steerVerdict.toUpperCase()}`:''));
+        }
+        const res=socBellResolve(holder,holderReply,steerVerdict);
         if(res&&res.winner)nxt=res.winner;
       }
       /* The queue comes before the round robin — that is the anti-starvation rule. */
@@ -39955,6 +39995,55 @@ function socStop(){
   SOC_RUN.stop=true;
   if(SOC_RUN.ctrl){try{SOC_RUN.ctrl.abort();}catch(_){}}
   toast('Stopping the stream…',2000);
+}
+
+/* ── THE STEER ─────────────────────────────────────────────────────────────
+   socBellDecision has always taken a steer verdict; until now nothing supplied one, so an
+   objection always won by default. This is the arbiter.
+
+   Deliberately the cheapest voice in the room. Its whole job is one word, so it gets a hard
+   token ceiling and a prompt that forbids prose — an arbiter that writes three paragraphs about
+   the merits of both positions has become a fourth participant, which is exactly what a
+   tie-break must not be. The AI OS caps theirs at 64 tokens and one or two sentences; same idea.
+
+   It is OPTIONAL and degrades to the previous behaviour: no steer configured means an objection
+   stands, which is the conservative reading (the voice already holding the floor keeps it). */
+const SOC_STEER_SYS=
+  'You are the STEER. Another voice rang the bell to interrupt; the voice holding the floor has '+
+  'objected. Decide who speaks next.\n'+
+  'Reply with ONE word and nothing else:\n'+
+  '  YAY  — the interruption is more important, let the ringer cut in\n'+
+  '  NAY  — the objection stands, the current voice keeps the floor\n'+
+  'No explanation. No prose. One word.';
+/* Returns a verdict string socBellDecision already understands, or '' when there is no steer or
+   it could not answer — never a guess. */
+/* PURE, and split out for the same reason socBellDecision is: the recusal rule is the part that
+   must never quietly break, and a rule that can only be tested by making a model call is a rule
+   that will not be tested. A steer holding the floor or ringing the bell cannot arbitrate its own
+   dispute — that is not a tie-break, it is a casting vote for itself. */
+function socSteerEligible(steerId,holderId,ringerId){
+  if(!steerId)return false;
+  if(steerId===holderId||steerId===ringerId)return false;
+  return true;
+}
+async function socSteerAsk(holder,ringer,reason,holderReply,signal){
+  const steerId=SOC.steer;
+  if(!socSteerEligible(steerId,holder&&holder.id,ringer&&ringer.id))return'';
+  const steer=botAll().find(b=>b.id===steerId);
+  if(!steer)return'';
+  try{
+    const r=await botTurn(steer,[{role:'user',content:
+      `GOAL: ${SOC.goal}\n\n${ringer.name} rang the bell: "${reason}"\n`+
+      `${holder.name} objected: "${String(holderReply||'').slice(0,300)}"\n\nYAY or NAY?`}],
+      signal,{sys:SOC_STEER_SYS,maxTokens:12,label:'soc-steer'});
+    if(!r.ok)return'';
+    const t=String(r.content||'').trim().toLowerCase();
+    /* Read only the leading word. A model that answers "yay, because…" has still said yay, and
+       one that rambles past the first word has failed the format and gets no vote. */
+    if(/^\s*(yay|yes|grant|allow)\b/.test(t))return'yay';
+    if(/^\s*(nay|no|deny|refuse)\b/.test(t))return'nay';
+    return'';
+  }catch(_){return'';}
 }
 
 /* ── THE BELL ──────────────────────────────────────────────────────────────
@@ -44519,6 +44608,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     renderActLedger,renderCkpts,renderEvo,renderSkillSources,ACTLEDGER,
     renderAssistants,renderVoices,renderDossiers,
     renderSoc,
+    SOC_STEER_SYS,socSteerAsk,socSteerEligible,
     SOC_BELL_MAX,socRingBell,socBellDecision,socBellResolve,socQueuePush,socQueuePop,
     SOC_ROLES,SOC_CAPS,SOC_DIRECTIVES,socParseDirective,socResolve,socVoices,socNext,
     socLooping,socCapsHit,socSay,socSysFor,socStart,socStop,saveSoc,
