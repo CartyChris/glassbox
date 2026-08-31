@@ -93,6 +93,10 @@ body[data-tabpos=left] .tabgroup,body[data-tabpos=right] .tabgroup{
 .modeopt b{display:block;font-size:14px;margin-bottom:2px}
 .modeopt span{font-size:12px;color:var(--ink3);line-height:1.45}
 .modeopt i{font-size:19px;font-style:normal;line-height:1}
+.tabs.tab-reordering{cursor:grabbing;user-select:none}
+.tabs.tab-reordering .tab{transition:none}
+.tab.tab-dragging{opacity:.85;transform:scale(1.04);box-shadow:0 6px 20px rgba(0,0,0,.4);
+  border-color:var(--acc)!important;z-index:5;position:relative}
 .spl-stage{position:relative;margin-top:11px;height:min(58vh,540px);border:1px solid var(--edge);
   border-radius:13px;overflow:hidden;background:linear-gradient(180deg,#0e1119,#0a0c12)}
 .spl-stage canvas{display:block;width:100%;height:100%}
@@ -105,6 +109,49 @@ body[data-tabpos=left] .tabgroup,body[data-tabpos=right] .tabgroup{
   border-radius:13px;background:#0a0c12}
 .spl-shot img{max-width:100%;border-radius:11px;border:1px solid var(--edge);margin-top:11px}
 .spl-objs{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;max-height:150px;overflow:auto}
+.setup-meter{height:9px;border-radius:99px;background:var(--panel2);overflow:hidden;margin:11px 0 8px;
+  border:1px solid var(--edge)}
+.setup-meter span{display:block;height:100%;border-radius:99px;transition:width .5s ease}
+.setup-meter span.good{background:var(--good)}
+.setup-meter span.warm{background:var(--warn,#e8b339)}
+.setup-meter span.bad{background:var(--bad)}
+.setup-rows{display:grid;gap:7px;margin-top:11px}
+.setup-row{display:flex;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--edge);
+  border-radius:11px;background:var(--panel2)}
+.setup-row.on{opacity:.72}
+.setup-row b{display:block;font-size:13px}
+.setup-row i{display:block;font-style:normal;font-size:12px;color:var(--ink3);line-height:1.4;margin-top:1px}
+.setup-row u{display:block;text-decoration:none;font-size:11px;color:var(--ink3);opacity:.72;margin-top:2px}
+.setup-dot{width:19px;text-align:center;font-weight:800;color:var(--ink3)}
+.tm-row{display:flex;align-items:center;gap:6px}
+.tm-hit{display:flex;align-items:center;gap:9px;flex:1;min-width:0;background:none;border:0;
+  color:inherit;font:inherit;text-align:left;cursor:pointer;padding:8px 10px;border-radius:9px}
+.tm-hit:hover{background:var(--panel2)}
+.tm-move{display:flex;gap:3px;flex:none}
+.tm-move .btn{padding:4px 8px;line-height:1}
+.tm-move .btn[disabled]{opacity:.3;pointer-events:none}
+.botface{display:block;flex:none;border-radius:50%;background:rgba(255,255,255,.04)}
+.bot-turn{border-left:2px solid var(--edge2)}
+.bt-head{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.bt-head b{font-size:13.5px}
+.bt-head i{font-style:normal;font-size:11.5px;color:var(--ink3)}
+.bt-face{display:flex;flex:none}
+.tag.warn{background:rgba(232,179,57,.16);border-color:rgba(232,179,57,.5);color:#e8b339}
+.bx-rows{display:grid;gap:7px;margin-top:10px}
+.bx-row{display:flex;gap:10px;align-items:flex-start;padding:9px 11px;border:1px solid var(--edge);
+  border-radius:11px;background:var(--panel2)}
+.bx-row.bad{border-color:rgba(255,86,86,.45);background:rgba(255,86,86,.07)}
+.bx-row b{font-size:12.5px}
+.bx-meta{font-size:11px;color:var(--ink3);margin-top:2px;line-height:1.5}
+.bx-chain{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.bx-chain span{font-size:10px;padding:1px 6px;border-radius:99px;border:1px solid var(--edge2);
+  color:var(--ink3);font-family:ui-monospace,monospace}
+.bx-chain span.used{border-color:var(--good);color:var(--good)}
+.bx-chain span.dead{opacity:.5;text-decoration:line-through}
+.botcfg{display:grid;gap:9px;margin-top:10px}
+.botcfg-row{display:flex;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--edge);
+  border-radius:12px;background:var(--panel2)}
+.setup-row.on .setup-dot{color:var(--good)}
 /* Keyboard users could not see where they were: there was no focus style anywhere in the
    app. This is the one ring, applied to every interactive element at once. */
 :where(button,a,input,select,textarea,[tabindex],.tab,.chip,.mh-chip,.of-rev,.am-offer):focus-visible{
@@ -4273,6 +4320,12 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
         <button class="subtab" data-bsub="news">📰 News</button>
         <button class="subtab" data-bsub="openbot">🤖 OpenBot</button>
         <button class="subtab" data-bsub="sync">🔗 Sync</button>
+        <button class="subtab" data-bsub="box">🔍 Black box</button>
+      </div>
+
+      <div class="sub" id="bsub-box">
+        <div id="botbox"></div>
+        <div id="botcfg"></div>
       </div>
 
       <div class="sub on" id="bsub-roster">
@@ -4778,6 +4831,8 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
 
     <section class="view" id="view-settings"><div class="wrap" style="max-width:780px">
       <div id="sfx-panel"></div>
+      <div id="setup-panel"></div>
+      <div id="gauntlet-settings"></div>
       <div id="persist-panel"></div>
       <div id="pwa-panel"></div>
       <div id="xd-panel"></div>
@@ -5706,6 +5761,110 @@ const BOT_SEED=[
   {name:'Mo',    role:'Researcher', brief:'You find what is already known before anyone builds it. You cite what you actually read and you flag when a claim is your recollection rather than a source.'},
 ];
 const BOT_CAP=8;
+
+/* ═══════════════════ BOTS: FACES, CHAINS, AND THE AUDIT TRAIL ═══════════════════
+   One roster, two surfaces, and they are deliberately not the same thing:
+     · the Chat tab is where you TALK to them
+     · the Bots tab is the black box — what was actually asked, of which model, whether a
+       fallback fired, which tools were touched and what it cost
+   Nothing is duplicated between them: the chat renders BMSGS, the audit renders BOT_RUNS, and
+   each links to the other by id. A bot that claims to have done something and an audit trail
+   that shows what it really did are the same feature seen from two ends. */
+
+/* Deterministic faces. The same seed must give the same creature forever — an avatar that
+   changed on reload would read as a different bot, which is worse than having no avatar.
+   FNV-1a to mix the seed, then xorshift for the stream: both are exact integer maths, so this
+   is stable across browsers and sessions in a way Math.random can never be. */
+function botRng(seed){
+  let h=2166136261>>>0;
+  const t=String(seed==null?'x':seed);
+  for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}
+  if(!h)h=0x9e3779b9;
+  return()=>{h^=h<<13;h>>>=0;h^=h>>>17;h^=h<<5;h>>>=0;return h/4294967296;};
+}
+const BOT_PALETTES=[
+  ['#7aa2ff','#b98cff','#1b2233'],['#39d98a','#7ae7c7','#12241d'],['#ffb457','#ff8a5c','#2a1c14'],
+  ['#ff8fb1','#ffc2d6','#2a1620'],['#6ee7f0','#4fb8d8','#0f2028'],['#c7a3ff','#8f7aff','#1c1730'],
+  ['#ffe066','#ffc93c','#2a2412'],['#8de08d','#4fbf7a','#132417'],
+];
+/* Pure SVG so one function serves the chat bubble, the roster row and a 16px tab icon. No
+   canvas, no network, no fonts — it renders identically offline and inside the gauntlet. */
+function botSprite(seed,size){
+  const r=botRng(seed),S=+size||44;
+  const pal=BOT_PALETTES[Math.floor(r()*BOT_PALETTES.length)];
+  const body=pal[0],accent=pal[1],dark=pal[2];
+  const shape=Math.floor(r()*4);          // blob / round / capsule / chunky
+  const eyes=r()<0.14?1:r()<0.9?2:3;
+  const mouth=Math.floor(r()*5);
+  const topper=Math.floor(r()*5);
+  const eyeR=2.6+r()*1.5, lift=r()*3-1.5;
+  const p=[];
+  // ── topper, drawn behind the body ──
+  if(topper===1)p.push(`<path d="M32 13 L32 5" stroke="${accent}" stroke-width="2.4" stroke-linecap="round"/><circle cx="32" cy="4" r="3.1" fill="${accent}"/>`);
+  else if(topper===2)p.push(`<path d="M20 15 L14 6 L26 11 Z" fill="${accent}"/><path d="M44 15 L50 6 L38 11 Z" fill="${accent}"/>`);
+  else if(topper===3)p.push(`<path d="M25 12 q7 -11 14 0" fill="none" stroke="${accent}" stroke-width="2.6" stroke-linecap="round"/>`);
+  else if(topper===4)p.push(`<circle cx="21" cy="14" r="5.4" fill="${accent}"/><circle cx="43" cy="14" r="5.4" fill="${accent}"/>`);
+  // ── body ──
+  if(shape===0)p.push(`<path d="M32 14 c14 0 20 9 20 20 c0 12 -8 18 -20 18 c-12 0 -20 -6 -20 -18 c0 -11 6 -20 20 -20 Z" fill="${body}"/>`);
+  else if(shape===1)p.push(`<circle cx="32" cy="34" r="20" fill="${body}"/>`);
+  else if(shape===2)p.push(`<rect x="13" y="15" width="38" height="38" rx="17" fill="${body}"/>`);
+  else p.push(`<rect x="12" y="17" width="40" height="34" rx="10" fill="${body}"/>`);
+  // ── eyes ──
+  const ex=eyes===1?[32]:eyes===2?[25,39]:[22,32,42];
+  ex.forEach(x=>{
+    p.push(`<circle cx="${x}" cy="${32+lift}" r="${(eyeR+1.9).toFixed(1)}" fill="#fff"/>`);
+    const px=(x+(r()*1.6-0.8)).toFixed(1);        // a little wander, so the pair is not a stare
+    p.push(`<circle cx="${px}" cy="${(32+lift).toFixed(1)}" r="${eyeR.toFixed(1)}" fill="${dark}"/>`);
+    p.push(`<circle cx="${(+px+eyeR*0.42).toFixed(1)}" cy="${(31+lift).toFixed(1)}" r="${(eyeR*0.3).toFixed(1)}" fill="#fff" opacity=".95"/>`);
+  });
+  // ── mouth ──
+  const my=42+lift;
+  if(mouth===0)p.push(`<path d="M26 ${my} q6 5 12 0" fill="none" stroke="${dark}" stroke-width="2.1" stroke-linecap="round"/>`);
+  else if(mouth===1)p.push(`<ellipse cx="32" cy="${my+1}" rx="3.4" ry="4.2" fill="${dark}"/>`);
+  else if(mouth===2)p.push(`<path d="M27 ${my} h10" stroke="${dark}" stroke-width="2.1" stroke-linecap="round"/>`);
+  else if(mouth===3)p.push(`<path d="M26 ${my} q6 5 12 0" fill="none" stroke="${dark}" stroke-width="2.1" stroke-linecap="round"/><path d="M29 ${my+1.5} l1.6 3 l1.6 -3 Z" fill="#fff"/>`);
+  else p.push(`<path d="M25 ${my-1} q7 7 14 0 q-7 3 -14 0 Z" fill="${dark}"/>`);
+  // ── blush ──
+  if(r()<0.5)p.push(`<circle cx="19" cy="${(38+lift).toFixed(1)}" r="3" fill="#ff8fb1" opacity=".45"/><circle cx="45" cy="${(38+lift).toFixed(1)}" r="3" fill="#ff8fb1" opacity=".45"/>`);
+  return `<svg viewBox="0 0 64 64" width="${S}" height="${S}" role="img" aria-label="bot avatar" class="botface">${p.join('')}</svg>`;
+}
+
+/* Model chain: the chosen model, then the fallbacks, in order. A bot whose model is retired or
+   rate-limited should keep working rather than dying silently mid-conversation — and the audit
+   records WHICH one answered, because "it replied" and "your first choice replied" are
+   different facts and only one of them is on your bill. */
+function botModelChain(b){
+  const out=[];
+  if(b&&b.model)out.push(b.model);
+  ((b&&b.fallbacks)||[]).forEach(m=>{if(m&&!out.includes(m))out.push(m);});
+  [settings.buildModel,settings.archModel].forEach(m=>{if(m&&!out.includes(m))out.push(m);});
+  return out.filter(Boolean);
+}
+/* Older rosters predate avatars, chains and tool grants. Filling defaults on read rather than
+   migrating on write means a roster saved by an older build still opens, and nothing is
+   rewritten until the user actually changes something. */
+function botNorm(b){
+  if(!b)return b;
+  if(!b.avatar)b.avatar=b.id||b.name||'bot';
+  if(!Array.isArray(b.fallbacks))b.fallbacks=[];
+  if(!Array.isArray(b.tools))b.tools=[];
+  if(typeof b.purpose!=='string')b.purpose=b.brief||'';
+  return b;
+}
+const botAll=()=>BOTS.map(botNorm);
+
+/* ── The black box ─────────────────────────────────────────────────────────
+   Every bot turn writes one record here whether it succeeded or not. This is what the Bots tab
+   renders: not what the bot SAID, which is in the chat, but what it actually did to produce it. */
+let BOT_RUNS=store.get('botruns',[]);
+const saveBotRuns=()=>store.set('botruns',BOT_RUNS.slice(-300));
+function botAudit(rec){
+  const r=Object.assign({id:uid(),ts:nowISO(),tools:[],tried:[],ok:true},rec||{});
+  BOT_RUNS=[r].concat(BOT_RUNS).slice(0,300);
+  saveBotRuns();
+  return r;
+}
+const botRunsFor=id=>BOT_RUNS.filter(r=>r.botId===id);
 function botAdd(name,role,model,brief){
   const n=String(name||'').trim();if(!n)return{ok:false,why:'needs a name'};
   if(BOTS.length>=BOT_CAP)return{ok:false,why:`the office holds ${BOT_CAP} desks — retire someone first`};
@@ -19065,22 +19224,22 @@ function agentSuggestions(){
   const measured=Object.keys(LOCAL_BENCH||{}).length;
   if(localModels.length&&!measured)
     push('local','info',`${localModels.length} local model(s) connected but never benchmarked — routing is guessing.`,
-      'Benchmark them',()=>go('local'));
+      'Benchmark them',()=>goEnsure('local','it holds the benchmark'));
   // ollama connected, truncation never probed: the silent one
   const ollamaModels=localModels.filter(m=>String(m.id).startsWith('ollama/'));
   if(ollamaModels.length&&!Object.keys(LOCAL_CTX||{}).length)
     push('local','warn','Ollama truncates long prompts silently and none of yours have been measured.',
-      'Run the truncation probe',()=>go('local'));
+      'Run the truncation probe',()=>goEnsure('local','it holds the probe'));
   // spend
   if(SESSION_SPEND>2)
-    push('cost','warn',`This session has spent ${money(SESSION_SPEND)}.`,'Open metrics',()=>go('metrics'));
+    push('cost','warn',`This session has spent ${money(SESSION_SPEND)}.`,'Open metrics',()=>goEnsure('metrics'));
   // graph health
   try{
     if(typeof graphHealth==='function'){
       const h=graphHealth();
       if(h&&h.contradictions>0)
         push('health','warn',`${h.contradictions} unresolved contradiction(s) in the graph — they poison every recall.`,
-          'Open graphs',()=>go('graphs'));
+          'Open graphs',()=>goEnsure('graphs'));
     }
   }catch(e){}
   /* Guard staleness. Surfaced because the whole point of the Gauntlet is that a guard which
@@ -19089,14 +19248,17 @@ function agentSuggestions(){
     const gs=gauntletStale();
     if(gs.stale)
       push('health','info',`Guards have not been re-verified — ${gs.reason}.`,
-        'Run the gauntlet',()=>go('local'));
+        /* Runs it HERE rather than navigating. "Run the gauntlet" should run the gauntlet —
+           sending you to a tab to press a second button was indirection even when that tab
+           was visible. */
+        'Run the gauntlet',()=>gauntletQuickRun());
     else if(gs.green===false)
       push('health','warn','The last gauntlet run was RED — a guard is not discriminating.',
-        'Open results',()=>go('local'));
+        'Open results',()=>gauntletQuickRun(true));
   }catch(e){}
   // no key and no local models: the app cannot do anything at all
   if(!API_KEY&&!localModels.length)
-    push('next','warn','No API key and no local models — nothing can run yet.','Open settings',()=>go('settings'));
+    push('next','warn','No API key and no local models — nothing can run yet.','Open settings',()=>goEnsure('settings'));
   return out.slice(0,Math.max(1,SUGGEST.maxAtOnce));
 }
 /* The activity strip. Reads the same ACTIVE map the header pills use, so there is exactly one
@@ -22417,22 +22579,30 @@ function gauntletCases(g){
     what:'sending to Creations actually writes something, rather than only saying it did',
     run:()=>{
       const keep=g.CREATIONS.slice();
+      const view=(document.querySelector('.view.active')||{}).id;
       try{
         const before=g.CREATIONS.length;
         g.connToCreations({kind:'html',data:'<h1>gauntlet</h1>',title:'gauntlet probe',from:'gauntlet'});
         const grew=g.CREATIONS.length-before;
         const top=g.CREATIONS[0];
         return (grew===1&&top&&top.files&&top.files['index.html'])?'saved':'lost:'+grew;
-      }finally{g.CREATIONS=keep;saveCreations();}
+      }finally{
+        g.CREATIONS=keep;saveCreations();
+        /* connToCreations navigates, which is correct for a person and wrong for a test:
+           running the suite silently moved the user to the Creations tab. Where you are
+           standing is state, and a case must leave none of it behind. */
+        if(view)go(view.replace(/^view-/,''));
+      }
     },expect:v=>v==='saved',
     antiWhat:'and an image arrives as a real file rather than an empty shell',
     anti:()=>{
       const keep=g.CREATIONS.slice();
+      const view=(document.querySelector('.view.active')||{}).id;
       try{
         g.connToCreations({kind:'image',data:'data:image/png;base64,iVBORw0KGgo=',title:'probe',from:'gauntlet'});
         const top=g.CREATIONS[0];
         return (top&&top.entry==='asset.png'&&String(top.files['asset.png']).startsWith('data:image/png'))?1:0;
-      }finally{g.CREATIONS=keep;saveCreations();}
+      }finally{g.CREATIONS=keep;saveCreations();if(view)go(view.replace(/^view-/,''));}
     },antiExpect:v=>v===1});
 
   add({id:'render-unique-ids',sub:'rendering',uses:['esc'],
@@ -24726,8 +24896,29 @@ function renderNotify(){
 }
 /* ═══════════════════ GAUNTLET UI ═══════════════════ */
 let GAUNTLET_BUSY=false;
-function renderGauntlet(){
-  const host=$('#gauntlet-panel');if(!host)return;
+/* Mounted in TWO places — Local, where it has always lived, and Settings, which can never be
+   switched off. Scoped class lookups rather than ids: two mounts of an id-based panel means
+   $('#gt-out') always resolves to the first one, so the second would render into the wrong
+   card. That exact bug already cost this codebase a pass (the awards ceremony stage). */
+function renderGauntlet(sel){
+  /* Settings is the single home: it is the one tab that can never be switched off, which is
+     what made the banner action reachable in the first place. Local gets a signpost rather
+     than a second copy of the panel — the same controls in two places is not two features. */
+  const h=$(sel||'#gauntlet-settings');
+  if(h)renderGauntletInto(h);
+  const ptr=$('#gauntlet-panel');
+  if(ptr&&!sel)ptr.innerHTML=`
+    <div class="card">
+      <h3>🥊 Regression Gauntlet</h3>
+      <p class="help">It lives in <b>Settings</b> now, so it stays reachable even when this tab
+        is switched off — which is how a stock onboarding answer used to leave it unusable.</p>
+      <button class="btn ghost" id="gt-goto">Open it in Settings →</button>
+    </div>`;
+  const b=$('#gt-goto');
+  if(b)b.onclick=()=>setupFocus('settings','#gauntlet-settings');
+}
+function renderGauntletInto(host){
+  if(!host)return;
   const st=gauntletStale();
   const r=GAUNTLET_LAST;
   host.innerHTML=`
@@ -24739,30 +24930,31 @@ function renderGauntlet(){
       The anti-fixture is the point — a guard that fires on everything passes every positive test,
       and "stops discriminating" is the bug this codebase has produced five times.</p>
     <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
-      <button class="btn" id="gt-run">Run the gauntlet</button>
-      <button class="btn ghost small" id="gt-sabotage">🔨 Prove it can fail</button>
-      <button class="btn ghost small" id="gt-export">⬇ GAUNTLET.md</button>
+      <button class="btn gt-run">Run the gauntlet</button>
+      <button class="btn ghost small gt-sabotage">🔨 Prove it can fail</button>
+      <button class="btn ghost small gt-export">⬇ GAUNTLET.md</button>
       <span class="help" style="flex:1">${st.stale
         ? `<b style="color:var(--warn)">Stale — ${esc(st.reason)}</b>`
         : st.green?`<b style="color:var(--good)">Last run green</b> · ${esc((st.ts||'').slice(0,16).replace('T',' '))}`
                   :'<b style="color:var(--bad)">Last run was RED</b>'}</span>
     </div>
-    <div id="gt-out" style="margin-top:12px">${r?gauntletHtml(r):''}</div>
+    <div class="gt-out" style="margin-top:12px">${r?gauntletHtml(r):''}</div>
   </div>`;
-  $('#gt-run').onclick=()=>{
+  const out=()=>$('.gt-out',host);
+  $('.gt-run',host).onclick=()=>{
     if(GAUNTLET_BUSY)return; GAUNTLET_BUSY=true;
-    $('#gt-out').innerHTML='<p class="help">running…</p>';
+    out().innerHTML='<p class="help">running…</p>';
     setTimeout(()=>{const res=gauntletRun();GAUNTLET_BUSY=false;
-      $('#gt-out').innerHTML=gauntletHtml(res);
+      out().innerHTML=gauntletHtml(res);
       toast(res.green?`✅ ${res.passed}/${res.total} green in ${res.ms}ms`
                      :`❌ ${res.failed} case(s) failed`,5000);
       renderGauntlet();},20);
   };
-  $('#gt-sabotage').onclick=()=>{
+  $('.gt-sabotage',host).onclick=()=>{
     if(GAUNTLET_BUSY)return; GAUNTLET_BUSY=true;
-    $('#gt-out').innerHTML='<p class="help">deliberately breaking each guard in turn…</p>';
+    out().innerHTML='<p class="help">deliberately breaking each guard in turn…</p>';
     setTimeout(()=>{const sab=gauntletSabotage();GAUNTLET_BUSY=false;
-      $('#gt-out').innerHTML=`
+      out().innerHTML=`
       <div class="ds-audit">
         <div class="ds-arow${sab.caught===sab.sabotages&&sab.restoredGreen?'':' fail'}">
           <div style="flex:1"><b>${esc(sab.verdict)}</b>
@@ -24776,9 +24968,41 @@ function renderGauntlet(){
       </div>`;
       toast(sab.verdict,8000);renderGauntlet();},20);
   };
-  $('#gt-export').onclick=()=>{
+  $('.gt-export',host).onclick=()=>{
     if(!GAUNTLET_LAST){toast('Run it first');return;}
     downloadText('GAUNTLET.md',gauntletReport(GAUNTLET_LAST));toast('Exported');};
+}
+/* The banner action runs it HERE. No tab, no second button, works from any surface — which
+   is what makes it safe for the suggestion to exist at all when the tab holding the panel can
+   be switched off. */
+function gauntletQuickRun(showLast){
+  if(GAUNTLET_BUSY)return toast('Already running',2000);
+  if(showLast&&GAUNTLET_LAST){
+    openModal('<h3>🥊 Last gauntlet run</h3>'+gauntletHtml(GAUNTLET_LAST)+
+      '<p class="help" style="margin-top:10px">The full panel, with the sabotage prover and the '+
+      'Markdown export, is in <b>Settings</b> and in <b>Local</b>.</p>');
+    return;
+  }
+  GAUNTLET_BUSY=true;
+  openModal('<h3>🥊 Regression Gauntlet</h3><p class="help">running every guard…</p>');
+  setTimeout(()=>{
+    let res=null,err=null;
+    try{res=gauntletRun();}catch(e){err=e;}
+    GAUNTLET_BUSY=false;
+    /* The progress modal is GONE by now, and legitimately so: the a11y-modal-trap case opens
+       and closes a modal of its own, and openModal clears every existing overlay before it
+       mounts. Holding a reference to a node inside it and writing into that node wrote into a
+       detached element — the results appeared nowhere. Re-open with the finished result
+       instead of trying to update something the suite was entitled to destroy. */
+    if(err){openModal('<h3>🥊 Regression Gauntlet</h3><p class="help">The gauntlet itself threw: '+
+      esc(err.message)+'</p>');return;}
+    openModal('<h3>🥊 Regression Gauntlet</h3>'+gauntletHtml(res)+
+      '<p class="help" style="margin-top:10px">The sabotage prover and the Markdown export live '+
+      'in the full panel, in <b>Settings</b>.</p>');
+    toast(res.green?`✅ ${res.passed}/${res.total} green in ${res.ms}ms`
+                   :`❌ ${res.failed} case(s) failed`,5000);
+    renderGauntlet();
+  },30);
 }
 function gauntletHtml(r){
   const bySub={};r.results.forEach(x=>{(bySub[x.sub]=bySub[x.sub]||[]).push(x);});
@@ -29790,7 +30014,9 @@ const ASST_MODES={
           'Cite what you actually read, distinguish confirmed fact from inference, and state '+
           'plainly what you could not verify. A shorter honest answer beats a padded confident one.'},
   moa:   {label:'Mixture of Agents', blurb:'several models propose, an aggregator decides, in layers',
-          maxTokens:4000, web:false, moa:true, sys:''}};
+          maxTokens:4000, web:false, moa:true, sys:''},
+  group: {label:'Group chat', blurb:'your bots, in one room — each with its own model and job',
+          maxTokens:1400, web:false, group:true, sys:''}};
 const ASST_DEFAULTS={mode:'chat',model:'',auto:true,persona:'',sys:'',useBrain:true,
   useSkills:true,useTools:true,showThinking:true,perMode:{}};
 let ASST=Object.assign({},ASST_DEFAULTS,store.get('assistant',{}));
@@ -29832,6 +30058,86 @@ function asstSystem(){
 }
 /* One turn. Streams content and reasoning separately so the UI can show thinking as it
    happens, and surfaces every tool call as its own visible step rather than a silent gap. */
+/* Who answers. An @mention is an instruction, not a hint: naming one bot means the others stay
+   out of it, which is the only way a room of eight is usable. Otherwise everyone active speaks,
+   capped, because eight simultaneous answers is noise and eight simultaneous bills is worse. */
+function botsAddressed(text){
+  const active=botAll().filter(b=>b.on!==false);
+  const named=active.filter(b=>new RegExp('@'+b.name.replace(/[^\w]/g,'')+'\\b','i').test(text));
+  return named.length?named:active.slice(0,4);
+}
+function botSysFor(b){
+  return `You are ${b.name}, the ${b.role||'generalist'} in a group chat with a human and other bots.\n`+
+    (b.purpose||b.brief||'')+
+    `\n\nRules of the room: speak only as ${b.name}. Never write another bot's lines. Be brief — `+
+    `two or three sentences unless asked for more, because everyone else is answering too. `+
+    `If a question is outside your job, say so in one line and name who should take it.`;
+}
+/* One bot turn, down its own model chain, with the audit record written whatever happens.
+   The chain is the point: a retired or rate-limited model should cost you a slower answer, not
+   a dead bot — and the record says which model actually replied, because that is what you paid. */
+async function botTurn(b,history,signal){
+  const chain=botModelChain(b);
+  const tried=[];
+  const t0=Date.now();
+  for(let i=0;i<chain.length;i++){
+    const model=chain[i];
+    tried.push(model);
+    try{
+      const acc=await streamComplete({model,maxTokens:ASST_MODES.group.maxTokens,
+        messages:[{role:'system',content:botSysFor(b)+skillBlockFor('bots')},...history]},
+        null,signal,'bot-'+b.name);
+      const content=String(acc.content||'').trim();
+      if(!content)throw new Error('empty answer');
+      const run=botAudit({botId:b.id,botName:b.name,model,tried,fellBack:i>0,
+        ms:Date.now()-t0,cost:acc.cost||0,inChars:history.reduce((a,m)=>a+String(m.content||'').length,0),
+        outChars:content.length,ok:true});
+      return{ok:true,content,model,fellBack:i>0,cost:acc.cost||0,ms:Date.now()-t0,runId:run.id,
+        reasoning:acc.reasoning||''};
+    }catch(e){
+      if(signal&&signal.aborted){
+        botAudit({botId:b.id,botName:b.name,model,tried,ms:Date.now()-t0,ok:false,error:'stopped'});
+        return{ok:false,error:'stopped'};
+      }
+      /* Keep going down the chain; only the LAST failure is reported, because "gpt-x failed"
+         is noise when the fallback answered fine. */
+      if(i===chain.length-1){
+        const run=botAudit({botId:b.id,botName:b.name,model,tried,ms:Date.now()-t0,ok:false,
+          error:String(e.message||e)});
+        return{ok:false,error:String(e.message||e),runId:run.id,tried};
+      }
+    }
+  }
+  return{ok:false,error:'no model available'};
+}
+async function botGroupRun(text,c,signal){
+  const speakers=botsAddressed(text);
+  if(!speakers.length){
+    c.msgs.push({role:'assistant',content:
+      'There are no bots in the room yet. Add one in the Bots tab — give it a name, a job and a model — and it will answer here.',
+      ts:nowISO()});
+    renderAsst();return;
+  }
+  /* Sequential on purpose: each bot sees what the ones before it said, which is what makes it a
+     conversation rather than four parallel monologues that happen to share a prompt. */
+  for(const b of speakers){
+    if(signal&&signal.aborted)break;
+    const slot={role:'assistant',bot:{id:b.id,name:b.name,role:b.role,avatar:b.avatar},
+      content:'',tools:[],ts:nowISO(),streaming:true};
+    c.msgs.push(slot);renderAsst();
+    const history=c.msgs.filter(m=>!m.streaming&&(m.content||'').trim()).slice(-14)
+      .map(m=>({role:m.role==='user'?'user':'assistant',
+        content:(m.bot?m.bot.name+': ':'')+String(m.content||'')}));
+    const r=await botTurn(b,history,signal);
+    slot.streaming=false;
+    if(r.ok){Object.assign(slot,{content:r.content,model:r.model,fellBack:r.fellBack,
+      cost:r.cost,ms:r.ms,runId:r.runId,reasoning:r.reasoning});
+      c.cost=(c.cost||0)+(r.cost||0);
+      botMsg(b.name,'ALL',r.content,'say');
+    }else{Object.assign(slot,{error:r.error,runId:r.runId,model:(r.tried||[]).slice(-1)[0]||''});}
+    saveAChats();renderAsst();
+  }
+}
 async function asstSend(text){
   const c=achat()||achatNew(text.slice(0,48));
   if(c.title==='New chat')c.title=text.slice(0,48);
@@ -29841,6 +30147,14 @@ async function asstSend(text){
   renderAsst();
   const cfg=asstCfg();
   ASST_ABORT=new AbortController();
+  if(asstMode().group){
+    /* The empty assistant slot pushed above belongs to a single answer; a group turn writes one
+       message per bot instead, so it is removed rather than left hanging as a blank bubble. */
+    c.msgs.pop();
+    await botGroupRun(text,c,ASST_ABORT.signal);
+    saveAChats();renderAsst();
+    return null;
+  }
   /* MoA is a different control flow, not a different prompt, so it branches here rather than
      pretending to be one call. Each layer's progress is shown as it lands. */
   if(asstMode().moa){
@@ -30377,6 +30691,31 @@ function asstOffer(kind,note){
 }
 function asstMsgHTML(m){
   if(m.role==='user')return `<div class="am user"><div class="am-body">${esc(m.content)}</div></div>`;
+  /* A bot turn is an assistant turn with a face and a name on it. Rendered here rather than in
+     a parallel renderer so replies, tool notes, costs and the hand-off offers all keep working
+     exactly as they do for a normal answer. */
+  if(m.bot){
+    const think=m.reasoning&&ASST.showThinking
+      ? `<details class="am-think"><summary>💭 ${esc(m.bot.name)} thinking</summary><div>${esc(m.reasoning)}</div></details>`:'';
+    const tools=(m.tools||[]).map(t=>
+      `<div class="am-tool ${t.ok?'':'bad'}">⚒ ${esc(t.name)} — ${esc(t.note||'')}</div>`).join('');
+    if(!m.streaming&&m.content&&!m._offers)m._offers=asstArtifacts(m.content);
+    return `<div class="am asst bot-turn">
+      <div class="bt-head">
+        <span class="bt-face">${botSprite(m.bot.avatar||m.bot.name,34)}</span>
+        <b>${esc(m.bot.name)}</b><i>${esc(m.bot.role||'')}</i>
+        <span style="flex:1"></span>
+        ${m.fellBack?`<span class="tag warn" title="First choice did not answer">fallback</span>`:''}
+        <span class="mono mini muted">${esc((m.model||'').split('/').pop())}</span>
+      </div>
+      ${think}${tools}
+      ${m.error?`<div class="am-tool bad">✗ ${esc(m.error)}</div>`:''}
+      <div class="am-body">${esc(m.content)||(m.streaming?'<span class="help">…</span>':'')}</div>
+      ${asstOfferHTML(m)}
+      <div class="am-meta mono">${m.cost?money(m.cost)+' · ':''}${m.ms?m.ms+'ms':''}${
+        m.runId?` · <a href="#" data-botrun="${esc(m.runId)}">audit ↗</a>`:''}</div>
+    </div>`;
+  }
   const think=m.reasoning&&ASST.showThinking
     ? `<details class="am-think" ${m.streaming?'open':''}><summary>💭 Thinking${m.streaming?' …':''}</summary><div>${esc(m.reasoning)}</div></details>`:'';
   const tools=(m.tools||[]).map(t=>
@@ -33521,8 +33860,7 @@ function paletteItems(){
   const items=[];
   REGISTRY.tabs.forEach(t=>items.push({
     kind:'tab',title:t.text||t.label,sub:'Tab',badge:tabHidden(t.id)?'hidden':'',
-    run:()=>{if(tabHidden(t.id)){UI.hiddenTabs=UI.hiddenTabs.filter(x=>x!==t.id);saveUI();applyUI();
-      toast(`“${t.text}” switched back on`);}go(t.id);}}));
+    run:()=>goEnsure(t.id)}));
   REGISTRY.cards.forEach(c=>items.push({
     kind:'section',title:c.label,sub:'Section in '+c.tab,badge:cardHidden(c.id)?'hidden':'',
     run:()=>{if(cardHidden(c.id)){UI.hiddenCards=UI.hiddenCards.filter(x=>x!==c.id);saveUI();applyUI();}
@@ -34381,6 +34719,23 @@ function buildRegistry(){
   return REGISTRY;
 }
 const tabHidden=id=>UI.hiddenTabs.includes(id);
+/* go() deliberately REFUSES a hidden tab and bounces you to the first visible one — correct for
+   navigation, because a tab you switched off should not be clickable. It is wrong for an
+   explicit ACTION. Someone pressing "Run the gauntlet" in a banner has asked for that thing by
+   name; answering with "local is switched off in Customise" and dumping them on another tab is
+   a dead end, and it was reachable from a stock onboarding answer — pick the smallest tab set
+   and four of the health suggestions pointed at a tab you were never given.
+   The palette and connRun already un-hid on explicit intent. This is that rule, in one place,
+   instead of three copies that can drift. */
+function goEnsure(view,why){
+  if(tabHidden(view)){
+    UI.hiddenTabs=UI.hiddenTabs.filter(x=>x!==view);
+    saveUI();applyUI();
+    const t=REGISTRY.tabs.find(t=>t.id===view);
+    toast(`Switched “${(t&&t.text)||view}” back on${why?' — '+why:''}`,3000);
+  }
+  go(view);
+}
 const cardHidden=id=>UI.hiddenCards.includes(id);
 function firstVisibleTab(){
   const t=REGISTRY.tabs.find(t=>!tabHidden(t.id));
@@ -34412,12 +34767,9 @@ function applyUI(){
   // tab visibility, order and labelling
   const nav=$('#tabs');
   if(nav){
-    const order=(UI.tabOrder&&UI.tabOrder.length?UI.tabOrder:REGISTRY.tabs.map(t=>t.id));
-    order.forEach(id=>{const t=REGISTRY.tabs.find(x=>x.id===id);if(t&&t.el)nav.appendChild(t.el);});
-    REGISTRY.tabs.forEach(t=>{if(!order.includes(t.id)&&t.el)nav.appendChild(t.el);});
-    /* The ＋ is not a registry tab, so the re-append above leaves it wherever it started —
-       which is first. It only makes sense at the end of the bar. */
-    const add=document.getElementById('tab-add');if(add)nav.appendChild(add);
+    /* Order is applyTabMode's job now — see tabOrderedIds. Doing it here as well is what
+       made a custom order vanish whenever the density changed. */
+    if(typeof applyTabMode==='function')applyTabMode();
     REGISTRY.tabs.forEach(t=>{
       if(!t.el)return;
       t.el.style.display=tabHidden(t.id)?'none':'';
@@ -34573,6 +34925,248 @@ function stripEdges(n){
   n.classList.toggle('more-l',n.scrollLeft>4);
   n.classList.toggle('more-r',max>4&&n.scrollLeft<max-4);
 }
+/* ═══════════════════ SETUP METER ═══════════════════
+   What can this install actually DO right now, and what is stopping the rest.
+
+   Every row is PROBED from live state — a key that exists, a bridge that answered, a catalogue
+   that contains a vision model. Nothing here is a checkbox the user ticks and nothing is
+   remembered as "done": if you delete your key the meter drops, because a setup screen that
+   remembers being satisfied is lying the moment anything changes.
+
+   Two rules that keep it honest. Each row names what you CANNOT do without it, in the app's own
+   terms, rather than the name of a setting — "no image generation" is useful, "GENCFG.geminiKey
+   is empty" is not. And every fixable row carries a `fix` that lands you on the exact control,
+   focused, in one press. A meter that tells you something is missing and then makes you hunt
+   for it has added a chore, not a capability. */
+function setupFocus(view,sel){
+  goEnsure(view);
+  if(!sel)return;
+  /* After a tab switch the panel may not have rendered yet, so this waits a frame rather than
+     querying into a section that does not exist for another tick. */
+  setTimeout(()=>{const el=$(sel);if(!el)return;
+    el.scrollIntoView({block:'center',behavior:UI.motion===false?'auto':'smooth'});
+    if(el.focus)try{el.focus({preventScroll:true});}catch(_){}
+    el.style.outline='2px solid var(--acc)';setTimeout(()=>{el.style.outline='';},1600);},260);
+}
+const SETUP_CHECKS=[
+  {id:'key',weight:3,label:'A model key',
+   unlocks:'every hosted model — chat, reasoning, building, image generation',
+   without:'Nothing hosted can run. The app still works with local models, but the catalogue is out of reach.',
+   probe:()=>({ok:!!API_KEY,detail:API_KEY?'saved in this browser only':'not set'}),
+   fix:{label:'Add a key',run:()=>setupFocus('settings','#set-key')}},
+
+  {id:'local',weight:1,label:'Local models',
+   unlocks:'free, private runs that never leave your machine',
+   without:'Every call costs money and leaves the device.',
+   probe:()=>{const n=(CATALOG||[]).filter(m=>m._local).length;
+     return{ok:n>0,detail:n?`${n} connected`:'none detected'};},
+   fix:{label:'Connect Ollama',run:()=>setupFocus('local','#set-ollama')}},
+
+  {id:'bridge',weight:2,label:'The local bridge',
+   unlocks:'your terminal, local CLIs, ComfyUI, and providers that block browsers',
+   without:'Anything needing a real shell or a CORS-blocked provider (Gemini, Replicate, ComfyUI) cannot run.',
+   probe:()=>({ok:!!BRIDGE_INFO,detail:BRIDGE_INFO?(BRIDGE_INFO.name||'connected'):'not running'}),
+   fix:{label:'Start the bridge',run:()=>setupFocus('local','#bridge-status')}},
+
+  {id:'image',weight:2,label:'Image generation',
+   unlocks:'making pictures, textures and concept art',
+   without:'The Create tab can describe an image but cannot produce one.',
+   probe:()=>{const m=genImageModel();const r=genReady(m);
+     return{ok:r.ok,detail:r.ok?m.label:r.why};},
+   fix:{label:'Set it up',run:()=>setupFocus('gen','#gen-imodel')}},
+
+  {id:'video',weight:1,label:'Video generation',
+   unlocks:'short clips from a prompt or a still',
+   without:'No video. Everything else in Create still works.',
+   probe:()=>{const m=genVideoModel();const r=genReady(m);
+     return{ok:r.ok,detail:r.ok?m.label:r.why};},
+   fix:{label:'Set it up',run:()=>setupFocus('gen','#gen-vmodel')}},
+
+  {id:'vision',weight:1,label:'Models that can see',
+   unlocks:'screenshots and design critique — showing a model your UI',
+   without:'You can describe an interface but not show one.',
+   probe:()=>{const n=(CATALOG||[]).filter(m=>{
+       const im=m&&m.architecture&&m.architecture.input_modalities;
+       return Array.isArray(im)&&im.includes('image');}).length;
+     return{ok:n>0,detail:n?`${n} in your catalogue`:'none — usually means no key yet'};},
+   fix:{label:'Browse models',run:()=>setupFocus('modelhub')}},
+
+  {id:'backup',weight:3,label:'A backup folder',
+   unlocks:'work that survives the browser clearing its storage',
+   without:'Everything lives in this browser only. Clearing site data would take all of it.',
+   probe:()=>({ok:!!(PERSIST&&PERSIST.dirName),
+     detail:(PERSIST&&PERSIST.dirName)?`backing up to “${PERSIST.dirName}”`:'not chosen'}),
+   fix:{label:'Pick a folder',run:()=>setupFocus('settings','#persist-panel')}},
+
+  {id:'brain',weight:1,label:'The brain',
+   unlocks:'notes that carry what this project learned into every later prompt',
+   without:'Each session starts from nothing and repeats mistakes it already made.',
+   probe:()=>({ok:!!(typeof BRAIN!=='undefined'&&BRAIN.on&&(BRAIN.docs||[]).length),
+     detail:(typeof BRAIN!=='undefined'&&BRAIN.on)?`${(BRAIN.docs||[]).length} notes`:'switched off'}),
+   fix:{label:'Open the brain',run:()=>setupFocus('brain')}},
+
+  {id:'offline',weight:1,label:'Installed & offline',
+   unlocks:'opening the app with no connection',
+   without:'The app itself needs the network to load, even though your work is local.',
+   probe:()=>({ok:!!(typeof PWA!=='undefined'&&PWA.state==='ready'),
+     detail:(typeof PWA==='undefined')?'unknown':
+       PWA.state==='ready'?'cached':PWA.state==='file'?'not available from a local file':'not installed'}),
+   fix:{label:'Install it',run:()=>setupFocus('settings','#pwa-panel')}},
+];
+/* Weighted, because "no key" and "no video model" are not the same size of gap. */
+function setupScore(){
+  const rows=SETUP_CHECKS.map(c=>{
+    let r;try{r=c.probe();}catch(e){r={ok:false,detail:'could not check: '+e.message};}
+    return Object.assign({},c,r);
+  });
+  const total=rows.reduce((a,r)=>a+r.weight,0);
+  const have=rows.filter(r=>r.ok).reduce((a,r)=>a+r.weight,0);
+  return{rows,pct:total?Math.round(have/total*100):0,
+    ready:rows.filter(r=>r.ok).length,of:rows.length,
+    blocked:rows.filter(r=>!r.ok)};
+}
+/* ── The Bots tab's black box ───────────────────────────────────────────────
+   The chat shows what a bot SAID. This shows what it did to say it: which model was asked, in
+   what order, which one actually answered, how long it took, what it cost, and what it touched.
+   Deliberately not a second chat log — that would be the duplication trap. Every row links back
+   to the message it produced, and every message links forward to its row. */
+function botAuditRow(r){
+  const b=botAll().find(x=>x.id===r.botId);
+  const chain=(r.tried||[]).map((m,i)=>{
+    const used=r.ok&&i===r.tried.length-1;
+    return `<span class="${used?'used':(r.ok?'dead':'')}" title="${used?'answered':'did not answer'}">${esc(m.split('/').pop())}</span>`;
+  }).join('');
+  return `<div class="bx-row${r.ok?'':' bad'}">
+    <span class="bt-face">${botSprite((b&&b.avatar)||r.botName,28)}</span>
+    <div style="flex:1;min-width:0">
+      <b>${esc(r.botName)}</b>
+      <span class="mini muted"> · ${esc(String(r.ts).slice(11,19))}</span>
+      ${r.fellBack?' <span class="tag warn">fell back</span>':''}
+      ${r.ok?'':` <span class="tag" style="color:var(--bad)">failed</span>`}
+      <div class="bx-meta">
+        ${r.ok?`answered in ${r.ms}ms · ${money(r.cost||0)} · ${r.inChars||0}→${r.outChars||0} chars`
+              :`gave up after ${r.ms}ms — ${esc(r.error||'unknown')}`}
+      </div>
+      ${chain?`<div class="bx-chain">${chain}</div>`:''}
+      ${(r.tools||[]).length?`<div class="bx-meta">⚒ ${(r.tools||[]).map(t=>esc(t.port||t.name)).join(', ')}</div>`:''}
+    </div>
+  </div>`;
+}
+function renderBotBox(){
+  const host=$('#botbox');if(!host)return;
+  const runs=BOT_RUNS.slice(0,40);
+  const spend=BOT_RUNS.reduce((a,r)=>a+(r.cost||0),0);
+  const fails=BOT_RUNS.filter(r=>!r.ok).length;
+  const fell=BOT_RUNS.filter(r=>r.fellBack).length;
+  host.innerHTML=`
+  <div class="card">
+    <h3>🔍 Black box — what the bots actually did</h3>
+    <p class="help">The chat shows what they said. This shows what it took: which model was asked,
+      in what order, which one answered, and what it cost. A bot that quietly fell back to a
+      cheaper model is still answering you — it is just not answering the way you configured it.</p>
+    ${BOT_RUNS.length?`
+      <div class="row" style="gap:14px;flex-wrap:wrap;margin:8px 0 2px">
+        <span class="help" style="margin:0"><b>${BOT_RUNS.length}</b> turns</span>
+        <span class="help" style="margin:0"><b>${money(spend)}</b> total</span>
+        <span class="help" style="margin:0"><b>${fell}</b> fell back</span>
+        <span class="help" style="margin:0"><b>${fails}</b> failed</span>
+        <span style="flex:1"></span>
+        <button class="btn ghost sm" id="bx-clear">Clear log</button>
+      </div>
+      <div class="bx-rows">${runs.map(botAuditRow).join('')}</div>`
+    :`<p class="help">Nothing yet. Open <b>Chat → Group chat</b> and talk to them; every turn lands here.</p>
+      <button class="btn" id="bx-open">Open group chat →</button>`}
+  </div>`;
+  const c=$('#bx-clear');if(c)c.onclick=()=>{BOT_RUNS=[];saveBotRuns();renderBotBox();toast('Log cleared',1800);};
+  const o=$('#bx-open');if(o)o.onclick=()=>{ASST.mode='group';saveASST();goEnsure('assistant');
+    setTimeout(()=>{if(typeof renderAsst==='function')renderAsst();},200);};
+}
+/* Per-bot setup. The roster row above says who they are; this is what they are wired to —
+   the model chain, the tools they may reach, and the face. Kept beside the black box on
+   purpose: the place you change a bot's model is the place you can see what its last model
+   actually did. */
+function renderBotCfg(){
+  const host=$('#botcfg');if(!host)return;
+  const bots=botAll();
+  const models=(CATALOG||[]).slice(0,400);
+  const opt=(sel)=>`<option value="">— none —</option>`+models.map(m=>
+    `<option value="${esc(m.id)}"${m.id===sel?' selected':''}>${esc(m.name||m.id)}</option>`).join('');
+  host.innerHTML=`
+  <div class="card">
+    <h3>🎛 Wiring</h3>
+    <p class="help">Each bot gets its own model, a fallback to try when that one will not answer,
+      and the tabs it is allowed to hand work to. A bot with no fallback simply fails when its
+      model is down; one with a fallback keeps talking and the black box records that it did.</p>
+    ${bots.length?`<div class="botcfg">${bots.map(b=>`
+      <div class="botcfg-row" data-botcfg="${esc(b.id)}">
+        <span class="bt-face">${botSprite(b.avatar,40)}</span>
+        <div style="flex:1;min-width:0">
+          <b>${esc(b.name)}</b> <span class="mini muted">· ${esc(b.role||'')}</span>
+          <div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap">
+            <select data-botmodel="${esc(b.id)}" style="flex:1;min-width:150px" title="Primary model">${opt(b.model)}</select>
+            <select data-botfall="${esc(b.id)}" style="flex:1;min-width:150px" title="Fallback when the primary will not answer">${opt((b.fallbacks||[])[0])}</select>
+          </div>
+          <div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap">
+            <input data-botpurpose="${esc(b.id)}" style="flex:1;min-width:200px"
+              placeholder="what this one is for" value="${esc(b.purpose||b.brief||'')}">
+            <button class="btn ghost sm" data-botface="${esc(b.id)}" title="New face">🎲 Face</button>
+            <button class="btn ghost sm" data-botruns="${esc(b.id)}">${botRunsFor(b.id).length} turns</button>
+          </div>
+        </div>
+      </div>`).join('')}</div>`
+    :`<p class="help">No bots yet — hire one on the <b>Roster</b> tab and it will appear here.</p>`}
+  </div>`;
+  const save=()=>{saveBots();renderBotCfg();};
+  $$('[data-botmodel]',host).forEach(sel=>sel.onchange=()=>{
+    const b=botAll().find(x=>x.id===sel.dataset.botmodel);if(b){b.model=sel.value;save();}});
+  $$('[data-botfall]',host).forEach(sel=>sel.onchange=()=>{
+    const b=botAll().find(x=>x.id===sel.dataset.botfall);
+    if(b){b.fallbacks=sel.value?[sel.value]:[];save();}});
+  $$('[data-botpurpose]',host).forEach(i=>i.onchange=()=>{
+    const b=botAll().find(x=>x.id===i.dataset.botpurpose);if(b){b.purpose=i.value;saveBots();}});
+  $$('[data-botface]',host).forEach(btn=>btn.onclick=()=>{
+    const b=botAll().find(x=>x.id===btn.dataset.botface);
+    /* Reroll by changing the SEED, not by storing a picture — the face stays reproducible and
+       the roster stays a few bytes per bot. */
+    if(b){b.avatar=b.id+':'+Math.floor(Math.random()*1e6);save();}});
+  $$('[data-botruns]',host).forEach(btn=>btn.onclick=()=>{
+    const id=btn.dataset.botruns;
+    const rows=botRunsFor(id);
+    openModal(`<h3>${esc((botAll().find(b=>b.id===id)||{}).name||'Bot')} — every turn</h3>`+
+      (rows.length?`<div class="bx-rows">${rows.slice(0,50).map(botAuditRow).join('')}</div>`
+                  :'<p class="help">This one has not spoken yet.</p>'));});
+}
+function renderSetup(){
+  const host=$('#setup-panel');if(!host)return;
+  const s=setupScore();
+  const tone=s.pct>=85?'good':s.pct>=50?'warm':'bad';
+  host.innerHTML=`
+  <div class="card">
+    <h3>🎛 What this can do right now</h3>
+    <p class="help">Measured from live state, not remembered — if you remove a key this drops
+      again. Every gap below says what it costs you and takes you straight to the control.</p>
+    <div class="setup-meter"><span class="${tone}" style="width:${Math.max(3,s.pct)}%"></span></div>
+    <p class="help"><b>${s.pct}% set up</b> · ${s.ready} of ${s.of} capabilities ready${
+      s.blocked.length?` · ${s.blocked.length} thing${s.blocked.length===1?'':'s'} you cannot do yet`:' · nothing is missing'}</p>
+    <div class="setup-rows">
+      ${s.rows.map(r=>`
+        <div class="setup-row${r.ok?' on':''}">
+          <span class="setup-dot">${r.ok?'✓':'○'}</span>
+          <span style="flex:1;min-width:0">
+            <b>${esc(r.label)}</b>
+            <i>${r.ok?esc(r.unlocks):esc(r.without)}</i>
+            <u>${esc(r.detail||'')}</u>
+          </span>
+          ${r.ok?'':`<button class="btn ghost sm" data-setupfix="${esc(r.id)}">${esc(r.fix.label)} →</button>`}
+        </div>`).join('')}
+    </div>
+  </div>`;
+  $$('[data-setupfix]',host).forEach(b=>b.onclick=()=>{
+    const c=SETUP_CHECKS.find(x=>x.id===b.dataset.setupfix);
+    if(c&&c.fix&&c.fix.run)c.fix.run();
+  });
+}
+
 /* ═══════════════════ SPLINE ═══════════════════
    Spline scenes, running inside GlassBox and able to leave again.
 
@@ -34826,7 +35420,30 @@ const TAB_MODES={
     what:'Every tab, in the original order. Best once you know where things live.'},
 };
 let TABMODE=store.get('tabmode','grouped');
-let TAB_ORDER0=null;                       // the original DOM order, captured once
+let TAB_ORDER0=null;                       // the shipped DOM order, captured once
+/* THE single source of truth for tab order.
+   applyUI() used to re-append every tab by UI.tabOrder while applyTabMode() re-appended them by
+   group. Both were right on their own and together they fought: whichever ran last won, so
+   changing density silently threw away an order the user had dragged into place. Order is
+   decided here, once, and applyUI now delegates rather than competing. */
+function tabOrderedIds(){
+  const real=(REGISTRY.tabs||[]).map(t=>t.id);
+  const saved=(UI.tabOrder||[]).filter(id=>real.includes(id));
+  real.forEach(id=>{if(!saved.includes(id))saved.push(id);});   // new tabs land at the end
+  return saved;
+}
+/* Move a tab n places within the CURRENT order and persist. Used by the drag, the keyboard and
+   the arrows in the manager, so all three cannot disagree about what a move means. */
+function tabMove(id,delta){
+  const order=tabOrderedIds();
+  const i=order.indexOf(id);
+  if(i<0)return false;
+  const j=Math.max(0,Math.min(order.length-1,i+delta));
+  if(i===j)return false;
+  order.splice(j,0,order.splice(i,1)[0]);
+  UI.tabOrder=order;saveUI();applyTabMode();
+  return true;
+}
 function tabGroupOf(view){
   const g=TAB_GROUPS.find(g=>g.views.includes(view));
   return g?g.id:null;
@@ -34839,18 +35456,20 @@ function applyTabMode(){
   if(!TAB_ORDER0)TAB_ORDER0=[...nav.children];
   document.body.setAttribute('data-tabmode',mode);
   nav.querySelectorAll('.tabgroup').forEach(x=>x.remove());
-  const tabs=[...nav.querySelectorAll('.tab[data-view]')];
+  /* Sorted by the user's order before anything else looks at them, so grouped mode orders
+     WITHIN each group and full mode is simply the whole list in that order. */
+  const rank=tabOrderedIds();
+  const tabs=[...nav.querySelectorAll('.tab[data-view]')]
+    .sort((a,b)=>{const x=rank.indexOf(a.dataset.view),y=rank.indexOf(b.dataset.view);
+      return (x<0?1e9:x)-(y<0?1e9:y);});
   tabs.forEach(t=>t.setAttribute('data-essential',TAB_ESSENTIALS.includes(t.dataset.view)?'1':'0'));
   const extras=[...nav.children].filter(c=>!c.matches('.tab[data-view]'));
   if(mode==='full'){
-    /* Restore, rather than re-sort: appendChild MOVES the same buttons, so identity,
-       listeners and focus all survive the round trip. */
-    TAB_ORDER0.forEach(el=>nav.appendChild(el));
-    /* Anything created AFTER the snapshot — the section-manager button is added during boot,
-       after this first runs — is not in TAB_ORDER0, so restoring alone left it stranded at
-       the FRONT of the bar. Re-append the strays so they land last, as they do in the other
-       two modes. */
-    [...nav.children].filter(c=>!TAB_ORDER0.includes(c)&&!c.matches('.tabgroup'))
+    /* appendChild MOVES the same buttons, so identity, listeners and focus survive. */
+    tabs.forEach(el=>nav.appendChild(el));
+    /* Anything created AFTER boot — the section-manager button — is not a .tab, so re-append
+       the strays to keep them last rather than stranded at the front. */
+    [...nav.children].filter(c=>!c.matches('.tab[data-view]')&&!c.matches('.tabgroup'))
       .forEach(c=>nav.appendChild(c));
   }else{
     const seen=new Set();
@@ -34869,6 +35488,98 @@ function applyTabMode(){
     extras.forEach(e=>nav.appendChild(e));      // the section-manager button stays last
   }
   tabEdges();
+}
+/* Reordering the bar directly.
+
+   The existing reorder lived in Customise and used HTML5 drag-and-drop — `draggable` plus
+   dragstart/dragover/drop. That API does not fire on touch AT ALL, so on a phone the feature
+   did not exist, and the phone is where the tab bar is most crowded. Pointer Events cover
+   mouse, touch and pen with the same code path, so this replaces it rather than adding a
+   second mechanism beside it.
+
+   Three ways in, one implementation underneath (tabMove), because a drag, an arrow key and a
+   button in a dialog disagreeing about what "move left" means is how ordering bugs start:
+     · press and hold a tab, then slide it
+     · focus a tab and press Cmd/Ctrl + ArrowLeft / ArrowRight
+     · the arrows in the Sections dialog, which is the accessible floor and always works */
+const TAB_DRAG_HOLD=280;     // ms before a press becomes a drag, so a tap still just navigates
+/* Which tab is under x, ignoring the one being dragged. Pure geometry, so it is testable and
+   cannot be defeated by the dragged element sitting on top of the drop target. */
+function tabDropTarget(nav,held,x){
+  let best=null,bestD=Infinity;
+  [...nav.querySelectorAll('.tab[data-view]')].forEach(t=>{
+    if(t===held)return;
+    const r=t.getBoundingClientRect();
+    if(!r.width)return;
+    /* Distance to the tab's span: zero when x is inside it, otherwise how far outside — so a
+       pointer past the end of the strip still lands on the last tab instead of nothing. */
+    const d=x<r.left?r.left-x:x>r.right?x-r.right:0;
+    if(d<bestD){bestD=d;best=t;}
+  });
+  return best;
+}
+function initTabDrag(){
+  const nav=$('#tabs');if(!nav||initTabDrag._done)return;initTabDrag._done=true;
+  let held=null,timer=null,startX=0,moved=false;
+  const clear=()=>{clearTimeout(timer);timer=null;
+    if(held){held.classList.remove('tab-dragging');held=null;}
+    nav.classList.remove('tab-reordering');moved=false;};
+  nav.addEventListener('pointerdown',e=>{
+    const t=e.target.closest('.tab[data-view]');if(!t)return;
+    startX=e.clientX;moved=false;
+    timer=setTimeout(()=>{
+      held=t;t.classList.add('tab-dragging');nav.classList.add('tab-reordering');
+      /* Capture so the pointer keeps reporting to the bar even when it leaves the tab, and
+         so a drag that ends outside still tidies up. */
+      try{nav.setPointerCapture(e.pointerId);}catch(_){}
+      if(navigator.vibrate)navigator.vibrate(8);
+      toast('Slide to reorder — release to keep it',1800);
+    },TAB_DRAG_HOLD);
+  });
+  nav.addEventListener('pointermove',e=>{
+    if(!held){
+      /* A real scroll or a swipe cancels the pending hold, or the bar would grab every swipe
+         on a phone and the strip would stop scrolling. */
+      if(timer&&Math.abs(e.clientX-startX)>8){clearTimeout(timer);timer=null;}
+      return;
+    }
+    e.preventDefault();moved=true;
+    /* Target chosen from the tab RECTS rather than elementFromPoint. Two reasons, and the
+       second is the real one: the dragged tab is lifted with a z-index, so hit-testing can
+       return the tab being dragged instead of the one underneath it and the drop is silently
+       missed. Rect maths also does not care that hit-testing needs a laid-out viewport. */
+    const t=tabDropTarget(nav,held,e.clientX);
+    if(!t||t===held)return;
+    const r=t.getBoundingClientRect();
+    const after=(e.clientX-r.left)/r.width>0.5;
+    t.parentNode.insertBefore(held,after?t.nextSibling:t);
+  },{passive:false});
+  const finish=()=>{
+    if(held&&moved){
+      /* Read the order back off the DOM the user just arranged, rather than tracking indices
+         during the drag — the DOM is what they were looking at. */
+      UI.tabOrder=[...nav.querySelectorAll('.tab[data-view]')].map(t=>t.dataset.view);
+      saveUI();applyTabMode();
+      toast('Order saved',1600);sfx('done');
+    }
+    clear();
+  };
+  nav.addEventListener('pointerup',finish);
+  nav.addEventListener('pointercancel',clear);
+  /* Keyboard: the tab bar is a tablist with a roving tabindex, so the focused tab is the one
+     being moved. Meta/Ctrl distinguishes "move this" from "go to the next one". */
+  nav.addEventListener('keydown',e=>{
+    if(!(e.metaKey||e.ctrlKey))return;
+    const t=e.target.closest&&e.target.closest('.tab[data-view]');if(!t)return;
+    const d=e.key==='ArrowLeft'?-1:e.key==='ArrowRight'?1:0;
+    if(!d)return;
+    e.preventDefault();
+    if(tabMove(t.dataset.view,d)){
+      const again=$(`#tabs .tab[data-view="${t.dataset.view}"]`);
+      if(again){again.focus();again.scrollIntoView({block:'nearest',inline:'nearest'});}
+      toast('Moved '+(d<0?'left':'right'),1200);
+    }
+  });
 }
 function setTabMode(m){
   TABMODE=TAB_MODES[m]?m:'grouped';
@@ -35012,8 +35723,7 @@ async function connRun(portId,payload){
   if(!p.takes.includes(payload.kind))
     return toast(`${p.label} cannot take ${CONN_KINDS[payload.kind]?CONN_KINDS[payload.kind].label.toLowerCase():payload.kind}`,3000);
   /* Sending to a section the user switched off turns it back on — they just asked for it. */
-  if(tabHidden(p.tab)){UI.hiddenTabs=UI.hiddenTabs.filter(x=>x!==p.tab);saveUI();applyUI();
-    toast('Switched “'+p.label+'” back on',2600);}
+  if(tabHidden(p.tab))goEnsure(p.tab,'it is the destination you picked');
   try{
     await p.run(payload);
     CONNX.log=[{from:payload.from||'',to:portId,kind:payload.kind,title:payload.title,ts:nowISO()}]
@@ -35535,13 +36245,26 @@ function renderTabAdder(){
   btn.textContent=n?'＋ '+n:'＋';
 }
 function openTabManager(){
-  const rows=REGISTRY.tabs.map(t=>{
-    const on=!tabHidden(t.id);
-    return `<button class="tm-row${on?' on':''}" data-tmid="${esc(t.id)}">
-      <span class="tm-tick">${on?'✓':'＋'}</span>
-      <b>${esc(t.text||t.label||t.id)}</b>
-      <span style="flex:1"></span>
-      <span class="mini muted">${on?'showing':'hidden'}</span></button>`;
+  /* Listed in the user's own order, and movable from here. The drag on the bar is faster once
+     you know it exists; these arrows are the floor — they work on a phone, with a keyboard, and
+     with a screen reader, and they call the same tabMove the drag does. */
+  const ids=tabOrderedIds();
+  const rows=ids.map((id,i)=>{
+    const t=REGISTRY.tabs.find(x=>x.id===id);if(!t)return '';
+    const on=!tabHidden(id);
+    return `<div class="tm-row${on?' on':''}">
+      <button class="tm-hit" data-tmid="${esc(id)}" title="${on?'Hide':'Show'} this section">
+        <span class="tm-tick">${on?'✓':'＋'}</span>
+        <b>${esc(t.text||t.label||id)}</b>
+        <span style="flex:1"></span>
+        <span class="mini muted">${on?'showing':'hidden'}</span>
+      </button>
+      <span class="tm-move">
+        <button class="btn ghost sm" data-tmup="${esc(id)}"${i===0?' disabled':''}
+          aria-label="Move ${esc(t.text||id)} earlier">↑</button>
+        <button class="btn ghost sm" data-tmdown="${esc(id)}"${i===ids.length-1?' disabled':''}
+          aria-label="Move ${esc(t.text||id)} later">↓</button>
+      </span></div>`;
   }).join('');
   openModal(`<h3 style="margin-top:0">Sections</h3>
     <p class="help">Click any section to show or hide it. Nothing is ever deleted — a hidden
@@ -35562,6 +36285,10 @@ function openTabManager(){
       UI.hiddenTabs=tabHidden(id)?UI.hiddenTabs.filter(x=>x!==id):(UI.hiddenTabs||[]).concat([id]);
       saveUI();applyUI();openTabManager();
     });
+    /* Re-opening the dialog is how every other control here repaints, so moving does the same
+       rather than inventing a second refresh path that could drift out of step. */
+    $$('[data-tmup]').forEach(b=>b.onclick=()=>{tabMove(b.dataset.tmup,-1);openTabManager();});
+    $$('[data-tmdown]').forEach(b=>b.onclick=()=>{tabMove(b.dataset.tmdown,1);openTabManager();});
     $$('[data-tmpos]').forEach(b=>b.onclick=()=>{setTabPos(b.dataset.tmpos);openTabManager();});
     const a=$('#tm-all'),n=$('#tm-none'),r=$('#tm-redo');
     if(a)a.onclick=()=>{UI.hiddenTabs=[];saveUI();applyUI();openTabManager();};
@@ -40741,6 +41468,19 @@ function panelFail(name,e){
 }
 /* Retry re-runs the whole tab, which is the only honest "try again" — a panel's render is not
    independently re-entrant, and pretending otherwise would show a half-drawn tab. */
+/* The "audit ↗" on a bot turn opens that single run, rather than dropping you in the Bots tab
+   to hunt for it. The two surfaces link both ways: a message knows its run, a run knows its bot. */
+document.addEventListener('click',e=>{
+  const ar=e.target.closest('[data-botrun]');
+  if(ar){
+    e.preventDefault();
+    const run=(BOT_RUNS||[]).find(x=>x.id===ar.dataset.botrun);
+    openModal(run?'<h3>What that turn actually did</h3><div class="bx-rows">'+botAuditRow(run)+'</div>'+
+      '<p class="help" style="margin-top:10px">Every turn is kept in <b>Bots → Black box</b>.</p>'
+      :'<p class="help">That run has aged out of the log.</p>');
+    return;
+  }
+});
 document.addEventListener('click',e=>{
   const r=e.target.closest('[data-panelretry]');
   if(r){const v=r.dataset.panelretry;
@@ -40808,7 +41548,8 @@ function go(view){
   if(view==='mission')panelGuard(view,()=>{renderMonitor();renderComms();renderRunDiff();
     refreshSessions().then(renderSessions).catch(e=>panelFail('mission',e));});
   if(view==='creations')panelGuard(view,()=>renderCreations());
-  if(view==='bots')panelGuard(view,()=>{renderBots();renderBotFeed();renderCallInvite();renderNet();});
+  if(view==='bots')panelGuard(view,()=>{renderBots();renderBotFeed();renderCallInvite();renderNet();
+    renderBotBox();renderBotCfg();});
   if(view==='vo')panelGuard(view,()=>{renderVoGames();voSync();voThink();voResize();voFrame(0);renderVoRoster();
     renderSteer();renderOfficeDesign();renderOutputs();});
   else if(VO.on)voStop();      // do not burn a rAF loop on a tab nobody is looking at
@@ -40824,7 +41565,8 @@ function go(view){
   if(view==='studio')panelGuard(view,()=>{renderStudio();renderStudioX();connInit();if(!$('#st-frame').srcdoc)runPreview();});
   if(view==='connect')panelGuard(view,()=>{connInit();renderConnections();});
   if(view==='awards')panelGuard(view,()=>{connInit();renderAwards();});
-  if(view==='settings')panelGuard(view,()=>{renderCrossDevice();renderPersist();renderPwa();renderSfx();renderWhy();});
+  if(view==='settings')panelGuard(view,()=>{renderSetup();renderGauntlet('#gauntlet-settings');
+    renderCrossDevice();renderPersist();renderPwa();renderSfx();renderWhy();});
   if(view==='help')panelGuard(view,()=>renderHelp());
   if(view==='webos')panelGuard(view,()=>{wosInit();wosRender();wosFillFolders();wosClockTick();});
 }
@@ -40844,7 +41586,7 @@ async function boot(){
   });
   $('#helpBtn').onclick=showHelp;
   $('#modeBtn').onclick=openTabModeMenu;
-  applyTabMode();
+  applyTabMode();initTabDrag();
   const _mb=$('#modeBtn');
   if(_mb){_mb.textContent=TAB_MODES[TABMODE].icon;_mb.title='Showing: '+TAB_MODES[TABMODE].label;}
   $('#fsBtn').onclick=toggleFullscreenView;
@@ -41112,12 +41854,17 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     wdreamSignal,wdreamAbortErr,get WDREAM_RUN(){return WDREAM_RUN},set WDREAM_RUN(v){WDREAM_RUN=v},
     ofcUndo,ofcRedo,ofcSnap,ofcSnapshot,ofcRestore,ofcHistButtons,
     panelGuard,panelFail,PWA,pwaInit,pwaInstall,pwaReset,renderPwa,
+    botsAddressed,botSysFor,botTurn,botGroupRun,renderBotBox,renderBotCfg,botAuditRow,
+    SETUP_CHECKS,setupScore,renderSetup,setupFocus,goEnsure,gauntletQuickRun,tabDropTarget,
+    botRng,botSprite,botModelChain,botNorm,botAll,botAudit,botRunsFor,BOT_PALETTES,
+    get BOT_RUNS(){return BOT_RUNS},set BOT_RUNS(v){BOT_RUNS=v},saveBotRuns,
     SPL_RUNTIME,splNormalise,splLoad,splShot,splEmbedHtml,renderSpline,splStatus,
     connToCreations,creationSave,saveCreations,
     get CREATIONS(){return CREATIONS},set CREATIONS(v){CREATIONS=v},
     get SPL(){return SPL},set SPL(v){SPL=v},
     get SPL_STATE(){return SPL_STATE},set SPL_STATE(v){SPL_STATE=v},
     TAB_GROUPS,TAB_ESSENTIALS,TAB_MODES,tabGroupOf,applyTabMode,setTabMode,openTabModeMenu,
+    tabOrderedIds,tabMove,initTabDrag,
     get TABMODE(){return TABMODE},set TABMODE(v){TABMODE=v},
     openModal,closeModal,focusablesIn,FOCUSABLE,wosFocusEl,
     get OFC_UNDO(){return OFC_UNDO},set OFC_UNDO(v){OFC_UNDO=v},
