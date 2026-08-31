@@ -164,6 +164,23 @@ body[data-tabpos=left] .tabgroup,body[data-tabpos=right] .tabgroup{
 .evo-card{border:1px solid var(--edge2);border-radius:12px;padding:11px 13px;background:var(--panel2);
   margin-bottom:9px}
 .evo-card>b{font-size:13.5px;display:block;margin-bottom:4px}
+.bill-b{font-size:10px;padding:1px 6px;border-radius:99px;border:1px solid var(--edge2);
+  color:var(--ink3);white-space:nowrap}
+.bill-b.subscription{border-color:rgba(57,217,138,.5);color:var(--good)}
+.bill-b.local{border-color:rgba(122,162,255,.5);color:#7aa2ff}
+.bill-b.free{border-color:rgba(57,217,138,.35);color:var(--good)}
+.jvs-core{width:74px;height:74px;border-radius:50%;position:relative;flex:none;
+  background:radial-gradient(circle at 50% 45%,rgba(122,162,255,.55),rgba(122,162,255,.07) 62%);
+  border:1px solid rgba(122,162,255,.42);transition:all .3s ease}
+.jvs-core:after{content:'';position:absolute;inset:12px;border-radius:50%;
+  border:1px solid rgba(122,162,255,.5);transition:all .3s}
+.jvs-core[data-state=listening]{border-color:var(--good);animation:jvsPulse 1.15s ease-in-out infinite}
+.jvs-core[data-state=thinking]{border-color:#e8b339}
+.jvs-core[data-state=thinking]:after{animation:jvsSpin 1.5s linear infinite}
+.jvs-core[data-state=speaking]{border-color:#b98cff;animation:jvsPulse .62s ease-in-out infinite}
+@keyframes jvsPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.07);opacity:.82}}
+@keyframes jvsSpin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.jvs-core,.jvs-core:after{animation:none!important}}
 .botcfg{display:grid;gap:9px;margin-top:10px}
 .botcfg-row{display:flex;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--edge);
   border-radius:12px;background:var(--panel2)}
@@ -4351,6 +4368,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
 
       <div class="sub" id="bsub-box">
         <div id="botbox"></div>
+        <div id="bot-dossiers"></div>
         <div id="botcfg"></div>
       </div>
 
@@ -4861,6 +4879,9 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
     <section class="view" id="view-settings"><div class="wrap" style="max-width:780px">
       <div id="sfx-panel"></div>
       <div id="setup-panel"></div>
+      <div id="jvs-panel"></div>
+      <div id="tts-panel"></div>
+      <div id="sub-models"></div>
       <div id="evo-panel"></div>
       <div id="ckpt-panel"></div>
       <div id="act-ledger"></div>
@@ -22909,6 +22930,103 @@ function gauntletCases(g){
     antiWhat:'and identical content is reported as identical rather than as a change',
     anti:()=>g.skillDiff('same\ntext','same\ntext').same?1:0,antiExpect:v=>v===1});
 
+  /* ── Assistants, dossiers, billing ────────────────────────────────────── */
+
+  add({id:'jvs-intent-resolves',sub:'assistants',uses:['JVS_INTENTS'],
+    what:'a spoken tab name resolves even with filler words around it',
+    run:()=>{
+      const goto=g.JVS_INTENTS.find(i=>i.id==='goto');
+      /* The first version captured the word "tab" as part of the name and then looked for a tab
+         literally called "bots tab". Several phrasings, because one is not a test. */
+      const phrasings=['open the bots tab','go to settings','show webos','switch to the office tab'];
+      const bad=phrasings.filter(p2=>{
+        const m=p2.match(goto.test);
+        if(!m)return true;
+        const want=String(m[3]||'').trim().toLowerCase()
+          .replace(/\b(tab|tabs|section|screen|page|view)\b/g,'').trim();
+        const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9 ]/g,'').trim();
+        const tabs=g.REGISTRY.tabs||[];
+        return !(tabs.find(x=>x.id===want.replace(/\s+/g,''))||tabs.find(x=>norm(x.text).includes(want)));
+      });
+      return bad.length;},expect:v=>v===0,
+    antiWhat:'while a tab that does not exist is still reported as not found',
+    anti:()=>{
+      const goto=g.JVS_INTENTS.find(i=>i.id==='goto');
+      const m='open the flibbertigibbet tab'.match(goto.test);
+      if(!m)return 0;
+      const want=String(m[3]||'').replace(/\b(tab|tabs)\b/g,'').trim().toLowerCase();
+      const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9 ]/g,'').trim();
+      return (g.REGISTRY.tabs||[]).some(x=>norm(x.text).includes(want))?1:0;
+    },antiExpect:v=>v===0});
+
+  add({id:'dossier-derived',sub:'assistants',uses:['botDossier','botAudit'],
+    what:'a profile reflects real work and is empty when there is none',
+    run:()=>{
+      /* BOTS is exported through a getter with NO setter, so `g.BOTS = []` does nothing (or
+         throws). Mutate the array in place and persist through store — the same mistake as the
+         ACTIVE map two passes ago. Check for a setter before assigning through __gb. */
+      const keepB=g.BOTS.slice(),keepR=g.BOT_RUNS.slice();
+      try{
+        g.BOTS.length=0;g.BOT_RUNS=[];
+        const r=g.botAdd('GauntletProbe','Tester','','x');
+        const before=g.botDossier(r.bot.id);
+        g.botAudit({botId:r.bot.id,botName:'GauntletProbe',model:'a/b',tried:['a/b'],ms:10,ok:true,outChars:50});
+        const after=g.botDossier(r.bot.id);
+        return (before.runs===0&&before.standing==='no work yet'&&after.runs===1)?'derived':
+          before.runs+'/'+after.runs;
+      }finally{
+        g.BOTS.length=0;keepB.forEach(x=>g.BOTS.push(x));g.store.set('bots',g.BOTS);
+        g.BOT_RUNS=keepR;g.saveBotRuns();
+      }
+    },expect:v=>v==='derived',
+    antiWhat:'and a failing turn drags reliability down rather than being ignored',
+    anti:()=>{
+      const keepB=g.BOTS.slice(),keepR=g.BOT_RUNS.slice();
+      try{
+        g.BOTS.length=0;g.BOT_RUNS=[];
+        const r=g.botAdd('GauntletProbe2','Tester','','x');
+        g.botAudit({botId:r.bot.id,botName:'GauntletProbe2',model:'a/b',tried:['a/b'],ms:10,ok:true});
+        g.botAudit({botId:r.bot.id,botName:'GauntletProbe2',model:'a/b',tried:['a/b'],ms:10,ok:false,error:'x'});
+        return g.botDossier(r.bot.id).reliability;
+      }finally{
+        g.BOTS.length=0;keepB.forEach(x=>g.BOTS.push(x));g.store.set('bots',g.BOTS);
+        g.BOT_RUNS=keepR;g.saveBotRuns();
+      }
+    },antiExpect:v=>v===50});
+
+  add({id:'billing-honest',sub:'assistants',uses:['modelBilling','SUB_BILLED'],
+    what:'a model reached through a subscription CLI is labelled subscription, not free',
+    run:()=>{
+      const a=g.modelBilling('cc/claude-sonnet').kind;
+      const b=g.modelBilling('codex/gpt-5').kind;
+      return (a==='subscription'&&b==='subscription')?'labelled':a+'/'+b;
+    },expect:v=>v==='labelled',
+    antiWhat:'while a local model is called local and a keyed one pay-as-you-go',
+    anti:()=>{
+      const l=g.modelBilling('ollama/llama').kind;
+      const p2=g.modelBilling('anthropic/claude-fable-5').kind;
+      return (l==='local'&&p2==='payg')?1:0;
+    },antiExpect:v=>v===1});
+
+  add({id:'vo-bot-no-dupes',sub:'assistants',uses:['voToBot','botToVo'],
+    what:'converting between office and roster does not breed duplicates',
+    run:()=>{
+      const keep=g.BOTS.slice();
+      try{
+        g.BOTS.length=0;
+        const r=g.botAdd('RoundTrip','Staff','','x');
+        g.botToVo(r.bot.id);
+        g.voToBot('RoundTrip');
+        return g.BOTS.filter(b=>b.name==='RoundTrip').length;
+      }finally{g.BOTS.length=0;keep.forEach(x=>g.BOTS.push(x));g.store.set('bots',g.BOTS);}
+    },expect:v=>v===1,
+    antiWhat:'and converting a name that does not exist fails rather than inventing one',
+    anti:()=>{
+      const keep=g.BOTS.slice();
+      try{g.BOTS.length=0;const r=g.voToBot('NoSuchWorkerAnywhere');return r.ok?1:0;}
+      finally{g.BOTS.length=0;keep.forEach(x=>g.BOTS.push(x));g.store.set('bots',g.BOTS);}
+    },antiExpect:v=>v===0});
+
   add({id:'render-unique-ids',sub:'rendering',uses:['esc'],
     what:'no duplicate DOM id (the second one is unreachable via $())',
     run:()=>{const seen={},d=[];document.querySelectorAll('[id]').forEach(e=>{
@@ -23221,6 +23339,13 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'billing-blind',export:'modelBilling',
+   why:'subscription models stop being distinguished from pay-as-you-go',
+   broken:()=>()=>({kind:'payg'})},
+  {id:'dossier-invents',export:'botDossier',
+   why:'a profile reports work that never happened',
+   broken:()=>id=>({bot:{id},runs:99,ok:99,failed:0,reliability:100,spend:0,avgMs:1,
+     fellBack:0,words:0,topModels:[],claimed:[],since:null,standing:'never failed'})},
   {id:'evo-autoapply',export:'evoPropose',
    why:'a proposal starts applying itself instead of waiting for a human',
    broken:()=>o=>{if(o&&typeof o.apply==='function')o.apply();
@@ -36068,6 +36193,201 @@ function renderSkillSources(){
     catch(e){toast('Could not fetch: '+e.message,4200);}
     cu.disabled=false;cu.textContent='Fetch';};
 }
+/* ── Assistants panel ──────────────────────────────────────────────────────
+   The HUD is not decoration: idle / listening / thinking / speaking are four states a user
+   genuinely cannot infer otherwise, because a microphone that is not recording and one that is
+   look identical, and a model thinking looks the same as a model that has silently failed. */
+function renderAssistants(){
+  const host=$('#jvs-panel');if(!host)return;
+  const a=jvsActive();
+  const voices=ttsVoices();
+  const models=(CATALOG||[]).slice(0,300);
+  host.innerHTML=`
+  <div class="card">
+    <h3>🎙 Assistants</h3>
+    <p class="help">Voice or typing, your choice — the commands below run <b>locally</b>, with no
+      model call, so opening a tab or taking a checkpoint is instant, free, and works with no API
+      key. Anything that is not a command becomes a question for the assistant's model.</p>
+    <div class="row" style="gap:14px;align-items:center;flex-wrap:wrap">
+      <div class="jvs-core" id="jvs-core" data-state="idle"></div>
+      <div style="flex:1;min-width:190px">
+        <div class="row" style="gap:6px;flex-wrap:wrap">
+          <select id="jvs-who" style="flex:1;min-width:120px">
+            ${JVS.length?JVS.map(x=>`<option value="${esc(x.id)}"${x.id===(a&&a.id)?' selected':''}>${esc(x.name)}</option>`).join('')
+                        :'<option value="">no assistants yet</option>'}
+          </select>
+          <button class="btn ghost sm" id="jvs-new">＋ New</button>
+        </div>
+        <div class="mini muted" style="margin-top:5px">state: <b id="jvs-state">ready</b></div>
+      </div>
+    </div>
+    <div class="row" style="gap:6px;margin-top:10px;flex-wrap:wrap">
+      <input id="jvs-say" style="flex:1;min-width:180px" placeholder="try: open the bots tab · run the gauntlet · what have I spent">
+      <button class="btn" id="jvs-send">Send</button>
+      <button class="btn ghost" id="jvs-mic" title="${jvsCanListen()?'Speak':'This browser cannot listen — type instead'}"
+        ${jvsCanListen()?'':'disabled'}>🎤</button>
+    </div>
+    <div id="jvs-out" class="help" style="margin-top:8px"></div>
+    ${a?`
+    <h3 style="margin-top:15px;font-size:14px">${esc(a.name)}'s setup</h3>
+    <div class="row" style="gap:6px;flex-wrap:wrap">
+      <input id="jvs-name" style="flex:0 0 130px" value="${esc(a.name)}" placeholder="name">
+      <select id="jvs-model" style="flex:1;min-width:150px">
+        <option value="">default model</option>
+        ${models.map(m=>`<option value="${esc(m.id)}"${m.id===a.model?' selected':''}>${esc(m.name||m.id)}</option>`).join('')}
+      </select>
+      <select id="jvs-voice" style="flex:1;min-width:140px">
+        <option value="">default voice</option>
+        ${voices.map(v=>`<option value="${esc(v.name)}"${v.name===a.voice?' selected':''}>${esc(v.name)} · ${esc(v.lang)}</option>`).join('')}
+      </select>
+      <button class="btn ghost sm" id="jvs-test">▶ Hear it</button>
+    </div>
+    <textarea id="jvs-persona" rows="2" style="margin-top:6px"
+      placeholder="how it should behave">${esc(a.persona||'')}</textarea>
+    <div class="row" style="gap:6px;margin-top:6px">
+      <button class="btn sm" id="jvs-save">Save</button>
+      <button class="btn ghost sm" id="jvs-del">Remove</button>
+    </div>`:''}
+    <details style="margin-top:12px"><summary class="help" style="cursor:pointer">What it understands without a model</summary>
+      <div class="bx-rows" style="margin-top:7px">
+        ${JVS_INTENTS.map(i=>`<div class="bx-row"><div style="flex:1"><b class="mono">${esc(i.say)}</b></div></div>`).join('')}
+      </div></details>
+    ${voices.length?'':'<p class="help" style="margin-top:8px">No speech voices were found on this device yet — replies will be text only.</p>'}
+  </div>`;
+  const out=t=>{const o=$('#jvs-out');if(o)o.innerHTML=esc(t);};
+  const run=async txt=>{
+    if(!txt.trim())return;
+    out('…');
+    const r=await jvsCommand(txt);
+    out((r.say||'(nothing to say)')+(r.local?'':' · via model'));
+    renderActLedger&&renderActLedger();
+  };
+  const send=$('#jvs-send');if(send)send.onclick=()=>{const i=$('#jvs-say');run(i.value);i.value='';};
+  const say=$('#jvs-say');if(say)say.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();run(say.value);say.value='';}};
+  const mic=$('#jvs-mic');
+  if(mic)mic.onclick=()=>{const r=jvsListen(t=>{const i=$('#jvs-say');if(i)i.value=t;run(t);});
+    if(!r.ok)toast(r.why,3000);};
+  const who=$('#jvs-who');
+  if(who)who.onchange=()=>{JVS_ACTIVE=who.value;store.set('assistantActive',JVS_ACTIVE);renderAssistants();};
+  const nw=$('#jvs-new');
+  if(nw)nw.onclick=()=>{const n=prompt('Name this assistant','Jarvis');if(!n)return;
+    jvsAdd(n);renderAssistants();toast(n+' is ready',2000);};
+  const sv=$('#jvs-save');
+  if(sv)sv.onclick=()=>{
+    const cur=jvsActive();if(!cur)return;
+    cur.name=$('#jvs-name').value.trim()||cur.name;
+    cur.model=$('#jvs-model').value;cur.voice=$('#jvs-voice').value;
+    cur.persona=$('#jvs-persona').value;
+    saveJvs();renderAssistants();toast('Saved',1600);};
+  const del=$('#jvs-del');
+  if(del)del.onclick=()=>{const cur=jvsActive();if(!cur)return;
+    if(!confirm('Remove '+cur.name+'?'))return;
+    JVS=JVS.filter(x=>x.id!==cur.id);JVS_ACTIVE=(JVS[0]||{}).id||'';
+    saveJvs();store.set('assistantActive',JVS_ACTIVE);renderAssistants();};
+  const test=$('#jvs-test');
+  if(test)test.onclick=()=>{const v=$('#jvs-voice').value;
+    const r=ttsSpeak(`Hello. I am ${$('#jvs-name').value||'your assistant'}.`,{voice:v});
+    if(!r.ok)toast(r.why,2600);};
+}
+
+/* ── Voice settings ────────────────────────────────────────────────────── */
+function renderVoices(){
+  const host=$('#tts-panel');if(!host)return;
+  const voices=ttsVoices();
+  const bots=botAll();
+  host.innerHTML=`
+  <div class="card">
+    <h3>🔊 Voices</h3>
+    <p class="help">Speech comes from this device — free, offline, no key. The voices available
+      are the ones your operating system has installed, so the list differs between a Mac, a
+      Windows PC and a phone. ${voices.length?`<b>${voices.length}</b> found here.`:'None found yet — try reopening this tab.'}</p>
+    <label class="chk"><input type="checkbox" id="tts-on" ${TTS.on?'checked':''}> speak replies aloud</label>
+    <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">
+      <select id="tts-voice" style="flex:1;min-width:170px">
+        <option value="">automatic</option>
+        ${voices.map(v=>`<option value="${esc(v.name)}"${v.name===TTS.voice?' selected':''}>${esc(v.name)} · ${esc(v.lang)}${v.localService?'':' (network)'}</option>`).join('')}
+      </select>
+      <button class="btn ghost sm" id="tts-test">▶ Test</button>
+      <button class="btn ghost sm" id="tts-stop">■ Stop</button>
+    </div>
+    <div class="row" style="gap:12px;margin-top:8px;flex-wrap:wrap">
+      <label style="flex:1;min-width:120px">Speed <input type="range" id="tts-rate" min="0.5" max="2" step="0.05" value="${TTS.rate}"></label>
+      <label style="flex:1;min-width:120px">Pitch <input type="range" id="tts-pitch" min="0" max="2" step="0.05" value="${TTS.pitch}"></label>
+    </div>
+    ${bots.length?`<h3 style="margin-top:14px;font-size:14px">A voice per bot</h3>
+      <div class="setup-rows">${bots.map(b=>`
+        <div class="setup-row"><span class="bt-face">${botFace(b,30)}</span>
+          <span style="flex:1;min-width:0"><b>${esc(b.name)}</b></span>
+          <select data-ttsbot="${esc(b.id)}" style="flex:0 0 168px">
+            <option value="">default</option>
+            ${voices.map(v=>`<option value="${esc(v.name)}"${(TTS.perBot||{})[b.id]===v.name?' selected':''}>${esc(v.name)}</option>`).join('')}
+          </select>
+        </div>`).join('')}</div>`:''}
+  </div>`;
+  const on=$('#tts-on');if(on)on.onchange=()=>{TTS.on=on.checked;saveTts();};
+  const vs=$('#tts-voice');if(vs)vs.onchange=()=>{TTS.voice=vs.value;saveTts();};
+  const rt=$('#tts-rate');if(rt)rt.oninput=()=>{TTS.rate=+rt.value;saveTts();};
+  const pt=$('#tts-pitch');if(pt)pt.oninput=()=>{TTS.pitch=+pt.value;saveTts();};
+  const tb=$('#tts-test');
+  if(tb)tb.onclick=()=>{const r=ttsSpeak('This is how the assistant will sound in Glassbox Jet.');
+    if(!r.ok)toast(r.why,2600);};
+  const sb=$('#tts-stop');if(sb)sb.onclick=ttsStop;
+  $$('[data-ttsbot]',host).forEach(sel=>sel.onchange=()=>{
+    TTS.perBot=TTS.perBot||{};TTS.perBot[sel.dataset.ttsbot]=sel.value;saveTts();});
+}
+
+/* ── Dossiers + conversion, in the Bots tab ──────────────────────────────── */
+function renderDossiers(){
+  const host=$('#bot-dossiers');if(!host)return;
+  const bots=botAll();
+  host.innerHTML=`
+  <div class="card">
+    <h3>🪪 Profiles</h3>
+    <p class="help">Built from what each bot has actually done — turns taken, models used, money
+      spent, times it failed. Nothing here is written by a model, so a bot that has done nothing
+      has an empty profile rather than a flattering biography.</p>
+    ${bots.length?bots.map(b=>{
+      const d=botDossier(b.id);
+      return `<div class="evo-card">
+        <div class="row" style="gap:10px;align-items:center">
+          <span class="bt-face">${botFace(b,46)}</span>
+          <div style="flex:1;min-width:0">
+            <b>${esc(b.name)}</b> <span class="mini muted">· ${esc(b.role||'')}</span>
+            <div class="bx-meta">${d.runs?`${d.runs} turns · ${d.reliability}% completed · ${money(d.spend)} · ~${d.avgMs}ms typical`
+                                        :'has not spoken yet'}</div>
+            <div class="bx-meta"><b>${esc(d.standing)}</b>${d.fellBack?` · fell back to a backup model ${d.fellBack}×`:''}</div>
+          </div>
+          <button class="btn ghost sm" data-dosportrait="${esc(b.id)}" title="Generate a portrait with an image model">🖼</button>
+          <button class="btn ghost sm" data-dostovo="${esc(b.id)}" title="Add to the Virtual Office">🏢</button>
+        </div>
+        ${d.claimed.length?`<div class="bx-chain" style="margin-top:7px">${d.claimed.map(c=>`<span>${esc(c)}</span>`).join('')}
+          <span class="mini muted" style="align-self:center">claimed</span></div>`:''}
+        ${d.topModels.length?`<div class="bx-meta" style="margin-top:5px">Ran on: ${d.topModels.map(([m,n])=>esc(m.split('/').pop())+' ×'+n).join(', ')}</div>`:''}
+      </div>`;}).join('')
+    :`<p class="help">No bots yet.</p>`}
+    <h3 style="margin-top:14px;font-size:14px">From the Virtual Office</h3>
+    <p class="help">Office workers and bots are the same idea in two rooms. Converting carries the
+      name and role across rather than copying, so a round trip does not create twins.</p>
+    <div class="row" style="gap:6px;flex-wrap:wrap" id="vo-import">
+      ${(voWorkers()||[]).length?(voWorkers()||[]).map(w=>
+        `<button class="btn ghost sm" data-votobot="${esc(w.name)}">＋ ${esc(w.name)}</button>`).join('')
+        :'<span class="help" style="margin:0">The office is empty.</span>'}
+    </div>
+  </div>`;
+  $$('[data-dostovo]',host).forEach(b=>b.onclick=()=>{
+    const r=botToVo(b.dataset.dostovo);
+    toast(r.ok?(r.existing?'Already in the office':'Added to the Virtual Office'):'Could not: '+r.why,2400);});
+  $$('[data-votobot]',host).forEach(b=>b.onclick=()=>{
+    const r=voToBot(b.dataset.votobot);
+    toast(r.ok?(r.existing?'Already a bot':'Now a bot'):'Could not: '+r.why,2400);
+    renderDossiers();});
+  $$('[data-dosportrait]',host).forEach(b=>b.onclick=async()=>{
+    b.disabled=true;b.textContent='…';
+    const r=await botPortrait(b.dataset.dosportrait);
+    b.disabled=false;b.textContent='🖼';
+    toast(r.ok?'Portrait generated':'No portrait: '+r.why+(r.fix?' — '+r.fix:''),r.ok?2400:4200);
+    renderDossiers();});
+}
 function renderSetup(){
   const host=$('#setup-panel');if(!host)return;
   const s=setupScore();
@@ -39119,6 +39439,424 @@ async function persistDir(){
 /* ── What "all my work" actually is ────────────────────────────────────── */
 const PERSIST_KEYS=['ws','projects','creations','ofw','ofc','webos','brainDir','moaPresets',
   'skillCtx','connx','ui','onboarding','skills','history','traces','persist','trueforge','notes'];
+/* ═══════════════════ WHICH POOL IS THIS COMING OUT OF? ═══════════════════
+   Three ways a model call gets paid for, and the app should never leave you guessing which:
+
+     SUBSCRIPTION  your ChatGPT / Claude / Grok plan, spent through a CLI you already installed
+                   and logged into. The bridge runs that CLI. Shows $0.00 here because the money
+                   left when you paid the monthly bill, not when you pressed send — but it does
+                   consume your plan's limits, and that is worth seeing.
+     PAY AS YOU GO an API key, billed per token, real money per call.
+     FREE / LOCAL  Ollama or a genuinely free tier. Costs nothing and leaves no machine.
+
+   On OAuth specifically, because the request asked for it and the answer is a real constraint
+   rather than an implementation gap:
+
+   ANTHROPIC PROHIBITED IT. Their terms changed on 20 February 2026 to forbid using subscription
+   OAuth tokens in third-party tools, with billing enforcement live from 4 April 2026. Building a
+   "connect your Claude subscription" button here would breach those terms using the user's own
+   account, so it is deliberately not built. Google made the same change for Gemini CLI.
+
+   OPENAI IS A GREY AREA. Codex OAuth tokens can be replayed through a localhost proxy that
+   imitates the CLI, and it currently works, but OpenAI does not officially support a third-party
+   app spending a user's subscription and could close it without warning.
+
+   So the supported path is the one that was never in doubt: run the CLI the vendor gave you,
+   through the local bridge, authenticated the way the vendor intended. Same subscription, same
+   models, no terms violated, and it does not break when a vendor rotates a token format. */
+const SUB_BILLED={
+  'cc/':      {vendor:'Anthropic',  cli:'claude', plan:'Claude subscription'},
+  'codex/':   {vendor:'OpenAI',     cli:'codex',  plan:'ChatGPT plan'},
+  'grok/':    {vendor:'xAI',        cli:'grok',   plan:'Grok subscription'},
+  'copilot/': {vendor:'GitHub',     cli:'copilot',plan:'Copilot subscription'},
+  'kimi/':    {vendor:'Moonshot',   cli:'kimi',   plan:'Kimi plan'},
+  'goose/':   {vendor:'Block',      cli:'goose',  plan:'whatever goose is configured with'},
+};
+const BILLING={
+  subscription:{label:'Subscription',icon:'🎫',tone:'good',
+    note:'Spends your plan’s limits, not your card. Runs through a CLI you already signed into.'},
+  payg:{label:'Pay as you go',icon:'💳',tone:'warm',note:'Billed per token against your API key.'},
+  free:{label:'Free',icon:'🆓',tone:'good',note:'No cost.'},
+  local:{label:'Local',icon:'🖥',tone:'good',note:'Runs on this machine. Costs nothing, sends nothing.'},
+};
+function modelBilling(id){
+  const s2=String(id||'');
+  const pre=Object.keys(SUB_BILLED).find(p=>s2.startsWith(p));
+  if(pre)return{kind:'subscription',...SUB_BILLED[pre],prefix:pre};
+  if(s2.startsWith('ollama/'))return{kind:'local'};
+  const m=(typeof CATMAP!=='undefined'&&CATMAP.get)?CATMAP.get(id):null;
+  if(m&&m._local)return{kind:'local'};
+  if(m&&(m.priceIn===0||/(^|\/)free|:free\b/i.test(s2)))return{kind:'free'};
+  return{kind:'payg'};
+}
+const billingBadge=id=>{
+  const b=modelBilling(id),B=BILLING[b.kind];
+  return `<span class="bill-b ${b.kind}" title="${esc(B.note)}${b.plan?' · '+esc(b.plan):''}">${B.icon} ${esc(B.label)}</span>`;
+};
+/* Which subscription CLIs are actually reachable right now — reported, never assumed. */
+function subModelsAvailable(){
+  const out=[];
+  Object.entries(SUB_BILLED).forEach(([pre,v])=>{
+    const models=(CATALOG||[]).filter(m=>String(m.id).startsWith(pre));
+    out.push({...v,prefix:pre,count:models.length,
+      live:models.length>0,
+      why:models.length?`${models.length} model${models.length===1?'':'s'} offered by the bridge`
+        :(BRIDGE_INFO?`the bridge is up but is not offering ${v.cli} models — is \`${v.cli}\` installed and signed in?`
+                     :'the local bridge is not running')});
+  });
+  return out;
+}
+function renderSubModels(){
+  const host=$('#sub-models');if(!host)return;
+  const rows=subModelsAvailable();
+  const live=rows.filter(r=>r.live).length;
+  host.innerHTML=`
+  <div class="card">
+    <h3>🎫 Using a subscription instead of a card</h3>
+    <p class="help">Models reached through a CLI you already installed and signed into. They spend
+      your <b>plan's limits</b> rather than an API key, and they show as $0.00 in this app's cost
+      figures because the money left when you paid the monthly bill — not when you pressed send.</p>
+    <p class="help"><b>Why there is no “Connect with Anthropic” button here:</b> Anthropic's terms
+      changed on 20 February 2026 to prohibit subscription OAuth tokens in third-party tools, with
+      enforcement from 4 April 2026. Adding that button would breach those terms using your own
+      account, so it is deliberately absent. Google made the same change for Gemini CLI. OpenAI has
+      not, but does not officially support it either. Running the vendor's own CLI through the
+      bridge gets you the same models, on the same subscription, without any of that.</p>
+    <p class="help"><b>${live} of ${rows.length}</b> subscription CLIs are reachable right now.</p>
+    <div class="setup-rows">
+      ${rows.map(r=>`<div class="setup-row${r.live?' on':''}">
+        <span class="setup-dot">${r.live?'✓':'○'}</span>
+        <span style="flex:1;min-width:0">
+          <b>${esc(r.plan)}</b> <span class="mini muted">via <code>${esc(r.cli)}</code></span>
+          <i>${esc(r.why)}</i>
+          <u>${esc(r.prefix)}… · billed to your ${esc(r.vendor)} plan</u>
+        </span>
+      </div>`).join('')}
+    </div>
+    <div class="row" style="gap:8px;margin-top:10px">
+      <button class="btn ghost sm" id="sub-bridge">Bridge setup →</button>
+      <button class="btn ghost sm" id="sub-refresh">Re-check</button>
+    </div>
+  </div>`;
+  const b=$('#sub-bridge');if(b)b.onclick=()=>setupFocus('local','#bridge-status');
+  const r=$('#sub-refresh');
+  if(r)r.onclick=async()=>{r.disabled=true;r.textContent='Checking…';
+    try{await probeBridge(true);}catch(_){}
+    r.disabled=false;r.textContent='Re-check';renderSubModels();};
+}
+
+/* ═══════════════════ BOT DOSSIERS, CONVERSION, PORTRAITS ═══════════════════
+   The AI OS calls these "agent dossiers"; the request called them social profiles. Either way
+   the rule that makes them worth having is the same one that governs every other panel in this
+   app: DERIVED FROM REAL WORK, NEVER INVENTED.
+
+   A profile page that says "Scout is a highly effective researcher" because a model wrote that
+   sentence is decoration. Everything below is computed from BOT_RUNS — turns actually taken,
+   models actually used, money actually spent, failures actually had. A bot that has done nothing
+   has an empty profile, and that is the honest answer rather than a generated biography. */
+function botDossier(id){
+  const b=botAll().find(x=>x.id===id);
+  if(!b)return null;
+  const runs=botRunsFor(id);
+  const ok=runs.filter(r=>r.ok);
+  const models={};
+  runs.forEach(r=>{const m=r.model||'unknown';models[m]=(models[m]||0)+1;});
+  const topModels=Object.entries(models).sort((a,b2)=>b2[1]-a[1]).slice(0,3);
+  const spend=runs.reduce((a,r)=>a+(r.cost||0),0);
+  const avgMs=ok.length?Math.round(ok.reduce((a,r)=>a+(r.ms||0),0)/ok.length):0;
+  const fellBack=runs.filter(r=>r.fellBack).length;
+  const words=ok.reduce((a,r)=>a+Math.round((r.outChars||0)/5),0);
+  /* "Skills" are claimed by the bot's own role and purpose, so they are labelled as CLAIMED.
+     What is measured sits beside them, and the gap between the two is the interesting part. */
+  const claimed=[b.role,...String(b.purpose||b.brief||'').split(/[.,;]/).slice(0,3)]
+    .map(x=>String(x||'').trim()).filter(x=>x.length>2&&x.length<48);
+  const first=runs.length?runs[runs.length-1].ts:null;
+  return{bot:b,runs:runs.length,ok:ok.length,failed:runs.length-ok.length,
+    reliability:runs.length?Math.round(ok.length/runs.length*100):null,
+    spend,avgMs,fellBack,words,topModels,claimed,since:first,
+    /* Deliberately not a score out of ten. A single number invites comparing bots that do
+       different jobs, and there is no honest way to rank a reviewer against a scout. */
+    standing:runs.length===0?'no work yet'
+      :ok.length===runs.length?'never failed'
+      :ok.length/runs.length>=0.8?'mostly reliable':'unreliable'};
+}
+
+/* ── Virtual Office ↔ Bots ─────────────────────────────────────────────────
+   Same person, two rooms. A VO worker and a bot were separate concepts that happened to have a
+   name and a role, so this converts rather than copies: the id is carried across, which is what
+   stops a round trip from breeding duplicates. */
+function voToBot(workerName){
+  const w=(voWorkers()||[]).find(x=>x&&x.name===workerName);
+  if(!w)return{ok:false,why:'no such worker'};
+  const already=BOTS.find(b=>b.name.toLowerCase()===String(w.name).toLowerCase());
+  if(already)return{ok:true,bot:already,existing:true};
+  const r=botAdd(w.name,w.role||w.job||'Office',w.model||'',
+    w.brief||w.purpose||`You worked in the virtual office as ${w.role||'staff'}.`);
+  if(!r.ok)return r;
+  r.bot.fromVo=true;
+  saveBots();
+  actLog('human','virtual office → bot: '+w.name,{});
+  return{ok:true,bot:r.bot};
+}
+function botToVo(botId){
+  const b=botAll().find(x=>x.id===botId);
+  if(!b)return{ok:false,why:'no such bot'};
+  if(typeof VO==='undefined'||!VO)return{ok:false,why:'the virtual office is not loaded'};
+  VO.bots=VO.bots||[];
+  if(VO.bots.some(w=>w&&w.name===b.name))return{ok:true,existing:true};
+  VO.bots.push({name:b.name,role:b.role||'Staff',model:b.model||'',
+    brief:b.purpose||b.brief||'',avatar:b.avatar,fromBot:b.id});
+  try{if(typeof saveVo==='function')saveVo();else store.set('vo',VO);}catch(_){}
+  actLog('human','bot → virtual office: '+b.name,{});
+  return{ok:true};
+}
+
+/* ── Portraits ─────────────────────────────────────────────────────────────
+   Routed through the SAME genImage the Create tab uses, rather than a second image path — one
+   place to configure, one place that knows about keys, sizes and providers. When image
+   generation is not available the procedural face stays, which is why botSprite is the default
+   rather than a placeholder: the fallback is a real avatar, not a broken image icon. */
+async function botPortrait(id){
+  const b=botAll().find(x=>x.id===id);
+  if(!b)return{ok:false,why:'no such bot'};
+  if(typeof genImage!=='function')return{ok:false,why:'image generation is not available'};
+  const ready=typeof genReady==='function'?genReady(genImageModel()):{ok:true};
+  if(!ready.ok)return{ok:false,why:ready.why,fix:ready.fix};
+  const prompt=`Character portrait avatar of "${b.name}", who works as a ${b.role||'generalist'}. `+
+    (b.purpose||b.brief||'')+
+    ' Friendly stylised character illustration, head and shoulders, simple flat background, '+
+    'centred, clean vector-like shapes, no text, no watermark.';
+  actLog('human','portrait requested: '+b.name,{model:genImageModel().id});
+  const r=await genImage(prompt,{size:'1024x1024',count:1});
+  if(!r.ok)return{ok:false,why:r.error,fix:r.fix};
+  const asset=(r.images||[])[0];
+  if(!asset)return{ok:false,why:'the model returned no image'};
+  b.portrait=asset.id||asset.name||'';
+  b.portraitAt=nowISO();
+  saveBots();
+  actLog('model','portrait generated: '+b.name,{asset:b.portrait});
+  return{ok:true,asset:b.portrait};
+}
+/* One place decides what a bot's face is, so every surface agrees. */
+function botFace(b,size){
+  if(b&&b.portrait&&typeof genAssetUrl==='function'){
+    const u=genAssetUrl(b.portrait);
+    if(u)return `<img class="botface" src="${esc(u)}" width="${size||44}" height="${size||44}" alt="${esc(b.name)}">`;
+  }
+  return botSprite((b&&b.avatar)||(b&&b.name)||'bot',size||44);
+}
+
+/* ═══════════════════ VOICES ═══════════════════
+   Speech synthesis, from the browser, free, offline, no key.
+
+   Web Speech synthesis is the right call here over a paid TTS API: it costs nothing, works with
+   no network, and every machine already has a dozen voices installed. The tradeoff is that the
+   VOICE LIST IS THE USER'S MACHINE — it differs between a Mac, a Windows box and an iPhone, so
+   nothing here hardcodes a voice name. We enumerate what is actually present and pick sensibly.
+
+   The one real trap, and the reason getVoices is wrapped: on Chrome the list is EMPTY on first
+   call and only populates after a `voiceschanged` event. Code that reads it once at boot gets
+   nothing and concludes the device has no voices. */
+let TTS_CACHE=null;
+function ttsVoices(){
+  if(!('speechSynthesis' in window))return[];
+  const v=speechSynthesis.getVoices()||[];
+  if(v.length)TTS_CACHE=v;
+  return TTS_CACHE||[];
+}
+/* Warm the list, because the first getVoices() is empty on Chromium until this event fires. */
+if(typeof speechSynthesis!=='undefined'&&speechSynthesis.addEventListener)
+  speechSynthesis.addEventListener('voiceschanged',()=>{TTS_CACHE=speechSynthesis.getVoices()||[];});
+const TTS_DEFAULTS={on:false,voice:'',rate:1,pitch:1,volume:1,perBot:{}};
+let TTS=Object.assign({},TTS_DEFAULTS,store.get('tts',{}));
+const saveTts=()=>store.set('tts',TTS);
+/* Prefer a local, high-quality, English voice when the user has not chosen — localService voices
+   do not need the network and do not stall on a slow connection. */
+function ttsPick(name){
+  const all=ttsVoices();
+  if(!all.length)return null;
+  if(name){const hit=all.find(v=>v.name===name);if(hit)return hit;}
+  return all.find(v=>v.localService&&/^en/i.test(v.lang))||
+         all.find(v=>/^en/i.test(v.lang))||all[0];
+}
+let TTS_LAST=null;
+function ttsSpeak(text,opts){
+  const o=opts||{};
+  if(!('speechSynthesis' in window))return{ok:false,why:'this browser has no speech synthesis'};
+  const t=String(text||'').trim();
+  if(!t)return{ok:false,why:'nothing to say'};
+  /* Queueing is almost never what anyone wants: two overlapping replies are unintelligible, and
+     a long queue keeps talking after the user has moved on. Newest utterance wins. */
+  try{speechSynthesis.cancel();}catch(_){}
+  const u=new SpeechSynthesisUtterance(t.slice(0,4000));
+  const v=ttsPick(o.voice||TTS.voice);
+  if(v)u.voice=v;
+  u.rate=Math.max(0.5,Math.min(2,+(o.rate??TTS.rate)||1));
+  u.pitch=Math.max(0,Math.min(2,+(o.pitch??TTS.pitch)||1));
+  u.volume=Math.max(0,Math.min(1,+(o.volume??TTS.volume)||1));
+  if(o.onend)u.onend=o.onend;
+  if(o.onstart)u.onstart=o.onstart;
+  TTS_LAST=u;
+  try{speechSynthesis.speak(u);}catch(e){return{ok:false,why:e.message};}
+  return{ok:true,voice:v?v.name:'default'};
+}
+const ttsStop=()=>{try{speechSynthesis.cancel();}catch(_){}};
+const ttsSpeaking=()=>{try{return!!speechSynthesis.speaking;}catch(_){return false;}};
+/* A bot speaks in its own voice if one was assigned, otherwise the global one. */
+function ttsSayAs(botId,text){
+  if(!TTS.on)return{ok:false,why:'speech is off'};
+  return ttsSpeak(text,{voice:(TTS.perBot||{})[botId]||TTS.voice});
+}
+
+/* ═══════════════════ ASSISTANTS (the JARVIS pattern) ═══════════════════
+   Adapted from the AI OS's Voice Assistant, with its good ideas kept and its main limit removed.
+
+   What is kept: the HUD with real states (idle / listening / thinking / speaking), spoken
+   replies, and an intent layer rather than "send everything to a model and hope".
+
+   What is changed, and why: in the AI OS there is ONE assistant with a fixed intent list. Here
+   there are MANY, each with its own name, voice, model and personality, because the request was
+   explicitly for several — and because a "research assistant" and a "run my app" assistant want
+   different models and different manners.
+
+   The important design decision is that INTENTS RUN LOCALLY AND FIRST. A command like "open the
+   bots tab" or "run the gauntlet" is matched by pattern and executed directly — no model call,
+   no token cost, no latency, and it works with no API key at all. Only what no intent matches
+   goes to a model. An assistant that needs a paid round trip to change tabs is a worse assistant
+   AND a more expensive one. */
+const JVS_INTENTS=[
+  {id:'goto',   say:'open <tab>',        test:/\b(open|go to|show|switch to)\s+(the\s+)?([a-z0-9 ]{2,24})\b/i,
+   run:m=>{
+     /* People say "open the bots TAB", so the trailing noun has to come off before matching —
+        the first version captured it and then looked for a tab literally named "bots tab".
+        Matching is also widened to the id and to a leading-word match, because tab labels carry
+        emoji and extra words ("🤖 Bots") that a spoken phrase will never reproduce. */
+     let want=String(m[3]||'').trim().toLowerCase()
+       .replace(/\b(tab|tabs|section|screen|page|view)\b/g,'').trim();
+     if(!want)return{ok:false,say:'Which tab did you mean?'};
+     const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9 ]/g,'').trim();
+     const tabs=REGISTRY.tabs||[];
+     const t=tabs.find(x=>x.id===want.replace(/\s+/g,''))
+          || tabs.find(x=>norm(x.text)===want)
+          || tabs.find(x=>norm(x.text).startsWith(want))
+          || tabs.find(x=>norm(x.text).includes(want))
+          || tabs.find(x=>x.id.includes(want.replace(/\s+/g,'')));
+     if(!t)return{ok:false,say:`I could not find a tab called ${want}.`};
+     goEnsure(t.id);
+     return{ok:true,say:`Opening ${norm(t.text)||t.id}.`};
+   }},
+  {id:'gauntlet',say:'run the gauntlet', test:/\b(run|check)\b.*\b(gauntlet|guards|tests)\b/i,
+   run:()=>{gauntletQuickRun();return{ok:true,say:'Running every guard now.'};}},
+  {id:'ckpt',   say:'take a checkpoint', test:/\b(take|make|save)\b.*\b(checkpoint|snapshot|backup)\b/i,
+   run:async()=>{const m=await ckptTake('voice','assistant');
+     return{ok:!!m,say:m?`Checkpoint saved, ${(m.bytes/1024).toFixed(0)} kilobytes.`:'I could not save a checkpoint.'};}},
+  {id:'spend',  say:'what have I spent', test:/\b(spend|spent|cost|costing|bill)\b/i,
+   /* money() renders five decimals, which is right on screen and unreadable aloud — "zero point
+      zero zero zero zero zero". Spoken numbers get rounded to something a person would say. */
+   run:()=>{const c=+SESSION_SPEND||0;
+     const spoken=c<0.01?(c===0?'nothing yet':'less than a cent'):'about '+money(c);
+     return{ok:true,say:`This session has spent ${spoken}. The ledger has ${ACT.length} recorded actions.`};}},
+  {id:'setup',  say:'what is not set up',test:/\b(setup|set up|configur|missing|what can|not working)\b/i,
+   run:()=>{const s=setupScore();
+     return{ok:true,say:s.blocked.length
+       ? `You are ${s.pct} percent set up. ${s.blocked.length} things are missing, starting with ${s.blocked[0].label}.`
+       : 'Everything is set up.'};}},
+  {id:'status', say:'status report',     test:/\b(status|report|how are things|summary)\b/i,
+   run:()=>{const g=(typeof GAUNTLET_LAST!=='undefined'&&GAUNTLET_LAST)?
+       `${GAUNTLET_LAST.passed} of ${GAUNTLET_LAST.total} guards passing`:'the guards have not been run';
+     return{ok:true,say:`${(BOTS||[]).length} bots, ${CKPTS.length} checkpoints, ${g}.`};}},
+  {id:'bots',   say:'who is in the room',test:/\b(who|which bots|roster|team)\b/i,
+   run:()=>{const b=botAll().filter(x=>x.on!==false);
+     return{ok:true,say:b.length?`${b.length} active: ${b.map(x=>x.name).join(', ')}.`:'The roster is empty.'};}},
+  {id:'stop',   say:'stop talking',      test:/\b(stop|quiet|shut up|silence|cancel)\b/i,
+   run:()=>{ttsStop();return{ok:true,say:'',silent:true};}},
+  {id:'help',   say:'what can you do',   test:/\b(what can you|help|commands|abilities)\b/i,
+   run:()=>({ok:true,say:'I can open tabs, run the guards, take a checkpoint, report spend, tell you what is not set up, and answer anything else with a model.'})},
+];
+const JVS_DEFAULTS={id:'',name:'Jarvis',persona:'Calm, brief, and factual. One or two sentences unless asked for more.',
+  model:'',voice:'',auto:true,on:true};
+let JVS=store.get('assistants',[]);
+const saveJvs=()=>store.set('assistants',JVS);
+let JVS_ACTIVE=store.get('assistantActive','');
+let JVS_STATE='idle';                    // idle | listening | thinking | speaking
+function jvsAdd(name,persona,model,voice){
+  const a=Object.assign({},JVS_DEFAULTS,{id:uid(),name:String(name||'Jarvis').slice(0,32),
+    persona:persona||JVS_DEFAULTS.persona,model:model||'',voice:voice||''});
+  JVS=JVS.concat([a]);saveJvs();
+  if(!JVS_ACTIVE){JVS_ACTIVE=a.id;store.set('assistantActive',a.id);}
+  actLog('human','created assistant: '+a.name,{model:a.model||'default'});
+  return a;
+}
+const jvsActive=()=>JVS.find(a=>a.id===JVS_ACTIVE)||JVS[0]||null;
+function jvsState(st){
+  JVS_STATE=st;
+  const hud=$('#jvs-core');
+  if(hud)hud.dataset.state=st;
+  const lbl=$('#jvs-state');
+  if(lbl)lbl.textContent={idle:'ready',listening:'listening…',thinking:'thinking…',speaking:'speaking'}[st]||st;
+}
+/* Intents first, model second. Returns what was said so the caller can show it. */
+async function jvsCommand(text,opts){
+  const o=opts||{};
+  const a=jvsActive();
+  const said=String(text||'').trim();
+  if(!said)return{ok:false};
+  actLog('human','said to '+((a&&a.name)||'assistant'),{note:said.slice(0,80)});
+  for(const intent of JVS_INTENTS){
+    if(intent.test.test(said)){
+      jvsState('thinking');
+      let r;try{r=await intent.run(said.match(intent.test));}catch(e){r={ok:false,say:'That did not work: '+e.message};}
+      actLog('agent','intent: '+intent.id,{matched:said.slice(0,60),ok:r.ok});
+      if(r.say&&!r.silent){jvsState('speaking');ttsSpeak(r.say,{voice:a&&a.voice,onend:()=>jvsState('idle')});}
+      else jvsState('idle');
+      return{...r,intent:intent.id,local:true};
+    }
+  }
+  /* No intent matched — this is a question, so it costs a model call. */
+  if(!API_KEY&&!(CATALOG||[]).some(m=>m._local)){
+    const msg='I have no model connected, so I can only do the built-in commands. Say "what can you do" to hear them.';
+    jvsState('speaking');ttsSpeak(msg,{voice:a&&a.voice,onend:()=>jvsState('idle')});
+    return{ok:false,say:msg,local:true};
+  }
+  jvsState('thinking');
+  try{
+    const acc=await streamComplete({model:(a&&a.model)||settings.archModel,maxTokens:500,
+      messages:[{role:'system',content:`You are ${(a&&a.name)||'an assistant'} inside Glassbox Jet. `+
+        ((a&&a.persona)||'')+' Answer in at most three sentences; this will be read aloud.'},
+        {role:'user',content:said}]},null,null,'assistant');
+    const out=String(acc.content||'').trim();
+    jvsState('speaking');
+    ttsSpeak(out,{voice:a&&a.voice,onend:()=>jvsState('idle')});
+    return{ok:true,say:out,cost:acc.cost||0};
+  }catch(e){
+    jvsState('idle');
+    return{ok:false,say:'That failed: '+e.message};
+  }
+}
+/* Speech recognition is Chromium-only and prefixed. Everything above works without it — this is
+   an input method, not the feature, so its absence degrades to typing rather than to nothing. */
+const jvsCanListen=()=>!!(window.SpeechRecognition||window.webkitSpeechRecognition);
+let JVS_REC=null;
+function jvsListen(onText){
+  const R=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!R)return{ok:false,why:'this browser cannot listen — type instead'};
+  if(JVS_REC){try{JVS_REC.stop();}catch(_){}JVS_REC=null;jvsState('idle');return{ok:true,stopped:true};}
+  const r=new R();
+  r.lang='en-US';r.interimResults=false;r.maxAlternatives=1;
+  r.onstart=()=>jvsState('listening');
+  r.onerror=e=>{jvsState('idle');JVS_REC=null;
+    toast(e.error==='not-allowed'?'Microphone permission was refused':'Could not listen: '+e.error,3400);};
+  r.onend=()=>{JVS_REC=null;if(JVS_STATE==='listening')jvsState('idle');};
+  r.onresult=ev=>{
+    const t=ev.results[0][0].transcript;
+    JVS_REC=null;
+    if(onText)onText(t);
+  };
+  JVS_REC=r;
+  try{r.start();}catch(e){return{ok:false,why:e.message};}
+  return{ok:true};
+}
+
 /* ═══════════════════ SKILL SOURCES & UPDATES ═══════════════════
    Skills can come from a repository and can be updated when that repository moves.
 
@@ -42848,7 +43586,7 @@ function go(view){
     refreshSessions().then(renderSessions).catch(e=>panelFail('mission',e));});
   if(view==='creations')panelGuard(view,()=>renderCreations());
   if(view==='bots')panelGuard(view,()=>{renderBots();renderBotFeed();renderCallInvite();renderNet();
-    renderBotBox();renderBotCfg();});
+    renderBotBox();renderDossiers();renderBotCfg();});
   if(view==='vo')panelGuard(view,()=>{renderVoGames();voSync();voThink();voResize();voFrame(0);renderVoRoster();
     renderSteer();renderOfficeDesign();renderOutputs();});
   else if(VO.on)voStop();      // do not burn a rAF loop on a tab nobody is looking at
@@ -42864,7 +43602,8 @@ function go(view){
   if(view==='studio')panelGuard(view,()=>{renderStudio();renderStudioX();connInit();if(!$('#st-frame').srcdoc)runPreview();});
   if(view==='connect')panelGuard(view,()=>{connInit();renderConnections();});
   if(view==='awards')panelGuard(view,()=>{connInit();renderAwards();});
-  if(view==='settings')panelGuard(view,()=>{renderSetup();renderEvo();renderCkpts();
+  if(view==='settings')panelGuard(view,()=>{renderSetup();renderAssistants();renderVoices();
+    renderSubModels();renderEvo();renderCkpts();
     renderActLedger();renderSkillSources();renderGauntlet('#gauntlet-settings');
     renderCrossDevice();renderPersist();renderPwa();renderSfx();renderWhy();});
   if(view==='help')panelGuard(view,()=>renderHelp());
@@ -43161,6 +43900,14 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     PC_CDN,PC_SAMPLES,PCV,pcLoad,pcOpen,pcBounds,pcPlay,pcShot,pcDestroy,renderPcv,
     get PCAPP(){return PCAPP},set PCAPP(v){PCAPP=v},
     renderActLedger,renderCkpts,renderEvo,renderSkillSources,ACTLEDGER,
+    renderAssistants,renderVoices,renderDossiers,
+    SUB_BILLED,BILLING,modelBilling,billingBadge,subModelsAvailable,renderSubModels,
+    botDossier,voToBot,botToVo,botPortrait,botFace,
+    ttsVoices,ttsPick,ttsSpeak,ttsStop,ttsSpeaking,ttsSayAs,get TTS(){return TTS},saveTts,
+    JVS_INTENTS,jvsAdd,jvsActive,jvsState,jvsCommand,jvsListen,jvsCanListen,
+    get JVS(){return JVS},set JVS(v){JVS=v},saveJvs,
+    get JVS_ACTIVE(){return JVS_ACTIVE},set JVS_ACTIVE(v){JVS_ACTIVE=v},
+    get JVS_STATE(){return JVS_STATE},
     SKILL_SOURCES,skillRawUrl,skillFetch,skillDiff,skillProposeInstall,skillCheckUpdates,
     EVO_TARGETS,EVO_STATES,evoPropose,evoApprove,evoReject,evoMeasure,evoRevert,
     get EVO(){return EVO},set EVO(v){EVO=v},saveEvo,
