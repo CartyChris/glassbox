@@ -6,7 +6,7 @@
 
 One HTML file. No build step. No account. No server holding your keys.
 
-[Open it →](https://glassbox.vercel.app) · [Download for macOS](desktop/GlassBox-macOS.dmg) · [Download for Windows](desktop/GlassBox-Windows.zip)
+[Open it →](https://glassbox-jet.vercel.app) · [Download for macOS](desktop/GlassBox-macOS.dmg) · [Download for Windows](desktop/GlassBox-Windows.zip)
 
 </div>
 
@@ -109,7 +109,7 @@ page.
 
 ### In the browser
 
-Open **[glassbox.vercel.app](https://glassbox.vercel.app)**. Add a provider key in Settings
+Open **[glassbox-jet.vercel.app](https://glassbox-jet.vercel.app)**. Add a provider key in Settings
 and you are working. Nothing installs.
 
 ### On your machine

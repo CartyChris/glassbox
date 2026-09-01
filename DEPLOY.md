@@ -31,7 +31,7 @@ npx vercel --prod
 ```
 
 `vercel.json` already declares no framework and no build command, so leave those blank if
-prompted. To claim the `glassbox.vercel.app` hostname, set the project name to `glassbox`
+prompted. To claim the `glassbox-jet.vercel.app` hostname, set the project name to `glassbox`
 when it asks.
 
 ### If the deployment asks visitors to sign in
@@ -62,7 +62,7 @@ Everything else the app contacts is a provider *you* add a key for.
 
 That is the whole problem, and it is one setting — not a build failure, not the CSP, not v0.
 
-Both `glassbox.vercel.app` and the team URL currently return **HTTP 200 to a Vercel login
+Both `glassbox-jet.vercel.app` and the team URL currently return **HTTP 200 to a Vercel login
 page**, because your team `CloudOps-Game-Time` has SAML with Deployment Protection on. Every
 visitor is asked to sign in to Vercel, so nobody but you can see it.
 
