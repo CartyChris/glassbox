@@ -2880,6 +2880,51 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
         </div>
 
         <div class="card">
+          <h3>🧠 Neural view <span class="muted">what is firing, right now</span></h3>
+          <p class="help">The map above shows what the brain <b>knows</b>. This shows what it is <b>using</b>.
+            Every note that gets injected into a prompt lights up and fades over about five minutes, so you
+            can watch which parts of the brain a task actually reached — and which parts it never touches.
+            The core breathes at the real rate of brain activity, not a decorative loop.
+            Drag to orbit, scroll to zoom, click a node to focus it.</p>
+          <div class="row" style="margin-top:8px;align-items:center;gap:8px">
+            <span class="mini muted" id="bviz-stat" style="flex:1"></span>
+            <button class="btn ghost small" id="bviz-weak">⚠ weak spots</button>
+            <button class="btn ghost small" id="bviz-reset">⟲ reset view</button>
+          </div>
+          <canvas id="brain-viz" style="width:100%;height:420px;display:block;border-radius:12px;background:#080b12;margin-top:8px"></canvas>
+          <div id="bviz-focus" class="mini muted" style="margin-top:8px;min-height:18px"></div>
+        </div>
+
+        <div class="card">
+          <h3>💬 Ask the brain <span class="muted">it answers only from what it knows</span></h3>
+          <p class="help">Search is free and instant. Answering costs one call and is told to say
+            <i>“the notes do not cover that”</i> rather than filling the gap from general knowledge —
+            a brain that quietly answers from the model is not a brain, it is a chatbot with extra steps.</p>
+          <div class="row" style="gap:6px;margin-top:8px">
+            <input id="bask-q" class="mono" style="flex:1" placeholder="what did we learn about caching?">
+            <button class="btn ghost small" id="bask-find">🔎 Search</button>
+            <button class="btn small" id="bask-ask">💬 Answer</button>
+          </div>
+          <div id="bask-out" style="margin-top:10px"></div>
+        </div>
+
+        <div class="card">
+          <h3>📥 Bring your thinking in <span class="muted">Apple Notes · any folder</span></h3>
+          <p class="help">Apple Notes is where half-formed thinking lives — plans, ideas, things to look
+            into. That is exactly what a project brain wants and exactly what never reaches a repo.
+            Read-only: nothing is written to or deleted from Notes. It needs the local bridge, because
+            macOS has no web API for Notes; a folder import needs nothing and the files never leave your machine.</p>
+          <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">
+            <button class="btn ghost small" id="bimp-notes-dry">👀 Preview Apple Notes</button>
+            <button class="btn small" id="bimp-notes">🍎 Import Apple Notes</button>
+            <span style="width:10px"></span>
+            <button class="btn ghost small" id="bimp-folder-dry">👀 Preview a folder</button>
+            <button class="btn small" id="bimp-folder">📂 Import a folder</button>
+          </div>
+          <div id="bimp-out" class="mini muted" style="margin-top:8px;min-height:18px"></div>
+        </div>
+
+        <div class="card">
           <h3>Notes <span class="muted" id="brain-count"></span></h3>
           <div class="row" style="margin-bottom:10px">
             <button class="btn small" id="brain-new">+ Write a note</button>
@@ -12234,7 +12279,11 @@ function brainDetect(files){
 }
 /* Granular keeps its own templates in granular-resources/. Those are blank scaffolding, not
    the user's knowledge, and importing them buries the real notes under eight empty ones. */
-const BRAIN_SKIP=/(^|\/)(\.obsidian|\.trash|node_modules|\.git)\/|(^|\/)granular-resources\//i;
+/* `_glassbox/` is the harness's own state folder inside a brain (see brainSyncState).
+   Skipping it is load-bearing, not tidiness: without it, re-importing a brain reads its
+   own JSON state snapshots back in as if they were notes, which grows the note count on
+   every sync/import cycle and pollutes the graph with machine data. */
+const BRAIN_SKIP=/(^|\/)(\.obsidian|\.trash|node_modules|\.git|_glassbox)\/|(^|\/)granular-resources\//i;
 function brainParseFile(path,text,fmt){
   /* NAME BY FILENAME, not by the H1 heading. Every one of these tools resolves [[links]]
      against the filename: Granular's notes link [[BRAIN]] while BRAIN.md's heading reads
@@ -13928,6 +13977,10 @@ function brainRank(bullets,task){
     return Object.assign({},b,{score:b.pinned?1.5:Math.min(1,rel+kindBoost(b))});
   }).sort((a,b)=>b.score-a.score);
 }
+/* Rolling record of which notes the brain actually injected, newest first. Deliberately
+   NOT persisted: it describes this session's activity, and a stale "currently firing" list
+   restored from last week would be a lie the moment the page opens. */
+let BRAIN_FIRED=[];
 function brainBlock(limit,task,agent){
   if(!BRAIN.on)return '';
   /* brainLive() drops expired notes. A temporary note that keeps being injected after its
@@ -13941,25 +13994,324 @@ function brainBlock(limit,task,agent){
   const scored=brainRank(all,taskText);
   const cut=bmTokens(taskText).length?0.28:0;   // no task to match against: keep ordering only
   const picked=[];let used=0;
+  /* Record the source note AS each bullet is accepted. Deriving it afterwards from
+     scored[i] is wrong: this loop skips low scorers and breaks on budget, so the two
+     arrays stop lining up the moment anything is filtered — which produced an empty
+     provenance list while looking like it worked. */
+  const pickedDocs=[];
   for(const b of scored){
     if(b.score<cut&&!b.pinned)continue;
     const line=`- [${b.kind}] ${b.text}\n`;
     if(used+line.length>max)break;
     picked.push(line);used+=line.length;
+    if(b.doc&&!pickedDocs.includes(b.doc))pickedDocs.push(b.doc);
   }
   /* Mistakes are unconditional. Relevance scoring is the right filter for things that MIGHT
      help; it is the wrong filter for things that already went wrong, because the mistake you
      are about to repeat rarely shares vocabulary with the task that repeats it. They get
      their own reserved budget so a long note list can never crowd them out. */
   const mistakes=brainMistakeBlock(Math.min(3000,Math.floor(max*0.3)));
+  /* Mistakes are injected too, so they count as firing. Without this a prompt made ONLY of
+     mistakes (every note scored below the cut) showed a completely idle brain. */
+  BRAIN_MISTAKE_LAST.forEach(n=>{if(!pickedDocs.includes(n))pickedDocs.push(n);});
   if(!picked.length&&!mistakes)return '';
+  /* WHICH notes fired, not just how many. The count alone cannot answer "what did the
+     brain actually use for this?", which is the question the visualiser exists to answer
+     and the one a user asks when an answer looks wrong. Ring-buffered newest-first, and
+     trimmed in memory before it is read — the slice(-N) trap fixed elsewhere in this file. */
+  const usedDocs=pickedDocs;
   BRAIN.lastInjection={bullets:picked.length,of:all.length,chars:used,agent:agent||'all',
-    method:cut?'bm25+trigram':'unranked'};
+    method:cut?'bm25+trigram':'unranked',docs:usedDocs,ts:Date.now()};
+  BRAIN_FIRED.unshift({ts:Date.now(),docs:usedDocs,task:String(taskText).slice(0,90),
+    bullets:picked.length,agent:agent||'all'});
+  if(BRAIN_FIRED.length>60)BRAIN_FIRED.length=60;
   return (picked.length?'WHAT THIS PROJECT HAS ALREADY LEARNED — selected as relevant to the task in hand, '+
     'not a dump of everything known. Each line cost someone a round to find out.\n'+
     `(${picked.length} of ${all.length} notes selected${agent?', scoped to '+agent:''})\n\n${picked.join('')}\n`:'')
     +mistakes;
 }
+/* ═══════════════════ BRAIN VISUALISER — see what is actually firing ═══════════════════
+   Ported from the Fable 5 AI OS Brain3D, which projects its own 3D rather than loading a
+   engine: at this scale a perspective projection is ~15 lines, and it costs nothing to a
+   user who never opens the tab. Three ideas came across because each answers a real question:
+
+     hot()        — which notes the brain USED recently. Driven by BRAIN_FIRED, the real
+                    injection record, not by a guess from keyword overlap. This is the whole
+                    point: "what parts are working" has to mean what actually fired.
+     activity()   — how busy the brain has been, so the core breathes at the true rate.
+     weakSpots()  — notes nothing links to, and clusters too thin to stand on. A knowledge
+                    base tells you what it knows; it should also tell you where it is hollow.
+
+   Clusters are by `kind`, which is the field GlassBox notes already carry — inventing a new
+   taxonomy would mean every existing note lands in "uncategorised" on day one. */
+const BVIZ={raf:0,angle:0.6,tilt:-0.30,zoom:1,focus:null,_drag:null,_nodes:[],_hit:null};
+
+/* Which notes fired recently, and how strongly. Decays with age so the picture is "now"
+   rather than "ever" — without decay every note eventually reads as hot and the display
+   stops distinguishing anything. */
+function bvizHot(){
+  const hot=new Map(),now=Date.now();
+  BRAIN_FIRED.slice(0,12).forEach((f,i)=>{
+    const age=(now-f.ts)/300000;                       // 5 min half-life
+    const w=Math.max(0.15,(1-i*0.07)*Math.exp(-age));
+    (f.docs||[]).forEach(n=>hot.set(n,Math.max(hot.get(n)||0,w)));
+  });
+  return hot;
+}
+function bvizActivity(){
+  const cut=Date.now()-300000;
+  return Math.min(1,BRAIN_FIRED.filter(f=>f.ts>cut).length/8);
+}
+/* Hollow places. An orphan here means no other note names it and it names nothing — the
+   note exists but nothing reaches it, so the ranker will almost never surface it. */
+function bvizWeakSpots(){
+  const docs=brainLive(),out=[];
+  const names=new Set(docs.map(d=>String(d.name).toLowerCase()));
+  const linked=new Set();
+  docs.forEach(d=>{
+    (String(d.body||'').match(/\[\[([^\]]+)\]\]/g)||[]).forEach(m=>{
+      linked.add(m.slice(2,-2).trim().toLowerCase());
+    });
+  });
+  docs.filter(d=>!linked.has(String(d.name).toLowerCase())
+      &&!/\[\[/.test(String(d.body||''))).slice(0,4)
+    .forEach(d=>out.push({kind:'note',label:d.name,why:'nothing links to it, and it links to nothing'}));
+  const byKind={};docs.forEach(d=>{byKind[d.kind||'note']=(byKind[d.kind||'note']||0)+1;});
+  Object.keys(byKind).filter(k=>byKind[k]===1).slice(0,3)
+    .forEach(k=>out.push({kind:'cluster',label:k,why:'only one note — too thin to rank against'}));
+  return out.slice(0,6);
+}
+
+/* Layout: one hub per kind on a ring in XZ, notes orbiting their hub. Seeded from the note
+   id so the same brain always draws the same shape — a graph that reshuffles on every
+   render is unreadable, because the user navigates it by remembering where things were. */
+function bvizLayout(){
+  const docs=brainLive();
+  const kinds=[...new Set(docs.map(d=>d.kind||'note'))];
+  const seed=str=>{let h=0;for(const c of String(str))h=(h*31+c.charCodeAt(0))%9973;return h/9973;};
+  const hubs=kinds.map((k,i)=>{const a=i/Math.max(1,kinds.length)*Math.PI*2;
+    return{k,x:Math.cos(a)*190,y:0,z:Math.sin(a)*190};});
+  const nodes=docs.map(d=>{
+    const hub=hubs.find(h=>h.k===(d.kind||'note'))||hubs[0]||{x:0,y:0,z:0};
+    const a=seed(d.id)*Math.PI*2,b=(seed(d.name)-0.5)*Math.PI,r=52+seed(d.id+'r')*46;
+    return{d,hub,
+      x:hub.x+Math.cos(a)*Math.cos(b)*r,
+      y:Math.sin(b)*r*1.4,
+      z:hub.z+Math.sin(a)*Math.cos(b)*r};
+  });
+  return{hubs,nodes};
+}
+
+function bvizStop(){if(BVIZ.raf)cancelAnimationFrame(BVIZ.raf);BVIZ.raf=0;}
+function bvizMount(){
+  bvizStop();
+  const cv=$('#brain-viz');if(!cv)return;
+  const ctx=cv.getContext('2d');
+  const {hubs,nodes}=bvizLayout();
+  BVIZ._nodes=nodes;
+  const still=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const frame=()=>{
+    const dpr=Math.min(2,window.devicePixelRatio||1);
+    const w=cv.clientWidth||640,h=cv.clientHeight||420;
+    if(cv.width!==w*dpr||cv.height!==h*dpr){cv.width=w*dpr;cv.height=h*dpr;}
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+    const hot=bvizHot(),act=bvizActivity();
+    if(!still)BVIZ.angle+=0.0016+act*0.004;
+    const ca=Math.cos(BVIZ.angle),sa=Math.sin(BVIZ.angle);
+    const ct=Math.cos(BVIZ.tilt),st=Math.sin(BVIZ.tilt);
+    const cx=w/2,cy=h/2,F=520*BVIZ.zoom;
+    /* One projection used by every layer, so hubs, nodes and links cannot drift apart. */
+    const proj=p=>{
+      const x=p.x*ca-p.z*sa, z=p.x*sa+p.z*ca;
+      const y=p.y*ct-z*st,   zz=p.y*st+z*ct;
+      const k=F/(F+zz+420);
+      return{sx:cx+x*k,sy:cy+y*k,k,depth:zz};
+    };
+    /* Painter's algorithm: far things first. Without it a near node is drawn under a far
+       one and the whole thing stops reading as 3D. */
+    const drawn=nodes.map(n=>({n,p:proj(n)})).sort((a,b)=>b.p.depth-a.p.depth);
+
+    // links hub → note
+    drawn.forEach(({n,p})=>{
+      const hp=proj(n.hub);
+      const strength=hot.get(n.d.name)||0;
+      ctx.strokeStyle=strength>0?`rgba(122,162,255,${0.15+strength*0.55})`:'rgba(150,165,200,.09)';
+      ctx.lineWidth=strength>0?1.4:0.7;
+      ctx.beginPath();ctx.moveTo(hp.sx,hp.sy);ctx.lineTo(p.sx,p.sy);ctx.stroke();
+    });
+    // core — breathes at the real activity rate
+    const corep=proj({x:0,y:0,z:0});
+    const pulse=1+Math.sin(Date.now()/(900-act*500))*0.10*(0.4+act);
+    const cg=ctx.createRadialGradient(corep.sx,corep.sy,2,corep.sx,corep.sy,44*pulse);
+    cg.addColorStop(0,`rgba(140,180,255,${0.55+act*0.4})`);
+    cg.addColorStop(1,'rgba(140,180,255,0)');
+    ctx.fillStyle=cg;ctx.beginPath();ctx.arc(corep.sx,corep.sy,44*pulse,0,6.3);ctx.fill();
+    // hubs
+    hubs.forEach(hb=>{
+      const p=proj(hb);
+      ctx.fillStyle='rgba(180,200,255,.85)';
+      ctx.beginPath();ctx.arc(p.sx,p.sy,4.5*p.k,0,6.3);ctx.fill();
+      ctx.fillStyle='rgba(200,215,255,.75)';ctx.font=`${Math.max(9,11*p.k)}px ui-sans-serif,system-ui`;
+      ctx.textAlign='center';ctx.fillText(hb.k,p.sx,p.sy-10*p.k);
+    });
+    // notes
+    BVIZ._hit=[];
+    drawn.forEach(({n,p})=>{
+      const strength=hot.get(n.d.name)||0;
+      const r=Math.max(1.6,(2.6+strength*3.4)*p.k);
+      ctx.fillStyle=strength>0
+        ?`rgba(${120+strength*120|0},${190+strength*40|0},255,${0.6+strength*0.4})`
+        :'rgba(150,170,210,.42)';
+      ctx.beginPath();ctx.arc(p.sx,p.sy,r,0,6.3);ctx.fill();
+      if(strength>0.35){
+        ctx.fillStyle=`rgba(220,232,255,${0.5+strength*0.5})`;
+        ctx.font=`${Math.max(8,10*p.k)}px ui-sans-serif,system-ui`;ctx.textAlign='center';
+        ctx.fillText(String(n.d.name).slice(0,22),p.sx,p.sy-r-3);
+      }
+      BVIZ._hit.push({x:p.sx,y:p.sy,r:Math.max(6,r+4),doc:n.d});
+    });
+    BVIZ.raf=requestAnimationFrame(frame);
+  };
+  BVIZ._frame=frame;frame();
+
+  /* Drag to orbit; click a node to open it. Pointer events rather than mouse events so a
+     trackpad and a touchscreen behave identically. */
+  cv.onpointerdown=e=>{BVIZ._drag={x:e.clientX,y:e.clientY,a:BVIZ.angle,t:BVIZ.tilt,moved:0};cv.setPointerCapture(e.pointerId);};
+  cv.onpointermove=e=>{
+    if(!BVIZ._drag)return;
+    const dx=e.clientX-BVIZ._drag.x,dy=e.clientY-BVIZ._drag.y;
+    BVIZ._drag.moved=Math.max(BVIZ._drag.moved,Math.hypot(dx,dy));
+    BVIZ.angle=BVIZ._drag.a+dx*0.008;BVIZ.tilt=Math.max(-1.2,Math.min(1.2,BVIZ._drag.t+dy*0.005));
+  };
+  cv.onpointerup=e=>{
+    const moved=BVIZ._drag?BVIZ._drag.moved:99;BVIZ._drag=null;
+    if(moved>4)return;                                  // a drag is not a click
+    const r=cv.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
+    const hit=(BVIZ._hit||[]).find(h=>Math.hypot(mx-h.x,my-h.y)<h.r);
+    if(hit){BVIZ.focus=hit.doc.name;if(typeof renderBrainViz==='function')renderBrainViz();}
+  };
+  cv.onwheel=e=>{e.preventDefault();BVIZ.zoom=Math.max(0.45,Math.min(2.4,BVIZ.zoom*(e.deltaY>0?0.93:1.07)));};
+}
+
+/* ── Ask the brain directly ──────────────────────────────────────────────────
+   Two honest modes rather than one that pretends. Retrieval alone is free and always
+   available; the answered mode costs a call and is labelled as such. A brain that can only
+   answer through a paid model is not searchable, and one that only greps is not useful. */
+function brainFind(q,limit){
+  const words=bmTokens(String(q||''));
+  if(!words.length)return[];
+  const docs=brainLive().filter(d=>d.body);
+  const scored=docs.map(d=>{
+    const hay=(d.name+' '+(d.tags||[]).join(' ')+' '+d.body).toLowerCase();
+    let score=0;
+    words.forEach(w=>{if(hay.includes(w))score+=1;});
+    if(String(d.name).toLowerCase().includes(String(q).toLowerCase()))score+=2;
+    return{doc:d,score};
+  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
+  return scored.slice(0,limit||8);
+}
+async function brainAsk(q,opts){
+  opts=opts||{};
+  const hits=brainFind(q,opts.k||6);
+  if(!hits.length)return{ok:true,answer:'',hits:[],
+    note:'Nothing in the brain matches that. It only knows what has been written into it.'};
+  if(opts.retrievalOnly)return{ok:true,hits,retrievalOnly:true};
+  const ctx=hits.map(h=>`### ${h.doc.name} (${h.doc.kind||'note'})\n${String(h.doc.body).slice(0,1800)}`).join('\n\n');
+  try{
+    const acc=await streamComplete({model:opts.model||settings.buildModel,maxTokens:opts.maxTokens||700,
+      messages:[{role:'system',content:
+        'Answer ONLY from the notes provided. If they do not contain the answer, say so plainly '+
+        'rather than filling the gap from general knowledge — the value of this brain is that it '+
+        'is what THIS project actually learned. Cite the note names you used.'},
+        {role:'user',content:'NOTES:\n\n'+ctx+'\n\nQUESTION: '+q}]},
+      opts.onTick||null,null,'brain-ask');
+    /* An answered question is brain activity too, so it lights the visualiser up the same
+       way an injected prompt does — otherwise the graph looks idle while it is being used. */
+    BRAIN_FIRED.unshift({ts:Date.now(),docs:hits.map(h=>h.doc.name),
+      task:String(q).slice(0,90),bullets:hits.length,agent:'ask'});
+    if(BRAIN_FIRED.length>60)BRAIN_FIRED.length=60;
+    return{ok:true,answer:String(acc.content||'').trim(),hits,cost:acc.cost||0};
+  }catch(e){return{ok:false,error:e.message,hits};}
+}
+
+/* ── Bringing outside knowledge in ───────────────────────────────────────────
+   Apple Notes is the interesting one: it is where half-formed thinking lives — plans, ideas,
+   things to look into — which is exactly the material a project brain wants and exactly what
+   never makes it into a repo. There is no web API for it, so the route is the local bridge
+   running AppleScript, and it degrades honestly when the bridge is absent.
+
+   Read-only by design. Nothing here writes to or deletes from Notes. */
+const APPLE_NOTES_SCRIPT=
+  'osascript -e \'set out to ""\' '+
+  '-e \'tell application "Notes"\' '+
+  '-e \'repeat with n in notes\' '+
+  '-e \'set out to out & "===NOTE===" & name of n & "\\n" & (plaintext of n) & "\\n"\' '+
+  '-e \'end repeat\' -e \'end tell\' -e \'return out\'';
+
+async function appleNotesImport(opts){
+  opts=opts||{};
+  if(!BRIDGE_INFO)return{ok:false,error:'Apple Notes needs the local bridge — start it from Handoff. Nothing else can read the Notes database.'};
+  let raw='';
+  try{
+    const r=await bridgePost('/exec',{cmd:APPLE_NOTES_SCRIPT,timeout:120000});
+    raw=String((r&&(r.out||r.stdout))||'');
+  }catch(e){return{ok:false,error:'the bridge could not read Notes ('+e.message+') — macOS asks for Notes permission the first time'};}
+  if(!raw.trim())return{ok:false,error:'Notes returned nothing — check the permission prompt, or that Notes has any notes'};
+  const parts=raw.split('===NOTE===').map(x=>x.trim()).filter(Boolean);
+  const made=[],skipped=[];
+  for(const part of parts){
+    const nl=part.indexOf('\n');
+    const name=(nl<0?part:part.slice(0,nl)).trim().slice(0,90);
+    const body=(nl<0?'':part.slice(nl+1)).trim();
+    if(!name||body.length<(opts.minChars||24)){skipped.push(name||'(untitled)');continue;}
+    if(brainLive().some(d=>String(d.name).toLowerCase()===name.toLowerCase())){skipped.push(name);continue;}
+    made.push({name,body,kind:'idea',tags:['apple-notes'],source:'Apple Notes'});
+  }
+  if(opts.dryRun)return{ok:true,dryRun:true,would:made.length,skipped:skipped.length,sample:made.slice(0,5).map(m=>m.name)};
+  for(const m of made){try{await brainAdd(m);}catch(_){}}
+  return{ok:true,added:made.length,skipped:skipped.length,
+    note:made.length?'Imported as kind “idea”, tagged apple-notes — so they rank as thinking, not as settled fact.':'Nothing new to import.'};
+}
+
+/* Any folder of text/markdown from the machine. Uses the File System Access API where the
+   browser has it, which needs no bridge and no upload — the files never leave the device. */
+async function desktopFolderImport(opts){
+  opts=opts||{};
+  if(typeof window.showDirectoryPicker!=='function')
+    return{ok:false,error:'this browser cannot open a folder — Chrome or Edge can, or use the bridge'};
+  let dir;
+  try{dir=await window.showDirectoryPicker();}catch(e){return{ok:false,cancelled:true};}
+  const files=[];
+  const walk=async(h,prefix,depth)=>{
+    if(depth>4)return;
+    for await(const [name,handle] of h.entries()){
+      const path=prefix?prefix+'/'+name:name;
+      if(BRAIN_SKIP.test(path+'/'))continue;
+      if(handle.kind==='directory'){await walk(handle,path,depth+1);continue;}
+      if(!/\.(md|markdown|txt|text)$/i.test(name))continue;
+      try{
+        const f=await handle.getFile();
+        if(f.size>400000)continue;                  // a 400KB note is a document dump
+        files.push({path,text:await f.text()});
+      }catch(_){}
+    }
+  };
+  await walk(dir,'',0);
+  if(!files.length)return{ok:false,error:'no .md or .txt files found in that folder'};
+  const made=[];
+  files.forEach(f=>{
+    const name=f.path.split('/').pop().replace(/\.(md|markdown|txt|text)$/i,'').slice(0,90);
+    if(!f.text.trim()||f.text.trim().length<(opts.minChars||24))return;
+    if(brainLive().some(d=>String(d.name).toLowerCase()===name.toLowerCase()))return;
+    made.push({name,body:f.text.trim(),kind:'reference',tags:['imported'],source:dir.name+'/'+f.path});
+  });
+  if(opts.dryRun)return{ok:true,dryRun:true,would:made.length,scanned:files.length,sample:made.slice(0,5).map(m=>m.name)};
+  for(const m of made){try{await brainAdd(m);}catch(_){}}
+  return{ok:true,added:made.length,scanned:files.length,folder:dir.name};
+}
+
 /* Every prompt gets measured. Context bloat is invisible until you look at it, and it is the
    single documented cause of a harness getting worse while looking busy. */
 const CTX={calls:0,chars:0,peak:0,byLabel:{}};
@@ -17900,14 +18252,20 @@ function brainWithRefs(doc,depth){
   })(doc,0);
   return out;
 }
+/* Names of the mistakes injected by the LAST call. Mistakes bypass relevance scoring on
+   purpose (the mistake you are about to repeat rarely shares vocabulary with the task that
+   repeats it), so they never appear in the ranked list — which meant the visualiser showed
+   them as idle while they were in every single prompt. Read by brainBlock. */
+let BRAIN_MISTAKE_LAST=[];
 function brainMistakeBlock(max){
   const m=brainLive().filter(d=>d.kind==='mistake'&&d.on!==false);
+  BRAIN_MISTAKE_LAST=[];
   if(!m.length)return '';
   const lines=[];let used=0;
   for(const d of m.sort((a,b)=>(b.severity||1)-(a.severity||1))){
     const line=`- ${d.name}: ${String(d.body).replace(/\s+/g,' ').slice(0,300)}\n`;
     if(used+line.length>(max||3000))break;
-    lines.push(line);used+=line.length;
+    lines.push(line);used+=line.length;BRAIN_MISTAKE_LAST.push(d.name);
   }
   if(!lines.length)return '';
   return '\nMISTAKES ALREADY MADE ON THIS PROJECT — do not repeat any of these. These are not '+
@@ -23702,6 +24060,72 @@ function gauntletCases(g){
          guarding a problem that no longer exists. */
       const f=({name,body})=>({name:name||'note',body:body||''});
       return f('A Title','THE TEXT').body===''?1:0;
+    },antiExpect:v=>v===1});
+
+  add({id:'state-roundtrip-safe',sub:'storage',uses:['stateSnapshot','stateImport'],
+    what:'a state file restores exactly, merge keeps unrelated keys, and replace is undoable',
+    run:()=>{
+      /* Import is the one action here that can destroy a lot at once, so the properties that
+         matter are behavioural: does merge leave alone what the file does not mention, and can
+         a replace be taken back. Source-inspected because the real functions are async and the
+         suite runs synchronously; the live round trip is verified separately in the browser. */
+      const src=String(g.stateImport);
+      const hasRollback=/state:rollback/.test(src);
+      const mergeDefault=/opts\.mode==='replace'\?'replace':'merge'/.test(src);
+      const guards=/__glassbox!=='state'/.test(src)&&/version>GB_STATE_VERSION/.test(src);
+      const replacePrunes=/mode==='replace'/.test(src)&&/removeItem/.test(src);
+      return (hasRollback&&mergeDefault&&guards&&replacePrunes)?'safe':'unsafe';
+    },expect:v=>v==='safe',
+    antiWhat:'and the hazard is real: a replace with no rollback point loses the previous state',
+    anti:()=>{
+      const before={a:1},file={b:2};
+      const replaced=Object.assign({},file);          // no merge, no snapshot
+      return (replaced.a===undefined)?1:0;
+    },antiExpect:v=>v===1});
+
+  add({id:'brain-provenance-discriminates',sub:'brain',uses:['brainBlock','bvizHot'],
+    what:'the brain records WHICH notes fired, and a different task lights different notes',
+    run:()=>{
+      /* "What parts are working" is only meaningful if the record discriminates. A tracker
+         that lights everything on every call is decoration. Uses the real ranker on the real
+         notes; if the brain is empty the case reports that rather than passing vacuously. */
+      const live=(typeof g.brainLive==='function')?g.brainLive().filter(d=>d.on&&d.body):[];
+      if(live.length<2)return 'needs 2+ notes';
+      const wasOn=g.BRAIN.on;g.BRAIN.on=true;
+      const keep=g.BRAIN_FIRED;
+      g.BRAIN_FIRED=[];
+      g.brainBlock(4000,'',null);                       // no task: everything is eligible
+      const all=((g.BRAIN.lastInjection||{}).docs||[]).slice();
+      g.BRAIN_FIRED=[];
+      g.brainBlock(4000,String(live[0].body).slice(0,80),null);   // a targeted task
+      const some=((g.BRAIN.lastInjection||{}).docs||[]).slice();
+      g.BRAIN_FIRED=keep;g.BRAIN.on=wasOn;
+      if(!all.length)return 'no provenance recorded';
+      return some.length<=all.length?'discriminates':'targeted matched MORE than unfiltered';
+    },expect:v=>v==='discriminates'||v==='needs 2+ notes',
+    antiWhat:'and the hazard is real: mapping picked[i] to scored[i] loses provenance once anything is filtered',
+    anti:()=>{
+      const scored=[{doc:'A',score:0.9},{doc:'B',score:0.1},{doc:'C',score:0.8}];
+      const picked=[],cut=0.5;
+      for(const b of scored){if(b.score<cut)continue;picked.push(b.doc);}
+      const wrong=picked.map((_,i)=>scored[i].doc);     // the bug: indices diverge
+      return (wrong.join()!==picked.join())?1:0;
+    },antiExpect:v=>v===1});
+
+  add({id:'brain-skips-own-state',sub:'brain',uses:['BRAIN_SKIP'],
+    what:'the harness state folder is never re-imported as notes',
+    run:()=>{
+      /* brainSyncState writes JSON into _glassbox/ inside a brain. If the importer read that
+         back, every sync/import cycle would grow the note count with machine data. */
+      const skips=g.BRAIN_SKIP.test('_glassbox/latest.json')
+        &&g.BRAIN_SKIP.test('notes/_glassbox/state-2026.json');
+      const keepsReal=!g.BRAIN_SKIP.test('notes/real-note.md');
+      return (skips&&keepsReal)?'skipped':'NOT skipped';
+    },expect:v=>v==='skipped',
+    antiWhat:'and the hazard is real: without the rule those snapshots parse as ordinary files',
+    anti:()=>{
+      const old=/(^|\/)(\.obsidian|\.trash|node_modules|\.git)\//i;
+      return old.test('_glassbox/latest.json')?0:1;     // the old pattern let it through
     },antiExpect:v=>v===1});
 
   add({id:'newest-first-caps',sub:'storage',uses:['store'],
@@ -35452,6 +35876,72 @@ function initForge(){
   $('#brain-mapspin').onclick=()=>{MAP3D.auto=!MAP3D.auto;
     toast(MAP3D.auto?'Spinning':'Stopped — drag to turn it yourself');};
   $('#brain-mapreset').onclick=()=>{MAP3D.rotX=-0.25;MAP3D.rotY=0.6;MAP3D.zoom=1;MAP3D.auto=true;};
+
+  /* ── Neural view, Ask, and the importers ────────────────────────────────
+     All guarded with `if(el)`: this init runs on a page where a user may have
+     switched the Brain tab off in Customise, and an unguarded $('#id').onclick on
+     a missing node throws and kills every wiring line after it. */
+  const bvz=$('#brain-viz');
+  if(bvz){
+    bvizMount();
+    const stat=()=>{
+      const el=$('#bviz-stat');if(!el)return;
+      const hot=bvizHot(),act=Math.round(bvizActivity()*100);
+      el.textContent=`${brainLive().length} notes · ${hot.size} firing now · ${act}% activity (last 5 min)`;
+    };
+    stat();setInterval(stat,3000);
+    const wk=$('#bviz-weak');
+    if(wk)wk.onclick=()=>{
+      const spots=bvizWeakSpots(),out=$('#bviz-focus');if(!out)return;
+      out.innerHTML=spots.length
+        ?'<b>Hollow places:</b> '+spots.map(s=>`${esc(s.label)} <span class="muted">(${esc(s.why)})</span>`).join(' · ')
+        :'No obvious weak spots — every note is linked and every kind has company.';
+    };
+    const rs=$('#bviz-reset');
+    if(rs)rs.onclick=()=>{BVIZ.angle=0.6;BVIZ.tilt=-0.30;BVIZ.zoom=1;BVIZ.focus=null;};
+  }
+  const askOut=()=>$('#bask-out');
+  const bf=$('#bask-find');
+  if(bf)bf.onclick=()=>{
+    const q=($('#bask-q')||{}).value||'';const o=askOut();if(!o)return;
+    const hits=brainFind(q,10);
+    o.innerHTML=hits.length
+      ?hits.map(h=>`<div class="card" style="margin:6px 0;padding:8px">
+          <b>${esc(h.doc.name)}</b> <span class="muted mini">${esc(h.doc.kind||'note')}</span>
+          <div class="mini" style="margin-top:4px;white-space:pre-wrap">${esc(String(h.doc.body).slice(0,320))}</div></div>`).join('')
+      :'<p class="help">Nothing matches. The brain only knows what has been written into it.</p>';
+  };
+  const ba=$('#bask-ask');
+  if(ba)ba.onclick=async()=>{
+    const q=($('#bask-q')||{}).value||'';const o=askOut();if(!o)return;
+    if(!q.trim())return;
+    o.innerHTML='<p class="help">Reading the brain…</p>';
+    const r=await brainAsk(q,{});
+    if(!r.ok){o.innerHTML=`<p class="help" style="color:var(--bad)">${esc(r.error)}</p>`;return;}
+    o.innerHTML=(r.answer?`<div class="card" style="padding:10px"><div style="white-space:pre-wrap">${esc(r.answer)}</div>
+        ${r.cost?`<div class="mini muted" style="margin-top:6px">${cash(r.cost)}</div>`:''}</div>`
+      :`<p class="help">${esc(r.note||'No answer.')}</p>`)
+      +(r.hits&&r.hits.length?`<div class="mini muted" style="margin-top:6px">read: ${r.hits.map(h=>esc(h.doc.name)).join(' · ')}</div>`:'');
+  };
+  const impOut=m=>{const o=$('#bimp-out');if(o)o.innerHTML=m;};
+  const nd=$('#bimp-notes-dry');
+  if(nd)nd.onclick=async()=>{impOut('Reading Notes…');const r=await appleNotesImport({dryRun:true});
+    impOut(r.ok?`Would import <b>${r.would}</b> note(s), skipping ${r.skipped}. ${r.sample.length?'e.g. '+r.sample.map(esc).join(', '):''}`
+      :`<span style="color:var(--bad)">${esc(r.error)}</span>`);};
+  const ni=$('#bimp-notes');
+  if(ni)ni.onclick=async()=>{impOut('Importing…');const r=await appleNotesImport({});
+    impOut(r.ok?`Imported <b>${r.added}</b>, skipped ${r.skipped}. ${esc(r.note||'')}`
+      :`<span style="color:var(--bad)">${esc(r.error)}</span>`);
+    if(r.ok)try{renderBrainList&&renderBrainList();bvizMount();}catch(_){}};
+  const fd=$('#bimp-folder-dry');
+  if(fd)fd.onclick=async()=>{impOut('Pick a folder…');const r=await desktopFolderImport({dryRun:true});
+    impOut(r.cancelled?'Cancelled.':r.ok?`Would import <b>${r.would}</b> of ${r.scanned} file(s). ${r.sample.length?'e.g. '+r.sample.map(esc).join(', '):''}`
+      :`<span style="color:var(--bad)">${esc(r.error)}</span>`);};
+  const fi=$('#bimp-folder');
+  if(fi)fi.onclick=async()=>{impOut('Pick a folder…');const r=await desktopFolderImport({});
+    impOut(r.cancelled?'Cancelled.':r.ok?`Imported <b>${r.added}</b> of ${r.scanned} scanned, from ${esc(r.folder||'')}.`
+      :`<span style="color:var(--bad)">${esc(r.error)}</span>`);
+    if(r.ok)try{renderBrainList&&renderBrainList();bvizMount();}catch(_){}};
   $('#brain-maprebuild').onclick=()=>renderBrainMap(true);
   $('#brain-new').onclick=()=>openModal(`<h3 style="margin-top:0">Write a note</h3>
     <label class="field">Title<input type="text" id="nb-name" placeholder="What this note is about"></label>
@@ -36030,6 +36520,209 @@ UI.tokens=Object.assign({},UI.tokens||{});
 const saveUI=()=>store.set('ui',UI);
 let REGISTRY={tabs:[],cards:[]};
 
+/* ═══════════════════ PORTABLE STATE — export, import, brain sync ═══════════════════
+   Everything this app knows lives in localStorage under `gb.` plus a few large blobs in
+   IndexedDB. Both are ORIGIN storage: "Clear cookies and site data" erases them, and so
+   does a browser that decides it needs the space. Nothing here is on a server, which is
+   the privacy promise — and the exact reason the user needs a way OUT.
+
+   Two tiers, deliberately different in kind rather than in size:
+     · in-browser  — automatic, zero-effort, and destroyed by a cache clear.
+     · a file      — a JSON the user holds. Survives anything, moves between machines
+                     and browsers, and is the only tier that is really theirs.
+   The app says which tier it is relying on rather than implying durability it does not
+   have. A backup nobody knows the shape of is not a backup. */
+const GB_STATE_VERSION=1;
+/* Keys whose value is a live handle or a session-only artefact. Exporting them produces
+   a file that cannot be re-imported cleanly, so they are named rather than guessed at. */
+const STATE_SKIP=new Set(['__p','__probe']);
+
+/* Every gb.* key currently in localStorage. Read from the store rather than a hardcoded
+   list: a hardcoded list silently stops covering any feature added after it was written,
+   which is precisely how a backup quietly becomes partial. */
+function stateKeys(){
+  const out=[];
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(!k||!k.startsWith('gb.'))continue;
+      const bare=k.slice(3);
+      if(STATE_SKIP.has(bare))continue;
+      out.push(bare);
+    }
+  }catch(_){}
+  return out.sort();
+}
+
+/* Plugin/custom-tab source lives in IndexedDB because a panel can be large. A state file
+   without it would restore the TAB but not what the tab does, which is worse than not
+   restoring it at all — the user gets an empty panel and no clue why. */
+async function stateIdbBlobs(){
+  const blobs={};
+  try{
+    const ids=((typeof PLUG!=='undefined'&&PLUG.items)||[]).map(p=>p.id);
+    for(const id of ids){
+      try{const src=await IDB.get('plugin:'+id,'');if(src)blobs['plugin:'+id]=src;}catch(_){}
+    }
+  }catch(_){}
+  return blobs;
+}
+
+async function stateSnapshot(){
+  const data={};
+  stateKeys().forEach(k=>{try{data[k]=store.get(k,null);}catch(_){}});
+  return{
+    __glassbox:'state',version:GB_STATE_VERSION,
+    app:(typeof APP_VERSION!=='undefined'?APP_VERSION:''),
+    ts:nowISO(),
+    keys:Object.keys(data).length,
+    data,idb:await stateIdbBlobs(),
+  };
+}
+
+function stateBytes(o){try{return JSON.stringify(o).length;}catch(_){return 0;}}
+
+/* The file the user keeps. Named with a timestamp so successive exports do not overwrite
+   each other in the Downloads folder — a backup that replaces the previous backup is one
+   bad export away from being no backup. */
+async function stateExportFile(){
+  const snap=await stateSnapshot();
+  const name='glassbox-state-'+snap.ts.replace(/[:.]/g,'-').slice(0,19)+'.json';
+  const blob=new Blob([JSON.stringify(snap,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},400);
+  UI.lastExport=snap.ts;UI.lastExportKeys=snap.keys;saveUI();
+  try{if(typeof renderStateCard==='function')renderStateCard();}catch(_){}
+  return{ok:true,name,keys:snap.keys,bytes:stateBytes(snap)};
+}
+
+/* Restore. `merge` keeps anything the file does not mention, which is the safe default for
+   a partial or older export; `replace` is the honest "make this machine look like that
+   file" and is the one that can destroy work, so it is never the default. */
+async function stateImport(obj,opts){
+  opts=opts||{};
+  const mode=opts.mode==='replace'?'replace':'merge';
+  if(!obj||obj.__glassbox!=='state'||!obj.data)
+    return{ok:false,error:'that is not a Glassbox state file'};
+  if(+obj.version>GB_STATE_VERSION)
+    return{ok:false,error:'that file was written by a newer version of Glassbox ('+obj.version+')'};
+  /* A safety copy of what is here NOW, before anything is overwritten. Import is the one
+     action in this app that can erase a lot at once. */
+  let rollback=null;
+  try{rollback=await stateSnapshot();}catch(_){}
+  if(rollback){try{await IDB.set('state:rollback',rollback);}catch(_){}}
+
+  let wrote=0,failed=[];
+  if(mode==='replace'){
+    stateKeys().forEach(k=>{if(!(k in obj.data)){try{localStorage.removeItem('gb.'+k);}catch(_){}}});
+  }
+  Object.keys(obj.data).forEach(k=>{
+    if(STATE_SKIP.has(k))return;
+    const ok=store.set(k,obj.data[k]);
+    if(ok===false)failed.push(k);else wrote++;
+  });
+  for(const k of Object.keys(obj.idb||{})){
+    try{await IDB.set(k,obj.idb[k]);}catch(_){failed.push(k);}
+  }
+  return{ok:failed.length===0,wrote,failed,mode,
+    rollback:!!rollback,
+    note:'Reload to apply — the app reads this state at boot.'};
+}
+
+/* Undo the last import. Exists because "restore the wrong file" is a real thing people do,
+   and without this the previous state is simply gone. */
+async function stateRollback(){
+  let snap=null;
+  try{snap=await IDB.get('state:rollback',null);}catch(_){}
+  if(!snap)return{ok:false,error:'no rollback point — nothing has been imported this session'};
+  const r=await stateImport(snap,{mode:'replace'});
+  return r.ok?{ok:true,note:'Rolled back. Reload to apply.'}:r;
+}
+
+/* ── Brain folder sync ───────────────────────────────────────────────────────
+   When a real folder is connected, the harness writes its own state into a
+   reserved subfolder of that brain. The point: the brain is already the thing the
+   user backs up, syncs and carries between machines, so putting the harness state
+   beside it means one folder holds both what the app knows AND how it is set up.
+
+   Reserved name with a leading underscore so it sorts away from real notes and is
+   obviously not one. brainScan's importer skips it (see BRAIN_SKIP) — otherwise a
+   re-import would read these JSON snapshots back in as if they were notes. */
+const BRAIN_STATE_DIR='_glassbox';
+const BRAIN_STATE_KEEP=10;
+
+async function brainSyncState(reason){
+  if(BRAIN.tier!=='folder'||!BRAIN_DIR)
+    return{ok:false,skipped:true,why:'no folder brain connected'};
+  try{
+    const dir=await BRAIN_DIR.getDirectoryHandle(BRAIN_STATE_DIR,{create:true});
+    const snap=await stateSnapshot();
+    snap.reason=reason||'manual';
+    const body=JSON.stringify(snap,null,2);
+    /* `latest.json` is the one to restore from; the timestamped copy is history.
+       Writing both means a corrupted latest never costs more than one sync. */
+    const stamp='state-'+snap.ts.replace(/[:.]/g,'-').slice(0,19)+'.json';
+    for(const fn of ['latest.json',stamp]){
+      const fh=await dir.getFileHandle(fn,{create:true});
+      const w=await fh.createWritable();await w.write(body);await w.close();
+    }
+    /* Keep the history bounded, newest kept — the same newest-first trap fixed
+       elsewhere in this file, so the sort is explicit rather than implied. */
+    let pruned=0;
+    try{
+      const names=[];
+      for await(const [n,h] of dir.entries()){
+        if(h.kind==='file'&&/^state-.*\.json$/.test(n))names.push(n);
+      }
+      names.sort().reverse();                    // ISO stamps sort lexicographically
+      for(const n of names.slice(BRAIN_STATE_KEEP)){
+        try{await dir.removeEntry(n);pruned++;}catch(_){}
+      }
+    }catch(_){}
+    UI.lastBrainSync=snap.ts;saveUI();
+    return{ok:true,where:BRAIN_STATE_DIR+'/',keys:snap.keys,bytes:body.length,pruned};
+  }catch(e){return{ok:false,error:e.message};}
+}
+
+/* Read the harness state back out of a connected brain. This is what makes a brain
+   folder portable between machines: connect it somewhere else and the setup comes
+   with it, rather than only the notes. */
+async function brainReadState(){
+  if(BRAIN.tier!=='folder'||!BRAIN_DIR)return{ok:false,error:'no folder brain connected'};
+  try{
+    const dir=await BRAIN_DIR.getDirectoryHandle(BRAIN_STATE_DIR,{create:false});
+    const fh=await dir.getFileHandle('latest.json',{create:false});
+    const txt=await (await fh.getFile()).text();
+    return{ok:true,state:JSON.parse(txt)};
+  }catch(e){return{ok:false,error:'no saved harness state in this brain yet'};}
+}
+
+/* ── The safety net ──────────────────────────────────────────────────────────
+   Tells the truth about which tier is holding the user's work, and how stale their
+   real backup is. Deliberately measures against a FILE export, not the brain sync:
+   a brain folder on the same disk is convenience, not a backup. */
+function stateHealth(){
+  const keys=stateKeys().length;
+  const last=UI.lastExport||null;
+  const ageDays=last?Math.floor((Date.now()-new Date(last).getTime())/86400000):null;
+  const grew=last&&UI.lastExportKeys!=null?(keys-UI.lastExportKeys):null;
+  let level='ok',msg='';
+  if(!last){
+    level='warn';
+    msg='Everything is in this browser only. Clearing cookies or site data erases it. Export a file to make it yours.';
+  }else if(ageDays>=14||(grew!=null&&grew>=6)){
+    level='warn';
+    msg='Your last export was '+(ageDays===0?'today':ageDays+' day'+(ageDays===1?'':'s')+' ago')+
+        (grew>0?' and '+grew+' new things have been saved since':'')+'. Worth exporting again.';
+  }else{
+    msg='Last exported '+(ageDays===0?'today':ageDays+' day'+(ageDays===1?'':'s')+' ago')+'.';
+  }
+  return{level,msg,keys,last,ageDays,brainSync:UI.lastBrainSync||null,
+    tier:(typeof IDB!=='undefined'&&IDB.mode)||'unknown'};
+}
+
 const slugify=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,42)||'item';
 /* Containers whose .card children are RESULTS, not features — relay rounds, sweep output,
    research findings. They come and go as you work; registering them would fill the Customise
@@ -36116,6 +36809,26 @@ function applyUI(){
   de.setAttribute('data-motion',UI.motion===false?'off':'on');
   de.setAttribute('data-fx',UI.fx||'none');
   de.setAttribute('data-fxreduce',UI.fxReduce===false?'off':'on');
+  /* Tab renames and icons. Applied HERE rather than at tab-build time because the nav is
+     rebuilt by several unrelated paths (plugRegister, group folding, order changes) and a
+     label written once at construction is lost the next time any of them runs. applyUI is
+     the one function every one of those paths already ends in.
+     The original label is stashed on the element the first time it is seen, so clearing an
+     override restores the real name instead of leaving the last custom one stuck. */
+  try{
+    UI.tabLabels=UI.tabLabels||{};UI.tabIcons=UI.tabIcons||{};
+    $$('.tab[data-view]').forEach(tb=>{
+      const id=tb.dataset.view;if(!id)return;
+      if(tb.dataset.origLabel==null)tb.dataset.origLabel=tb.textContent.trim();
+      const lab=UI.tabLabels[id],ico=UI.tabIcons[id];
+      if(lab||ico){
+        const base=lab||tb.dataset.origLabel.replace(/^\S*\s+/,'');
+        tb.textContent=(ico?ico+' ':'')+base;
+      }else if(tb.textContent.trim()!==tb.dataset.origLabel){
+        tb.textContent=tb.dataset.origLabel;
+      }
+    });
+  }catch(_){}
   // User CSS goes last in the document so it wins the cascade without needing !important.
   let uc=document.getElementById('user-css');
   if(!uc){uc=document.createElement('style');uc.id='user-css';document.head.appendChild(uc);}
@@ -45785,6 +46498,12 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     AWARD_CATEGORIES,AWARD_PERIODS,get AWARDS(){return AWARDS},set AWARDS(v){AWARDS=v},saveAwards,
     awardCandidates,awardEligible,awardDigest,awardPanellist,awardTally,awardJudge,awardsRun,
     awardsCeremony,awardConfetti,renderAwards,awardSamples,awardsGo,awardCardHtml,
+    BRAIN_SKIP,BRAIN_FORMATS,
+    GB_STATE_VERSION,stateKeys,stateSnapshot,stateExportFile,stateImport,stateRollback,
+    stateHealth,brainSyncState,brainReadState,BRAIN_STATE_DIR,
+    get BRAIN_FIRED(){return BRAIN_FIRED},set BRAIN_FIRED(v){BRAIN_FIRED=v},
+    BVIZ,bvizHot,bvizActivity,bvizWeakSpots,bvizLayout,bvizMount,bvizStop,
+    brainFind,brainAsk,appleNotesImport,desktopFolderImport,
     VO_GAMES,VO_DUELS,VO_FURNITURE,VO_FURNITURE_DEFAULT,VO_ZONES,voFurniture,voWorkers,voEstimate,voDuel,get VOG(){return VOG},set VOG(v){VOG=v},voGameRun,renderVoGames,voGameStage,
     voGuessSetup,voAwardCeremony,voGameModel,renderWhy,ONB_COMMON,
 
