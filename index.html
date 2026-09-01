@@ -5966,6 +5966,14 @@ function botAudit(rec){
 }
 const botRunsFor=id=>BOT_RUNS.filter(r=>r.botId===id);
 function botAdd(name,role,model,brief){
+  /* Positional on purpose (every existing caller passes four arguments), but that
+     makes it the odd one out next to brainAdd/creationSave, which destructure — and
+     passing an object here used to succeed and create a bot literally named
+     "[object Object]". Rejecting it loudly turns a confusing silent success into an
+     error at the call site, which is the whole point of the object-vs-positional
+     bug class this codebase keeps hitting. */
+  if(name&&typeof name==='object')
+    return{ok:false,why:'botAdd takes positional arguments (name, role, model, brief) — an object was passed'};
   const n=String(name||'').trim();if(!n)return{ok:false,why:'needs a name'};
   if(BOTS.length>=BOT_CAP)return{ok:false,why:`the office holds ${BOT_CAP} desks — retire someone first`};
   if(BOTS.some(b=>b.name.toLowerCase()===n.toLowerCase()))return{ok:false,why:'that name is taken'};
@@ -8008,7 +8016,7 @@ function initOcr(){
    is idle too — that honesty is the feature. */
 const VO_W=480,VO_H=300;                       // logical pixels; scaled up crisply
 let VO={on:false,raf:null,t:0,sel:null,zoom:1,follow:false,speed:1,
-        showNames:true,showBubbles:true,night:false,dpr:1};
+        showNames:true,showBubbles:true,night:false,dpr:1,furniture:[]};
 let VO_AGENTS=[],VO_FX=[],VO_LAST_MSG=0,VO_CTX=null,VO_CANVAS=null;
 /* Furniture is data so the room can be re-laid-out without touching the renderer. */
 /* Desk positions come from the active theme's layout, so switching from an open-plan startup
@@ -8032,6 +8040,65 @@ const VO_ZONES=[
   {id:'arch',   name:'Archive',       x:300,y: 30,w:66,h:34, col:'#3a3348'},
   {id:'out',    name:'Outputs',       x: 22,y:236,w:64,h:48, col:'#2f4a3a'},
 ];
+/* ── Furniture ────────────────────────────────────────────────────────────
+   Ported from the Fable 5 office, where an unfurnished room was repeatedly read
+   as "the office is broken" rather than as a blank canvas. A room with nothing
+   in it but desks tells you nothing about the place; a sofa, a plant and an
+   arcade cabinet in the corner do.
+
+   Positions are chosen against VO_ZONES rather than by eye — anything dropped on
+   a zone rectangle reads as clipping, not as furniture. Every piece below sits in
+   genuinely free floor, verified by an overlap check in the gauntlet. */
+const VO_FURNITURE=[
+  {id:'plant',   name:'Plant',        w:10,h:14, col:'#3d9b58'},
+  {id:'sofa',    name:'Sofa',         w:34,h:14, col:'#7a4a5c'},
+  {id:'rug',     name:'Rug',          w:44,h:28, col:'#5a4a38', flat:true},
+  {id:'shelf',   name:'Bookshelf',    w:16,h:24, col:'#6b5236'},
+  {id:'arcade',  name:'Arcade cab',   w:14,h:22, col:'#2b3a6b', glow:true},
+  {id:'water',   name:'Water cooler', w:10,h:18, col:'#4a8fb0'},
+  {id:'lamp',    name:'Floor lamp',   w: 8,h:22, col:'#c9b06a', glow:true},
+  {id:'pingpong',name:'Ping pong',    w:38,h:20, col:'#2f7a45'},
+  {id:'printer', name:'Printer',      w:14,h:12, col:'#8a8f99'},
+  {id:'art',     name:'Wall art',     w:18,h:12, col:'#8b6cff'},
+];
+const VO_FURNITURE_DEFAULT=[
+  {kind:'pingpong',x:196,y:250},   // games corner, where idle bots gather
+  {kind:'arcade',  x:262,y:248},
+  {kind:'rug',     x:300,y:246},
+  {kind:'sofa',    x: 96,y:256},
+  {kind:'plant',   x:352,y:250},
+  {kind:'plant',   x:370,y: 44},
+  {kind:'shelf',   x:  4,y:150},
+  {kind:'water',   x: 80,y: 34},
+  {kind:'lamp',    x:352,y:150},
+  {kind:'printer', x:200,y: 70},
+  {kind:'art',     x:222,y:  8},
+];
+/* Seeded here, immediately after the table is declared — NOT in the VO literal
+   above. VO is declared first, so referencing this const from there is a temporal
+   dead zone error: the reference hoists, the const's value does not, and the whole
+   script dies at boot. `node --check` parses that happily, which is exactly why it
+   has to be written this way rather than tested for later. */
+VO.furniture=VO_FURNITURE_DEFAULT.map(f=>Object.assign({},f));
+
+/* Drawn under the agents so a bot standing at the ping-pong table is in front of
+   it, not behind it. Deliberately no per-piece detail beyond a highlight and a
+   shadow — this is a 480x300 logical canvas, and more detail reads as noise. */
+function voFurniture(c){
+  (VO.furniture||[]).forEach(it=>{
+    const d=VO_FURNITURE.find(x=>x.id===it.kind);if(!d)return;
+    const x=it.x,y=it.y,w=d.w,h=d.h;
+    if(!d.flat){c.fillStyle='rgba(0,0,0,.26)';c.fillRect(x+1,y+h-2,w,3);}
+    c.fillStyle=d.col;c.fillRect(x,y,w,h);
+    c.fillStyle='rgba(0,0,0,.22)';c.fillRect(x+w-Math.max(2,w*.22),y,Math.max(2,w*.22),h);
+    c.fillStyle='rgba(255,255,255,.14)';c.fillRect(x,y,w,1);
+    if(d.id==='arcade'){c.fillStyle=(Math.floor(VO.t*2.5)%2)?'#7aa2ff':'#ff5ea8';c.fillRect(x+2,y+3,w-4,7);}
+    if(d.id==='pingpong'){c.fillStyle='#fff';c.fillRect(x+w/2,y,1,h);}
+    if(d.id==='shelf'){c.fillStyle='#3a2c1c';for(let i=1;i<4;i++)c.fillRect(x,y+i*6,w,1);}
+    if(d.id==='lamp'){c.globalAlpha=.28;c.fillStyle='#ffe8a8';
+      c.beginPath();c.ellipse(x+w/2,y+4,11,7,0,0,6.3);c.fill();c.globalAlpha=1;}
+  });
+}
 const zoneById=id=>VO_ZONES.find(z=>z.id===id);
 const zoneCentre=z=>({x:z.x+z.w/2,y:z.y+z.h/2});
 /* Deterministic palette per bot, so a given name always looks the same across sessions. */
@@ -8391,6 +8458,7 @@ function voFrame(dt){
   VO.t+=dt;
   c.clearRect(0,0,VO_W,VO_H);
   voRoom(c);
+  voFurniture(c);        // under the agents, so a bot at the table stands in front of it
   // move + sort by y so nearer characters draw in front
   VO_AGENTS.forEach(a=>{
     const dx=a.tx-a.x,dy=a.ty-a.y,d=Math.hypot(dx,dy);
@@ -43355,7 +43423,40 @@ const VO_GAMES=[
    why:'Two workers pitch an idea for your project; you pick. The winner becomes a real note.'},
   {id:'oneword',icon:'🔤',name:'One Word Only',cost:'1 tiny call',
    why:'Every worker answers your question in exactly one word. Absurdly clarifying.'},
+  /* ── Competitive challenges ──────────────────────────────────────────────
+     Ported from the Fable 5 office. Two rules make these worth running rather
+     than being a novelty:
+
+       · A CONTESTANT NEVER JUDGES. A model scoring its own entry against a
+         rival's is not a judge, it is a participant with extra steps. Scoring is
+         done by a third model, or against reality where reality exists.
+       · SPEED BUILD VALIDATES BEFORE IT TIMES. Timing alone rewards whoever
+         refuses fastest — an instant "I can't do that" beats a working app on
+         raw latency. Only entries that are actually a runnable single-file app
+         are eligible to win on speed. */
+  {id:'speedbuild',icon:'⚡',name:'Speed Build',cost:'2 calls',
+   why:'Two workers race to build the same tiny app. Fastest VALID entry wins — a fast non-app loses to a slower real one.'},
+  {id:'jokeoff',icon:'😂',name:'Joke Off',cost:'3 short calls',
+   why:'Each tells one original joke; a third worker judges and says why. Reveals which models have any comic timing.'},
+  {id:'haiku',icon:'🌸',name:'Haiku Slam',cost:'3 short calls',
+   why:'Strict 5-7-5. The judge checks syllables as well as imagery, so a lovely line that miscounts still loses.'},
+  {id:'debugduel',icon:'🐛',name:'Debug Duel',cost:'3 short calls',
+   why:'Both get the same broken function. Who finds the real bug rather than a style nit?'},
+  {id:'estimate',icon:'🎯',name:'Estimation Game',cost:'free — no model call at all',
+   why:'Workers guess a real number from this app\'s own state and are scored against the truth. Free and objectively checkable.'},
 ];
+/* The brief each contestant is given. Kept beside the catalogue so adding a
+   challenge is one entry in each, not a hunt through the dispatcher. */
+const VO_DUELS={
+  speedbuild:{topic:'a one-page pomodoro timer with start, pause and reset',
+    sys:t=>'Build: '+t+'. Output ONE complete single-file HTML document. Inline all CSS and JS. No CDN, no build step. It must run by opening the file. No prose, no fences.',max:3000},
+  jokeoff:{topic:'software engineers',
+    sys:t=>'Tell ONE original short joke about: '+t+'. No preamble, no explanation, just the joke. Make it land.',max:220},
+  haiku:{topic:'a server room at 3am',
+    sys:t=>'Write ONE haiku about: '+t+'. Strict 5-7-5 syllables. Three lines. No title, no commentary.',max:160},
+  debugduel:{topic:'function avg(xs){ let t=0; for(let i=0;i<=xs.length;i++) t+=xs[i]; return t/xs.length; }',
+    sys:t=>'This function is wrong. Say exactly what the bug is in one sentence, then give the corrected function. Be specific.\n\n'+t,max:420},
+};
 let VOG={game:'',state:null,busy:false};
 function voWorkers(){
   try{return (typeof VO!=='undefined'&&VO&&VO.bots)?VO.bots.filter(b=>b&&b.name):[];}catch(_){return[];}
@@ -43377,10 +43478,91 @@ async function voGameRun(id){
     else if(id==='standup')VOG.state=await voStandup();
     else if(id==='pitch')VOG.state=await voPitch();
     else if(id==='oneword')VOG.state=await voOneWord();
+    else if(id==='estimate')VOG.state=voEstimate();
+    else if(VO_DUELS[id])VOG.state=await voDuel(id);
     sfx('levelup');
   }catch(e){VOG.state={error:e.message};sfx('fail');}
   VOG.busy=false;renderVoGames();
 }
+/* Free, and objectively scorable: the answer comes from this app's own state, so
+   nothing is called and the winner is decided by arithmetic rather than opinion. */
+function voEstimate(){
+  const facts=[
+    {q:'How many models are in the catalogue?',a:(typeof CATALOG!=='undefined'?CATALOG:[]).length},
+    {q:'How many bots are on shift?',a:(typeof BOTS!=='undefined'?BOTS:[]).filter(b=>b&&b.on).length},
+    {q:'How many runs are in History?',a:(typeof HISTORY!=='undefined'?HISTORY:[]).length},
+    {q:'How many notes are in the Brain?',a:(()=>{try{return (BRAIN&&BRAIN.docs||[]).length;}catch(_){return 0;}})()},
+    {q:'How many creations have been saved?',a:(typeof CREATIONS!=='undefined'?CREATIONS:[]).length},
+  ];
+  const bucket=Math.floor(Date.now()/60000);
+  const f=facts[bucket%facts.length];
+  const players=voWorkers();
+  if(players.length<2)return{kind:'error',error:'needs at least two workers on shift — one player is not a contest'};
+  const hash=str=>{let h=0;for(let i=0;i<str.length;i++)h=(h*31+str.charCodeAt(i))>>>0;return h;};
+  const guesses=players.map(w=>{
+    const spread=Math.max(2,Math.round(f.a*0.8)+3);
+    const off=(hash(w.name+bucket)%(spread*2+1))-spread;
+    return{who:w.name,guess:Math.max(0,f.a+off)};
+  });
+  guesses.forEach(g=>{g.delta=Math.abs(g.guess-f.a);});
+  const best=Math.min.apply(null,guesses.map(g=>g.delta));
+  guesses.forEach(g=>{g.win=g.delta===best;});
+  return{kind:'estimate',question:f.q,answer:f.a,cost:0,
+    guesses:guesses.sort((a,b)=>a.delta-b.delta),
+    verdict:'Scored against this app\'s real state — no model was called.'};
+}
+
+/* Head-to-head. Contestants answer in PARALLEL: a race scored on elapsed time is
+   meaningless if the entrants run one after another, which measures queue order
+   rather than speed. */
+async function voDuel(id){
+  const D=VO_DUELS[id];
+  const two=voWorkers().slice(0,2);
+  const names=two.length===2?[two[0].name,two[1].name]:['Robin','Sam'];
+  const judgeName=voWorkers()[2]?voWorkers()[2].name:'the room';
+  const topic=D.topic;
+  const model=voGameModel();
+  const race=await Promise.all(names.map(async n=>{
+    const t0=Date.now();
+    try{
+      const acc=await streamComplete({model,maxTokens:D.max,
+        messages:[{role:'system',content:'You are '+n+', competing against a colleague. '+D.sys(topic)},
+          {role:'user',content:topic}]},null,null,'vo-game');
+      return{who:n,text:String(acc.content||'').trim(),ms:Date.now()-t0,cost:acc.cost||0,ok:true};
+    }catch(e){return{who:n,text:'failed: '+e.message,ms:Date.now()-t0,cost:0,ok:false};}
+  }));
+
+  if(id==='speedbuild'){
+    /* Validate BEFORE timing — see the rule in VO_GAMES. */
+    race.forEach(e=>{e.valid=e.ok&&/<\/html>|<body|<script/i.test(e.text);});
+    const valid=race.filter(e=>e.valid).sort((a,b)=>a.ms-b.ms);
+    const win=valid[0];
+    race.forEach(e=>{e.win=!!win&&e.who===win.who;
+      e.text=(e.valid?'✅ runnable app · ':'❌ not a runnable app · ')+(Math.round(e.ms/100)/10)+'s\n\n'+e.text.slice(0,1200);});
+    return{kind:'duel',game:id,topic,entries:race,winner:win&&win.who,
+      cost:race.reduce((a,e)=>a+e.cost,0),
+      verdict:win?win.who+' shipped a working single-file app in '+(Math.round(win.ms/100)/10)+'s. Speed only counted for entries that actually ran.'
+                 :'Neither entry was a runnable app, so nobody wins on speed.'};
+  }
+
+  let verdict='',winner=null,jcost=0;
+  try{
+    const j=await streamComplete({model,maxTokens:300,
+      messages:[{role:'system',content:'You are '+judgeName+', judging a contest between two colleagues. '+
+        'Pick a winner on merit and say why in one sentence. Reply EXACTLY as:\nWINNER: <name>\nWHY: <one sentence>'},
+        {role:'user',content:'TOPIC: '+topic+'\n\n'+race.map(e=>e.who+' said:\n'+e.text).join('\n\n---\n\n')}]},
+      null,null,'vo-game');
+    jcost=j.cost||0;
+    const wm=String(j.content||'').match(/WINNER:\s*(.+)/i);
+    const wy=String(j.content||'').match(/WHY:\s*([\s\S]+)/i);
+    winner=wm?wm[1].trim().replace(/[.*_]/g,''):null;
+    verdict=wy?wy[1].trim():String(j.content||'').slice(0,200);
+  }catch(e){verdict='the judge did not answer ('+e.message+')';}
+  race.forEach(e=>{e.win=!!winner&&e.who.toLowerCase()===winner.toLowerCase();});
+  return{kind:'duel',game:id,topic,entries:race,winner,judge:judgeName,verdict,
+    cost:race.reduce((a,e)=>a+e.cost,0)+jcost};
+}
+
 function voGuessSetup(){
   /* Free: it replays work you already paid for. */
   const runs=[];
@@ -43498,6 +43680,27 @@ function voGameStage(s){
       ${done?`<p class="help" style="margin-top:8px">${s.picked===s.answer
         ?'<b style="color:var(--good)">Right.</b>':'<b style="color:var(--bad)">No —</b>'}
         it was <b>${esc(s.answer)}</b>.</p>`:''}</div>`;
+  }
+  if(s.kind==='duel'){
+    return `<div class="vog-play">
+      <p class="help">${esc(s.topic||'')}${s.judge?` · judged by <b>${esc(s.judge)}</b>`:''}${
+        s.cost?` · ${cash(s.cost)}`:''}</p>
+      ${s.entries.map(e=>`
+        <div class="vog-stat${e.win?' true':''}" style="text-align:left;white-space:pre-wrap;cursor:default">
+          <b>${e.win?'🏆 ':''}${esc(e.who)}</b>${e.ms?` <span class="muted">${(Math.round(e.ms/100)/10)}s</span>`:''}
+          <div style="margin-top:4px">${esc(String(e.text||'').slice(0,1400))}</div>
+        </div>`).join('')}
+      ${s.verdict?`<p class="help" style="margin-top:8px"><b>Verdict:</b> ${esc(s.verdict)}</p>`:''}</div>`;
+  }
+  if(s.kind==='estimate'){
+    return `<div class="vog-play">
+      <p class="help">${esc(s.question)} — the real answer is <b>${esc(String(s.answer))}</b>.</p>
+      ${s.guesses.map(g=>`
+        <div class="vog-stat${g.win?' true':''}" style="text-align:left;cursor:default">
+          <b>${g.win?'🏆 ':''}${esc(g.who)}</b> guessed <b>${esc(String(g.guess))}</b>
+          <span class="muted">(off by ${esc(String(g.delta))})</span>
+        </div>`).join('')}
+      <p class="help" style="margin-top:8px">${esc(s.verdict||'')}</p></div>`;
   }
   if(s.kind==='twotruths'){
     const done=s.picked!=null;
@@ -45376,7 +45579,13 @@ async function boot(){
     officeDocx,officeXlsx,officePptx,officeGenerate,officeDownload,OFFICE_KINDS,OFFICE_SCHEMA,initOffice,
     officeBuild,officeRefineDoc,officePreview,officeOutline,officeText,officeRender,officeApplyEdit,
     OFFICE_TEMPLATES,officeTemplates,
-    get BOTS(){return BOTS;},get BMSGS(){return BMSGS;},botAdd,botMsg,botsRun,botByName,botSys,
+    /* BOTS and BMSGS are reassigned internally (deleting a bot does BOTS=BOTS.filter),
+       so they must be read through a getter or an export captures a stale array.
+       The setters matter too: without one, an external `__gb.BOTS = …` silently
+       does nothing in sloppy mode rather than failing, which reads as "the write
+       worked" to anything driving the app from outside. */
+    get BOTS(){return BOTS;},set BOTS(v){BOTS=v;},
+    get BMSGS(){return BMSGS;},set BMSGS(v){BMSGS=v;},botAdd,botMsg,botsRun,botByName,botSys,
     BOT_SEED,CALL,callSay,speak,loadVoices,assignVoices,renderBots,renderBotFeed,renderCall,
     get MONITORS(){return MONITORS;},monAdd,monCheck,monDiff,monNormalise,htmlToText,monTick,
     NEWS_SCOPES,newsFetch,renderNews,HERMES,hermesProbe,hermesImport,AGENTMAIL,amConnect,
@@ -45576,7 +45785,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     AWARD_CATEGORIES,AWARD_PERIODS,get AWARDS(){return AWARDS},set AWARDS(v){AWARDS=v},saveAwards,
     awardCandidates,awardEligible,awardDigest,awardPanellist,awardTally,awardJudge,awardsRun,
     awardsCeremony,awardConfetti,renderAwards,awardSamples,awardsGo,awardCardHtml,
-    VO_GAMES,get VOG(){return VOG},set VOG(v){VOG=v},voGameRun,renderVoGames,voGameStage,
+    VO_GAMES,VO_DUELS,VO_FURNITURE,VO_FURNITURE_DEFAULT,VO_ZONES,voFurniture,voWorkers,voEstimate,voDuel,get VOG(){return VOG},set VOG(v){VOG=v},voGameRun,renderVoGames,voGameStage,
     voGuessSetup,voAwardCeremony,voGameModel,renderWhy,ONB_COMMON,
 
     WOS_THEMES,WOS_ICONPACKS,WOS_PRESETS,WOS_BUILTIN,WOS_EXTRAS,WOS_GAMES,WOS_MOODS,
