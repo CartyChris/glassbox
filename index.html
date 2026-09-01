@@ -98,8 +98,10 @@ body[data-tabpos=left] .tabgroup,body[data-tabpos=right] .tabgroup{
 .tab.tab-dragging{opacity:.85;transform:scale(1.04);box-shadow:0 6px 20px rgba(0,0,0,.4);
   border-color:var(--acc)!important;z-index:5;position:relative}
 .tab.tg-hidden{display:none!important}
-.tabgroup{cursor:pointer;border:1px solid transparent;background:none;font:inherit;
-  display:inline-flex;align-items:center;gap:5px}
+.tabgroup{cursor:pointer;border:1px dashed var(--edge2);background:none;font:inherit;
+  display:inline-flex;align-items:center;gap:5px;border-radius:8px;transition:background .12s}
+.tabgroup:hover{border-style:solid;background:var(--panel2)}
+.tabgroup:hover .tg-car{opacity:1;transform:scale(1.3)}
 .tabgroup:hover{border-color:var(--edge2);background:var(--panel2)}
 .tabgroup:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .tabgroup.folded{border-color:var(--edge2);background:var(--panel2)}
@@ -37608,7 +37610,9 @@ function applyTabMode(){
       chip.dataset.tabgroup=g.id;
       chip.type='button';
       chip.setAttribute('aria-expanded',folded?'false':'true');
-      chip.title=(folded?'Show':'Hide')+' the '+g.label.toLowerCase()+' tabs';
+      chip.title=(folded?`Show the ${mine.length} ${g.label.toLowerCase()} tabs`
+                        :`Fold these ${mine.length} tabs into “${g.label}”`)+
+        ' — click the group name';
       chip.innerHTML=`<span class="tg-car">${folded?'▸':'▾'}</span>${esc(g.icon)} ${esc(g.label)}`+
         (folded?`<span class="tg-n">${mine.length}</span>`:'');
       nav.appendChild(chip);
@@ -37740,7 +37744,11 @@ function openTabModeMenu(){
       anything hidden here is still one search away with ⌘K — or reachable when another tab
       hands work to it.</p>
     <div class="modemenu">${opts}</div>
-    <p class="help" style="margin-top:12px">Want a specific tab gone for good instead?
+    <p class="help" style="margin-top:12px"><b>In Grouped mode, click any group name in the tab
+      bar to fold its tabs into it.</b> Keep open the one or two groups you are working in and
+      put the rest away; the tab you are currently on never folds, and the arrangement is
+      remembered.</p>
+    <p class="help">Want a specific tab gone for good instead?
       That lives in <b>Customise</b>, and this dial will not touch it.</p>`);
   $$('.modeopt').forEach(b=>b.onclick=()=>{setTabMode(b.dataset.mode);closeModal();});
 }
@@ -45045,6 +45053,16 @@ async function boot(){
   $('#helpBtn').onclick=showHelp;
   $('#modeBtn').onclick=openTabModeMenu;
   applyTabMode();initTabDrag();
+  /* The groups have always folded; nothing said so. A dashed outline reads as "this is a
+     control" rather than "this is a label", and the hint fires ONCE — a tip that reappears is
+     an annoyance, one that never appears is a feature nobody finds. */
+  if(TABMODE!=='full'&&!store.get('tipFold',false)){
+    setTimeout(()=>{
+      if(TABMODE==='full')return;
+      toast('Tip: click a group name in the tab bar to fold its tabs away',6000);
+      store.set('tipFold',true);
+    },2500);
+  }
   const _mb=$('#modeBtn');
   if(_mb){_mb.textContent=TAB_MODES[TABMODE].icon;_mb.title='Showing: '+TAB_MODES[TABMODE].label;}
   $('#fsBtn').onclick=toggleFullscreenView;
