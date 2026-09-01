@@ -14829,12 +14829,25 @@ function buildReasoning(opts,model){
   if(mt<=budget)budget=Math.max(1024,Math.floor(mt*0.5));
   return {reasoning:{max_tokens:budget},maxTokens:mt};
 }
-function accInit(){return {text:'',summary:'',reasoningPlain:'',encrypted:[],content:'',details:{},rawFormat:'',usage:null,cost:null,samples:[],finishReason:'',continuations:0,annotations:[]};}
+function accInit(){return {text:'',summary:'',reasoningPlain:'',encrypted:[],content:'',details:{},rawFormat:'',usage:null,cost:null,samples:[],finishReason:'',continuations:0,annotations:[],images:[]};}
 function applyDelta(acc,delta){
   if(!delta)return;
   // Web-search sources arrive as annotations, either streamed per-delta or on the message.
   if(Array.isArray(delta.annotations)&&delta.annotations.length)
     acc.annotations=(acc.annotations||[]).concat(delta.annotations);
+  /* Generated images ride in the chat-completions envelope on `images`, as data URLs. They are
+     collected HERE because everything streams — `stream:true` is not optional in this client —
+     so there is never an assembled non-streamed message to read them off afterwards.
+
+     This is why image generation never worked: genImage read `acc.raw.choices[0].message.images`,
+     and accInit has no `raw` field at all, so `msg` was always {} and every single call reported
+     "the model returned no image". The model had in fact returned one every time. */
+  if(Array.isArray(delta.images)&&delta.images.length){
+    delta.images.forEach(im=>{
+      const url=(im&&im.image_url&&im.image_url.url)||(im&&im.url)||'';
+      if(url&&!acc.images.includes(url))acc.images.push(url);
+    });
+  }
   if(typeof delta.reasoning==='string')acc.reasoningPlain+=delta.reasoning;
   // DeepSeek-direct / Ollama / other OpenAI-compatible providers use these instead
   if(typeof delta.reasoning_content==='string')acc.reasoningPlain+=delta.reasoning_content;
@@ -19855,7 +19868,43 @@ const localImageBackends=()=>LOCAL_IMAGE_BACKENDS.filter(b=>{try{return b.detect
 const localVideoBackends=()=>LOCAL_VIDEO_BACKENDS.filter(b=>{try{return b.detect();}catch(_){return false;}});
 /* The lists the pickers actually render. Hosted first because most people have a key before
    they have a local rig; detected local ones append rather than replace. */
-const genImageList=()=>GEN_IMAGE_MODELS.filter(m=>m.via!=='comfy').concat(localImageBackends());
+/* DERIVED FROM THE LIVE CATALOGUE, not hardcoded.
+
+   Every one of the four shipped image model ids had gone stale — gemini-3.7-flash-image,
+   gpt-image-1, flux-1.1-pro and sd3.5-large all answer "not a valid model ID" now. So image
+   generation was not degraded, it was completely broken, and had been since whenever those ids
+   were retired. Nobody noticed because nothing verified them against reality.
+
+   Replacing them with four fresh ids would rot exactly the same way. Instead the list is built
+   from models the catalogue SAYS can output images, which is the same rule this codebase already
+   applies to navigation: derive from the data, never hand-maintain a copy of it.
+
+   The hardcoded entries survive only as a fallback for before the catalogue loads, and as the
+   carrier for the local backends, which the catalogue knows nothing about. */
+function genImageFromCatalog(){
+  const cat=(typeof CATALOG!=='undefined'?CATALOG:[])||[];
+  return cat.filter(m=>{
+    const om=m.architecture&&m.architecture.output_modalities;
+    if(!Array.isArray(om)||!om.includes('image'))return false;
+    /* Auto-routers advertise every modality and price at -1. They are not image models, and
+       picking one would send an image request somewhere unpredictable. */
+    if(/^openrouter\/auto/.test(m.id))return false;
+    return true;
+  }).map(m=>{
+    const out=parseFloat((m.pricing&&m.pricing.completion)||'0')||0;
+    return{id:m.id,label:m.name||m.id,via:'openrouter',
+      sizes:['1024x1024','1536x1024','1024x1536'],
+      _out:out,
+      note:'From your live catalogue'+(out?` · about ${money(out*1000)} per 1k output tokens`:'')};
+  }).sort((a,b)=>a._out-b._out);           // cheapest first: a portrait does not need the flagship
+}
+const genImageList=()=>{
+  const live=genImageFromCatalog();
+  const local=localImageBackends();
+  /* Fall back to the shipped list only when the catalogue has not loaded — better a possibly
+     stale menu than an empty one, and the moment a key lands the real list replaces it. */
+  return (live.length?live:GEN_IMAGE_MODELS.filter(m=>m.via!=='comfy')).concat(local);
+};
 const genVideoList=()=>GEN_VIDEO_MODELS.concat(localVideoBackends());
 const genImageModel=id=>genImageList().find(m=>m.id===(id||GENCFG.imageModel))||genImageList()[0];
 const genVideoModel=id=>genVideoList().find(m=>m.id===(id||GENCFG.videoModel))||genVideoList()[0];
@@ -19898,12 +19947,8 @@ async function genImage(prompt,opts){
     const acc=await streamComplete({model:m.id,maxTokens:1200,noCache:true,
       messages:[{role:'user',content:prompt}],
       extra:{modalities:['image','text']}},null,null,'gen:image');
-    const imgs=[];
-    const msg=(acc&&acc.raw&&acc.raw.choices&&acc.raw.choices[0]&&acc.raw.choices[0].message)||{};
-    (msg.images||[]).forEach(im=>{
-      const url=(im&&im.image_url&&im.image_url.url)||im.url||'';
-      if(url)imgs.push(url);
-    });
+    /* Read from the accumulator, which is the only thing that sees a streamed response. */
+    const imgs=(acc&&acc.images||[]).slice();
     (acc.annotations||[]).forEach(a=>{if(a&&a.type==='image'&&a.url)imgs.push(a.url);});
     spanEnd(span,acc);
     if(!imgs.length)return{ok:false,error:'the model returned no image — it may not be image-capable '+
@@ -23361,6 +23406,65 @@ function gauntletCases(g){
     antiWhat:'while a real paid model is still labelled pay-as-you-go',
     anti:()=>g.modelBilling('anthropic/claude-fable-5').kind,antiExpect:v=>v==='payg'});
 
+  /* ── Image generation ─────────────────────────────────────────────────────
+     This feature was broken three ways at once and every failure was SILENT, which is why it
+     survived: a stale model list, a parser reading a field that never existed, and a guard
+     testing for a function that was never defined. Each has a case now. */
+
+  add({id:'img-models-from-catalog',sub:'wiring',uses:['genImageFromCatalog','genImageList'],
+    what:'the image model list is derived from the live catalogue, not a hand-kept copy',
+    run:()=>{
+      const live=g.genImageFromCatalog();
+      if(!live.length)return 'no-catalog';        // no key loaded; nothing to assert against
+      /* Every id offered must exist. All four hardcoded ids had been retired, so the picker
+         offered nothing but 400s. */
+      const bogus=live.filter(m=>!(g.CATMAP&&g.CATMAP.get&&g.CATMAP.get(m.id)));
+      /* Auto-routers advertise every modality and price at -1; sending an image request to one
+         goes somewhere unpredictable. */
+      const routers=live.filter(m=>/^openrouter\/auto/.test(m.id));
+      return bogus.length===0&&routers.length===0?'derived':`bogus=${bogus.length} routers=${routers.length}`;
+    },expect:v=>v==='derived'||v==='no-catalog',
+    antiWhat:'and the cheapest option is offered first rather than the flagship',
+    anti:()=>{
+      const live=g.genImageFromCatalog();
+      if(live.length<2)return 1;
+      return live[0]._out<=live[live.length-1]._out?1:0;
+    },antiExpect:v=>v===1});
+
+  add({id:'img-collected-from-stream',sub:'wiring',uses:['accInit','applyDelta'],
+    what:'generated images are collected off the stream, where they actually arrive',
+    run:()=>{
+      /* genImage used to read acc.raw.choices[0].message.images. accInit has no `raw` field at
+         all and stream:true is not optional, so msg was always {} and every call reported "the
+         model returned no image" while the model had in fact returned one. */
+      const acc=g.accInit();
+      g.applyDelta(acc,{images:[{type:'image_url',image_url:{url:'data:image/png;base64,AAA'}}]});
+      g.applyDelta(acc,{images:[{type:'image_url',image_url:{url:'data:image/png;base64,AAA'}}]});
+      g.applyDelta(acc,{content:'some text'});
+      return (acc.images.length===1&&acc.images[0].startsWith('data:image/'))?'collected':
+        `n=${acc.images.length}`;
+    },expect:v=>v==='collected',
+    antiWhat:'while a delta carrying no image adds nothing',
+    anti:()=>{const acc=g.accInit();g.applyDelta(acc,{content:'hello'});return acc.images.length;},
+    antiExpect:v=>v===0});
+
+  add({id:'botface-uses-portrait',sub:'wiring',uses:['botFace','botSprite'],
+    what:'a warmed portrait is actually used, and the sprite is the fallback',
+    run:()=>{
+      const keep=Object.assign({},g.BOT_FACES);
+      try{
+        const bot={id:'x',name:'Probe',avatar:'probe',portrait:'p1'};
+        g.BOT_FACES={};
+        const cold=g.botFace(bot,40);                    // not warmed -> sprite
+        g.BOT_FACES={p1:'data:image/png;base64,AAA'};
+        const warm=g.botFace(bot,40);                    // warmed -> image
+        return (/^<svg/.test(cold)&&/^<img/.test(warm))?'both':
+          `cold=${cold.slice(0,5)} warm=${warm.slice(0,5)}`;
+      }finally{g.BOT_FACES=keep;}
+    },expect:v=>v==='both',
+    antiWhat:'and a bot with no portrait always gets a sprite rather than a broken image',
+    anti:()=>/^<svg/.test(g.botFace({id:'y',name:'NoPic',avatar:'n'},40))?1:0,antiExpect:v=>v===1});
+
   add({id:'render-unique-ids',sub:'rendering',uses:['esc'],
     what:'no duplicate DOM id (the second one is unreachable via $())',
     run:()=>{const seen={},d=[];document.querySelectorAll('[id]').forEach(e=>{
@@ -23673,6 +23777,12 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'img-stream-blind',export:'applyDelta',
+   why:'generated images stop being collected and every call reports "no image returned"',
+   broken:()=>(acc,delta)=>{if(delta&&typeof delta.content==='string')acc.content+=delta.content;}},
+  {id:'face-always-sprite',export:'botFace',
+   why:'a generated portrait is never shown and the sprite silently wins forever',
+   broken:()=>(b,size)=>window.__gb.botSprite((b&&b.name)||'bot',size||44)},
   {id:'billing-all-payg',export:'modelBilling',
    why:'free and subscription models start reading as pay-as-you-go',
    broken:()=>()=>({kind:'payg'})},
@@ -40652,15 +40762,41 @@ async function botPortrait(id){
   b.portrait=asset.id||asset.name||'';
   b.portraitAt=nowISO();
   saveBots();
+  /* Warm it now rather than waiting for the next render to discover it — the user pressed a
+     button and expects the face to change, not to change eventually. */
+  await botFaceWarm([b]);
   actLog('model','portrait generated: '+b.name,{asset:b.portrait});
   return{ok:true,asset:b.portrait};
 }
+/* Portrait bytes live in IndexedDB and are read with genAssetBody, which is ASYNC. botFace is
+   synchronous — it is called from inside template literals all over this app — so it cannot
+   await, and the original guard (`typeof genAssetUrl==='function'`) referred to a function that
+   does not exist. The result: the check silently failed forever and a generated portrait could
+   never appear. A guard whose condition can never be true is indistinguishable from no feature.
+
+   So: an explicit warm cache. Faces resolve asynchronously once, then every synchronous caller
+   reads them for free. */
+let BOT_FACES={};
+async function botFaceWarm(list){
+  const bots=(list||botAll()).filter(b=>b&&b.portrait&&!BOT_FACES[b.portrait]);
+  if(!bots.length)return false;
+  let got=false;
+  for(const b of bots){
+    try{
+      const body=await genAssetBody(b.portrait);
+      const url=body&&(body.dataUrl||body.svg);
+      if(url){BOT_FACES[b.portrait]=url;got=true;}
+    }catch(_){}
+  }
+  return got;
+}
 /* One place decides what a bot's face is, so every surface agrees. */
 function botFace(b,size){
-  if(b&&b.portrait&&typeof genAssetUrl==='function'){
-    const u=genAssetUrl(b.portrait);
-    if(u)return `<img class="botface" src="${esc(u)}" width="${size||44}" height="${size||44}" alt="${esc(b.name)}">`;
-  }
+  const url=b&&b.portrait&&BOT_FACES[b.portrait];
+  if(url)return `<img class="botface" src="${esc(url)}" width="${size||44}" height="${size||44}" `+
+    `alt="${esc(b.name||'bot')}" title="${esc(b.name||'')}">`;
+  /* The procedural sprite is the honest fallback, not a placeholder: it is deterministic, it
+     never fails, and a bot always has a face even with no image model configured. */
   return botSprite((b&&b.avatar)||(b&&b.name)||'bot',size||44);
 }
 
@@ -44604,7 +44740,10 @@ function go(view){
     refreshSessions().then(renderSessions).catch(e=>panelFail('mission',e));});
   if(view==='creations')panelGuard(view,()=>renderCreations());
   if(view==='bots')panelGuard(view,()=>{renderBots();renderBotFeed();renderCallInvite();renderNet();
-    renderBotBox();renderDossiers();renderBotCfg();renderSoc();});
+    renderBotBox();renderDossiers();renderBotCfg();renderSoc();
+    /* Portraits resolve from IndexedDB after the first paint, so repaint once they land rather
+       than showing sprites until something else happens to re-render. */
+    botFaceWarm().then(got=>{if(got){renderBotCfg();renderSoc();renderDossiers();}});});
   if(view==='vo')panelGuard(view,()=>{renderVoGames();voSync();voThink();voResize();voFrame(0);renderVoRoster();
     renderSteer();renderOfficeDesign();renderOutputs();});
   else if(VO.on)voStop();      // do not burn a rAF loop on a tab nobody is looking at
@@ -44944,8 +45083,10 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     genImageList,genVideoList,LOCAL_IMAGE_BACKENDS,LOCAL_VIDEO_BACKENDS,
     botsAddressed,botSysFor,botTurn,botGroupRun,renderBotBox,renderBotCfg,botAuditRow,
     BOT_QUICK,BOT_EFFORTS,groupRosterHTML,wireGroupRoster,
+    genImageFromCatalog,
     SETUP_CHECKS,setupScore,renderSetup,setupFocus,goEnsure,gauntletQuickRun,tabDropTarget,
     botRng,botSprite,botModelChain,botNorm,botAll,botAudit,botRunsFor,BOT_PALETTES,
+    botFaceWarm,get BOT_FACES(){return BOT_FACES},set BOT_FACES(v){BOT_FACES=v},
     get BOT_RUNS(){return BOT_RUNS},set BOT_RUNS(v){BOT_RUNS=v},saveBotRuns,
     SPL_RUNTIME,splNormalise,splLoad,splShot,splEmbedHtml,renderSpline,splStatus,
     connToCreations,creationSave,saveCreations,
