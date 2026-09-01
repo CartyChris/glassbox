@@ -14821,8 +14821,23 @@ function forecastRun(maxRounds){
    file. Seven such fields came to ~180KB, 27.7% of the cache, against a ~5MB localStorage
    budget shared with the Brain, history and settings. Dropping them from the CACHE only; the
    live in-memory objects keep whatever the API sent. */
+/* The stored catalogue is the single largest thing this app keeps: measured at 422KB of the
+   682KB total, i.e. 62% of everything, for a CACHE of a public list that can be re-fetched.
+   That matters because the storage-pressure banner exists precisely because a browser can evict
+   an origin's data — and the eviction takes the user's actual WORK with it, to make room for a
+   model list.
+
+   The three fields below were measured at 133KB (32% of the stored catalogue) and are read
+   nowhere: neither renderModels nor renderModelHub touches them, no template interpolates a
+   model description, and `m.description` / `.links` / `.created` appear nowhere in the file.
+   Verified against the live endpoint rather than estimated.
+
+   Everything else stays, because it IS read: pricing drives every cost figure, architecture
+   drives vision and image-output detection, supported_parameters gates reasoning, and
+   top_provider caps completion tokens. */
 const CATALOG_DEAD_FIELDS=['benchmarks','hugging_face_id','canonical_slug','default_parameters',
-  'supported_voices','per_request_limits','expiration_date','knowledge_cutoff'];
+  'supported_voices','per_request_limits','expiration_date','knowledge_cutoff',
+  'description','links','created'];
 function catalogSlim(list){
   return (list||[]).map(m=>{
     const c=Object.assign({},m);
@@ -23536,6 +23551,27 @@ function gauntletCases(g){
       return m?m[1].split(',').length:0;
     },antiExpect:v=>v===12});
 
+  add({id:'conn-brain-passes-object',sub:'wiring',uses:['connToBrain'],
+    what:'the Brain connector passes an options OBJECT, not positional arguments',
+    run:()=>{
+      /* brainAdd destructures its parameter. Called positionally it silently returns a note with
+         an EMPTY body while every caller-visible signal says success — which is how this shipped
+         and discarded every Send-to-Brain. Source-inspected because connToBrain is async and the
+         suite runs cases synchronously; an async run() hands expect() a Promise. */
+      const src=String(g.connToBrain);
+      const passesObject=/brainAdd\(\s*\{/.test(src);
+      const positional=/brainAdd\(\s*[a-zA-Z_$][\w$]*\s*,/.test(src);
+      return (passesObject&&!positional)?'object':
+        (positional?'POSITIONAL — body will be discarded':'no brainAdd call found');
+    },expect:v=>v==='object',
+    antiWhat:'and the hazard is real: the same call made positionally does lose the body',
+    anti:()=>{
+      /* If this ever stops being true, brainAdd's signature changed and the case above is
+         guarding a problem that no longer exists. */
+      const f=({name,body})=>({name:name||'note',body:body||''});
+      return f('A Title','THE TEXT').body===''?1:0;
+    },antiExpect:v=>v===1});
+
   add({id:'render-unique-ids',sub:'rendering',uses:['esc'],
     what:'no duplicate DOM id (the second one is unreachable via $())',
     run:()=>{const seen={},d=[];document.querySelectorAll('[id]').forEach(e=>{
@@ -23848,6 +23884,9 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'brain-positional',export:'connToBrain',
+   why:'the Brain connector goes back to positional args and silently saves empty notes',
+   broken:()=>function(p){const t=p.data;return brainAdd(p.title||'x',t);}},
   {id:'godot-transposed',export:'godotBasis',
    why:'the exported rotation becomes its own inverse and every object faces the wrong way',
    broken:()=>(rot,scale)=>{const s=scale||[1,1,1];
@@ -31751,7 +31790,12 @@ function asstMsgHTML(m){
 function renderAsstStream(){
   const c=achat();if(!c||!$('#asst-thread'))return;
   const last=$('#asst-thread').lastElementChild;
-  if(last)last.outerHTML=asstMsgHTML(c.msgs[c.msgs.length-1]);
+  /* The element and the message are two different things. Starting a New chat mid-stream leaves
+     the old thread node on screen while achat() already returns the new, EMPTY chat — so
+     msgs[length-1] is msgs[-1], undefined, and asstMsgHTML throws on m.role out of a streaming
+     callback, taking the answer the user already paid for with it. */
+  const m=c.msgs[c.msgs.length-1];
+  if(last&&m)last.outerHTML=asstMsgHTML(m);
   const th=$('#asst-thread');th.scrollTop=th.scrollHeight;
 }
 function renderAsst(){
@@ -38008,12 +38052,33 @@ function connToAsst(p){
   if(i){i.value=(p.title?p.title+'\n\n':'')+String(typeof p.data==='string'?p.data:JSON.stringify(p.data));i.focus();}
   toast('Loaded into the Assistant',2200);
 }
-function connToBrain(p){
+/* brainAdd takes an OBJECT: async function brainAdd({name,body,kind,tags,source,on}).
+   This was the only one of ten call sites passing positional arguments. Destructuring a string
+   yields undefined for every key, so `body||''` became '' and the note was stored EMPTY — while
+   the toast said "Saved to the Brain" and the user was taken there to look at it. Every
+   Send-to-Brain from WebOS notes, the office hand-off, a plugin's saveNote and the generic
+   Send-to menu silently discarded the text.
+
+   Proven rather than reasoned: calling the real signature positionally returns
+   {name:"note", body:"", kind:"insight"}.
+
+   It is also awaited now. connRun does `await p.run(payload)` inside a try/catch precisely so a
+   failed save can be reported; a fire-and-forget promise meant that catch could never see one,
+   which is how a storage failure would ALSO have produced a success toast. Same shape as the
+   connToCreations regression whose post-mortem sits a few lines below.
+
+   The brainRemember fallback is deleted rather than fixed: it appeared exactly once in the file,
+   in its own typeof guard, and was never defined anywhere — a branch that could not run. */
+async function connToBrain(p){
   const text=typeof p.data==='string'?p.data:JSON.stringify(p.data,null,2);
-  if(typeof brainAdd==='function')brainAdd(p.title||'From '+(p.from||'elsewhere'),text);
-  else if(typeof brainRemember==='function')brainRemember(text);
+  const name=p.title||'From '+(p.from||'elsewhere');
+  const d=await brainAdd({name,body:text,kind:'insight',source:p.from||'connector'});
   go('brain');
-  toast('Saved to the Brain',2200);
+  if(typeof renderBrainDomains==='function')renderBrainDomains();
+  /* Say what actually landed. "Saved" with an empty note is the failure this whole comment is
+     about, so the confirmation now names the note and its size. */
+  toast(d&&d.body?`Saved “${name}” to the Brain · ${d.body.length} chars`:'Saved to the Brain',2600);
+  return d;
 }
 function connToReverse(p){
   go('reverse');
@@ -45317,6 +45382,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     CONN_KINDS,CONN_PORTS,connPort,connTargets,get CONNX(){return CONNX},set CONNX(v){CONNX=v},
     saveConnx,connMake,connRun,connMenu,connInit,connCustomAdd,connCustomDel,connLearn,
     connSuggestDismiss,connIdeas,renderConnections,connToStudio,connToWebos,connToWriter,connToCalc,
+    connToBrain,
     ONB_INTERESTS,ONB_ALWAYS,get ONB(){return ONB},set ONB(v){ONB=v},saveOnb,onbNeeded,onbTabsFor,
     onbApply,onbRender,onbMaybe,TABPOS,applyTabPos,setTabPos,renderTabAdder,openTabManager,
     HELP_TOPICS,get HELPC(){return HELPC},set HELPC(v){HELPC=v},helpSearch,renderHelp,
