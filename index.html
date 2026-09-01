@@ -9229,6 +9229,43 @@ addEventListener('message',ev=>{
       exec({do(){o.name=a.name;},undo(){o.name=before;}});}}
     else if(cmd==='screenshot'){renderer.render(scene,camera);
       post('file',{name:'viewport.png',mime:'image/png',dataUrl:renderer.domElement.toDataURL('image/png')});}
+    /* A FULL serialisation, as opposed to the outliner tree which carries only names and types.
+       Exporting to another engine needs the things the tree deliberately leaves out: world
+       transform, which primitive it is, that primitive's own parameters, and the material. */
+    else if(cmd==='dump'){
+      const out=[];
+      scene.traverse(o=>{
+        if(o===scene||!o.name)return;
+        if(o.userData&&o.userData.helper)return;          // grids and gizmos are not the scene
+        const isLight=!!o.isLight, isMesh=!!o.isMesh;
+        if(!isLight&&!isMesh)return;
+        const p=o.getWorldPosition(new THREE.Vector3());
+        const q=o.getWorldQuaternion(new THREE.Quaternion());
+        const e=new THREE.Euler().setFromQuaternion(q);
+        const sc=o.getWorldScale(new THREE.Vector3());
+        const rec={name:o.name,kind:isLight?'light':'mesh',
+          pos:[p.x,p.y,p.z],rot:[e.x,e.y,e.z],scale:[sc.x,sc.y,sc.z],visible:o.visible};
+        if(isLight){
+          rec.light=(o.type||'').replace('Light','').toLowerCase();
+          rec.color='#'+(o.color?o.color.getHexString():'ffffff');
+          rec.intensity=o.intensity;
+          if(o.distance!==undefined)rec.distance=o.distance;
+          if(o.angle!==undefined)rec.angle=o.angle;
+        }else{
+          const gp=(o.geometry&&o.geometry.parameters)||{};
+          rec.geo=(o.geometry&&o.geometry.type||'').replace('Geometry','').toLowerCase();
+          rec.params=JSON.parse(JSON.stringify(gp));
+          const m=o.material;
+          if(m){
+            rec.color='#'+(m.color?m.color.getHexString():'cccccc');
+            if(m.emissive)rec.emissive='#'+m.emissive.getHexString();
+            rec.metalness=m.metalness;rec.roughness=m.roughness;
+            if(m.opacity!==undefined&&m.opacity<1)rec.opacity=m.opacity;
+          }
+        }
+        out.push(rec);
+      });
+      post('dump',{objects:out,bg:(scene.background&&scene.background.getHexString)?'#'+scene.background.getHexString():null});}
   }catch(e){post('err',String(e&&e.message||e));}
   sync();
 });
@@ -9575,6 +9612,7 @@ function initEd3(){
   addEventListener('message',ev=>{
     const d=ev.data;if(!d||!d.__ed3)return;
     if(d.k==='err'&&typeof ed3Log==='function')ed3Log('err',d.v);
+    if(d.k==='dump'&&ED3_DUMP_CB){const cb=ED3_DUMP_CB;ED3_DUMP_CB=null;cb(d.v);}
     if(d.k==='tree'){ED3.tree=d.v.tree;ED3.undo=d.v.undo;ED3.redo=d.v.redo;ED3.stats=d.v.stats;
       ed3Tree();
       const st=$('#ed3-stats');
@@ -35969,6 +36007,150 @@ function stripEdges(n){
   n.classList.toggle('more-l',n.scrollLeft>4);
   n.classList.toggle('more-r',max>4&&n.scrollLeft<max-4);
 }
+/* ═══════════════════ GODOT EXPORT ═══════════════════
+   The scene here becomes a real Godot 4 project you can open, edit and ship.
+
+   This is also the honest answer to "work inside Tesana". Tesana has no public API, no SDK and
+   no embed — checked, not assumed — so it cannot be operated from inside this app. What it DOES
+   have is a Source Code (Godot) export: the complete project, GDScript, .tscn scenes and every
+   raw asset. Godot is therefore the interchange format between the two, and writing it here is
+   what makes the two tools interoperate. Assets and scenes move; the editor UI does not.
+
+   The .tscn format matters more than it looks. Godot 4 files carry `format=3`, a Transform3D is
+   NINE basis floats followed by THREE origin floats — not a 4x4 and not position-first — and a
+   mesh is a sub_resource the node references by id. Get any of those wrong and the project opens
+   to an empty scene with no error, which is the worst possible failure for an exporter. */
+const GODOT_MESH={
+  box:'BoxMesh', sphere:'SphereMesh', cylinder:'CylinderMesh', capsule:'CapsuleMesh',
+  plane:'PlaneMesh', torus:'TorusMesh', circle:'PlaneMesh', ring:'TorusMesh',
+  tube:'CylinderMesh', lathe:'CylinderMesh', torusknot:'TorusMesh',
+  /* Godot has no built-in platonic solids; a sphere is the closest primitive and the mesh is
+     named so it is obvious in the outliner what it stood in for. */
+  dodecahedron:'SphereMesh', icosahedron:'SphereMesh', octahedron:'SphereMesh',
+  tetrahedron:'SphereMesh', sprite:'QuadMesh',
+};
+const GODOT_LIGHT={point:'OmniLight3D',spot:'SpotLight3D',directional:'DirectionalLight3D'};
+/* Euler XYZ -> the nine basis floats Godot expects, in its column order. */
+function godotBasis(rot,scale){
+  const [rx,ry,rz]=rot||[0,0,0], [sx,sy,sz]=scale||[1,1,1];
+  const cx=Math.cos(rx),sxn=Math.sin(rx),cy=Math.cos(ry),syn=Math.sin(ry),cz=Math.cos(rz),szn=Math.sin(rz);
+  /* R = Rz * Ry * Rx, matching three.js's default XYZ Euler order. */
+  const m=[
+    cy*cz,            cz*sxn*syn-cx*szn,  cx*cz*syn+sxn*szn,
+    cy*szn,           cx*cz+sxn*syn*szn,  -cz*sxn+cx*syn*szn,
+    -syn,             cy*sxn,             cx*cy
+  ];
+  return [m[0]*sx,m[1]*sy,m[2]*sz, m[3]*sx,m[4]*sy,m[5]*sz, m[6]*sx,m[7]*sy,m[8]*sz];
+}
+const gdNum=v=>{const n=+v;return isFinite(n)?(+n.toFixed(5)):0;};
+function godotColor(hex){
+  const h=String(hex||'#cccccc').replace('#','');
+  const n=parseInt(h.length===3?h.split('').map(c=>c+c).join(''):h,16)||0;
+  /* Godot Color takes linear floats 0..1. */
+  return[((n>>16)&255)/255,((n>>8)&255)/255,(n&255)/255,1].map(v=>+v.toFixed(4));
+}
+/* Pure: objects in, a {path:contents} project out. No DOM, no network, so it is fully testable. */
+function godotProject(objects,opts){
+  const o=opts||{};
+  const name=(o.name||'Glassbox Scene').replace(/["\n]/g,'');
+  const subs=[],nodes=[];
+  let n=0;
+  (objects||[]).forEach(ob=>{
+    if(!ob||ob.visible===false)return;
+    const safe=String(ob.name||('node'+n)).replace(/[^\w\- ]/g,'').trim()||('node'+n);
+    const t=godotBasis(ob.rot,ob.scale).map(gdNum)
+      .concat((ob.pos||[0,0,0]).map(gdNum)).join(', ');
+    if(ob.kind==='light'){
+      const type=GODOT_LIGHT[ob.light]||'OmniLight3D';
+      const c=godotColor(ob.color);
+      nodes.push(`[node name="${safe}" type="${type}" parent="."]\n`+
+        `transform = Transform3D(${t})\n`+
+        `light_color = Color(${c.join(', ')})\n`+
+        `light_energy = ${gdNum(ob.intensity!=null?ob.intensity:1)}\n`);
+      n++;return;
+    }
+    const meshType=GODOT_MESH[ob.geo]||'BoxMesh';
+    const mid=`${meshType}_${n}`, matid=`StandardMaterial3D_${n}`;
+    const P=ob.params||{};
+    /* Primitive parameters carry across where Godot has an equivalent; where it does not, the
+       shape falls back to its default size rather than to zero, because a zero-sized mesh is
+       invisible and reads as a failed export. */
+    let props='';
+    if(meshType==='BoxMesh')props=`size = Vector3(${gdNum(P.width||1)}, ${gdNum(P.height||1)}, ${gdNum(P.depth||1)})\n`;
+    else if(meshType==='SphereMesh'){const r=gdNum(P.radius||0.5);props=`radius = ${r}\nheight = ${r*2}\n`;}
+    else if(meshType==='CylinderMesh')props=`top_radius = ${gdNum(P.radiusTop!=null?P.radiusTop:0.5)}\n`+
+      `bottom_radius = ${gdNum(P.radiusBottom!=null?P.radiusBottom:0.5)}\nheight = ${gdNum(P.height||1)}\n`;
+    else if(meshType==='CapsuleMesh')props=`radius = ${gdNum(P.radius||0.5)}\nheight = ${gdNum((P.height||1)+(P.radius||0.5)*2)}\n`;
+    else if(meshType==='PlaneMesh')props=`size = Vector2(${gdNum(P.width||1)}, ${gdNum(P.height||P.depth||1)})\n`;
+    else if(meshType==='TorusMesh')props=`inner_radius = ${gdNum((P.radius||0.5)-(P.tube||0.15))}\n`+
+      `outer_radius = ${gdNum((P.radius||0.5)+(P.tube||0.15))}\n`;
+    else if(meshType==='QuadMesh')props=`size = Vector2(1, 1)\n`;
+    subs.push(`[sub_resource type="${meshType}" id="${mid}"]\n${props}`);
+    const c=godotColor(ob.color);
+    let mat=`[sub_resource type="StandardMaterial3D" id="${matid}"]\nalbedo_color = Color(${c.join(', ')})\n`+
+      `metallic = ${gdNum(ob.metalness!=null?ob.metalness:0.1)}\nroughness = ${gdNum(ob.roughness!=null?ob.roughness:0.8)}\n`;
+    if(ob.emissive&&ob.emissive!=='#000000'){
+      const e=godotColor(ob.emissive);
+      mat+=`emission_enabled = true\nemission = Color(${e.join(', ')})\n`;
+    }
+    if(ob.opacity!=null&&ob.opacity<1){
+      mat+=`transparency = 1\nalbedo_color = Color(${c[0]}, ${c[1]}, ${c[2]}, ${gdNum(ob.opacity)})\n`;
+    }
+    subs.push(mat);
+    nodes.push(`[node name="${safe}" type="MeshInstance3D" parent="."]\n`+
+      `transform = Transform3D(${t})\n`+
+      `mesh = SubResource("${mid}")\n`+
+      `surface_material_override/0 = SubResource("${matid}")\n`);
+    n++;
+  });
+  /* load_steps counts the sub-resources plus one for the scene itself. Godot tolerates a wrong
+     count but the editor rewrites the file on first save, so getting it right keeps the diff
+     clean for anyone version-controlling the export. */
+  const tscn=`[gd_scene load_steps=${subs.length+1} format=3]\n\n`+
+    subs.join('\n')+`\n[node name="Root" type="Node3D"]\n\n`+nodes.join('\n');
+  const project=`; Godot 4 project, exported from Glassbox Jet.\n`+
+    `config_version=5\n\n[application]\n\n`+
+    `config/name="${name}"\nrun/main_scene="res://main.tscn"\n`+
+    `config/features=PackedStringArray("4.3", "Forward Plus")\n\n`+
+    `[rendering]\n\nenvironment/defaults/default_clear_color=Color(${godotColor(o.bg||'#0b0d12').join(', ')})\n`;
+  const readme=`# ${name}\n\nExported from Glassbox Jet's 3D editor.\n\n`+
+    `Open **project.godot** in Godot 4.3 or newer. The scene is \`main.tscn\`.\n\n`+
+    `## What came across\n\n`+
+    `- ${n} object${n===1?'':'s'} as MeshInstance3D and light nodes, with world transforms\n`+
+    `- Primitive parameters where Godot has an equivalent primitive\n`+
+    `- Albedo, metallic, roughness, emission and transparency per object\n\n`+
+    `## What did not\n\n`+
+    `Godot has no built-in platonic solids, so dodecahedron, icosahedron, octahedron and\n`+
+    `tetrahedron come across as spheres — the node keeps its name so it is obvious which.\n`+
+    `Imported GLB meshes are references in the editor, not primitives, so they are not written\n`+
+    `here; export those from the source tool and drop them into \`assets/\`.\n\n`+
+    `## Tesana\n\nTesana exports the same shape — a Godot project with .tscn scenes and an\n`+
+    `\`assets/\` folder. Its assets drop straight into this project, and this scene opens\n`+
+    `alongside one of theirs.\n`;
+  return{'project.godot':project,'main.tscn':tscn,'README.md':readme};
+}
+/* Asks the editor for a full dump, then writes the project. The dump is async because it is a
+   round trip through the iframe. */
+function ed3Godot(){
+  const done=(d)=>{
+    try{
+      const files=godotProject((d&&d.objects)||[],{name:'Glassbox Scene',bg:d&&d.bg});
+      /* downloadBlob takes the NAME first — reversed arguments here produced a file called
+         "[object Blob]" with no extension, which is a download nobody can open. */
+      downloadBlob('glassbox-godot-project.zip',makeZip(files));
+      const n=(d&&d.objects||[]).length;
+      toast(`Godot project exported — ${n} object${n===1?'':'s'}`,3600);
+      actLog('human','exported a Godot project',{objects:n});
+    }catch(e){toast('Could not build the project: '+e.message,4200);}
+  };
+  ED3_DUMP_CB=done;
+  ed3Send('dump',{});
+  /* If the editor never answers, say so rather than leaving a button that did nothing. */
+  setTimeout(()=>{if(ED3_DUMP_CB===done){ED3_DUMP_CB=null;
+    toast('The editor did not answer — open the Editor sub-tab first',4000);}},4000);
+}
+let ED3_DUMP_CB=null;
+
 /* ═══════════════════ PLAYCANVAS ═══════════════════
    A SECOND engine, deliberately, not a second editor.
 
@@ -36183,6 +36365,7 @@ function renderPcv(){
       </div>`:''}
       <div class="row" style="gap:8px;margin-top:9px;flex-wrap:wrap">
         <button class="btn ghost sm" id="pc-send">Send the frame to…</button>
+        <button class="btn ghost sm" id="pc-godot">⬇ Godot project</button>
       </div>`:''}
     ${PCV.status==='idle'?'<p class="help">Nothing loaded yet — try one of the samples above.</p>':''}
   </div>`;
@@ -36201,6 +36384,8 @@ function renderPcv(){
          to be parsed as one token. */
       pcOpen(URL.createObjectURL(file),file.name);};
     i.click();};
+  const gd2=$('#pc-godot');
+  if(gd2)gd2.onclick=()=>ed3Godot();
   const sd=$('#pc-send');
   if(sd)sd.onclick=()=>{
     const png=pcShot();
@@ -45117,6 +45302,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     botsAddressed,botSysFor,botTurn,botGroupRun,renderBotBox,renderBotCfg,botAuditRow,
     BOT_QUICK,BOT_EFFORTS,groupRosterHTML,wireGroupRoster,
     genImageFromCatalog,
+    GODOT_MESH,GODOT_LIGHT,godotBasis,godotColor,godotProject,ed3Godot,
     pcCanvas,get PC_CANVAS(){return PC_CANVAS},
     SETUP_CHECKS,setupScore,renderSetup,setupFocus,goEnsure,gauntletQuickRun,tabDropTarget,
     botRng,botSprite,botModelChain,botNorm,botAll,botAudit,botRunsFor,BOT_PALETTES,
