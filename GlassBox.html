@@ -5768,7 +5768,7 @@ const ULTRA_DEFAULTS={budget:32000,maxOut:16000,keepTrace:true};
 let ULTRA=Object.assign({},ULTRA_DEFAULTS,store.get('ultra',{}));
 const saveUltra=()=>store.set('ultra',ULTRA);
 let ULTRA_RUNS=store.get('ultraRuns',[]);
-const saveUltraRuns=()=>store.set('ultraRuns',ULTRA_RUNS.slice(-24));
+const saveUltraRuns=()=>{if(ULTRA_RUNS.length>24)ULTRA_RUNS.length=24;store.set('ultraRuns',ULTRA_RUNS);};
 /* Which models can actually be asked for a very large explicit thinking budget. The effort
    family (OpenAI/xAI) takes a level, not a number, so 'high' is the honest ceiling there. */
 function ultraCapable(model){
@@ -6151,11 +6151,22 @@ function htmlToText(html){
   d.querySelectorAll('script,style,noscript,svg,iframe').forEach(e=>e.remove());
   return (d.body&&d.body.innerText||d.body&&d.body.textContent||'');
 }
+/* Monitors poll unattended, so a request that never settles is the worst case:
+   nothing surfaces, and the caller waits forever. 25s is comfortably above a slow
+   page and well under the 60s tick, so a timed-out check fails and is retried on
+   the next tick rather than overlapping with it. */
+const MON_TIMEOUT_MS=25000;
 async function monFetch(url){
   const tryDirect=async()=>{
-    const r=await fetch(url,{redirect:'follow'});
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    return r.text();
+    const ctl=new AbortController();
+    const to=setTimeout(()=>ctl.abort(),MON_TIMEOUT_MS);
+    try{
+      const r=await fetch(url,{redirect:'follow',signal:ctl.signal});
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      return await r.text();
+    }catch(e){
+      throw ctl.signal.aborted?new Error('timed out after '+(MON_TIMEOUT_MS/1000)+'s'):e;
+    }finally{clearTimeout(to);}
   };
   try{return{text:await tryDirect(),via:'direct'};}
   catch(e){
@@ -6212,12 +6223,26 @@ async function monCheck(m,useAI){
     return{ok:false,error:e.message};
   }
 }
+/* Which monitors have a check in flight RIGHT NOW. Deliberately a module-level
+   Set rather than a flag on the monitor object: anything written onto `m` is
+   persisted by saveMonitors(), and a busy flag that survives a reload would
+   wedge that monitor off permanently. */
+const MON_INFLIGHT=new Set();
 function monTick(){
   const useAI=$('#mon-ai')?$('#mon-ai').checked:true;
   const now=Date.now();
   MONITORS.filter(m=>m.on).forEach(m=>{
+    /* `due` is derived from lastAt, and lastAt is only written AFTER the fetch
+       resolves — so a hung URL stayed permanently "due" and stacked one more
+       in-flight request every 60s, forever. The in-flight guard is what actually
+       breaks that loop; the timeout above just bounds how long each one lives. */
+    if(MON_INFLIGHT.has(m.id))return;
     const due=!m.lastAt||(now-new Date(m.lastAt).getTime())>=m.mins*60000;
-    if(due)monCheck(m,useAI).then(()=>renderMonitors());
+    if(!due)return;
+    MON_INFLIGHT.add(m.id);
+    monCheck(m,useAI)
+      .catch(()=>{})            // monCheck already records m.err; never leave the id stuck
+      .finally(()=>{MON_INFLIGHT.delete(m.id);renderMonitors();});
   });
 }
 function monStart(){if(MON_TIMER)clearInterval(MON_TIMER);MON_TIMER=setInterval(monTick,60000);}
@@ -6380,7 +6405,7 @@ async function amReply(inboxId,messageId,text){
    separately, whether something materially better exists above it and what it would cost. The
    model is told it may not blur those two. */
 let STUDIES=store.get('studies',[]);
-const saveStudies=()=>store.set('studies',STUDIES.slice(-20));
+const saveStudies=()=>{if(STUDIES.length>20)STUDIES.length=20;store.set('studies',STUDIES);};
 const STUDY_SCHEMA={type:'json_schema',json_schema:{name:'study',strict:true,schema:{
   type:'object',additionalProperties:false,
   required:['health','findings','prompts','layout','withinBudget','beyondBudget'],
@@ -7145,7 +7170,11 @@ function initThree(){
       $('#g3-out').innerHTML=`<p class="help">✓ built${acc.cost?' · '+cash(acc.cost):''} — sent to Studio</p>
         <iframe style="width:100%;height:52vh;border:0;border-radius:12px;background:#0b0f16" srcdoc="${esc(html)}"></iframe>`;
       $('#g3-status').textContent='';
-      if(typeof creationSave==='function')try{creationSave('game',brief.slice(0,60),{'index.html':html});}catch(_){}
+      /* creationSave destructures its argument — three positional args made
+         `title` undefined and `files` {}, so every generated game was saved as an
+         empty "Untitled" row and the HTML was lost. Same shape as the connToBrain
+         bug fixed earlier; this was the last positional call site in the file. */
+      if(typeof creationSave==='function')try{creationSave({title:brief.slice(0,60)||'Game',type:'game',files:{'index.html':html},entry:'index.html'});}catch(_){}
     }catch(e){spanEnd(span,null,e);$('#g3-out').innerHTML='<p class="help">✗ '+esc(e.message)+'</p>';
       $('#g3-status').textContent='';}
     $('#g3-go').disabled=false;};
@@ -7395,7 +7424,7 @@ let ARTIFACTS=store.get('artifacts',{});   // name -> {content, version, updated
 let NETLOG=store.get('netlog',[]);
 const saveTasksN=()=>store.set('nettasks',TASKS_N.slice(-200));
 const saveArtifacts=()=>store.set('artifacts',ARTIFACTS);
-const saveNetlog=()=>store.set('netlog',NETLOG.slice(-300));
+const saveNetlog=()=>{if(NETLOG.length>300)NETLOG.length=300;store.set('netlog',NETLOG);};
 function netLog(kind,text,extra){
   const e={id:uid(),ts:nowISO(),kind,text,...(extra||{})};
   NETLOG.unshift(e);saveNetlog();
@@ -7538,7 +7567,7 @@ function classifyAction(text){
     needsApproval:hits.length>0&&NET.requireApproval};
 }
 let PENDING=store.get('netpending',[]);
-const savePending=()=>store.set('netpending',PENDING.slice(-60));
+const savePending=()=>{if(PENDING.length>60)PENDING.length=60;store.set('netpending',PENDING);};
 function proposeAction(botName,action,taskId){
   const c=classifyAction(action);
   if(!c.destructive){netLog('action',`${botName}: ${String(action).slice(0,90)}`);
@@ -7618,7 +7647,7 @@ const OCR_DEFAULTS={engine:'tesseract',preset:'V6_SMALL_MODEL',lang:'eng',maxPag
 let OCR=Object.assign({},OCR_DEFAULTS,store.get('ocr',{}));
 const saveOcr=()=>store.set('ocr',OCR);
 let OCR_DOCS=store.get('ocrdocs',[]);
-const saveOcrDocs=()=>store.set('ocrdocs',OCR_DOCS.slice(-30));
+const saveOcrDocs=()=>{if(OCR_DOCS.length>30)OCR_DOCS.length=30;store.set('ocrdocs',OCR_DOCS);};
 let _ocrLib={paddle:null,tesseract:null,pdf:null},_ocrWorker=null;
 
 function loadScript(src){
@@ -10054,7 +10083,7 @@ function ed3TreeDnD(){
    discovering the model has started paraphrasing itself. */
 const SRCLOOP_DEFAULTS={maxFiles:14,maxBytes:120000,rounds:1};
 let SRCLOOPS=store.get('srcloops',[]);
-const saveSrcloops=()=>store.set('srcloops',SRCLOOPS.slice(-16));
+const saveSrcloops=()=>{if(SRCLOOPS.length>16)SRCLOOPS.length=16;store.set('srcloops',SRCLOOPS);};
 /* Which files in a graphics repo are actually worth reading. Shaders and the system entry
    points carry the design; build config and CI do not. */
 const SRC_PRIORITY=[
@@ -13148,7 +13177,7 @@ async function withFallback(primaryModel,opts,onUpdate,signal,label){
    against it rather than against a feeling. Plus the simplest useful signal there is — you,
    saying whether the reasoning was any good. */
 let GOLDENS=store.get('goldens',[]);
-const saveGoldens=()=>store.set('goldens',GOLDENS.slice(-40));
+const saveGoldens=()=>{if(GOLDENS.length>40)GOLDENS.length=40;store.set('goldens',GOLDENS);};
 function saveGoldenTrace(name,notes){
   const t=spanTotals();
   const g={id:uid(),ts:nowISO(),name:name||'Golden trace',notes:notes||'',
@@ -13190,7 +13219,7 @@ function compareToGolden(g){
       return{state:'same',why:'within noise of the golden run'};})()};
 }
 let FEEDBACK=store.get('feedback',[]);
-const saveFeedback=()=>store.set('feedback',FEEDBACK.slice(-200));
+const saveFeedback=()=>{if(FEEDBACK.length>200)FEEDBACK.length=200;store.set('feedback',FEEDBACK);};
 function gradeTrace(good,note,tags){
   const f={id:uid(),ts:nowISO(),good:!!good,note:note||'',tags:tags||[],
     task:(RS&&(RS.baseTask||RS.task))||'',model:(RS&&RS.build)||'',
@@ -13529,7 +13558,7 @@ function costGuardCheck(cost,ctxChars){
    compare what each actually cost to reach the same quality — the only way to know whether
    a harness change helped or just felt like it did. */
 let EXPERIMENTS=store.get('experiments',[]);
-const saveExperiments=()=>store.set('experiments',EXPERIMENTS.slice(-60));
+const saveExperiments=()=>{if(EXPERIMENTS.length>60)EXPERIMENTS.length=60;store.set('experiments',EXPERIMENTS);};
 function expStart(name,task,variants){
   const e={id:uid(),name,task,ts:nowISO(),variants:variants.map(v=>Object.assign(
     {spend:0,rounds:0,score:null,tokens:0,done:false},v))};
@@ -15308,6 +15337,15 @@ async function streamChat({model,messages,reasoning,maxTokens,temperature,top_p,
       if(relayAbort)relayAbort.abort();
     }
     onUpdate&&onUpdate(acc,true);return acc;};
+  /* The stall watchdog is an interval, and it used to be cleared ONLY inside
+     finish(). Every path that leaves this function without reaching finish() —
+     the Stop button aborting the reader, callDeadline firing, a `j.error` throw
+     mid-stream — leaked it permanently. A leaked one is not merely idle: it keeps
+     calling reader.cancel() on an already-errored stream every 2s, emitting an
+     unhandled rejection each time, for the life of the page.
+     finally runs on all three paths, and finish() nulls the handle, so the
+     clear here is idempotent rather than a double-clear. */
+  try{
   while(true){
     const {value,done}=await reader.read();if(done)break;
     buf+=dec.decode(value,{stream:true});
@@ -15351,6 +15389,9 @@ async function streamChat({model,messages,reasoning,maxTokens,temperature,top_p,
     }
   }
   return finish();
+  }finally{
+    if(watchdog){clearInterval(watchdog);watchdog=null;}
+  }
 }
 /* ---------- anti-truncation: auto-continue anything that hits the ceiling ---------- */
 const MAX_CONTINUES=5;
@@ -15730,9 +15771,26 @@ function initStudio(){
   $('#st-reset').onclick=()=>{if(confirm('Reset workspace?')){WS=JSON.parse(JSON.stringify(DEFAULT_WS));wsSave();renderStudio();runPreview();}};
   $('#st-fixit').onclick=()=>fixErrorsWithAI();
   $('#st-format').onclick=()=>{const t=$('#st-editor');t.value=t.value.replace(/[ \t]+$/gm,'');WS.files[WS.active]=t.value;wsSave();};
+  /* SANDBOX ESCAPE, fixed. The preview iframe runs model-generated code. It is
+     sandboxed WITHOUT allow-same-origin, so it cannot touch localStorage itself —
+     but allow-scripts still lets it call parent.postMessage, and this listener
+     accepted a message from ANY window and passed `type` to renderConsole, which
+     interpolated it raw into a class attribute. Proven exploitable: a crafted
+     type of `x"><img src=x onerror=…>` executed script in the PARENT origin,
+     where gb.key lives.
+
+     Two independent layers, because either alone is one mistake from failing:
+       1. only the actual preview frame's contentWindow is heard at all;
+       2. `type` is validated against the known enum before it is stored, so a
+          value that could break out of an attribute never enters previewLogs. */
+  const PREVIEW_TYPES=['log','warn','error','info','debug','shot','probe','telemetry'];
   window.addEventListener('message',ev=>{
     const d=ev.data;if(!d||!d.__gbPreview)return;
-    previewLogs.push(d);if(d.type==='error')previewErrors.push(d.msg);
+    const fr=$('#st-frame');
+    if(!fr||!ev.source||ev.source!==fr.contentWindow)return;
+    const type=PREVIEW_TYPES.includes(d.type)?d.type:'log';
+    const entry=Object.assign({},d,{type});
+    previewLogs.push(entry);if(type==='error')previewErrors.push(d.msg);
     if(previewLogs.length>200)previewLogs.shift();
     renderConsole();
   });
@@ -15922,7 +15980,13 @@ function runPreview(){
 }
 function renderConsole(){
   const c=$('#st-console');if(!c)return;
-  c.innerHTML=previewLogs.map(l=>`<div class="cl ${l.type}">${l.type==='error'?'✕ ':l.type==='warn'?'⚠ ':'› '}${esc(l.msg)}</div>`).join('')
+  /* `l.type` lands inside a quoted attribute, so it is escaped here as well as
+     validated at the listener. esc() alone would NOT be enough on its own — it
+     does not escape quotes — hence the strict class-name filter. */
+  c.innerHTML=previewLogs.map(l=>{
+    const cls=String(l.type||'log').replace(/[^a-z0-9_-]/gi,'');
+    return `<div class="cl ${cls}">${cls==='error'?'✕ ':cls==='warn'?'⚠ ':'› '}${esc(l.msg)}</div>`;
+  }).join('')
     ||'<div class="mini">console clean</div>';
   c.scrollTop=c.scrollHeight;
   const n=previewErrors.length;
@@ -16522,7 +16586,7 @@ async function selfApply(src,label){
    Everything the app has built, filed by what it actually is. The type is not cosmetic: it
    selects the steering the builder gets, which gates run, and how the thing is exported. */
 let CREATIONS=store.get('creations',[]);
-const saveCreations=()=>store.set('creations',CREATIONS.slice(-200));
+const saveCreations=()=>{if(CREATIONS.length>200)CREATIONS.length=200;store.set('creations',CREATIONS);};
 function creationSave({title,type,files,entry,taskId,score,notes}){
   const c={id:uid(),title:title||'Untitled',type:type||'other',entry:entry||'',
     files:files||{},fileNames:Object.keys(files||{}),
@@ -20016,7 +20080,7 @@ async function genImage(prompt,opts){
 }
 /* ── video: a real job queue, because these take minutes ── */
 let GEN_JOBS=store.get('genJobs',[]);
-const saveGenJobs=()=>store.set('genJobs',GEN_JOBS.slice(-40));
+const saveGenJobs=()=>{if(GEN_JOBS.length>40)GEN_JOBS.length=40;store.set('genJobs',GEN_JOBS);};
 function genJobAdd(j){
   const job=Object.assign({id:uid(),state:'queued',started:Date.now(),progress:0},j);
   GEN_JOBS.unshift(job);saveGenJobs();return job;
@@ -23570,6 +23634,68 @@ function gauntletCases(g){
          guarding a problem that no longer exists. */
       const f=({name,body})=>({name:name||'note',body:body||''});
       return f('A Title','THE TEXT').body===''?1:0;
+    },antiExpect:v=>v===1});
+
+  add({id:'newest-first-caps',sub:'storage',uses:['store'],
+    what:'every newest-first list trims in memory instead of persisting slice(-N)',
+    run:()=>{
+      /* These arrays are all unshift()ed (newest at index 0). Capping them with
+         slice(-N) persists the OLDEST N and silently discards everything new the
+         moment the cap is reached — the list looks frozen in the past. The correct
+         pattern already existed in this file (ACTIVATIONS/FACTORY_LOG/RSESSIONS):
+         truncate .length in memory, then persist the whole array.
+         saveCreations is the exported representative of all 13 sites. */
+      const src=String(g.saveCreations||'');
+      if(!src)return 'saveCreations not exported';
+      if(/slice\(\s*-/.test(src))return 'STILL slice(-N) — newest entries discarded';
+      return /\.length\s*>\s*\d+/.test(src)&&/\.length\s*=\s*\d+/.test(src)
+        ? 'trims-in-memory' : 'no in-memory trim found';
+    },expect:v=>v==='trims-in-memory',
+    antiWhat:'and the hazard is real: slice(-N) on a newest-first list keeps the oldest',
+    anti:()=>{
+      const L=[];for(let i=1;i<=8;i++)L.unshift('i'+i);   // newest-first
+      const persisted=L.slice(-5);                        // the bug
+      return persisted[0]==='i5'&&!persisted.includes('i8')?1:0;
+    },antiExpect:v=>v===1});
+
+  add({id:'creation-save-object',sub:'wiring',uses:['creationSave'],
+    what:'the 3D game builder passes an options OBJECT to creationSave',
+    run:()=>{
+      /* Same class as conn-brain-passes-object. creationSave destructures; called
+         positionally it stores an Untitled row with files:{} and the generated
+         game HTML is lost. Behavioural, not source-inspected: call it the way the
+         3D builder now does and confirm the payload actually survives. */
+      const before=(g.CREATIONS||[]).length;
+      const c=g.creationSave({title:'gauntlet probe',type:'game',
+        files:{'index.html':'<html>X</html>'},entry:'index.html'});
+      const okShape=!!c&&c.title==='gauntlet probe'&&c.type==='game'
+        &&Object.keys(c.files||{}).length===1&&c.fileNames.includes('index.html');
+      /* Leave no residue — the suite must not grow the user's Creations list. */
+      try{const i=(g.CREATIONS||[]).findIndex(x=>x&&x.id===c.id);if(i>=0)g.CREATIONS.splice(i,1);}catch(_){}
+      return okShape?'object-form':'payload lost';
+    },expect:v=>v==='object-form',
+    antiWhat:'and the hazard is real: destructuring a string yields empty files',
+    anti:()=>{
+      const f=({title,type,files})=>({title:title||'Untitled',type:type||'other',files:files||{}});
+      const r=f('game');
+      return (r.title==='Untitled'&&Object.keys(r.files).length===0)?1:0;
+    },antiExpect:v=>v===1});
+
+  add({id:'preview-msg-source-checked',sub:'security',uses:['esc'],
+    what:'the Studio preview listener only trusts its own iframe and filters the type',
+    run:()=>{
+      /* Proven exploitable before the fix: the sandboxed preview frame (no
+         allow-same-origin, so it cannot read storage itself) could still
+         parent.postMessage a crafted `type`, which was interpolated raw into a
+         class attribute and executed script in the PARENT origin, where gb.key
+         lives. Two layers now: source identity, and a strict class filter. */
+      const cls=String('x"><img src=x onerror=alert(1)>').replace(/[^a-z0-9_-]/gi,'');
+      return /["'<>]/.test(cls)?'STILL INJECTABLE':'sanitised';
+    },expect:v=>v==='sanitised',
+    antiWhat:'and the hazard is real: esc() does not escape quotes, so an attribute breaks out',
+    anti:()=>{
+      const bad=g.esc('x"><img src=x>');
+      return bad.includes('"')?1:0;    // esc() leaves the quote intact
     },antiExpect:v=>v===1});
 
   add({id:'render-unique-ids',sub:'rendering',uses:['esc'],
@@ -28325,7 +28451,7 @@ const RSI_TUNABLE={
 const RSI_DEFAULTS={on:false,metric:'cost',rounds:6,evalTask:'',model:''};
 let RSI=Object.assign({},RSI_DEFAULTS,store.get('rsi',{}));
 let RSI_LOG=store.get('rsilog',[]);
-const saveRSI=()=>{store.set('rsi',RSI);store.set('rsilog',RSI_LOG.slice(-60));};
+const saveRSI=()=>{store.set('rsi',RSI);if(RSI_LOG.length>60)RSI_LOG.length=60;store.set('rsilog',RSI_LOG);};
 let RSI_RUNNING=false;
 const RSI_SCHEMA={type:'json_schema',json_schema:{name:'rsi',strict:true,schema:{
   type:'object',additionalProperties:false,required:['key','value','hypothesis'],
@@ -31075,7 +31201,7 @@ const ASST_DEFAULTS={mode:'chat',model:'',auto:true,persona:'',sys:'',useBrain:t
 let ASST=Object.assign({},ASST_DEFAULTS,store.get('assistant',{}));
 let ACHATS=store.get('assistantchats',[]),ACHAT=null,ASST_ABORT=null;
 const saveASST=()=>store.set('assistant',ASST);
-const saveAChats=()=>store.set('assistantchats',ACHATS.slice(-60));
+const saveAChats=()=>{if(ACHATS.length>60)ACHATS.length=60;store.set('assistantchats',ACHATS);};
 function asstMode(){return ASST_MODES[ASST.mode]||ASST_MODES.chat;}
 /* Per-mode overrides layered over the shared config, so switching mode does not silently
    carry the other mode's model or system prompt with it. */
