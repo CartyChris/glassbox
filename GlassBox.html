@@ -4933,6 +4933,19 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
     <section class="view nopad" id="view-webos"><div id="wos-root" class="wos"></div></section>
 
     <section class="view" id="view-connect"><div class="wrap">
+      <div class="card">
+        <h3>🗂 Browse the MCP registry <span class="muted">the official directory</span></h3>
+        <p class="help">Search <span class="mono">registry.modelcontextprotocol.io</span> — the canonical
+          list since it replaced the old GitHub table — and add any hosted server as a connector in one
+          click. Servers that ship as a package to run locally are shown too, but they need the bridge and
+          a command rather than a URL, so they say so instead of offering a button that cannot work.</p>
+        <div class="row" style="gap:6px;margin-top:8px">
+          <input id="mreg-q" class="mono" style="flex:1" placeholder="search — e.g. github, postgres, figma">
+          <button class="btn small" id="mreg-go">🔎 Search</button>
+          <button class="btn ghost small" id="mreg-more">＋ More</button>
+        </div>
+        <div id="mreg-out" style="margin-top:10px"></div>
+      </div>
       <div id="cx-panel"></div>
     </div></section>
 
@@ -12928,6 +12941,86 @@ function connectorAdd(preset,cfg){
     token:cfg.token||'',on:true,tools:[],status:'never connected',lastError:'',ts:nowISO()};
   CONNECTORS.push(c);saveConnectors();return c;
 }
+/* ── The official MCP registry ────────────────────────────────────────────
+   registry.modelcontextprotocol.io became the canonical directory in April 2026,
+   replacing the GitHub README table that used to be the list. Browsing it here is
+   the difference between "paste a URL you found somewhere" and "search what
+   exists and add it" — which is what makes adding a new tool a normal action
+   rather than a project.
+
+   The response shape was read from the live endpoint rather than assumed, because
+   this codebase has already shipped one feature built on a hardcoded list that had
+   gone stale (every image model id was dead). Verified 2026-09:
+     { servers: [ { server:{name,title,description,version,remotes[],packages[]},
+                    _meta:{'io.modelcontextprotocol.registry/official':{status,isLatest}} } ],
+       metadata:{ nextCursor, count } }
+   Note the nesting under `.server` — reading the top level yields undefined for
+   every field, which looks like an empty registry rather than a parsing mistake. */
+const MCP_REGISTRY='https://registry.modelcontextprotocol.io/v0/servers';
+let MCPREG={q:'',items:[],cursor:null,loading:false,error:'',fetchedAt:null};
+
+function mcpRegNormalise(row){
+  const sv=(row&&row.server)||{};
+  const meta=(row&&row._meta&&row._meta['io.modelcontextprotocol.registry/official'])||{};
+  /* Only streamable-http remotes are one-click addable: a package entry means the
+     server has to be RUN locally, which needs the bridge and a command, so it is
+     surfaced as such rather than offered as a URL that does not exist. */
+  const remote=(sv.remotes||[]).find(r=>/streamable-http|sse/i.test(r.type||''))||null;
+  const pkg=(sv.packages||[])[0]||null;
+  return{
+    name:sv.name||'',title:sv.title||sv.name||'(unnamed)',
+    description:sv.description||'',version:sv.version||'',
+    url:remote?remote.url:'',
+    transport:remote?(remote.type||'streamable-http'):'',
+    pkgId:pkg?(pkg.identifier||pkg.name||''):'',
+    pkgRegistry:pkg?(pkg.registryType||pkg.registry_type||''):'',
+    status:meta.status||'',isLatest:meta.isLatest!==false,
+    addable:!!remote,
+  };
+}
+
+async function mcpRegFetch(opts){
+  opts=opts||{};
+  MCPREG.loading=true;MCPREG.error='';
+  try{
+    const u=new URL(MCP_REGISTRY);
+    u.searchParams.set('limit',String(opts.limit||40));
+    if(opts.cursor)u.searchParams.set('cursor',opts.cursor);
+    if(opts.search)u.searchParams.set('search',opts.search);
+    let txt='';
+    try{
+      const r=await fetch(u.toString(),{headers:{'Accept':'application/json'}});
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      txt=await r.text();
+    }catch(e){
+      /* The registry sends CORS, but a locked-down page or an offline machine still
+         fails. The bridge is the same escape hatch every other remote call here uses. */
+      if(!BRIDGE_INFO)throw new Error(e.message+' — and the bridge is not running');
+      const viaB=await bridgePost('/proxy',{url:u.toString(),method:'GET',headers:{}});
+      txt=typeof viaB==='string'?viaB:JSON.stringify(viaB);
+    }
+    const j=JSON.parse(txt);
+    const rows=(j.servers||[]).map(mcpRegNormalise)
+      .filter(x=>x.name&&x.status!=='deleted'&&x.isLatest);
+    MCPREG.items=opts.cursor?MCPREG.items.concat(rows):rows;
+    MCPREG.cursor=(j.metadata&&j.metadata.nextCursor)||null;
+    MCPREG.fetchedAt=nowISO();
+    return{ok:true,n:rows.length,total:MCPREG.items.length,more:!!MCPREG.cursor};
+  }catch(e){
+    MCPREG.error=e.message;return{ok:false,error:e.message};
+  }finally{MCPREG.loading=false;}
+}
+
+/* One click from "found it in the registry" to "it is a connector". */
+function mcpRegAdd(item){
+  if(!item||!item.url)
+    return{ok:false,error:'that server has no hosted endpoint — it ships as a package you run locally, so add it as an MCP (local command) with the bridge'};
+  if(CONNECTORS.some(c=>c.url===item.url))
+    return{ok:false,error:'already added'};
+  const c=connectorAdd('mcp-http',{label:item.title||item.name,url:item.url,token:''});
+  return{ok:true,connector:c,note:'Added. Press Connect to handshake and pull its tool list.'};
+}
+
 /* One JSON-RPC round trip, over whichever transport this connector uses. */
 async function mcpRpc(c,method,params){
   const body={jsonrpc:'2.0',id:uid(),method,params:params||{}};
@@ -24060,6 +24153,29 @@ function gauntletCases(g){
          guarding a problem that no longer exists. */
       const f=({name,body})=>({name:name||'note',body:body||''});
       return f('A Title','THE TEXT').body===''?1:0;
+    },antiExpect:v=>v===1});
+
+  add({id:'mcp-registry-shape',sub:'connectors',uses:['mcpRegNormalise','mcpRegAdd'],
+    what:'registry rows are read from the nested shape, and only hosted servers are addable',
+    run:()=>{
+      /* The live shape nests everything under `.server`. Reading the top level returns
+         undefined for every field, which looks like an empty registry rather than a parsing
+         mistake — so this pins the nesting, not just "it parsed". */
+      const row={server:{name:'x/y',title:'Thing',description:'d',version:'1.0.0',
+        remotes:[{type:'streamable-http',url:'https://example.com/mcp'}]},
+        _meta:{'io.modelcontextprotocol.registry/official':{status:'active',isLatest:true}}};
+      const n=mcpRegNormalise(row);
+      const pkgRow={server:{name:'p/q',title:'Pkg',packages:[{identifier:'@scope/thing'}]},
+        _meta:{'io.modelcontextprotocol.registry/official':{status:'active',isLatest:true}}};
+      const pn=mcpRegNormalise(pkgRow);
+      const refused=mcpRegAdd(pn);
+      return (n.title==='Thing'&&n.url==='https://example.com/mcp'&&n.addable
+        &&!pn.addable&&pn.pkgId==='@scope/thing'&&refused.ok===false)?'correct':'wrong';
+    },expect:v=>v==='correct',
+    antiWhat:'and the hazard is real: reading the row at the top level yields nothing',
+    anti:()=>{
+      const row={server:{name:'x/y',title:'Thing'}};
+      return (row.title===undefined&&row.name===undefined)?1:0;
     },antiExpect:v=>v===1});
 
   add({id:'state-roundtrip-safe',sub:'storage',uses:['stateSnapshot','stateImport'],
@@ -35877,6 +35993,45 @@ function initForge(){
     toast(MAP3D.auto?'Spinning':'Stopped — drag to turn it yourself');};
   $('#brain-mapreset').onclick=()=>{MAP3D.rotX=-0.25;MAP3D.rotY=0.6;MAP3D.zoom=1;MAP3D.auto=true;};
 
+  /* ── MCP registry browser ───────────────────────────────────────────── */
+  const mregRender=()=>{
+    const o=$('#mreg-out');if(!o)return;
+    if(MCPREG.error){o.innerHTML=`<p class="help" style="color:var(--bad)">${esc(MCPREG.error)}</p>`;return;}
+    const items=MCPREG.items||[];
+    if(!items.length){o.innerHTML='<p class="help">Nothing loaded yet — press Search.</p>';return;}
+    o.innerHTML=items.map((x,i)=>`
+      <div class="card" style="margin:6px 0;padding:9px">
+        <div class="row" style="gap:8px;align-items:center">
+          <span class="grow" style="min-width:0">
+            <b>${esc(x.title)}</b>
+            <span class="muted mini">${esc(x.version||'')}</span>
+            ${x.addable?'<span class="badge ok mini">hosted</span>':'<span class="badge mini">local package</span>'}
+            <div class="mini muted" style="margin-top:3px">${esc(String(x.description||'').slice(0,180))}</div>
+            <div class="mini muted" style="margin-top:2px">${esc(x.url||x.pkgId||'')}</div>
+          </span>
+          ${x.addable?`<button class="btn small" data-mreg="${i}">＋ Add</button>`:''}
+        </div>
+      </div>`).join('')
+      +(MCPREG.cursor?'<p class="help">More available — press ＋ More.</p>':'');
+    $$('[data-mreg]').forEach(b=>b.onclick=()=>{
+      const r=mcpRegAdd(MCPREG.items[+b.dataset.mreg]);
+      toast(r.ok?(r.note||'Added'):r.error,r.ok?3200:5200);
+      if(r.ok){b.textContent='✓ added';b.disabled=true;try{renderConnectors&&renderConnectors();}catch(_){}}
+    });
+  };
+  const mgo=$('#mreg-go');
+  if(mgo)mgo.onclick=async()=>{
+    const o=$('#mreg-out');if(o)o.innerHTML='<p class="help">Reading the registry…</p>';
+    await mcpRegFetch({search:($('#mreg-q')||{}).value||'',limit:40});
+    mregRender();
+  };
+  const mmore=$('#mreg-more');
+  if(mmore)mmore.onclick=async()=>{
+    if(!MCPREG.cursor)return toast('No more results',2200);
+    await mcpRegFetch({search:($('#mreg-q')||{}).value||'',cursor:MCPREG.cursor,limit:40});
+    mregRender();
+  };
+
   /* ── Neural view, Ask, and the importers ────────────────────────────────
      All guarded with `if(el)`: this init runs on a page where a user may have
      switched the Brain tab off in Customise, and an unguarded $('#id').onclick on
@@ -46499,6 +46654,8 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     awardCandidates,awardEligible,awardDigest,awardPanellist,awardTally,awardJudge,awardsRun,
     awardsCeremony,awardConfetti,renderAwards,awardSamples,awardsGo,awardCardHtml,
     BRAIN_SKIP,BRAIN_FORMATS,
+    MCP_REGISTRY,get MCPREG(){return MCPREG},set MCPREG(v){MCPREG=v},
+    mcpRegFetch,mcpRegAdd,mcpRegNormalise,
     GB_STATE_VERSION,stateKeys,stateSnapshot,stateExportFile,stateImport,stateRollback,
     stateHealth,brainSyncState,brainReadState,BRAIN_STATE_DIR,
     get BRAIN_FIRED(){return BRAIN_FIRED},set BRAIN_FIRED(v){BRAIN_FIRED=v},
