@@ -35993,6 +35993,29 @@ const PC_SAMPLES=[
 ];
 let PC=null;                 // the module, once
 let PCAPP=null;              // the running Application
+/* THE canvas — created once and never thrown away.
+
+   renderPcv() rewrites its host's innerHTML on every status change, which REPLACES the <canvas>
+   node. The Application holds a reference to the node it was constructed with, so each re-render
+   left the renderer drawing into a detached element that is no longer on the page. Confirmed in
+   a real browser: graphicsDevice.canvas !== the #pc-canvas in the DOM, device dimensions 0x0,
+   and the layer list containing "World" and "Immediate" twice over from stacked dead Applications.
+
+   Everything downstream of that looked like a different bug — a blank canvas, a backing store
+   stuck at 300x150, resizeCanvas appearing to do nothing, zero triangles with a perfectly valid
+   camera and mesh. One cause, four symptoms.
+
+   Keeping the element outside the churn is the fix: the panel re-renders around it. */
+let PC_CANVAS=null;
+function pcCanvas(){
+  if(!PC_CANVAS){
+    PC_CANVAS=document.createElement('canvas');
+    PC_CANVAS.id='pc-canvas';
+    PC_CANVAS.style.cssText='width:100%;height:380px;display:block;border:1px solid var(--edge);'+
+      'border-radius:12px;background:#0e1119';
+  }
+  return PC_CANVAS;
+}
 const PCV={url:'',name:'',status:'idle',meshes:0,materials:0,clips:[],clip:'',tris:0,err:''};
 async function pcLoad(){
   if(PC)return PC;
@@ -36016,7 +36039,7 @@ async function pcOpen(url,name){
   try{
     const pc=await pcLoad();
     PCV.status='loading asset';renderPcv();
-    const cv=$('#pc-canvas');if(!cv)return;
+    const cv=pcCanvas();
     pcDestroy();
     const app=new pc.Application(cv,{graphicsDeviceOptions:{alpha:false,antialias:true}});
     PCAPP=app;
@@ -36028,11 +36051,18 @@ async function pcOpen(url,name){
        than reasoned about: the canvas measured 300x150 with a full-width CSS box.
        A ResizeObserver rather than a window listener, because this panel changes size when a
        sub-tab opens or the tab bar moves, not only when the window does. */
+    /* app.resizeCanvas REPORTS the size it would use and does not apply it under FILLMODE_NONE —
+       verified live: it returned {width:1403,height:378} while the canvas stayed 300x150. The
+       backing store has to be set directly, and the device told about it. */
     const fit=()=>{
-      const w=Math.max(1,Math.round(cv.clientWidth||cv.parentElement&&cv.parentElement.clientWidth||0));
-      const h=Math.max(1,Math.round(cv.clientHeight||380));
-      if(!w||!h)return;                       // hidden panel: nothing sensible to size to yet
-      try{app.resizeCanvas(w,h);}catch(_){}
+      const w=Math.round(cv.clientWidth||(cv.parentElement&&cv.parentElement.clientWidth)||0);
+      const h=Math.round(cv.clientHeight||380);
+      if(w<2||h<2)return;                      // hidden panel: nothing sensible to size to yet
+      const dpr=Math.min(2,window.devicePixelRatio||1);   // capped: 3x on a phone is all cost
+      const bw=Math.round(w*dpr),bh=Math.round(h*dpr);
+      if(cv.width===bw&&cv.height===bh)return;
+      cv.width=bw;cv.height=bh;
+      try{app.graphicsDevice.setResolution(bw,bh);}catch(_){}
     };
     fit();
     if(window.ResizeObserver){
@@ -36142,8 +36172,7 @@ function renderPcv(){
     <div class="row" style="gap:6px;margin-top:7px;flex-wrap:wrap">
       ${PC_SAMPLES.map(x=>`<button class="btn ghost sm" data-pcsample="${esc(x.url)}">${esc(x.label)}</button>`).join('')}
     </div>
-    <canvas id="pc-canvas" style="width:100%;height:380px;border:1px solid var(--edge);
-      border-radius:12px;margin-top:11px;background:#0e1119;display:block"></canvas>
+    <div id="pc-mount" style="margin-top:11px"></div>
     ${PCV.status==='failed'?`<p class="help"><b style="color:var(--bad)">Could not open it.</b> ${esc(PCV.err)}</p>`:''}
     ${PCV.status==='ready'?`
       <p class="help"><b>${esc(PCV.name)}</b> — ${PCV.meshes} mesh${PCV.meshes===1?'':'es'} ·
@@ -36157,6 +36186,10 @@ function renderPcv(){
       </div>`:''}
     ${PCV.status==='idle'?'<p class="help">Nothing loaded yet — try one of the samples above.</p>':''}
   </div>`;
+  /* Move the SAME canvas back in rather than letting innerHTML mint a new one. appendChild
+     relocates the existing node, so the Application's reference stays valid. */
+  const mount=$('#pc-mount',host);
+  if(mount)mount.appendChild(pcCanvas());
   const o=$('#pc-open');if(o)o.onclick=()=>pcOpen($('#pc-url').value);
   $$('[data-pcsample]',host).forEach(b=>b.onclick=()=>{$('#pc-url').value=b.dataset.pcsample;pcOpen(b.dataset.pcsample);});
   $$('[data-pcclip]',host).forEach(b=>b.onclick=()=>pcPlay(b.dataset.pcclip));
@@ -45084,6 +45117,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     botsAddressed,botSysFor,botTurn,botGroupRun,renderBotBox,renderBotCfg,botAuditRow,
     BOT_QUICK,BOT_EFFORTS,groupRosterHTML,wireGroupRoster,
     genImageFromCatalog,
+    pcCanvas,get PC_CANVAS(){return PC_CANVAS},
     SETUP_CHECKS,setupScore,renderSetup,setupFocus,goEnsure,gauntletQuickRun,tabDropTarget,
     botRng,botSprite,botModelChain,botNorm,botAll,botAudit,botRunsFor,BOT_PALETTES,
     botFaceWarm,get BOT_FACES(){return BOT_FACES},set BOT_FACES(v){BOT_FACES=v},
