@@ -18656,7 +18656,10 @@ function dreamSchedule(){
    an old search reopens like a saved conversation. */
 const RSESS_CAP=40;
 let RSESSIONS=store.get('researchsessions',[]);
-const saveRSessions=()=>store.set('researchsessions',RSESSIONS.slice(-RSESS_CAP));
+/* No slice(-N) here: callers trim in memory first, and a redundant slice(-N) on a
+   newest-first list is the exact shape of the bug fixed 14 times in this file — it would
+   become live the moment that trim moved. */
+const saveRSessions=()=>{if(RSESSIONS.length>RSESS_CAP)RSESSIONS.length=RSESS_CAP;store.set('researchsessions',RSESSIONS);};
 function rsessSave(query,findings,meta){
   const s={id:uid(),ts:nowISO(),query:String(query||'').slice(0,300),
     findings:(findings||[]).slice(0,40),saved:[],cost:(meta&&meta.cost)||0,
@@ -21220,7 +21223,7 @@ function feedbackAdd({surface,verdict,note,model,subject,cost}){
   return rec;
 }
 let FEEDBACK_RULES=store.get('feedbackRules',[]);
-const saveFeedbackRules=()=>store.set('feedbackRules',FEEDBACK_RULES.slice(-40));
+const saveFeedbackRules=()=>{if(FEEDBACK_RULES.length>40)FEEDBACK_RULES.length=40;store.set('feedbackRules',FEEDBACK_RULES);};
 function feedbackLearn(rec){
   const rule={id:uid(),from:rec.id,surface:rec.surface,text:rec.note,ts:rec.ts,on:true};
   FEEDBACK_RULES.unshift(rule);saveFeedbackRules();
@@ -28639,7 +28642,7 @@ async function rpiRun(id,phase,{model,graphId,onUpdate,signal}={}){
    (superseded, below the confidence floor, over budget) is recorded with the reason, because
    "why was this not used" is the more useful question once the graph gets big. */
 let ACTIVATION=null,ACTIVATIONS=store.get('activations',[]);
-const saveActivations=()=>store.set('activations',ACTIVATIONS.slice(-24));
+const saveActivations=()=>{if(ACTIVATIONS.length>24)ACTIVATIONS.length=24;store.set('activations',ACTIVATIONS);};
 function actBegin(model,task){
   ACTIVATION={id:uid(),ts:nowISO(),model,tier:modelTier(model),
     task:String(task||'').slice(0,200),used:[],withheld:[],edges:[],blocks:[],chars:0};
@@ -46721,7 +46724,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     BRAIN_DOMAINS,brainDomainScore,brainUsage,brainDomainMap,brainReorgPlan,
     SKILL_SURFACES,get SKILLCTX(){return SKILLCTX},saveSkillCtx,skillsFor,skillBlockFor,skillToggle,
     get FEEDBACK(){return FEEDBACK},set FEEDBACK(v){FEEDBACK=v},
-    get FEEDBACK_RULES(){return FEEDBACK_RULES},set FEEDBACK_RULES(v){FEEDBACK_RULES=v},
+    get FEEDBACK_RULES(){return FEEDBACK_RULES},set FEEDBACK_RULES(v){FEEDBACK_RULES=v},saveFeedbackRules,
     feedbackAdd,feedbackLearn,feedbackBlockFor,feedbackStats,feedbackWidget,feedbackInit,
     GEN_IMAGE_MODELS,GEN_VIDEO_MODELS,GEN_PROVIDERS,get GENCFG(){return GENCFG},saveGenCfg,
     genImageModel,genVideoModel,genReady,genImage,genVideo,genFetch,genSaveAsset,genAssetBody,
