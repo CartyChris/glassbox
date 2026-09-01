@@ -23350,6 +23350,17 @@ function gauntletCases(g){
     anti:()=>g.socParseAssumptions('Here is the design, it uses a queue and a worker.').length,
     antiExpect:v=>v===0});
 
+  add({id:'billing-free-not-payg',sub:'wiring',uses:['modelBilling'],
+    what:'a keyless provider is labelled free, not pay-as-you-go',
+    run:()=>{
+      /* The most misleading label available is telling someone a free model costs money, and
+         that is exactly what happened: provider-built models carry pricing as STRINGS and never
+         set priceIn, so the numeric test missed them entirely. */
+      const b=g.modelBilling('ovh/gpt-oss-20b');
+      return b.kind;},expect:v=>v==='free',
+    antiWhat:'while a real paid model is still labelled pay-as-you-go',
+    anti:()=>g.modelBilling('anthropic/claude-fable-5').kind,antiExpect:v=>v==='payg'});
+
   add({id:'render-unique-ids',sub:'rendering',uses:['esc'],
     what:'no duplicate DOM id (the second one is unreachable via $())',
     run:()=>{const seen={},d=[];document.querySelectorAll('[id]').forEach(e=>{
@@ -23662,6 +23673,9 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'billing-all-payg',export:'modelBilling',
+   why:'free and subscription models start reading as pay-as-you-go',
+   broken:()=>()=>({kind:'payg'})},
   {id:'assume-silent',export:'socCorrections',
    why:'a rejected premise stops reaching later voices and the stream keeps building on it',
    broken:()=>()=>''},
@@ -40482,7 +40496,15 @@ function modelBilling(id){
   if(s2.startsWith('ollama/'))return{kind:'local'};
   const m=(typeof CATMAP!=='undefined'&&CATMAP.get)?CATMAP.get(id):null;
   if(m&&m._local)return{kind:'local'};
-  if(m&&(m.priceIn===0||/(^|\/)free|:free\b/i.test(s2)))return{kind:'free'};
+  /* A provider that needs no key charges nothing by definition. Checked BEFORE the price test,
+     because provider-built models carry `pricing:{prompt:'0'}` as STRINGS and never set priceIn
+     — so the numeric test below silently missed them and labelled the free tier "pay as you go",
+     which is the most misleading label available: it tells someone a free model costs money. */
+  const prov=(typeof PROVIDERS!=='undefined'?PROVIDERS:[]).find(x=>s2.startsWith(x.id+'/'));
+  if(prov&&prov.anonymous)return{kind:'free'};
+  const zero=v=>v===0||v==='0'||(typeof v==='string'&&/^0(\.0+)?$/.test(v));
+  if(m&&(zero(m.priceIn)||zero(m.pricing&&m.pricing.prompt)||/(^|\/)free|:free\b/i.test(s2)))
+    return{kind:'free'};
   return{kind:'payg'};
 }
 const billingBadge=id=>{
