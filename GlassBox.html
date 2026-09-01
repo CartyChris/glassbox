@@ -36040,7 +36040,12 @@ function godotBasis(rot,scale){
     cy*szn,           cx*cz+sxn*syn*szn,  -cz*sxn+cx*syn*szn,
     -syn,             cy*sxn,             cx*cy
   ];
-  return [m[0]*sx,m[1]*sy,m[2]*sz, m[3]*sx,m[4]*sy,m[5]*sz, m[6]*sx,m[7]*sy,m[8]*sz];
+  /* `m` is row-major R. Godot's Transform3D takes the basis as COLUMNS, and column j is the one
+     scaled by scale[j]. Emitting rows instead produces the TRANSPOSE of the rotation, which is
+     its inverse — every object rotated the wrong way. It passes an identity-only test, because
+     the transpose of the identity is the identity, so this is only caught by testing a real
+     rotation against an independently-built reference. */
+  return [m[0]*sx,m[3]*sx,m[6]*sx,  m[1]*sy,m[4]*sy,m[7]*sy,  m[2]*sz,m[5]*sz,m[8]*sz];
 }
 const gdNum=v=>{const n=+v;return isFinite(n)?(+n.toFixed(5)):0;};
 function godotColor(hex){
