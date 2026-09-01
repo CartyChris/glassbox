@@ -23503,6 +23503,37 @@ function gauntletCases(g){
     antiWhat:'and a bot with no portrait always gets a sprite rather than a broken image',
     anti:()=>/^<svg/.test(g.botFace({id:'y',name:'NoPic',avatar:'n'},40))?1:0,antiExpect:v=>v===1});
 
+  add({id:'godot-basis-columns',sub:'wiring',uses:['godotBasis'],
+    what:'the exported rotation basis is columns, not its transpose',
+    run:()=>{
+      /* A transposed basis is the INVERSE rotation: every object comes out turned the wrong way
+         in Godot. It passes any identity-only check, because the transpose of the identity is
+         the identity — so the reference here is built independently, as Rz*Ry*Rx from separate
+         matrices rather than the pre-multiplied form the implementation uses. */
+      const mul=(A,C)=>{const o=new Array(9).fill(0);
+        for(let r=0;r<3;r++)for(let c=0;c<3;c++){let v=0;for(let k=0;k<3;k++)v+=A[r*3+k]*C[k*3+c];o[r*3+c]=v;}return o;};
+      const Rx=a=>[1,0,0, 0,Math.cos(a),-Math.sin(a), 0,Math.sin(a),Math.cos(a)];
+      const Ry=a=>[Math.cos(a),0,Math.sin(a), 0,1,0, -Math.sin(a),0,Math.cos(a)];
+      const Rz=a=>[Math.cos(a),-Math.sin(a),0, Math.sin(a),Math.cos(a),0, 0,0,1];
+      const ref=(rot,sc)=>{const R=mul(Rz(rot[2]),mul(Ry(rot[1]),Rx(rot[0])));
+        return [R[0]*sc[0],R[3]*sc[0],R[6]*sc[0], R[1]*sc[1],R[4]*sc[1],R[7]*sc[1],
+                R[2]*sc[2],R[5]*sc[2],R[8]*sc[2]];};
+      const cases=[[[0,0.7,0],[1,1,1]],[[0.3,-0.5,1.2],[1,1,1]],[[0.3,-0.5,1.2],[2,0.5,1.5]]];
+      let worst=0;
+      cases.forEach(([r,sc])=>{
+        const mine=g.godotBasis(r,sc), t=ref(r,sc);
+        mine.forEach((v,i)=>{worst=Math.max(worst,Math.abs(v-t[i]));});
+      });
+      return worst<1e-6?'columns':'off by '+worst.toFixed(3);
+    },expect:v=>v==='columns',
+    antiWhat:'and a Transform3D carries twelve floats — nine basis then three origin',
+    anti:()=>{
+      const files=g.godotProject([{name:'a',kind:'mesh',geo:'box',pos:[1,2,3],rot:[0,0,0],
+        scale:[1,1,1],params:{},color:'#fff'}],{});
+      const m=files['main.tscn'].match(/Transform3D\(([^)]*)\)/);
+      return m?m[1].split(',').length:0;
+    },antiExpect:v=>v===12});
+
   add({id:'render-unique-ids',sub:'rendering',uses:['esc'],
     what:'no duplicate DOM id (the second one is unreachable via $())',
     run:()=>{const seen={},d=[];document.querySelectorAll('[id]').forEach(e=>{
@@ -23815,6 +23846,11 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'godot-transposed',export:'godotBasis',
+   why:'the exported rotation becomes its own inverse and every object faces the wrong way',
+   broken:()=>(rot,scale)=>{const s=scale||[1,1,1];
+     const c=Math.cos(rot[1]||0),n=Math.sin(rot[1]||0);
+     return [c*s[0],0,n*s[0], 0,s[1],0, -n*s[2],0,c*s[2]];}},
   {id:'img-stream-blind',export:'applyDelta',
    why:'generated images stop being collected and every call reports "no image returned"',
    broken:()=>(acc,delta)=>{if(delta&&typeof delta.content==='string')acc.content+=delta.content;}},
