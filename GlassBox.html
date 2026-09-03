@@ -12699,7 +12699,7 @@ async function runStandup(members,context,hostEl){
   const list=(members||[]).filter(m=>m.model);
   if(!list.length)return null;
   logEvent('standup',{members:list.length});
-  const reports=await Promise.all(list.map(async m=>{
+  const reports=await pooled(list,async m=>{
     try{
       const acc=await streamComplete({model:m.model,web:false,maxTokens:420,
         response_format:STANDUP_SCHEMA,
@@ -12714,7 +12714,7 @@ async function runStandup(members,context,hostEl){
       comm(m.concern||m.model,'all',j.doing,'standup');
       return{member:m,...j,cost:acc.cost||0};
     }catch(e){return{member:m,doing:'(failed to report)',blocked:e.message,needs:'',risk:'',cost:0};}
-  }));
+  });
   // a conflict is two members claiming the same file
   const owners={},conflicts=[];
   reports.forEach(r=>{
@@ -13370,9 +13370,15 @@ async function withFallback(primaryModel,opts,onUpdate,signal,label){
   const cfg=Object.assign({},FALLBACK_DEFAULTS,OPS.fallback||{});
   const span=spanStart(label||primaryModel,'llm',{model:primaryModel});
   let acc=null,err=null;
-  try{acc=await streamComplete({...opts,model:primaryModel},onUpdate,signal,label);}
+  try{acc=await streamCompleteOnce({...opts,model:primaryModel},onUpdate,signal,label);}
   catch(e){err=e;}
-  const thin=acc&&cfg.onEmpty&&(acc.content||'').trim().length<cfg.minChars;
+  /* "Too short to be real" is only evidence of failure when a long answer was WANTED.
+     A caller that set maxTokens:20 (the one-word game), asked for structured output, or
+     capped below the threshold itself is going to get a short answer by design — treating
+     that as a failure would fire a second PAID call on every correct short response. This
+     guard is the difference between a safety net and a silent double-spend. */
+  const wantsShort=!!(opts&&(opts.response_format||(opts.maxTokens&&opts.maxTokens<=cfg.minChars*2)));
+  const thin=acc&&cfg.onEmpty&&!wantsShort&&(acc.content||'').trim().length<cfg.minChars;
   if(!err&&!thin){spanEnd(span,acc);return acc;}
   if(signal&&signal.aborted){spanEnd(span,acc,err);throw err||new Error('aborted');}
   const target=cfg.to||settings.buildModel;
@@ -13391,7 +13397,7 @@ async function withFallback(primaryModel,opts,onUpdate,signal,label){
     'The model that started this could not finish. Here is how far it got — continue from it, '+
     'do not restart, and do not comment on the handover:\n\n'+partial.slice(-6000)});
   try{
-    const acc2=await streamComplete({...opts,model:target,messages:msgs},onUpdate,signal,label);
+    const acc2=await streamCompleteOnce({...opts,model:target,messages:msgs},onUpdate,signal,label);
     acc2.fellBackFrom=primaryModel;
     spanEnd(span2,acc2);
     return acc2;
@@ -15984,7 +15990,21 @@ function callDeadline(signal,secs){
     get timedOut(){return timedOut;},
     done(){clearTimeout(timer);if(signal)signal.removeEventListener('abort',onParent);}};
 }
+/* ── The one path every model call takes ────────────────────────────────────
+   streamComplete is now fallback-aware, and streamCompleteOnce is the single attempt.
+   Wiring it here rather than at call sites is deliberate: withFallback was written months
+   ago, exported, and called from NOWHERE — 93 call sites and not one of them got the
+   behaviour. Wrapping the shared entry point gives all 93 the feature with no call-site
+   edits and no chance of a site being missed.
+
+   The split also prevents the obvious recursion: withFallback calls streamCompleteOnce,
+   never streamComplete. */
 async function streamComplete(opts,onUpdate,signal,label){
+  const cfg=Object.assign({},FALLBACK_DEFAULTS,(typeof OPS!=='undefined'&&OPS.fallback)||{});
+  if(!cfg.on)return streamCompleteOnce(opts,onUpdate,signal,label);
+  return withFallback((opts&&opts.model)||settings.buildModel,opts,onUpdate,signal,label);
+}
+async function streamCompleteOnce(opts,onUpdate,signal,label){
   const _dl=callDeadline(signal,opts&&opts.timeout);
   try{
     return await streamCompleteInner(opts,onUpdate,_dl.signal,label);
@@ -17472,7 +17492,7 @@ async function runSwarm(rn,baseFiles){
 
   setPhase(`🐝 Swarm round ${rn}`,`${members.length} builders working in parallel`);
   const shared=filesToText(baseFiles||WS.files);
-  const results=await Promise.all(members.map(async(m,i)=>{
+  const results=await pooled(members,async(m,i)=>{
     const cell=$(`#sw-${rn}-${i}`);
     const sys='You are ONE MEMBER of a swarm of builders working on the same application at the same time.\n'+
       `YOUR CONCERN: ${m.concern}\n`+
@@ -17503,7 +17523,7 @@ async function runSwarm(rn,baseFiles){
       cell.innerHTML=`<b>${esc(m.concern)}</b><div class="mini" style="color:var(--bad)">✗ ${esc(e.message)}</div>`;
       return{member:m,files:{},handshake:'',error:e.message};
     }
-  }));
+  });
   // ---- merge, and be honest about collisions ----
   const merged=Object.assign({},baseFiles||WS.files);
   const owners={},conflicts=[];
@@ -17739,7 +17759,7 @@ async function relayRound(){
     setPhase(`🏆 Tournament round ${rn}`,`${RS.tour} builders competing`);
     const models=tourModels.slice(0,RS.tour);
     bodyEl.innerHTML=models.map((m,i)=>`<div class="card" style="margin-bottom:8px"><b class="mono">${esc(m)}</b><div id="tb-${rn}-${i}"></div></div>`).join('');
-    const accs=await Promise.all(models.map((m,i)=>runBuilder(m,msg,$(`#tb-${rn}-${i}`),m).catch(e=>null)));
+    const accs=await pooled(models,(m,i)=>runBuilder(m,msg,$(`#tb-${rn}-${i}`),m).catch(e=>null));
     tourResults=models.map((m,i)=>({model:m,out:accs[i]?accs[i].content:null})).filter(x=>x.out);
     if(!tourResults.length)throw new Error('all tournament builders failed');
     setPhase(`⚖️ Architect picking winner`,RS.arch);
@@ -18032,7 +18052,7 @@ async function runCouncil(){
     grid.appendChild(d);cells[id]=d;});
   const sys='You are a member of an expert council. Think deeply about the problem in your reasoning channel, then give your POSITION: the key insight, your recommended approach, and the single biggest risk others will miss. Be opinionated and concrete. Max 250 words.';
   const results={};
-  await Promise.all(cnMembers.map(async id=>{
+  await pooled(cnMembers,async id=>{
     try{
       const r=buildReasoning({mode:'auto',effort:'high',budget:6144,cutoff:false,room:2048},id);
       const acc=await streamChat({model:id,messages:[{role:'system',content:sys},{role:'user',content:task}],
@@ -18043,7 +18063,7 @@ async function runCouncil(){
       results[id]={text:thoughtOf(acc),pos:acc.content};
       saveRun({id:uid(),ts:nowISO(),type:'council',model:id,prompt:task,acc,details:detailsArray(acc),usage:acc.usage,cost:estCost(acc,id)});
     }catch(e){if(e.name!=='AbortError')cells[id].querySelector('[data-ans]').textContent='⚠ '+e.message;}
-  }));
+  });
   // optional debate round
   if($('#cn-debate').checked&&Object.keys(results).length>1&&!cnAbort.signal.aborted){
     toast('Debate round…');
@@ -18100,7 +18120,7 @@ async function runCompare(){
       <div class="pane raw" style="margin-top:8px"><div class="ph"><span class="swatch"></span>reasoning</div><div class="pb" data-raw></div></div>
       <div class="pane ans" style="margin-top:8px"><div class="ph"><span class="swatch"></span>answer</div><div class="pb" data-ans></div></div>`;
     grid.appendChild(d);cells[id]=d;});
-  await Promise.all(cmpModels.map(async id=>{
+  await pooled(cmpModels,async id=>{
     const {reasoning,maxTokens}=buildReasoning({mode:'auto',effort:'high',budget:4096,cutoff:cut,cap:24,room:4096},id);
     try{
       const acc=await streamChat({model:id,messages:[{role:'system',content:'Reason fully in your reasoning channel.'+(cut?' Your visible answer must be at most one short sentence.':'')},
@@ -18115,7 +18135,7 @@ async function runCompare(){
       cmpLast[id]=thoughtOf(acc);
       saveRun({id:uid(),ts:nowISO(),type:'compare',model:id,prompt,acc,details:detailsArray(acc),usage:acc.usage,cost:estCost(acc,id)});
     }catch(e){if(e.name!=='AbortError')cells[id].querySelector('[data-ans]').textContent='⚠ '+e.message;}
-  }));
+  });
   $('#cmp-run').disabled=false;$('#cmp-stop').disabled=true;
   $('#cmp-diverge').disabled=Object.keys(cmpLast).length<2;cmpAbort=null;
 }
@@ -18518,7 +18538,7 @@ async function brainApplyCuration(){
 async function brainSpawnFromPlan(onUpdate){
   const plan=CURATION.spawn||[];
   if(!plan.length)return{ok:false,error:'Nothing proposed. Run the curator first.'};
-  const results=await Promise.all(plan.map(async(s,i)=>{
+  const results=await pooled(plan,async(s,i)=>{
     const notes=(s.notes||[]).map(id=>BRAIN.docs.find(d=>d.id===id)).filter(Boolean)
       .flatMap(d=>brainWithRefs(d,2));
     const seen=new Set(),material=notes.filter(d=>{if(seen.has(d.id))return false;seen.add(d.id);return true;})
@@ -18545,7 +18565,7 @@ async function brainSpawnFromPlan(onUpdate){
       paneEvent('agent','subagent-done',{label:s.agent,ok:false,note:e.message});
       return{agent:s.agent,task:s.task,ok:false,error:e.message};
     }
-  }));
+  });
   return{ok:true,results};
 }
 
@@ -24371,6 +24391,27 @@ function gauntletCases(g){
       return old.test('_glassbox/latest.json')?0:1;     // the old pattern let it through
     },antiExpect:v=>v===1});
 
+  add({id:'fallback-and-pool-wired',sub:'routing',uses:['withFallback','limiter'],
+    what:'every model call routes through fallback, and fan-outs are concurrency-capped',
+    run:()=>{
+      /* Both of these were written, exported, and called from NOWHERE — withFallback across
+         93 streamComplete call sites, limiter across 19 Promise.all fan-outs. A feature with
+         no call site is indistinguishable from a missing feature, and neither had one. */
+      const sc=String(g.streamComplete),wf=String(g.withFallback);
+      const wired=sc.includes('withFallback')&&sc.includes('streamCompleteOnce');
+      const noRecursion=(wf.match(/streamCompleteOnce\(/g)||[]).length===2
+        &&!/[^e]streamComplete\(/.test(wf);
+      const guard=wf.includes('wantsShort');
+      const pooled=typeof g.pooled==='function'&&g.MODEL_POOL.stats().max>=1;
+      return (wired&&noRecursion&&guard&&pooled)?'wired':'not wired';
+    },expect:v=>v==='wired',
+    antiWhat:'and the hazard is real: without the short-answer guard a one-word reply bills twice',
+    anti:()=>{
+      /* The naive "too short means it failed" test fires on every correct short answer. */
+      const naive=(opts,content)=>(content||'').trim().length<120;
+      return naive({maxTokens:20},'Caching')?1:0;   // one-word game would pay for a 2nd call
+    },antiExpect:v=>v===1});
+
   add({id:'newest-first-caps',sub:'storage',uses:['store'],
     what:'every newest-first list trims in memory instead of persisting slice(-N)',
     run:()=>{
@@ -25337,6 +25378,20 @@ function limiter(max){
     stats(){return{active,queued:queue.length,max:n};},
   };
 }
+
+/* ── The shared model pool ──────────────────────────────────────────────────
+   limiter() existed, was exported, and had exactly one reference: its own definition.
+   Meanwhile 19 Promise.all fan-outs went out uncapped. That is fine at 2 models and a
+   rate-limit wall at 12 — and the model list is chosen by the USER, so the width of these
+   fan-outs is not something the code controls.
+
+   Four in flight is the default because it keeps a Council of eight visibly progressing
+   without tripping a provider's per-minute ceiling. Everything still completes and results
+   still arrive in order; only the number in flight is bounded.
+
+   `pooled` is a drop-in for `Promise.all(xs.map(fn))` — same signature, same ordering. */
+const MODEL_POOL=limiter(4);
+const pooled=(xs,fn)=>Promise.all(Array.from(xs,(x,i)=>MODEL_POOL.run(()=>fn(x,i))));
 
 /* ── JSON repair ──
    A model that emits one trailing comma should not cost the whole answer. This repairs the
@@ -31866,7 +31921,7 @@ async function moaRun(task,onStep,signal){
   const history=[];let draft='',cost=0;
   try{
     for(let L=1;L<=layers;L++){
-      const outs=await Promise.all(props.map(async(m,i)=>{
+      const outs=await pooled(props,async(m,i)=>{
         const s=spanStart(`moa L${L}:${m}`,'llm',{model:m,layer:L});
         try{
           const acc=await streamComplete({model:m,maxTokens:3000,messages:[
@@ -31882,7 +31937,7 @@ async function moaRun(task,onStep,signal){
           if(onStep)onStep({layer:L,model:m,phase:'propose',text:acc.content});
           return{model:m,text:acc.content||''};
         }catch(e){spanEnd(s,null,e);return{model:m,text:'',error:e.message};}
-      }));
+      });
       const good=outs.filter(o=>o.text&&o.text.trim());
       if(!good.length)throw new Error('every proposer failed in layer '+L);
       const s2=spanStart(`moa aggregate L${L}`,'llm',{model:agg,layer:L});
@@ -46779,7 +46834,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     ohProbe,ohSessions,ohFetch,OH_DEFAULTS,get OH(){return OH},set OH(v){OH=v},
     syncProviderModels,syncAllProviders,syncProvidersNow,addCustomModel,removeCustomModel,
     spanStart,spanEnd,spanTree,spanTotals,get SPANS(){return SPANS},set SPANS(v){SPANS=v},
-    checkReasoning,shingles,jaccard,withFallback,FALLBACK_DEFAULTS,effortForTokens,
+    checkReasoning,shingles,jaccard,withFallback,FALLBACK_DEFAULTS,effortForTokens,streamCompleteOnce,
     saveGoldenTrace,compareToGolden,gradeTrace,feedbackBlock,
     get GOLDENS(){return GOLDENS},set GOLDENS(v){GOLDENS=v},
     get FEEDBACK(){return FEEDBACK},set FEEDBACK(v){FEEDBACK=v},
@@ -46813,6 +46868,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     temporalFacts,temporalBrief,fmtDur,
     ERROR_KINDS,classifyError,isRetryable,backoffDelay,parseRetryAfter,
     BREAKER_DEFAULTS,get BREAKERS(){return BREAKERS},set BREAKERS(v){BREAKERS=v},saveBreakers,
+    MODEL_POOL,pooled,
     breakerState,breakerRecord,breakerAllows,resilientCall,coalesce,inflightCount,limiter,
     repairJson,validateAgainstSchema,INJECTION_PATTERNS,injectionScan,storageReport,
     estimateTokens,everyMs,timersStop,timersList,
