@@ -24181,6 +24181,48 @@ function gauntletCases(g){
       return (row.title===undefined&&row.name===undefined)?1:0;
     },antiExpect:v=>v===1});
 
+  add({id:'backup-never-floods-downloads',sub:'storage',uses:['persistSchedule','persistBackupName'],
+    what:'automatic backup is opt-in, needs a folder, and never downloads on a timer',
+    run:()=>{
+      /* This shipped as auto:true / every 15 minutes with a DOWNLOAD fallback when no folder
+         was chosen, so an unconfigured browser dropped a file into ~/Downloads four times an
+         hour indefinitely. Three properties keep that from returning: off by default, a folder
+         is required to arm, and the interval has a floor. */
+      const P=g.PERSIST,keep={a:P.auto,d:P.dirName,e:P.everyMin};
+      P.auto=true;P.dirName='';           const noFolder=g.persistSchedule();
+      P.auto=false;P.dirName='X';         const off=g.persistSchedule();
+      P.auto=true;P.dirName='X';P.everyMin=1; const clamped=g.persistSchedule();
+      P.auto=keep.a;P.dirName=keep.d;P.everyMin=keep.e;g.persistSchedule();
+      const defaultsOff=g.PERSIST_DEFAULTS.auto===false&&g.PERSIST_DEFAULTS.everyMin>=60;
+      return (defaultsOff&&!noFolder.on&&!off.on&&clamped.on&&clamped.everyMin>=15)
+        ?'guarded':'UNGUARDED';
+    },expect:v=>v==='guarded',
+    antiWhat:'and the hazard is real: the old defaults armed a 15-minute timer with nowhere to write',
+    anti:()=>{
+      const old={auto:true,dirName:'',everyMin:15};
+      return (old.auto&&!old.dirName)?1:0;   // armed, no destination → downloads
+    },antiExpect:v=>v===1});
+
+  add({id:'backup-name-and-payload',sub:'storage',uses:['persistBackupName'],
+    what:'a backup is named readably and the JSON is the CONTENT, not the filename',
+    run:()=>{
+      /* downloadText(name,text) was called as downloadText(text,name): the workspace JSON
+         became the filename and the 31-character filename became the file. Every downloaded
+         backup was 31 bytes and named like a dump of an object. */
+      const n=g.persistBackupName();
+      const wellFormed=/^Glassbox Jet Backup \d{4}-\d{2}-\d{2}_\d{4}\.json$/.test(n);
+      const notAnObject=!/[{}\[\]"]/.test(n);
+      const src=String(g.persistBackupNow);
+      const rightOrder=/downloadText\(\s*fileName\s*,\s*text\s*\)/.test(src);
+      return (wellFormed&&notAnObject&&rightOrder)?'named':'BAD';
+    },expect:v=>v==='named',
+    antiWhat:'and the hazard is real: swapping the arguments makes the JSON the filename',
+    anti:()=>{
+      const name='glassbox-backup-2026-09-01.json',text='{"app":"Glassbox Jet"}';
+      const swapped={download:text,body:name};
+      return (swapped.body.length===31&&/[{}"]/.test(swapped.download))?1:0;
+    },antiExpect:v=>v===1});
+
   add({id:'state-roundtrip-safe',sub:'storage',uses:['stateSnapshot','stateImport'],
     what:'a state file restores exactly, merge keeps unrelated keys, and replace is undoable',
     run:()=>{
@@ -41342,9 +41384,44 @@ async function wosFillFolders(){
      3. Keep a rolling backup in a real folder on disk, via the File System Access API, so the
         browser is no longer the only copy.
      4. One ZIP that contains the Brain and every piece of work, openable anywhere. */
-const PERSIST_DEFAULTS={dirName:'',auto:true,everyMin:15,lastBackup:'',failures:0};
+/* Automatic backup is OFF until the user turns it on, and it is never a DOWNLOAD.
+   It shipped as auto:true / every 15 min with a download fallback when no folder was
+   chosen, which meant a browser that had never been configured quietly dropped a file
+   into ~/Downloads four times an hour, forever. Hundreds accumulated.
+   The rule now: automatic backups write to a FOLDER the user picked. No folder, no
+   automatic writing — because a background timer must never create files somewhere the
+   user did not choose. Manual "Back up now" still downloads on request, which is fine:
+   the user asked for it, once. */
+const PERSIST_DEFAULTS={dirName:'',auto:false,everyMin:1440,lastBackup:'',failures:0};
+/* Minutes → label. Hourly and up, plus 15/30 for anyone who wants them, because "every
+   15 minutes" is a reasonable CHOICE and an unreasonable DEFAULT. */
+const PERSIST_INTERVALS=[
+  {m:15,label:'every 15 minutes'},{m:30,label:'every 30 minutes'},
+  {m:60,label:'hourly'},{m:180,label:'every 3 hours'},{m:360,label:'every 6 hours'},
+  {m:720,label:'twice a day'},{m:1440,label:'once a day'},{m:10080,label:'once a week'},
+];
 let PERSIST=Object.assign({},PERSIST_DEFAULTS,store.get('persist',{}));
+
 const savePersist=()=>{try{localStorage.setItem('gb.persist',JSON.stringify(PERSIST));}catch(_){}};
+/* MIGRATION — one-shot, for browsers already flooding.
+   The shipped defaults were auto:true / 15 min with a download fallback, so any profile that
+   never chose a folder has been dropping a file into ~/Downloads four times an hour. Those
+   users have `auto:true` and an empty `dirName` saved, and the new default cannot reach them
+   because a saved value wins over a default. Turn it off once, and say so — silently changing
+   a user's setting is only acceptable when the setting was doing damage they did not ask for
+   and did not choose. A folder-backed setup is untouched: it was working as intended. */
+(()=>{
+  try{
+    if(PERSIST.auto&&!PERSIST.dirName&&!PERSIST._floodFixed){
+      PERSIST.auto=false;PERSIST._floodFixed=nowISO();
+      if(!PERSIST.everyMin||PERSIST.everyMin<60)PERSIST.everyMin=1440;
+      savePersist();
+      setTimeout(()=>{try{
+        toast('Automatic backup was writing a file to your Downloads every 15 minutes with no folder set. It is now off — turn it back on in Settings and choose a folder.',9000);
+      }catch(_){}} ,2500);
+    }
+  }catch(_){}
+})();
 let PERSIST_DIR=null;          // FileSystemDirectoryHandle — kept in IDB so it survives reloads
 let PERSIST_FAILED=false;
 
@@ -41394,6 +41471,20 @@ function persistFailBanner(msg){
   const f=$('#pa-folder');if(f)f.onclick=()=>persistPickFolder();
   const o=$('#pa-open');if(o)o.onclick=()=>{go('settings');setTimeout(()=>{
     const p=$('#persist-panel');if(p)p.scrollIntoView({behavior:'smooth',block:'center'});},200);};
+}
+/* (Re)arm the automatic backup. Safe to call repeatedly — everyMs replaces a timer of the
+   same name, so toggling the setting cannot stack intervals. */
+function persistSchedule(){
+  try{if(typeof timersStop==='function')timersStop('persist:auto');}catch(_){}
+  if(!PERSIST.auto)return{on:false,why:'automatic backup is off'};
+  if(!PERSIST.dirName)return{on:false,why:'no backup folder chosen'};
+  const mins=Math.max(15,+PERSIST.everyMin||1440);
+  try{
+    everyMs('persist:auto',()=>{
+      if(PERSIST.auto&&PERSIST.dirName)persistBackupNow({auto:true});
+    },mins*60000);
+  }catch(_){return{on:false,why:'timer registry unavailable'};}
+  return{on:true,everyMin:mins};
 }
 function persistClearAlarm(){
   PERSIST_FAILED=false;
@@ -42733,6 +42824,15 @@ async function ckptGuarded(label,reason,fn){
   }
 }
 
+/* One namer for every backup path. A file that lands in someone's Downloads has to say
+   what it is at a glance — the previous scheme produced names that read like malware. */
+function persistBackupName(ext){
+  const d=new Date();
+  const p=n=>String(n).padStart(2,'0');
+  const stamp=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`+
+              `_${p(d.getHours())}${p(d.getMinutes())}`;
+  return `Glassbox Jet Backup ${stamp}.${ext||'json'}`;
+}
 async function persistCollect(){
   const out={app:'Glassbox Jet',kind:'workspace',v:1,ts:nowISO(),data:{},idb:{},brain:null};
   PERSIST_KEYS.forEach(k=>{const v=store.get(k,null);if(v!=null)out.data[k]=v;});
@@ -42747,13 +42847,23 @@ async function persistCollect(){
   }
   return out;
 }
-async function persistBackupNow(){
+async function persistBackupNow(opts){
+  opts=opts||{};
   const dir=await persistDir();
   const snap=await persistCollect();
   const text=JSON.stringify(snap,null,2);
   if(!dir){
-    downloadText(text,'glassbox-backup-'+new Date().toISOString().slice(0,10)+'.json','application/json');
-    toast('No folder chosen yet — downloaded a one-off backup instead',4000);
+    /* An AUTOMATIC run with no folder does nothing at all. Falling back to a download
+       here is what produced hundreds of files in ~/Downloads: the timer fired regardless
+       of whether anywhere had been chosen to put them. */
+    if(opts.auto)return false;
+    /* downloadText(name, text) — the arguments were reversed here, so the JSON became the
+       FILENAME and the filename became the 31-byte contents. That is why every file was
+       31 bytes (the length of "glassbox-backup-YYYY-MM-DD.json") and named like a dump of
+       an object. Kept as a named local so the order is visible at the call site. */
+    const fileName=persistBackupName();
+    downloadText(fileName,text);
+    toast('No backup folder chosen — saved a one-off copy to your Downloads instead',4600);
     return false;
   }
   try{
@@ -42890,10 +43000,11 @@ async function persistInit(){
       logEvent('storage',{msg:'origin is not persistent — work can be evicted'});
   }
   /* Rolling backup on a timer, and one on the way out. */
-  if(PERSIST.auto){
-    setInterval(()=>{if(PERSIST.auto)persistBackupNow();},Math.max(5,PERSIST.everyMin||15)*60000);
-    window.addEventListener('beforeunload',()=>{ /* best effort, no await available here */ });
-  }
+  /* Registered with the timer registry rather than a bare setInterval, so changing the
+     interval replaces the timer instead of adding a second one — the old code could only
+     ever add. Guarded on a chosen folder as well as the toggle: `auto` with nowhere to
+     write is the state that produced the download flood. */
+  persistSchedule();
 }
 
 /* ═══════════════════ INSTALL & OFFLINE ═══════════════════
@@ -43018,14 +43129,21 @@ function renderPersist(){
         :savedName?`<p class="help"><b style="color:var(--warn,#ffb020)">“${esc(savedName)}” is remembered but needs permission again.</b>
             Browsers drop folder access on restart until you re-approve it — click below.</p>`
           :`<p class="help">No folder chosen yet.</p>`}
-      <div class="row" style="gap:8px">
+      <div class="row" style="gap:8px;flex-wrap:wrap">
         <button class="btn" id="pq-pick">${dir?'Change folder':'Choose a backup folder'}</button>
         <button class="btn ghost" id="pq-now">Back up now</button>
-        <label class="chk"><input type="checkbox" id="pq-auto" ${PERSIST.auto?'checked':''}> automatic</label>
-        <select id="pq-every" style="width:auto">
-          ${[5,15,30,60].map(m=>`<option value="${m}"${PERSIST.everyMin===m?' selected':''}>every ${m} min</option>`).join('')}
+        <label class="chk"><input type="checkbox" id="pq-auto" ${PERSIST.auto?'checked':''}> back up automatically</label>
+        <select id="pq-every" style="width:auto" ${PERSIST.auto?'':'disabled'}>
+          ${PERSIST_INTERVALS.map(x=>`<option value="${x.m}"${(+PERSIST.everyMin||1440)===x.m?' selected':''}>${x.label}</option>`).join('')}
         </select>
       </div>
+      <p class="help" style="margin-top:6px">
+        ${PERSIST.auto&&savedName
+          ? `Writing <b>${esc(persistBackupName())}</b> to “${esc(savedName)}” ${esc((PERSIST_INTERVALS.find(x=>x.m===(+PERSIST.everyMin||1440))||{label:''}).label)}. Older copies are kept in <span class="mono">backups/</span>.`
+          : PERSIST.auto
+            ? '<b style="color:var(--warn,#ffb020)">Automatic backup is on but no folder is chosen, so nothing is being written.</b> Pick a folder above — automatic backups are never downloaded, because a timer should not put files anywhere you did not choose.'
+            : 'Automatic backup is <b>off</b>. Nothing is written on a timer until you turn it on and choose a folder. “Back up now” always works and saves one file on request.'}
+      </p>
       ${window.showDirectoryPicker?'':'<p class="help">Your browser has no folder API — Chrome and Edge do. The ZIP below works everywhere.</p>'}
 
       <h3 style="margin-top:16px">3 · One ZIP with everything in it</h3>
@@ -43069,8 +43187,20 @@ function renderPersist(){
         };
         r.readAsText(f);};
       i.click();});
-    const a=$('#pq-auto');if(a)a.onchange=()=>{PERSIST.auto=a.checked;savePersist();};
-    const e2=$('#pq-every');if(e2)e2.onchange=()=>{PERSIST.everyMin=+e2.value;savePersist();};
+    /* Both handlers re-arm the schedule. persistSchedule replaces the timer of the same
+       name, so toggling repeatedly cannot stack intervals — the old bare setInterval could
+       only ever add another one. */
+    const a=$('#pq-auto');if(a)a.onchange=()=>{
+      PERSIST.auto=a.checked;savePersist();
+      const r=persistSchedule();
+      const lbl=(PERSIST_INTERVALS.find(x=>x.m===r.everyMin)||{label:''}).label;
+      toast(r.on?('Automatic backup on — '+lbl)
+                :('Automatic backup off'+(PERSIST.auto&&r.why?' — '+r.why:'')),3600);
+      renderPersist();
+    };
+    const e2=$('#pq-every');if(e2)e2.onchange=()=>{
+      PERSIST.everyMin=+e2.value;savePersist();persistSchedule();renderPersist();
+    };
   });
 }
 
@@ -46677,6 +46807,8 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     get WOS_STUDIO(){return WOS_STUDIO},set WOS_STUDIO(v){WOS_STUDIO=v},wosStudioSync,wosStudioPreview,
     get PERSIST(){return PERSIST},savePersist,persistFmt,persistQuota,persistRequest,persistFailBanner,
     persistClearAlarm,persistPickFolder,persistDir,persistCollect,persistBackupNow,persistZip,
+    persistSchedule,persistBackupName,PERSIST_INTERVALS,PERSIST_DEFAULTS,
+    get PERSIST(){return PERSIST},set PERSIST(v){PERSIST=v},
     persistImportZipJson,persistInit,renderPersist,PERSIST_KEYS,
     saveWos,wosBody,wosSetBody,wosInstall,wosUninstall,wosAllApps,wosApp,wosNotify,wosFromLog,
     wosOpen,wosClose,wosFocus,wosMax,wosMin,wosSnap,wosApplyTheme,wosRender,wosRenderNotifs,
