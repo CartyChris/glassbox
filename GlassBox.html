@@ -5103,7 +5103,18 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
 /* ===================== helpers ===================== */
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>[...r.querySelectorAll(s)];
-const esc=s=>(s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+/* Escapes QUOTES as well as &<>. It did not, and 263 places interpolate esc() into a
+   double-quoted attribute — `data-n="${esc(name)}"` — where a value containing a quote
+   closes the attribute and everything after it is parsed as markup. Three of those are
+   `srcdoc="${esc(html)}"`, where any document containing a double quote broke out of the
+   attribute entirely; those were live bugs, not hypotheticals.
+
+   Safe in every position: a browser decodes &quot; and &#39; back to the literal character
+   in both attribute and text context, so nothing renders differently. Verified before
+   changing it that esc() is never assigned to textContent/.value, never compared against a
+   raw string, and never parsed — those are the only sinks where entity-encoding would show
+   through as visible mojibake. */
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const fmt=n=>n==null?'—':(n>=1000?(n/1000).toFixed(n>=10000?0:1)+'k':''+n);
 const money=n=>n==null?'—':'$'+(n<0.01?n.toFixed(5):n.toFixed(4));
@@ -9768,6 +9779,11 @@ function initEd3(){
   ED3_FRAME.srcdoc=ed3Doc();
   addEventListener('message',ev=>{
     const d=ev.data;if(!d||!d.__ed3)return;
+    /* Only the editor frame may drive editor state. Without this any window that can reach
+       this page could replace ED3.tree and the stats readout — not script execution (the
+       sink is textContent), but a lie about what is in the scene. */
+    const _f=$('#ed3-frame');
+    if(_f&&ev.source&&ev.source!==_f.contentWindow)return;
     if(d.k==='err'&&typeof ed3Log==='function')ed3Log('err',d.v);
     if(d.k==='dump'&&ED3_DUMP_CB){const cb=ED3_DUMP_CB;ED3_DUMP_CB=null;cb(d.v);}
     if(d.k==='tree'){ED3.tree=d.v.tree;ED3.undo=d.v.undo;ED3.redo=d.v.redo;ED3.stats=d.v.stats;
@@ -15035,7 +15051,11 @@ async function testOnDevice(dev,settleMs){
   const fr=$('#dev-frame');if(!fr)return null;
   fr.style.width=dev.w+'px';fr.style.height=dev.h+'px';
   const errs=[];
-  const onMsg=e=>{const d=e.data;if(d&&d.__gbPreview&&d.type==='error')errs.push(d.msg);};
+  /* Console errors are attributed to the device under test, so they must come FROM it —
+     otherwise any window could inject fabricated failures into a device report. */
+  const onMsg=e=>{const d=e.data;
+    if(e.source&&fr.contentWindow&&e.source!==fr.contentWindow)return;
+    if(d&&d.__gbPreview&&d.type==='error')errs.push(d.msg);};
   window.addEventListener('message',onMsg);
   fr.srcdoc=composePreview(true);
   await sleep(settleMs||1600);
@@ -24345,10 +24365,16 @@ function gauntletCases(g){
       const cls=String('x"><img src=x onerror=alert(1)>').replace(/[^a-z0-9_-]/gi,'');
       return /["'<>]/.test(cls)?'STILL INJECTABLE':'sanitised';
     },expect:v=>v==='sanitised',
-    antiWhat:'and the hazard is real: esc() does not escape quotes, so an attribute breaks out',
+    antiWhat:'and the hazard is real: an UNESCAPED interpolation into an attribute breaks out',
     anti:()=>{
-      const bad=g.esc('x"><img src=x>');
-      return bad.includes('"')?1:0;    // esc() leaves the quote intact
+      /* esc() now escapes quotes too. It did not when this case was written, and the old
+         anti pinned exactly that — so this case went red the moment esc was hardened, which
+         is the suite working rather than a regression. The surviving hazard is a template
+         that drops a raw value into an attribute without calling esc at all. */
+      const raw='x"><img src=x>';
+      const host=document.createElement('div');
+      host.innerHTML='<div data-n="'+raw+'"></div>';
+      return host.querySelector('img')?1:0;
     },antiExpect:v=>v===1});
 
   add({id:'render-unique-ids',sub:'rendering',uses:['esc'],
