@@ -7151,7 +7151,7 @@ function initThree(){
     $('#i3-go').disabled=false;
     if(!r.ok){$('#i3-out').innerHTML='<p class="help">✗ '+esc(r.error)+'</p>';return;}
     $('#i3-out').innerHTML=`<p class="help">✓ built${r.cost?' · '+cash(r.cost):''}</p>
-      <iframe id="i3-frame" style="width:100%;height:44vh;border:0;border-radius:12px;background:#0b0f16"></iframe>
+      <iframe id="i3-frame" sandbox="allow-scripts allow-modals" style="width:100%;height:44vh;border:0;border-radius:12px;background:#0b0f16"></iframe>
       <div class="row" style="gap:8px;margin-top:8px">
         <button class="btn ghost small" id="i3-dl">⬇ Export .js</button>
         <button class="btn ghost small" id="i3-studio">→ Send to Studio</button></div>
@@ -36554,6 +36554,15 @@ function initHandoff(){
 }
 
 /* ═══════════════════ PROVIDERS UI ═══════════════════ */
+/* Sync every keyed provider at once. Exists as a real control rather than only an export —
+   an exported function with no caller is how this chain came to be dead in the first place. */
+async function syncProvidersNow(){
+  const rs=await syncAllProviders({});
+  const ok=rs.filter(r=>r.ok).length;
+  toast(`Synced ${ok}/${rs.length} provider(s)`,3600);
+  renderProviders();
+  return rs;
+}
 function renderProviders(){
   const host=$('#prov-list');if(!host)return;host.innerHTML='';
   PROVIDERS.forEach((p,i)=>{
@@ -36578,7 +36587,17 @@ function renderProviders(){
     host.appendChild(d);
     const save=()=>{saveProviders();rebuildProviderModels();};
     d.querySelector('[data-on]').onchange=e=>{p.on=e.target.checked;save();};
-    d.querySelector('[data-key]').onchange=e=>{p.key=e.target.value.trim();save();};
+    /* Entering a key is the moment the model list can be fetched, and nothing was fetching
+       it: syncProviderModels was only ever called by syncAllProviders, which was called from
+       nowhere. So a key was accepted and the picker kept showing the shipped defaults —
+       anything the provider had added since release was unreachable. Fire-and-forget so a
+       slow provider never blocks the field. */
+    d.querySelector('[data-key]').onchange=e=>{
+      p.key=e.target.value.trim();save();
+      if(p.key&&p.on)syncProviderModels(p,{quiet:true})
+        .then(r=>{if(r&&r.ok){rebuildProviderModels();renderProviders();}})
+        .catch(()=>{});
+    };
     d.querySelector('[data-base]').onchange=e=>{p.base=e.target.value.trim();save();};
     d.querySelector('[data-models]').onchange=e=>{p.models=e.target.value.split(',').map(s=>s.trim()).filter(Boolean);save();};
     d.querySelector('[data-proxy]').onchange=e=>{p.viaBridge=e.target.checked;save();};
@@ -42861,7 +42880,12 @@ async function ckptTake(label,reason){
     const body=await persistCollect();          // the one existing state-collector, not a second one
     body.ckpt={id,label:label||'checkpoint',reason:reason||'',ts:nowISO()};
     const json=JSON.stringify(body);
-    await IDB.set(ckptKey(id),body);
+    /* IDB.set returns false when it fell back to localStorage-over-quota or to memory.
+       Ignoring it meant a checkpoint that exists only for this session — or not at all —
+       still reported success, and ckptGuarded then ran a destructive change believing it
+       could be undone. That is the one failure this whole system exists to prevent. */
+    if((await IDB.set(ckptKey(id),body))===false)
+      throw new Error('storage is full — the checkpoint was not written');
     const meta={id,label:label||'checkpoint',reason:reason||'',ts:nowISO(),
       bytes:json.length,keys:Object.keys(body.data||{}).length};
     CKPTS=[meta].concat(CKPTS);
@@ -42889,7 +42913,13 @@ async function ckptRestore(id){
   /* Restoring is itself destructive, so it checkpoints the CURRENT state first. Undoing an undo
      is a thing people need roughly as often as undoing. */
   await ckptTake('before restoring “'+meta.label+'”','auto');
-  Object.entries(body.data).forEach(([k,v])=>{try{store.set(k,v);}catch(_){}});
+  /* A restore that silently drops keys is worse than one that fails: the user believes
+     they are back where they were. Count the failures and report them. */
+  let failed=[];
+  Object.entries(body.data).forEach(([k,v])=>{
+    try{if(store.set(k,v)===false)failed.push(k);}catch(_){failed.push(k);}
+  });
+  if(failed.length)toast(`Restored, but ${failed.length} item(s) could not be written — storage is full`,6000);
   if(body.brain!=null){try{await IDB.set(typeof brainKey==='function'?brainKey():'brain',body.brain);}catch(_){}}
   actLog&&actLog('human','restore',{label:meta.label,ts:meta.ts});
   return{ok:true,meta,reload:true};
@@ -46425,6 +46455,13 @@ document.addEventListener('click',e=>{
       ()=>toast('Could not copy',2000));}
 });
 function go(view){
+  /* The office loop is stopped on navigation; the brain-map, neural view and Viz loops were
+     not, so they kept running requestAnimationFrame off-screen for the rest of the session.
+     Each holds a full graph, so this is retained memory as well as wasted frames. */
+  try{
+    if(view!=='forge'){if(typeof bvizStop==='function')bvizStop();if(typeof stopMap==='function')stopMap();}
+    if(view!=='viz'&&typeof VIZ!=='undefined'&&VIZ.stop){try{VIZ.stop();}catch(_){}VIZ.stop=null;}
+  }catch(_){}
   /* A plugin tab has no built-in section; mount it on the way in. */
   const _pl=(typeof PLUG!=='undefined'&&PLUG.items||[]).find(p=>p.id===view);
   if(_pl)setTimeout(()=>plugMount(_pl),0);
@@ -46740,7 +46777,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     get TERMS(){return TERMS},set TERMS(v){TERMS=v},
     get TERM_ACTIVE(){return TERM_ACTIVE},set TERM_ACTIVE(v){TERM_ACTIVE=v},
     ohProbe,ohSessions,ohFetch,OH_DEFAULTS,get OH(){return OH},set OH(v){OH=v},
-    syncProviderModels,syncAllProviders,addCustomModel,removeCustomModel,
+    syncProviderModels,syncAllProviders,syncProvidersNow,addCustomModel,removeCustomModel,
     spanStart,spanEnd,spanTree,spanTotals,get SPANS(){return SPANS},set SPANS(v){SPANS=v},
     checkReasoning,shingles,jaccard,withFallback,FALLBACK_DEFAULTS,effortForTokens,
     saveGoldenTrace,compareToGolden,gradeTrace,feedbackBlock,
