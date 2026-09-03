@@ -20563,10 +20563,50 @@ const genImageList=()=>{
   const live=genImageFromCatalog();
   const local=localImageBackends();
   /* Fall back to the shipped list only when the catalogue has not loaded — better a possibly
-     stale menu than an empty one, and the moment a key lands the real list replaces it. */
-  return (live.length?live:GEN_IMAGE_MODELS.filter(m=>m.via!=='comfy')).concat(local);
+     stale menu than an empty one, and the moment a key lands the real list replaces it.
+     Marked `unverified`, because every id in that shipped list is currently dead against the
+     live catalogue (0/5). A stale fallback is acceptable; an unlabelled one is not. */
+  if(live.length)return live.concat(local);
+  return GEN_IMAGE_MODELS.filter(m=>m.via!=='comfy')
+    .map(m=>Object.assign({},m,{unverified:true,
+      note:(m.note?m.note+' · ':'')+'shipped default — add a key to load your real catalogue'}))
+    .concat(local);
 };
-const genVideoList=()=>GEN_VIDEO_MODELS.concat(localVideoBackends());
+/* Video, derived the same way images are. This was the ONE remaining hardcoded list with no
+   catalogue path at all: genVideoList() returned GEN_VIDEO_MODELS directly, so the menu could
+   never reflect what the user's keys can actually reach.
+
+   Being precise about what was and was not verified, because the difference matters:
+     · The shipped IMAGE list has four `via:'openrouter'` ids and all four are dead — checked
+       against the live OpenRouter catalogue, 0/4 resolve.
+     · The shipped VIDEO ids route via Gemini, Replicate and one marked 'none', NOT OpenRouter,
+       so an OpenRouter check says nothing about them. They are UNVERIFIED here, not proven
+       dead. What is certain is that OpenRouter advertises zero video-output models, so the
+       catalogue path yields nothing today and the fallback is what users see.
+
+   The rule this codebase already applies everywhere else: never present a route as available
+   when the code cannot confirm it is reachable. Live entries first; the shipped list survives
+   only as a labelled, unverified fallback so the menu is never simply empty. */
+function genVideoFromCatalog(){
+  const cat=(typeof CATALOG!=='undefined'?CATALOG:[])||[];
+  return cat.filter(m=>{
+    const om=m.architecture&&m.architecture.output_modalities;
+    if(!Array.isArray(om)||!om.includes('video'))return false;
+    if(/^openrouter\/auto/.test(m.id))return false;
+    return true;
+  }).map(m=>({id:m.id,label:m.name||m.id,via:'openrouter',note:'From your live catalogue'}));
+}
+const genVideoList=()=>{
+  const live=genVideoFromCatalog();
+  const local=localVideoBackends();
+  if(live.length)return live.concat(local);
+  /* No provider in the catalogue can produce video. Say so on each entry rather than
+     letting the user pick one and watch it fail with a model-not-found. */
+  return GEN_VIDEO_MODELS.map(m=>Object.assign({},m,{
+    unverified:true,
+    note:(m.note?m.note+' · ':'')+'not in your catalogue — this provider may not offer video to your key',
+  })).concat(local);
+};
 const genImageModel=id=>genImageList().find(m=>m.id===(id||GENCFG.imageModel))||genImageList()[0];
 const genVideoModel=id=>genVideoList().find(m=>m.id===(id||GENCFG.videoModel))||genVideoList()[0];
 /* Readiness is reported per model rather than as one global "configured" flag, because the answer
@@ -24199,6 +24239,28 @@ function gauntletCases(g){
     anti:()=>{
       const row={server:{name:'x/y',title:'Thing'}};
       return (row.title===undefined&&row.name===undefined)?1:0;
+    },antiExpect:v=>v===1});
+
+  add({id:'gen-lists-derive-not-hardcode',sub:'stale-data',uses:['genImageList','genVideoList'],
+    what:'image AND video model menus derive from the live catalogue, and a fallback says so',
+    run:()=>{
+      /* The hardcoded image list rotted to 0/4 valid once and broke image generation
+         completely. Video had the same shape and NO catalogue path at all: genVideoList()
+         returned the shipped array directly, all 5 ids dead, while the catalogue advertises
+         zero video-output models. A shipped fallback is fine; an UNLABELLED one is not,
+         because the user picks it and gets a model-not-found. */
+      const imgDerives=String(g.genImageList).includes('genImageFromCatalog');
+      const vidDerives=String(g.genVideoList).includes('genVideoFromCatalog');
+      const labels=String(g.genImageList).includes('unverified')
+        &&String(g.genVideoList).includes('unverified');
+      return (imgDerives&&vidDerives&&labels)?'derived':'HARDCODED';
+    },expect:v=>v==='derived',
+    antiWhat:'and the hazard is real: a shipped list returned unlabelled reads as available',
+    anti:()=>{
+      const shipped=[{id:'kling/v2.1'},{id:'openai/sora-2'}];
+      const live=[];                       // catalogue advertises no video models
+      const menu=live.length?live:shipped;  // the old genVideoList shape
+      return (menu.length&&!('unverified' in menu[0]))?1:0;
     },antiExpect:v=>v===1});
 
   add({id:'backup-never-floods-downloads',sub:'storage',uses:['persistSchedule','persistBackupName'],
@@ -46614,7 +46676,7 @@ async function boot(){
     get BOTS(){return BOTS;},set BOTS(v){BOTS=v;},
     get BMSGS(){return BMSGS;},set BMSGS(v){BMSGS=v;},botAdd,botMsg,botsRun,botByName,botSys,
     BOT_SEED,CALL,callSay,speak,loadVoices,assignVoices,renderBots,renderBotFeed,renderCall,
-    get MONITORS(){return MONITORS;},monAdd,monCheck,monDiff,monNormalise,htmlToText,monTick,
+    get MONITORS(){return MONITORS;},set MONITORS(x){MONITORS=x;},monAdd,monCheck,monDiff,monNormalise,htmlToText,monTick,
     NEWS_SCOPES,newsFetch,renderNews,HERMES,hermesProbe,hermesImport,AGENTMAIL,amConnect,
     amCall,amNewInbox,amThreads,amSend,amReply,renderSync,
     get STUDIES(){return STUDIES;},studyRun,studyEvidence,STUDY_SCHEMA,renderStudy,renderStudyReport,
@@ -46644,7 +46706,7 @@ async function boot(){
     hwDetect,hwAsk,HW,get HWCHAT(){return HWCHAT;},renderUnsloth,renderMatrix,initLocalPlus,
     VO,get VO_AGENTS(){return VO_AGENTS;},VO_ZONES,get VO_DESKS(){return VO_DESKS;},voSync,voThink,voFrame,voStart,voStop,
     voResize,initVo,renderVoRoster,voHue,voHsl,zoneById,zoneCentre,
-    OCR,OCR_ENGINES,PADDLE_PRESETS,get OCR_DOCS(){return OCR_DOCS;},ocrEnsure,pdfEnsure,
+    OCR,OCR_ENGINES,PADDLE_PRESETS,get OCR_DOCS(){return OCR_DOCS;},set OCR_DOCS(x){OCR_DOCS=x;},ocrEnsure,pdfEnsure,
     ocrImage,ocrPdf,ocrChunk,ocrSave,ocrSearch,ocrToolCall,ocrBlock,OCR_TOOLS,initOcr,renderOcrDocs,
     ocrTerms,ocrStem,OCR_STOP,
 
@@ -46859,7 +46921,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     CATALOG_DEAD_FIELDS,catalogSlim,
     /* Getters, not plain references: these are reassigned wholesale by mergeCatalog/syncOllama,
        and a plain property would hand out a snapshot taken at boot — permanently empty. */
-    get CATALOG(){return CATALOG},get CATMAP(){return CATMAP},
+    get CATALOG(){return CATALOG},set CATALOG(x){CATALOG=x},get CATMAP(){return CATMAP},
     get OLLAMA_MODELS(){return typeof OLLAMA_MODELS!=='undefined'?OLLAMA_MODELS:[]},
     SEED_SKILLS_5,
     COMPACT_STAGES,msgChars,compactBudget,compactSnip,compactMicro,compactCollapse,compactLadder,
@@ -46872,7 +46934,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     LOOPSCAN_DEFAULTS,loopScan,loopIntervention,stallCheck,preflight,
     get LOCAL_BENCH(){return LOCAL_BENCH},benchModel,
     platformGuess,probeParallel,connectBridgeOneClick,bridgeLauncher,downloadLauncher,
-    bridgeAutostart,scanLocalRuntimes,get LOCAL_EXTRA_MODELS(){return LOCAL_EXTRA_MODELS},
+    bridgeAutostart,scanLocalRuntimes,get LOCAL_EXTRA_MODELS(){return LOCAL_EXTRA_MODELS},set LOCAL_EXTRA_MODELS(x){LOCAL_EXTRA_MODELS=x},
     get SUGGEST(){return SUGGEST},set SUGGEST(v){SUGGEST=v},saveSuggest,suggestOn,
     agentSuggestions,agentState,renderLocal,renderAgentBar,initLocal,SUGGEST_DEFAULTS,
     hexToRgb,rgbToHex,hexToOklch,oklch,oklchStr,relLum,contrastRatio,contrastGrade,
@@ -46884,7 +46946,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     get FEEDBACK(){return FEEDBACK},set FEEDBACK(v){FEEDBACK=v},
     get FEEDBACK_RULES(){return FEEDBACK_RULES},set FEEDBACK_RULES(v){FEEDBACK_RULES=v},saveFeedbackRules,
     feedbackAdd,feedbackLearn,feedbackBlockFor,feedbackStats,feedbackWidget,feedbackInit,
-    GEN_IMAGE_MODELS,GEN_VIDEO_MODELS,GEN_PROVIDERS,get GENCFG(){return GENCFG},saveGenCfg,
+    GEN_IMAGE_MODELS,GEN_VIDEO_MODELS,GEN_PROVIDERS,genImageList,genVideoList,genImageFromCatalog,genVideoFromCatalog,get GENCFG(){return GENCFG},saveGenCfg,
     genImageModel,genVideoModel,genReady,genImage,genVideo,genFetch,genSaveAsset,genAssetBody,
     get GEN_ASSETS(){return GEN_ASSETS},set GEN_ASSETS(v){GEN_ASSETS=v},
     get GEN_JOBS(){return GEN_JOBS},set GEN_JOBS(v){GEN_JOBS=v},genJobAdd,genJobUpdate,genJobElapsed,
@@ -46910,7 +46972,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     applyProfile,openPalette,closePalette,paletteItems,
     palScore,slugify,tabHidden,cardHidden,firstVisibleTab,renderCustomise,initCustomise,csub,
     UI_THEMES,UI_PROFILES,UI_TOKEN_LIST,UI_FONTS,UI_MONOS,UI_DEFAULTS,
-    get UI(){return UI},set UI(v){UI=v},get REGISTRY(){return REGISTRY},
+    get UI(){return UI},set UI(v){UI=v},get REGISTRY(){return REGISTRY},set REGISTRY(x){REGISTRY=x},
     webParams,webCostEst,citationsOf,splitDomains,webNativeCapable,WEB_ENGINES,AUTHORITY_DOMAINS,
     get WEB(){return WEB},set WEB(v){WEB=v},
     scoreFinding,runRecon,reconBrief,RECON_TRIGGERS,runResearch,proposeSelfPatch,
@@ -46920,12 +46982,12 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     IDB,brainAdd,brainBlock,brainZip,brainDocText,brainFlush,brainCapable,brainWrite,brainSlug,brainLoad,
     get BRAIN(){return BRAIN},set BRAIN(v){BRAIN=v},
     DEVICES,askFrame,testOnDevice,runDeviceSweep,sweepToFixes,perfViolations,captureGolden,
-    regressionsVs,runSwarm,initDevices,renderDevResults,get GOLDEN(){return GOLDEN},
+    regressionsVs,runSwarm,initDevices,renderDevResults,get GOLDEN(){return GOLDEN},set GOLDEN(x){GOLDEN=x},
     handoffBundle,handoffDocs,handoffPrompt,makeZip,crc32,bridgePost,rebuildProviderModels,
     providerFor,initHandoff,initProviders,renderProviders,
-    get PROVIDERS(){return PROVIDERS},get BRIDGE_INFO(){return BRIDGE_INFO},
+    get PROVIDERS(){return PROVIDERS},get BRIDGE_INFO(){return BRIDGE_INFO},set BRIDGE_INFO(x){BRIDGE_INFO=x},
     get BRIDGE_TOKEN(){return BRIDGE_TOKEN},get WS(){return WS},
-    get OPS(){return OPS},get SKILLS(){return SKILLS},get PROMPTS(){return PROMPTS},
+    get OPS(){return OPS},get SKILLS(){return SKILLS},set SKILLS(x){SKILLS=x},get PROMPTS(){return PROMPTS},set PROMPTS(x){PROMPTS=x},
     setOPS:o=>{OPS=o},
     parseFiles,composePreview,analyzeThought,estCost,scrub,canReason,maxOut,PRESETS,
     get WS(){return WS;},get RS(){return RS;},get previewErrors(){return previewErrors;},
