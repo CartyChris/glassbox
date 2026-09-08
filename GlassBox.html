@@ -1606,6 +1606,14 @@ input[type=range]{flex:1;accent-color:var(--acc)}
   background:color-mix(in srgb,var(--acc) 10%,transparent);border:1px solid color-mix(in srgb,var(--acc) 42%,var(--edge));
   color:var(--acc);border-radius:8px;padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;
   text-align:left;transition:background .12s,border-color .12s,transform .12s}
+/* The fork control sits quiet until you are on the turn — a ⑂ on every message at full
+   strength turns a conversation into a toolbar. */
+.am{position:relative}
+.am-fork{position:absolute;top:6px;right:8px;opacity:0;transition:opacity .12s;
+  background:transparent;border:1px solid var(--edge);color:var(--ink3);
+  border-radius:6px;cursor:pointer;font-size:12px;line-height:1;padding:3px 6px}
+.am:hover .am-fork,.am-fork:focus{opacity:1}
+.am-fork:hover{color:var(--ink);border-color:var(--acc)}
 .am-offer:hover{background:color-mix(in srgb,var(--acc) 18%,transparent);
   border-color:var(--acc);transform:translateY(-1px)}
 .am-offer:active{transform:translateY(0)}
@@ -24576,6 +24584,38 @@ function gauntletCases(g){
       return old.test('_glassbox/latest.json')?0:1;     // the old pattern let it through
     },antiExpect:v=>v===1});
 
+  add({id:'chat-fork-copies',sub:'wiring',uses:['achatFork'],
+    what:'forking copies deeply — the original thread cannot be changed by editing the fork',
+    run:()=>{
+      /* The promise is "copies, never branches in place". A SHALLOW slice keeps the same
+         message objects, so continuing in the fork would rewrite the original's turns —
+         a destructive action wearing the name of a safe one. */
+      const keep=g.ACHATS.slice(),keepId=g.ACHAT;
+      const c=g.achatNew('fixture');
+      c.msgs.push({role:'user',content:'Q'},
+                  {role:'assistant',content:'A',streaming:true,_offers:['x']},
+                  {role:'user',content:'Q2'});
+      const snap=JSON.stringify(c.msgs);
+      const f=g.achatFork(c.id,0,{model:'m/override'});
+      f.chat.msgs[0].content='MUTATED';
+      const untouched=JSON.stringify(c.msgs)===snap;
+      const endsUser=f.chat.msgs[f.chat.msgs.length-1].role==='user';
+      const override=f.chat.model==='m/override';
+      const f2=g.achatFork(c.id,1,{});
+      const stripped=f2.chat.msgs.every(m=>m.streaming===undefined&&m._offers===undefined);
+      const origKeepsStreaming=c.msgs[1].streaming===true;
+      const guards=g.achatFork('nope',0,{}).ok===false;
+      g.ACHATS=keep;g.ACHAT=keepId;
+      return (untouched&&endsUser&&override&&stripped&&origKeepsStreaming&&guards)?'safe':'unsafe';
+    },expect:v=>v==='safe',
+    antiWhat:'and the hazard is real: a shallow slice lets the fork rewrite the original',
+    anti:()=>{
+      const orig=[{role:'user',content:'Q'}];
+      const shallow=orig.slice(0,1);          // shares the object
+      shallow[0].content='MUTATED';
+      return orig[0].content==='MUTATED'?1:0;
+    },antiExpect:v=>v===1});
+
   add({id:'prompt-inspector-honest',sub:'observability',uses:['promptCapture','promptBlocks'],
     what:'the inspector captures real prompts, labels their blocks without double-counting, and redacts keys',
     run:()=>{
@@ -32243,7 +32283,10 @@ function asstMode(){return ASST_MODES[ASST.mode]||ASST_MODES.chat;}
 function asstCfg(){
   const per=(ASST.perMode&&ASST.perMode[ASST.mode])||{};
   const m=asstMode();
-  return{model:per.model||ASST.model||settings.archModel,
+  /* A chat's OWN model wins. That is what makes "fork this and try a stronger model"
+     work without changing the global setting and dragging every other chat with it. */
+  const c=(typeof achat==='function'&&achat())||null;
+  return{model:(c&&c.model)||per.model||ASST.model||settings.archModel,
     sys:per.sys!=null?per.sys:ASST.sys,
     maxTokens:per.maxTokens||m.maxTokens,web:per.web!=null?per.web:m.web,
     persona:per.persona!=null?per.persona:ASST.persona};
@@ -32253,6 +32296,45 @@ function achatNew(title){
   ACHATS.unshift(c);ACHAT=c.id;saveAChats();return c;
 }
 function achat(){return ACHATS.find(c=>c.id===ACHAT)||null;}
+
+/* ── Fork a chat from turn N ────────────────────────────────────────────────
+   COPIES, never branches in place. The original thread is untouched and still selectable,
+   because the whole reason to fork is that you are not sure the new direction is better —
+   an in-place rewind that discards the rest would make this a destructive action wearing
+   the name of a safe one.
+
+   One rule covers both things people mean by it: keep messages 0..index.
+     · fork at YOUR question  → the copy ends with the question, ready to be answered again
+       (this is "retry with a different model")
+     · fork at an ANSWER      → the copy ends with that answer, ready to continue from it
+   No mode switch, because the index already says which one you meant.
+
+   Streaming state is stripped: a half-written turn copied as `streaming:true` would render
+   as permanently in-progress in a chat where nothing is running. */
+function achatFork(chatId,index,opts){
+  opts=opts||{};
+  const src=ACHATS.find(c=>c.id===chatId);
+  if(!src)return{ok:false,error:'that chat is gone'};
+  const n=Math.max(0,Math.min(index|0,(src.msgs||[]).length-1));
+  if(!(src.msgs||[]).length)return{ok:false,error:'nothing to fork — the chat is empty'};
+  /* Deep copy. A shallow slice shares the message OBJECTS, so editing or re-answering in
+     the fork would mutate the original's turns — the exact thing "copies, never branches"
+     is promising not to do. */
+  const msgs=JSON.parse(JSON.stringify(src.msgs.slice(0,n+1)))
+    .map(m=>{const c=Object.assign({},m);delete c.streaming;delete c._offers;return c;});
+  const cut=src.msgs[n];
+  const c={id:uid(),ts:nowISO(),
+    title:(opts.title||src.title||'Chat')+' — fork @'+(n+1),
+    mode:src.mode||ASST.mode,msgs,cost:0,
+    forkedFrom:{id:src.id,title:src.title,at:n,role:cut&&cut.role},
+    model:opts.model||src.model||''};
+  ACHATS.unshift(c);ACHAT=c.id;saveAChats();
+  return{ok:true,chat:c,kept:msgs.length,
+    /* Say which of the two things just happened, since the button is the same. */
+    note:(cut&&cut.role==='user')
+      ?'Forked at your message — send again to have it answered differently.'
+      :'Forked after that answer — continue from here.'};
+}
 function asstSystem(){
   const cfg=asstCfg(),m=asstMode();
   const parts=[cfg.sys||m.sys];
@@ -32910,8 +32992,13 @@ function asstOffer(kind,note){
   $('#gb-offer-x').onclick=hide;
   clearTimeout(asstOffer._t);asstOffer._t=setTimeout(hide,14000);
 }
-function asstMsgHTML(m){
-  if(m.role==='user')return `<div class="am user"><div class="am-body">${esc(m.content)}</div></div>`;
+function asstMsgHTML(m,i){
+  /* `.map(asstMsgHTML)` already passes the index, so the control needs no call-site change.
+     Guarded because other callers render a single message with no index. */
+  const fork=(typeof i==='number')
+    ? `<button class="am-fork" data-fork="${i}" title="Copy this chat up to here into a new one — the original is untouched">⑂</button>`
+    : '';
+  if(m.role==='user')return `<div class="am user"><div class="am-body">${esc(m.content)}</div>${fork}</div>`;
   /* A bot turn is an assistant turn with a face and a name on it. Rendered here rather than in
      a parallel renderer so replies, tool notes, costs and the hand-off offers all keep working
      exactly as they do for a normal answer. */
@@ -32931,6 +33018,7 @@ function asstMsgHTML(m){
       </div>
       ${think}${tools}
       ${m.error?`<div class="am-tool bad">✗ ${esc(m.error)}</div>`:''}
+      ${m.streaming?'':fork}
       <div class="am-body">${esc(m.content)||(m.streaming?'<span class="help">…</span>':'')}</div>
       ${asstOfferHTML(m)}
       <div class="am-meta mono">${m.cost?money(m.cost)+' · ':''}${m.ms?m.ms+'ms':''}${
@@ -32946,7 +33034,7 @@ function asstMsgHTML(m){
   return `<div class="am asst">${think}${tools}${err}
     <div class="am-body">${esc(m.content)||(m.streaming?'<span class="help">…</span>':'')}</div>
     ${asstOfferHTML(m)}
-    ${m.cost?`<div class="am-meta mono">${money(m.cost)}</div>`:''}</div>`;
+    ${m.cost?`<div class="am-meta mono">${money(m.cost)}</div>`:''}${m.streaming?'':fork}</div>`;
 }
 function renderAsstStream(){
   const c=achat();if(!c||!$('#asst-thread'))return;
@@ -32969,7 +33057,7 @@ function renderAsst(){
   th.scrollTop=th.scrollHeight;
   $('#asst-list').innerHTML=ACHATS.map(x=>
     `<button class="asst-chat ${x.id===ACHAT?'on':''}" data-id="${x.id}">
-       <span>${esc(x.title)}</span><small>${esc((x.mode||'chat'))}${x.cost?' · '+money(x.cost):''}</small></button>`).join('')
+       <span>${esc(x.title)}</span><small>${esc((x.mode||'chat'))}${x.model?' · '+esc(x.model.split('/').pop()):''}${x.cost?' · '+money(x.cost):''}</small></button>`).join('')
     ||'<p class="help" style="padding:8px">No chats yet.</p>';
   $$('#asst-modes .chip').forEach(b=>b.classList.toggle('on',b.dataset.mode===ASST.mode));
   $('#asst-auto').textContent=ASST.auto?'⚡ Auto':'🔒 Ask first';
@@ -32982,7 +33070,18 @@ function initAsst(){
     ASST.mode=b.dataset.mode;saveASST();renderAsst();renderAsstSettings();};
   $('#asst-new').onclick=()=>{achatNew();renderAsst();};
   /* Offers are delegated on the thread, so they keep working across re-renders. */
+  /* Delegated, like the offers below — the thread is re-rendered on every token and a
+     handler bound to a button would be discarded with it. */
   $('#asst-thread').addEventListener('click',e=>{
+    const f=e.target.closest('[data-fork]');
+    if(f){
+      const c=achat();if(!c)return;
+      const r=achatFork(c.id,+f.dataset.fork,{});
+      if(!r.ok)return toast(r.error,3200);
+      renderAsst();renderAsstSettings&&renderAsstSettings();
+      toast(r.note,5200);
+      return;
+    }
     const b=e.target.closest('.am-offer');if(!b)return;
     const bubble=b.closest('.am');
     const body=bubble&&bubble.querySelector('.am-body');
@@ -47176,6 +47275,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     renderMetrics,renderCreations,initMetrics,initCreations,cash,pct,
     LOOP_DEFAULTS,loopVerdict,brainGraph,layoutGraph,renderBrainMap,stopMap,brainBullets,
     scoreBullet,noteContext,get CTX(){return CTX},get MAP3D(){return MAP3D},
+    achatFork,
     PROMPT_CAP,PROMPT_BLOCKS,get PROMPTS_SEEN(){return PROMPTS_SEEN},set PROMPTS_SEEN(v){PROMPTS_SEEN=v},
     promptBlocks,promptCapture,promptDiff,promptScrub,
     spendByFeature,SEARCH_SOURCES,gbSearch,
