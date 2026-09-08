@@ -2622,6 +2622,44 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
 
     <section class="view" id="view-metrics"><div class="wrap">
       <div class="card">
+        <h3>🔎 Search everything <span class="muted">brain · creations · history · prompts · skills · studies</span></h3>
+        <p class="help">Every part of this app kept its own list and none of them were searchable.
+          Past about twenty of anything you cannot find it again. Every word must match, so a
+          two-word search narrows instead of returning the whole app.</p>
+        <div class="row" style="gap:6px;margin-top:8px">
+          <input id="gs-q" class="mono" style="flex:1" placeholder="search notes, runs, creations, prompts…">
+          <button class="btn small" id="gs-go">Search</button>
+        </div>
+        <div id="gs-out" style="margin-top:10px"></div>
+      </div>
+
+      <div class="card">
+        <h3>💸 What is actually spending the money</h3>
+        <p class="help">A session total is not actionable; a breakdown is. Built from the call log
+          that already exists, so it can never disagree with the headline number. Watch the
+          <b>per-call</b> column — the feature that quietly costs a lot each time is usually a
+          better thing to fix than the one you simply ran most.</p>
+        <div id="sp-out" style="margin-top:10px"></div>
+        <button class="btn ghost small" id="sp-refresh" style="margin-top:8px">↻ Refresh</button>
+      </div>
+
+      <div class="card">
+        <h3>🔬 Prompt inspector <span class="muted" id="pi-cap">the last calls, this session only</span></h3>
+        <p class="help">The app is called Glassbox and you could not see the prompt. This is the
+          exact text that went out, broken down by which part of the app put it there — so
+          "what is eating my context" has an answer. Held in memory only and gone on reload:
+          a persisted copy of every prompt would fill your storage and park whatever you pasted
+          into it on disk.</p>
+        <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">
+          <select id="pi-pick" style="flex:1;min-width:220px"></select>
+          <button class="btn ghost small" id="pi-refresh">↻</button>
+          <select id="pi-cmp" style="flex:1;min-width:220px"></select>
+          <button class="btn ghost small" id="pi-diff">⇄ Compare</button>
+        </div>
+        <div id="pi-out" style="margin-top:10px"></div>
+      </div>
+
+      <div class="card">
         <h3>💰 Cost per completed task</h3>
         <p class="help">The number that actually matters. Not tokens, not rounds, not score — <b>what it costs to get one thing finished to your satisfaction</b>, counting every failed attempt along the way. A task only counts as completed when you say it is.</p>
         <div class="row" style="margin-top:14px" id="m-kpis"></div>
@@ -14430,11 +14468,158 @@ async function desktopFolderImport(opts){
 /* Every prompt gets measured. Context bloat is invisible until you look at it, and it is the
    single documented cause of a harness getting worse while looking busy. */
 const CTX={calls:0,chars:0,peak:0,byLabel:{}};
-function noteContext(label,messages){
+
+/* ═══════════════════ PROMPT INSPECTOR ═══════════════════
+   The app is called Glassbox and you could not see the prompt. noteContext measured the
+   SIZE of every call and threw the content away, so "why did that answer go wrong" and
+   "what is eating my context" were both unanswerable from inside the app.
+
+   Kept in memory only, never persisted. This is a debugging lens on the current session,
+   not a record — and a persisted copy of every prompt would blow the storage quota and put
+   whatever the user pasted into localStorage, which is a worse trade than losing it on
+   reload. Twelve calls is enough to answer "what did I just send".
+
+   Blocks are LABELLED by matching the headers this app itself writes into system prompts,
+   so the breakdown says "brain 4.2k, skills 1.1k, tools 800" rather than "system 6.1k".
+   That is the number that actually tells you what to cut. */
+const PROMPT_CAP=12;
+let PROMPTS_SEEN=[];
+const PROMPT_BLOCKS=[
+  {id:'brain',   label:'Brain notes',   rx:/WHAT THIS PROJECT HAS ALREADY LEARNED|MISTAKES ALREADY MADE/},
+  {id:'skills',  label:'Skills',        rx:/SKILLS? (?:YOU CAN USE|AVAILABLE)|=== SKILL/},
+  {id:'tools',   label:'Tool defs',     rx:/TOOLS YOU CAN USE/},
+  {id:'memory',  label:'Working memory',rx:/WORKING MEMORY|CARRIED FORWARD/},
+  {id:'style',   label:'Output style',  rx:/OUTPUT STYLE|WRITE LIKE/},
+  {id:'files',   label:'Files',         rx:/===FILE:|^```[a-z]*\n/m},
+];
+/* Split one message into the labelled blocks it is made of. A block runs from its header to
+   the next header, so the sizes add up to the message rather than double-counting overlaps. */
+function promptBlocks(text){
+  const t=String(text||'');
+  const marks=[];
+  PROMPT_BLOCKS.forEach(b=>{const m=b.rx.exec(t);if(m)marks.push({id:b.id,label:b.label,at:m.index});});
+  marks.sort((x,y)=>x.at-y.at);
+  const out=[];
+  if(marks.length&&marks[0].at>0)out.push({id:'preamble',label:'Instructions',chars:marks[0].at});
+  marks.forEach((m,i)=>{
+    const end=i+1<marks.length?marks[i+1].at:t.length;
+    out.push({id:m.id,label:m.label,chars:end-m.at});
+  });
+  if(!marks.length)out.push({id:'body',label:'Prompt',chars:t.length});
+  return out.filter(b=>b.chars>0).sort((a,b)=>b.chars-a.chars);
+}
+/* A key pasted into a prompt would otherwise sit in memory in plain sight in a panel the
+   user might screenshot. Same scrub the trace exporter uses. */
+function promptScrub(t){
+  return String(t||'').replace(/sk-[a-zA-Z0-9_\-]{8,}/g,'sk-***REDACTED***');
+}
+function promptCapture(label,model,messages,chars){
+  try{
+    const msgs=(messages||[]).map(m=>({role:m.role||'user',
+      chars:String(m.content||'').length,text:promptScrub(m.content)}));
+    const sys=msgs.filter(m=>m.role==='system').map(m=>m.text).join('\n');
+    PROMPTS_SEEN.unshift({id:uid(),ts:Date.now(),label:label||'other',model:model||'',
+      chars,msgs,blocks:promptBlocks(sys||msgs.map(m=>m.text).join('\n'))});
+    if(PROMPTS_SEEN.length>PROMPT_CAP)PROMPTS_SEEN.length=PROMPT_CAP;
+  }catch(_){}
+}
+/* Why is this call bigger than that one? Compares two captures block by block, which is the
+   question people actually have — a raw text diff of two 30k-character prompts is unreadable. */
+function promptDiff(aId,bId){
+  const A=PROMPTS_SEEN.find(p=>p.id===aId),B=PROMPTS_SEEN.find(p=>p.id===bId);
+  if(!A||!B)return{ok:false,error:'pick two captured calls'};
+  const key=o=>{const m={};(o.blocks||[]).forEach(b=>{m[b.id]=(m[b.id]||0)+b.chars;});return m;};
+  const ka=key(A),kb=key(B);
+  const ids=[...new Set([...Object.keys(ka),...Object.keys(kb)])];
+  const rows=ids.map(id=>({id,
+    label:(PROMPT_BLOCKS.find(x=>x.id===id)||{label:id}).label,
+    a:ka[id]||0,b:kb[id]||0,delta:(kb[id]||0)-(ka[id]||0)}))
+    .sort((x,y)=>Math.abs(y.delta)-Math.abs(x.delta));
+  return{ok:true,a:A,b:B,rows,totalDelta:B.chars-A.chars};
+}
+
+/* ═══════════════════ SPEND BY FEATURE ═══════════════════
+   "This session cost $2.40" is not actionable. "Relay cost $1.80 of it" is. Every call
+   already logs {label, cost, in, out} — this only aggregates what is there rather than
+   adding a second accounting path that could disagree with the first.
+
+   Reports cost per call as well as total, because the useful finding is usually not the
+   feature you ran most; it is the one that costs a lot EACH TIME and is easy to run twice. */
+function spendByFeature(){
+  const calls=(LOG||[]).filter(e=>e.kind==='call');
+  const by={};
+  calls.forEach(e=>{
+    const k=e.label||e.model||'other';
+    const r=by[k]=by[k]||{label:k,n:0,cost:0,inTok:0,outTok:0,ms:0,ctx:0};
+    r.n++;r.cost+=e.cost||0;r.inTok+=e.in||0;r.outTok+=e.out||0;r.ms+=e.ms||0;r.ctx+=e.ctx||0;
+  });
+  const rows=Object.values(by).map(r=>Object.assign(r,{
+    per:r.n?r.cost/r.n:0, avgMs:r.n?Math.round(r.ms/r.n):0,
+    avgCtx:r.n?Math.round(r.ctx/r.n):0,
+  })).sort((a,b)=>b.cost-a.cost);
+  const total=rows.reduce((a,r)=>a+r.cost,0);
+  rows.forEach(r=>{r.share=total?r.cost/total:0;});
+  return{rows,total,calls:calls.length,
+    priciest:rows.slice().sort((a,b)=>b.per-a.per)[0]||null};
+}
+
+/* ═══════════════════ UNIVERSAL SEARCH ═══════════════════
+   Everything this app makes ends up in a different array, and none of them were searchable.
+   Past roughly twenty of anything you can no longer find it, which is the point at which a
+   tool stops accumulating value and starts accumulating clutter.
+
+   Reads the live arrays rather than an index: an index would need invalidating on every
+   write in a 47k-line file, and at these sizes a scan is instant. */
+const SEARCH_SOURCES=[
+  {id:'brain',    label:'Brain',      icon:'🧠', get:()=>(typeof brainLive==='function'?brainLive():[]),
+   text:d=>[d.name,d.body,(d.tags||[]).join(' ')].join(' '), title:d=>d.name, go:'forge'},
+  {id:'creations',label:'Creations',  icon:'🎨', get:()=>(typeof CREATIONS!=='undefined'?CREATIONS:[]),
+   text:d=>[d.title,d.notes,Object.keys(d.files||{}).join(' ')].join(' '), title:d=>d.title, go:'creations'},
+  {id:'history',  label:'History',    icon:'🕓', get:()=>(typeof HISTORY!=='undefined'?HISTORY:[]),
+   text:d=>[d.prompt,d.model,d.type].join(' '), title:d=>String(d.prompt||d.type||'run').slice(0,70), go:'history'},
+  {id:'prompts',  label:'Prompt library',icon:'📝',get:()=>(typeof PROMPTS!=='undefined'?PROMPTS:[]),
+   text:d=>[d.name,d.body].join(' '), title:d=>d.name, go:'library'},
+  {id:'skills',   label:'Skills',     icon:'🛠', get:()=>(typeof SKILLS!=='undefined'?SKILLS:[]),
+   text:d=>[d.name,d.desc,d.body].join(' '), title:d=>d.name, go:'library'},
+  {id:'notes',    label:'Studies',    icon:'🔬', get:()=>(typeof STUDIES!=='undefined'?STUDIES:[]),
+   text:d=>[d.title,d.body,d.notes].join(' '), title:d=>d.title||'study', go:'study'},
+];
+function gbSearch(q,opts){
+  const term=String(q||'').trim().toLowerCase();
+  if(term.length<2)return{ok:false,error:'type at least two characters',hits:[]};
+  const words=term.split(/\s+/).filter(Boolean);
+  const cap=(opts&&opts.limit)||40;
+  const hits=[];
+  SEARCH_SOURCES.forEach(src=>{
+    let list=[];try{list=src.get()||[];}catch(_){return;}
+    list.forEach(d=>{
+      let hay='';try{hay=String(src.text(d)||'').toLowerCase();}catch(_){return;}
+      if(!hay)return;
+      /* Every word must appear — an OR search over six sources returns everything and is
+         indistinguishable from no search at all. */
+      if(!words.every(w=>hay.includes(w)))return;
+      let title='';try{title=String(src.title(d)||'').slice(0,90);}catch(_){title='(untitled)';}
+      /* Rank: a title match is what the user meant; a body match is a maybe. */
+      const t=title.toLowerCase();
+      const score=words.reduce((a,w)=>a+(t.includes(w)?3:0)+(hay.includes(w)?1:0),0);
+      const at=hay.indexOf(words[0]);
+      hits.push({source:src.id,label:src.label,icon:src.icon,go:src.go,
+        title,score,
+        snippet:String(src.text(d)).slice(Math.max(0,at-60),at+140).replace(/\s+/g,' ').trim()});
+    });
+  });
+  hits.sort((a,b)=>b.score-a.score);
+  return{ok:true,term,total:hits.length,hits:hits.slice(0,cap),
+    bySource:SEARCH_SOURCES.map(s=>({id:s.id,label:s.label,n:hits.filter(h=>h.source===s.id).length}))
+      .filter(x=>x.n>0)};
+}
+
+function noteContext(label,messages,model){
   const chars=(messages||[]).reduce((a,m)=>a+String(m.content||'').length,0);
   CTX.calls++;CTX.chars+=chars;CTX.peak=Math.max(CTX.peak,chars);
   const e=CTX.byLabel[label||'other']=CTX.byLabel[label||'other']||{n:0,chars:0,peak:0};
   e.n++;e.chars+=chars;e.peak=Math.max(e.peak,chars);
+  promptCapture(label,model,messages,chars);
   return chars;
 }
 /* ═══════════════════ THE BRAIN MAP ═══════════════════
@@ -15812,7 +15997,7 @@ async function streamChat({model,messages,reasoning,maxTokens,temperature,top_p,
   if(route.runtime)localTune(route.runtime,body,{temperature,top_p,max_tokens:maxTokens,response_format});
   const acc=accInit();acc.local=route.local;let firstAt=0;const startAt=performance.now();
   acc.runtime=route.runtime||null;
-  acc.ctxChars=noteContext(model,messages);
+  acc.ctxChars=noteContext(label||model,messages,model);
   /* An identical request we have already answered costs nothing and takes no time. Skipped
      for streaming-visible calls only when the caller opts out, since a cached reply cannot
      stream — it arrives whole. */
@@ -24389,6 +24574,60 @@ function gauntletCases(g){
     anti:()=>{
       const old=/(^|\/)(\.obsidian|\.trash|node_modules|\.git)\//i;
       return old.test('_glassbox/latest.json')?0:1;     // the old pattern let it through
+    },antiExpect:v=>v===1});
+
+  add({id:'prompt-inspector-honest',sub:'observability',uses:['promptCapture','promptBlocks'],
+    what:'the inspector captures real prompts, labels their blocks without double-counting, and redacts keys',
+    run:()=>{
+      /* The block breakdown is the whole point: "system 6.1k" tells you nothing, "brain 4.2k,
+         tools 800" tells you what to cut. Blocks must therefore PARTITION the message — if
+         they overlap, the numbers add up to more than the prompt and the panel lies. */
+      const keep=g.PROMPTS_SEEN.slice();
+      const sys='WHAT THIS PROJECT HAS ALREADY LEARNED\n'+'x'.repeat(400)+
+                '\nTOOLS YOU CAN USE\n'+'y'.repeat(200);
+      g.promptCapture('t','m/x',[{role:'system',content:sys},{role:'user',content:'sk-abcdef1234567890'}],sys.length+18);
+      const p=g.PROMPTS_SEEN[0];
+      const sum=p.blocks.reduce((a,b)=>a+b.chars,0);
+      const partitions=Math.abs(sum-sys.length)<=2;
+      const labelled=p.blocks.some(b=>b.id==='brain')&&p.blocks.some(b=>b.id==='tools');
+      const redacted=!/sk-abcdef/.test(p.msgs[1].text);
+      g.PROMPTS_SEEN=keep;
+      return (partitions&&labelled&&redacted)?'honest':'wrong';
+    },expect:v=>v==='honest',
+    antiWhat:'and the hazard is real: counting each block from its header to end double-counts',
+    anti:()=>{
+      /* The naive version measures every block as "header to end of string", so two blocks in
+         one message add up to more than the message. */
+      const t='AAAA'+'x'.repeat(96)+'BBBB'+'y'.repeat(96);
+      const naive=[t.length-t.indexOf('AAAA'),t.length-t.indexOf('BBBB')].reduce((a,b)=>a+b,0);
+      return naive>t.length?1:0;
+    },antiExpect:v=>v===1});
+
+  add({id:'search-and-spend',sub:'observability',uses:['gbSearch','spendByFeature'],
+    what:'search narrows on every word, and spend is attributed per feature from the existing log',
+    run:()=>{
+      /* An OR search across six sources returns everything and is indistinguishable from no
+         search. Every word must appear. */
+      const one=g.gbSearch('the'),two=g.gbSearch('the zzzznotarealword');
+      const narrows=(two.total||0)<=(one.total||0)&&two.total===0;
+      const rejectsShort=g.gbSearch('a').ok===false;
+      /* Spend must aggregate the log rather than keep a second tally that can disagree. */
+      const src=String(g.spendByFeature);
+      const readsLog=/LOG\b/.test(src)&&/kind==='call'/.test(src);
+      const sp=g.spendByFeature();
+      const sharesOk=!sp.rows.length||Math.abs(sp.rows.reduce((a,r)=>a+r.share,0)-1)<1e-6;
+      return (narrows&&rejectsShort&&readsLog&&sharesOk)?'sound':'unsound';
+    },expect:v=>v==='sound',
+    antiWhat:'and the hazard is real: a total alone cannot say which feature to fix',
+    anti:()=>{
+      /* 'a' has the bigger TOTAL, 'b' the bigger PER CALL. That gap is the whole reason a
+         breakdown beats a headline number, so the fixture has to actually contain it —
+         the first version of this used numbers where b was cheaper per call and quietly
+         asserted nothing. */
+      const calls=[{label:'a',cost:0.50},{label:'a',cost:0.50},{label:'b',cost:0.90}];
+      const total=calls.reduce((x,c)=>x+c.cost,0);
+      const perA=1.00/2,perB=0.90/1;
+      return (Math.abs(total-1.90)<1e-9&&perA<perB&&1.00>0.90)?1:0;
     },antiExpect:v=>v===1});
 
   add({id:'fallback-and-pool-wired',sub:'routing',uses:['withFallback','limiter'],
@@ -36181,6 +36420,82 @@ function initForge(){
     toast(MAP3D.auto?'Spinning':'Stopped — drag to turn it yourself');};
   $('#brain-mapreset').onclick=()=>{MAP3D.rotX=-0.25;MAP3D.rotY=0.6;MAP3D.zoom=1;MAP3D.auto=true;};
 
+  /* ── Search / spend / prompt inspector ─────────────────────────────────
+     All guarded with if(el): a user can switch the Metrics tab off in Customise, and an
+     unguarded $('#id').onclick on a missing node throws and kills every wiring line after it. */
+  const capEl=$('#pi-cap');
+  if(capEl)capEl.textContent='the last '+PROMPT_CAP+' calls, this session only';
+
+  const gsRender=r=>{
+    const o=$('#gs-out');if(!o)return;
+    if(!r.ok){o.innerHTML=`<p class="help">${esc(r.error)}</p>`;return;}
+    if(!r.total){o.innerHTML='<p class="help">Nothing matches. Every word has to appear.</p>';return;}
+    o.innerHTML=`<p class="help">${r.total} match${r.total===1?'':'es'} — `+
+      r.bySource.map(b=>`${esc(b.label)} ${b.n}`).join(' · ')+`</p>`+
+      r.hits.map(h=>`<div class="card" style="margin:6px 0;padding:8px">
+        <div class="row" style="gap:6px;align-items:center">
+          <span class="grow" style="min-width:0">
+            <b>${h.icon} ${esc(h.title)}</b> <span class="muted mini">${esc(h.label)}</span>
+            <div class="mini muted" style="margin-top:3px">…${esc(h.snippet)}…</div>
+          </span>
+          <button class="btn ghost small" data-gsgo="${esc(h.go)}">Open</button>
+        </div></div>`).join('');
+    $$('[data-gsgo]').forEach(b=>b.onclick=()=>go(b.dataset.gsgo));
+  };
+  const gsq=$('#gs-q'),gsgo=$('#gs-go');
+  if(gsgo)gsgo.onclick=()=>gsRender(gbSearch(gsq?gsq.value:''));
+  if(gsq)gsq.onkeydown=e=>{if(e.key==='Enter')gsRender(gbSearch(gsq.value));};
+
+  const spRender=()=>{
+    const o=$('#sp-out');if(!o)return;
+    const r=spendByFeature();
+    if(!r.calls){o.innerHTML='<p class="help">No calls yet this session.</p>';return;}
+    o.innerHTML=`<p class="help">${r.calls} call(s) · ${cash(r.total)} total`+
+      (r.priciest&&r.priciest.per>0?` · priciest per call: <b>${esc(r.priciest.label)}</b> at ${cash(r.priciest.per)}`:'')+`</p>`+
+      `<table class="tbl" style="width:100%"><tr><th>Feature</th><th>Calls</th><th>Total</th><th>Per call</th><th>Avg ctx</th><th>Share</th></tr>`+
+      r.rows.slice(0,14).map(x=>`<tr>
+        <td>${esc(x.label)}</td><td>${x.n}</td><td>${cash(x.cost)}</td>
+        <td>${cash(x.per)}</td><td>${fmt(x.avgCtx)}</td>
+        <td><div style="background:var(--edge);border-radius:4px;height:8px;width:100%">
+          <div style="background:var(--acc);height:8px;border-radius:4px;width:${Math.round(x.share*100)}%"></div></div></td>
+      </tr>`).join('')+`</table>`;
+  };
+  const spr=$('#sp-refresh');if(spr)spr.onclick=spRender;
+  spRender();
+
+  const piFill=()=>{
+    const a=$('#pi-pick'),b=$('#pi-cmp');if(!a||!b)return;
+    const opts=PROMPTS_SEEN.map(p=>`<option value="${esc(p.id)}">${esc(p.label)} · ${fmt(p.chars)} chars · ${new Date(p.ts).toLocaleTimeString()}</option>`).join('');
+    a.innerHTML=opts||'<option value="">no calls captured yet</option>';
+    b.innerHTML='<option value="">— compare with —</option>'+opts;
+  };
+  const piShow=()=>{
+    const o=$('#pi-out'),sel=$('#pi-pick');if(!o||!sel)return;
+    const p=PROMPTS_SEEN.find(x=>x.id===sel.value);
+    if(!p){o.innerHTML='<p class="help">Run anything that calls a model, then press ↻.</p>';return;}
+    o.innerHTML=`<p class="help"><b>${esc(p.model||'')}</b> · ${fmt(p.chars)} characters across ${p.msgs.length} message(s)</p>`+
+      `<div class="row" style="gap:4px;flex-wrap:wrap;margin-bottom:8px">`+
+      p.blocks.map(b=>`<span class="chip">${esc(b.label)} · ${fmt(b.chars)}</span>`).join('')+`</div>`+
+      p.msgs.map(m=>`<details style="margin-bottom:6px"><summary><b>${esc(m.role)}</b> <span class="muted mini">${fmt(m.chars)} chars</span></summary>
+        <pre class="logs" style="white-space:pre-wrap;max-height:320px;margin-top:6px">${esc(m.text)}</pre></details>`).join('');
+  };
+  const pip=$('#pi-pick');if(pip)pip.onchange=piShow;
+  const pir=$('#pi-refresh');if(pir)pir.onclick=()=>{piFill();piShow();};
+  const pid=$('#pi-diff');
+  if(pid)pid.onclick=()=>{
+    const o=$('#pi-out');if(!o)return;
+    const d=promptDiff(($('#pi-pick')||{}).value,($('#pi-cmp')||{}).value);
+    if(!d.ok){o.innerHTML=`<p class="help">${esc(d.error)}</p>`;return;}
+    const sign=n=>(n>0?'+':'')+fmt(n);
+    o.innerHTML=`<p class="help">Difference: <b>${sign(d.totalDelta)}</b> characters
+      (${esc(d.a.label)} → ${esc(d.b.label)})</p>`+
+      `<table class="tbl" style="width:100%"><tr><th>Block</th><th>A</th><th>B</th><th>Δ</th></tr>`+
+      d.rows.map(r=>`<tr><td>${esc(r.label)}</td><td>${fmt(r.a)}</td><td>${fmt(r.b)}</td>
+        <td style="color:${r.delta>0?'var(--bad)':r.delta<0?'var(--good)':'inherit'}">${sign(r.delta)}</td></tr>`).join('')+
+      `</table>`;
+  };
+  piFill();
+
   /* ── MCP registry browser ───────────────────────────────────────────── */
   const mregRender=()=>{
     const o=$('#mreg-out');if(!o)return;
@@ -46861,6 +47176,9 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     renderMetrics,renderCreations,initMetrics,initCreations,cash,pct,
     LOOP_DEFAULTS,loopVerdict,brainGraph,layoutGraph,renderBrainMap,stopMap,brainBullets,
     scoreBullet,noteContext,get CTX(){return CTX},get MAP3D(){return MAP3D},
+    PROMPT_CAP,PROMPT_BLOCKS,get PROMPTS_SEEN(){return PROMPTS_SEEN},set PROMPTS_SEEN(v){PROMPTS_SEEN=v},
+    promptBlocks,promptCapture,promptDiff,promptScrub,
+    spendByFeature,SEARCH_SOURCES,gbSearch,
     bmTokens,bm25Index,bm25Score,brainRank,BM25_K1,BM25_B,
     renderGhostty,renderHarnessHealth,
     addSpend,get SESSION_SPEND(){return SESSION_SPEND},
