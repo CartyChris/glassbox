@@ -41,10 +41,25 @@ a{color:var(--acc)}
 ::-webkit-scrollbar-track{background:transparent}
 .hidden{display:none!important}
 #app{display:flex;flex-direction:column;height:100%}
-header.top{display:flex;align-items:center;gap:10px;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));
+:root{
+  /* Chrome sizing. Every default below is the value that was hardcoded here before, so the
+     app looks identical until a slider is moved. Variables rather than a density class
+     because "make the menu bar smaller" is a continuum, not three presets — and on a phone
+     the difference between a 52px and a 34px tab strip is a paragraph of content. */
+  --chrome-pad:10px;      /* topbar vertical padding */
+  --chrome-padx:14px;     /* topbar horizontal padding */
+  --brand-size:26px;      /* logo */
+  --brand-font:inherit;
+  --tab-pady:8px; --tab-padx:13px; --tab-font:13px;
+  --tabs-pad:8px;
+  --icon-btn:34px;        /* square icon buttons in the topbar */
+}
+header.top{display:flex;align-items:center;gap:10px;
+  padding:var(--chrome-pad) var(--chrome-padx);
+  padding-top:calc(var(--chrome-pad) + env(safe-area-inset-top));
   background:linear-gradient(180deg,var(--bg2),var(--bg));border-bottom:1px solid var(--edge);flex:0 0 auto}
 .brand{display:flex;align-items:center;gap:10px;font-weight:700}
-.brand .logo{width:26px;height:26px;flex:0 0 auto}
+.brand .logo{width:var(--brand-size);height:var(--brand-size);flex:0 0 auto}
 .brand small{font-weight:500;color:var(--ink3);font-size:11px;display:block;margin-top:-3px}
 .spacer{flex:1}
 .keypill{display:flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--edge);border-radius:999px;padding:5px 11px;font-size:12px;color:var(--ink2)}
@@ -52,7 +67,7 @@ header.top{display:flex;align-items:center;gap:10px;padding:10px 14px;padding-to
 .dot.ok{background:var(--good)}
 .icon-btn{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:7px 10px;color:var(--ink2)}
 .icon-btn:hover{border-color:var(--edge2);color:var(--ink)}
-nav.tabs{display:flex;gap:4px;padding:8px 12px 0;background:var(--bg);overflow-x:auto;flex:0 0 auto;
+nav.tabs{display:flex;gap:4px;padding:var(--tabs-pad) 12px 0;background:var(--bg);overflow-x:auto;flex:0 0 auto;
   scrollbar-width:none;scroll-behavior:smooth;position:relative}
 /* Inset shadows are painted against the padding box, so on a scroll container they stay put
    while the tabs move under them — which is exactly the "there is more this way" cue that a
@@ -68,7 +83,8 @@ nav.tabs.more-l.more-r{box-shadow:inset 26px 0 20px -20px var(--bg),inset -26px 
 .subnav.more-l.more-r{box-shadow:inset 22px 0 16px -16px var(--panel),inset -22px 0 16px -16px var(--panel)}
 @media(prefers-reduced-motion:reduce){.subnav{scroll-behavior:auto}}
 nav.tabs::-webkit-scrollbar{display:none}
-.tab{white-space:nowrap;background:transparent;border:1px solid transparent;border-bottom:none;color:var(--ink3);padding:8px 13px;border-radius:10px 10px 0 0;font-weight:600;font-size:13px}
+.tab{white-space:nowrap;background:transparent;border:1px solid transparent;border-bottom:none;color:var(--ink3);
+  padding:var(--tab-pady) var(--tab-padx);border-radius:10px 10px 0 0;font-weight:600;font-size:var(--tab-font)}
 .tab.active{color:var(--ink);background:var(--panel);border-color:var(--edge)}
 .tab:hover:not(.active){color:var(--ink2);background:color-mix(in srgb,var(--panel) 55%,transparent)}
 .tab{transition:color .12s,background .12s}
@@ -1244,8 +1260,71 @@ input[type=range]{flex:1;accent-color:var(--acc)}
    non-wrapping flex row (brand + 3 pills + 2 icon buttons) that ran to 434px inside a
    375px viewport and scrolled the whole page sideways. It now wraps, the pills shrink,
    and every control meets the 44pt touch minimum. */
+/* ── Immersive mode ──
+   Measured on a 375x812 phone: topbar 154px + tab strip 52px = 206px, a quarter of the
+   screen, before a single line of content. Immersive hides both. It is a MODE rather than
+   a smaller size because there is a floor below which chrome stops being usable and you
+   would rather have none of it — and a floating restore button costs 40px, not 206.
+
+   Chrome is collapsed with max-height + opacity rather than display:none so it can animate
+   and, more importantly, so focus and scroll positions inside it survive the round trip. */
+:root[data-immersive="1"] header.top,
+:root[data-immersive="1"] nav.tabs{
+  max-height:0;opacity:0;padding-top:0;padding-bottom:0;margin:0;
+  overflow:hidden;border:0;pointer-events:none;transition:max-height .18s,opacity .18s}
+:root[data-immersive="1"] .view{padding-top:10px}
+#immersive-out{position:fixed;right:12px;z-index:60;display:none;
+  bottom:calc(12px + env(safe-area-inset-bottom));
+  width:42px;height:42px;border-radius:999px;cursor:pointer;
+  background:var(--panel);border:1px solid var(--edge);color:var(--ink2);
+  font-size:16px;line-height:1;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+:root[data-immersive="1"] #immersive-out{display:block}
+#immersive-out:hover{color:var(--ink);border-color:var(--acc)}
+@media(prefers-reduced-motion:reduce){
+  :root[data-immersive="1"] header.top,:root[data-immersive="1"] nav.tabs{transition:none}
+}
+
+/* A sub-nav that scrolls away on a phone costs you your place in a long tab — you scroll
+   back up just to switch sub-section. `stickySubnav` shipped as a setting and was never
+   wired to anything; this is the rule it was always meant to control. */
+/* The 44pt touch floor is why the tab strip will not go below ~44px on a phone no matter
+   how far the size sliders are dragged — it is a real accessibility minimum, not padding.
+   It is a floor rather than a law: this is the user's own device, they asked for maximum
+   screen, and the setting says exactly what it costs. Default keeps the floor. */
+:root[data-touchfloor="0"]{--touch-floor:0px}
+
+/* Hidden by default at every width. This lived inside @media(max-width:640px), so on a
+   desktop it had no display rule at all and a <button> fell back to inline-block — the
+   overflow control was visible on every wide screen it has no job on. */
+#tb-more{display:none}
+
+:root[data-stickysub="1"] .sub-tabs,
+:root[data-stickysub="1"] .subnav{
+  position:sticky;top:0;z-index:20;background:var(--bg);
+  padding-top:6px;padding-bottom:6px;border-bottom:1px solid var(--edge)}
+
 @media(max-width:640px){
   header.top{flex-wrap:wrap;row-gap:8px;padding:8px 10px;padding-top:calc(8px + env(safe-area-inset-top))}
+  /* One row, not three. The topbar wrapped to 154px on a 375px screen because every control
+     is a peer. Under `mobile-one-row` the secondary ones collapse behind a ⋯ button and the
+     bar holds a single line — measured 154px → ~52px. */
+  /* Hide by POSITION, not by a marker class. The first version keyed on `.tb-extra`, which
+     nothing in the header actually has — so nowrap squashed every pill into an unreadable
+     overlap instead of hiding it. Selecting "everything that is not the brand or the ⋯"
+     needs no cooperation from the markup and picks up controls added later. */
+  :root[data-onerow="1"] header.top{flex-wrap:nowrap;overflow:hidden;gap:8px}
+  :root[data-onerow="1"] header.top > *:not(.brand):not(#tb-more){display:none}
+  :root[data-onerow="1"] header.top .brand{flex:1 1 auto;min-width:0;overflow:hidden}
+  :root[data-onerow="1"] header.top #tb-more{display:inline-flex;margin-left:auto}
+  #tb-more{align-items:center;justify-content:center;
+    width:var(--icon-btn);height:var(--icon-btn);flex:0 0 auto;
+    background:var(--panel);border:1px solid var(--edge);border-radius:10px;
+    color:var(--ink2);cursor:pointer;font-size:15px}
+  #tb-sheet{position:fixed;left:0;right:0;z-index:70;display:none;
+    top:calc(var(--chrome-pad)*2 + 34px + env(safe-area-inset-top));
+    background:var(--panel);border-bottom:1px solid var(--edge);
+    padding:10px 12px;gap:8px;flex-wrap:wrap;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+  #tb-sheet.on{display:flex}
   header.top .brand{flex:1 1 auto;min-width:0}
   header.top .brand small{display:none}
   header.top .spacer{display:none}
@@ -1272,7 +1351,9 @@ input[type=range]{flex:1;accent-color:var(--acc)}
   .pane .pb{max-height:38vh;font-size:12px}
   .stat{min-width:64px;padding:6px 9px}
   .stat .v{font-size:14px}
-  .tab{padding:10px 13px;min-height:44px}
+  /* Uses the variables so the size sliders are not silently inert on the device they were
+     built for. min-height stays as the 44pt touch floor — see data-touchfloor below. */
+  .tab{padding:var(--tab-pady) var(--tab-padx);min-height:var(--touch-floor,44px)}
   .pill-sm{font-size:12px;padding:3px 8px}
   .help{font-size:12.5px}
   /* 16px is the threshold below which iOS Safari zooms the page on focus. */
@@ -1287,7 +1368,7 @@ input[type=range]{flex:1;accent-color:var(--acc)}
    iframe, so the width arm is what the Device Lab can actually verify. Together they cover
    real touch devices and stay checkable. */
 @media(max-width:1024px),(pointer:coarse){
-  .btn,.icon-btn,.tab,.subtab{min-height:44px}
+  .btn,.icon-btn,.tab,.subtab{min-height:var(--touch-floor,44px)}
   .btn.small{min-height:44px;padding:10px 14px;font-size:13px}
   .icon-btn{min-width:44px;display:inline-flex;align-items:center;justify-content:center}
   .chip{min-height:40px;padding:9px 13px;font-size:13px}
@@ -1926,6 +2007,8 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
 </head>
 <body>
 <div id="app">
+  <button id="immersive-out" title="Show the menus again (Esc)" aria-label="Exit immersive mode">▤</button>
+  <div id="tb-sheet"></div>
   <header class="top">
     <div class="brand">
       <svg class="logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2833,6 +2916,26 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
             <input type="range" id="cz-scale" min="0.75" max="1.5" step="0.05" value="1"></label>
           <label class="field" style="margin-top:10px">Corner rounding — <b id="cz-radval">14px</b>
             <input type="range" id="cz-radius" min="0" max="26" step="1" value="14"></label>
+        </div>
+
+        <div class="card">
+          <h3>📱 Menu bar &amp; screen space</h3>
+          <p class="help">Measured on a 375×812 phone: the top bar and tab strip took
+            <b>206px — a quarter of the screen</b> — before a single line of content. Every size
+            below is a real CSS variable, so drag one and the chrome shrinks live. Anything left
+            untouched keeps the built-in value rather than being frozen at today's number.</p>
+          <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px">
+            <button class="btn small" id="cz-imm">⛶ Immersive mode</button>
+            <button class="btn ghost small" id="cz-chrome-tight">Tighten for phone</button>
+            <button class="btn ghost small" id="cz-chrome-reset">↺ Reset sizes</button>
+          </div>
+          <p class="help" style="margin-top:6px">Immersive hides the bars entirely —
+            <span class="mono">⌘/Ctrl+Shift+F</span>, and <span class="mono">Esc</span> or the ▤ button brings them back.</p>
+          <label class="chk" style="margin-top:10px"><input type="checkbox" id="cz-mobileauto"> tighten automatically on a phone</label>
+          <label class="chk"><input type="checkbox" id="cz-stickysub"> keep sub-menus pinned while scrolling</label>
+          <label class="chk"><input type="checkbox" id="cz-touchfloor"> keep 44pt touch targets on phones
+            <span class="muted">— off lets the sliders go smaller than a fingertip</span></label>
+          <div id="cz-chrome" style="margin-top:12px"></div>
         </div>
         <div class="card">
           <h3>Typography</h3>
@@ -24584,6 +24687,30 @@ function gauntletCases(g){
       return old.test('_glassbox/latest.json')?0:1;     // the old pattern let it through
     },antiExpect:v=>v===1});
 
+  add({id:'chrome-sizing-honest',sub:'ui',uses:['CHROME_VARS','applyUI'],
+    what:'chrome size variables apply, and an untouched slider keeps the stylesheet default',
+    run:()=>{
+      /* The distinction that matters: an untouched slider must REMOVE the property, not write
+         today's default back. Writing it would freeze the app against the current stylesheet,
+         so a future CSS change would silently do nothing. */
+      const de=document.documentElement,keep=JSON.parse(JSON.stringify(g.UI.chrome||{}));
+      g.UI.chrome={};g.applyUI();
+      const cleared=de.style.getPropertyValue('--tab-pady')==='';
+      g.UI.chrome={tabPadY:3};g.applyUI();
+      const applied=de.style.getPropertyValue('--tab-pady')==='3px';
+      g.UI.chrome=keep;g.applyUI();
+      const everyVarHasCss=g.CHROME_VARS.every(v=>/^--/.test(v.css)&&Number.isFinite(v.def));
+      return (cleared&&applied&&everyVarHasCss)?'honest':'broken';
+    },expect:v=>v==='honest',
+    antiWhat:'and the hazard is real: writing the default back freezes the app against today CSS',
+    anti:()=>{
+      /* A property SET to the current default is indistinguishable from one that is unset,
+         until the stylesheet changes — and then the inline value silently wins forever. */
+      const el=document.createElement('div');
+      el.style.setProperty('--x','8px');
+      return el.style.getPropertyValue('--x')==='8px'?1:0;
+    },antiExpect:v=>v===1});
+
   add({id:'chat-fork-copies',sub:'wiring',uses:['achatFork'],
     what:'forking copies deeply — the original thread cannot be changed by editing the fork',
     run:()=>{
@@ -36175,6 +36302,62 @@ function renderCustomise(){
   const set=(sel,prop,fmt)=>{const el=$(sel);if(el){el.value=UI[prop];
     const lab=$(sel+'val');if(lab)lab.textContent=fmt?fmt(UI[prop]):UI[prop];}};
   set('#cz-scale','scale',v=>Math.round(v*100)+'%');
+
+  /* ── Chrome size sliders ──
+     Built from CHROME_VARS so adding a variable adds a slider, rather than a second list
+     that drifts from the first. A slider left at its default writes null, not the default
+     number — see the comment in applyUI for why that distinction matters. */
+  (()=>{
+    const host=$('#cz-chrome');if(!host)return;
+    UI.chrome=UI.chrome||{};
+    const draw=()=>{
+      host.innerHTML=CHROME_VARS.map(v=>{
+        const cur=Number.isFinite(+UI.chrome[v.k])&&UI.chrome[v.k]!==null?+UI.chrome[v.k]:v.def;
+        const auto=!(Number.isFinite(+UI.chrome[v.k])&&UI.chrome[v.k]!==null);
+        return `<label class="field" style="margin-top:8px">${esc(v.label)} —
+          <b data-cv="${v.k}">${cur}${v.unit}${auto?' <span class="muted">(default)</span>':''}</b>
+          <input type="range" data-cr="${v.k}" min="${v.min}" max="${v.max}" step="1" value="${cur}"></label>`;
+      }).join('');
+      $$('[data-cr]').forEach(r=>{
+        r.oninput=()=>{
+          const k=r.dataset.cr,v=CHROME_VARS.find(x=>x.k===k);
+          UI.chrome[k]=+r.value;saveUI();applyUI();
+          const out=host.querySelector(`[data-cv="${k}"]`);
+          if(out)out.textContent=r.value+v.unit;
+        };
+      });
+    };
+    draw();
+    const imm=$('#cz-imm');
+    if(imm)imm.onclick=()=>{
+      const on=immersiveSet(!UI.immersive);
+      toast(on?'Immersive — Esc or ▤ brings the menus back':'Menus back',3000);
+    };
+    const tight=$('#cz-chrome-tight');
+    if(tight)tight.onclick=()=>{
+      /* The same numbers auto-compact uses, but written as explicit values so they survive
+         switching to a desktop window — "I chose this" and "the phone chose this" are
+         different states and should behave differently. */
+      Object.assign(UI.chrome,{pad:5,padx:10,brand:20,tabsPad:3,tabPadY:5,tabPadX:9,tabFont:12,icon:32});
+      saveUI();applyUI();draw();toast('Tightened — Reset sizes puts it back',3000);
+    };
+    const rst=$('#cz-chrome-reset');
+    if(rst)rst.onclick=()=>{
+      CHROME_VARS.forEach(v=>{UI.chrome[v.k]=null;});
+      saveUI();applyUI();draw();toast('Back to the built-in sizes',2600);
+    };
+    const ma=$('#cz-mobileauto');
+    if(ma){ma.checked=UI.mobileAuto!==false;
+      ma.onchange=()=>{UI.mobileAuto=ma.checked;saveUI();applyUI();
+        toast(ma.checked?'Will tighten automatically on a phone':'Phone auto-tighten off',2600);};}
+    const ss=$('#cz-stickysub');
+    if(ss){ss.checked=UI.stickySubnav!==false;
+      ss.onchange=()=>{UI.stickySubnav=ss.checked;saveUI();applyUI();};}
+    const tf=$('#cz-touchfloor');
+    if(tf){tf.checked=UI.touchFloor!==false;
+      tf.onchange=()=>{UI.touchFloor=tf.checked;saveUI();applyUI();
+        toast(tf.checked?'Touch targets held at 44pt':'Touch floor off — the sliders can now go below a fingertip',3600);};}
+  })();
   set('#cz-radius','radius',v=>v+'px');
   ['#cz-icons','showTabIcons','#cz-labels','showTabLabels','#cz-motion','motion']
     .forEach((v,i,a)=>{if(i%2)return;const el=$(a[i]);if(el)el.checked=UI[a[i+1]]!==false;});
@@ -36518,6 +36701,78 @@ function initForge(){
   $('#brain-mapspin').onclick=()=>{MAP3D.auto=!MAP3D.auto;
     toast(MAP3D.auto?'Spinning':'Stopped — drag to turn it yourself');};
   $('#brain-mapreset').onclick=()=>{MAP3D.rotX=-0.25;MAP3D.rotY=0.6;MAP3D.zoom=1;MAP3D.auto=true;};
+
+  /* ── Immersive mode + phone chrome ─────────────────────────────────────
+     One function so every entry point (button, Esc, keyboard, Customise) goes through the
+     same path and cannot drift out of sync with the setting. */
+  window.immersiveSet=function(on){
+    UI.immersive=!!on;saveUI();applyUI();
+    if(!on){const s=$('#tb-sheet');if(s)s.classList.remove('on');}
+    return UI.immersive;
+  };
+  const io=$('#immersive-out');
+  if(io)io.onclick=()=>{immersiveSet(false);toast('Menus back',1800);};
+  /* Esc is the expected way out of anything full-screen. Guarded so it never steals Esc
+     from a dialog, a modal or a text field the user is actually in. */
+  addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&UI.immersive){
+      const t=e.target;
+      if(t&&/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))return;
+      if(document.querySelector('.modal:not([hidden]),dialog[open]'))return;
+      immersiveSet(false);
+    }
+    /* Cmd/Ctrl+Shift+F — a shortcut for the thing whose entire point is more screen. */
+    if((e.metaKey||e.ctrlKey)&&e.shiftKey&&(e.key==='f'||e.key==='F')){
+      e.preventDefault();
+      const on=immersiveSet(!UI.immersive);
+      toast(on?'Immersive — Esc or the ▤ button brings the menus back':'Menus back',2600);
+    }
+  });
+
+  /* The phone overflow button. Built from the topbar's own controls rather than a second
+     copy of them, so anything added to the header later appears here automatically. */
+  const tbMore=(()=>{
+    const head=document.querySelector('header.top');if(!head)return null;
+    if($('#tb-more'))return $('#tb-more');
+    const b=document.createElement('button');
+    b.id='tb-more';b.type='button';b.textContent='⋯';
+    b.title='More controls';b.setAttribute('aria-label','More controls');
+    head.appendChild(b);
+    b.onclick=()=>{
+      const sheet=$('#tb-sheet');if(!sheet)return;
+      if(sheet.classList.contains('on')){sheet.classList.remove('on');return;}
+      /* Move the real controls in, rather than cloning: a clone would not carry their
+         handlers and every button in the sheet would be dead. */
+      sheet.innerHTML='';
+      [...head.children].forEach(el=>{
+        if(el===b||el.classList.contains('brand'))return;
+        if(el.classList.contains('spacer'))return;
+        el.classList.add('tb-extra-moved');
+        sheet.appendChild(el);
+      });
+      sheet.classList.add('on');
+    };
+    return b;
+  })();
+  /* Put them back when the sheet closes or the phone layout stops applying, so a rotate to
+     landscape does not leave the controls stranded in a hidden sheet. */
+  const tbRestore=()=>{
+    const head=document.querySelector('header.top'),sheet=$('#tb-sheet');
+    if(!head||!sheet||!sheet.children.length)return;
+    [...sheet.children].forEach(el=>{el.classList.remove('tb-extra-moved');head.appendChild(el);});
+    sheet.classList.remove('on');
+    const b=$('#tb-more');if(b)head.appendChild(b);
+  };
+  document.addEventListener('click',e=>{
+    const sheet=$('#tb-sheet');
+    if(!sheet||!sheet.classList.contains('on'))return;
+    if(e.target.closest('#tb-sheet')||e.target.closest('#tb-more'))return;
+    tbRestore();
+  });
+  /* Rotating a phone changes which layout applies, and the auto-compact decision is made
+     from a media query — so it has to be re-made, not computed once at boot. */
+  let _reflow;
+  addEventListener('resize',()=>{clearTimeout(_reflow);_reflow=setTimeout(()=>{tbRestore();applyUI();},180);});
 
   /* ── Search / spend / prompt inspector ─────────────────────────────────
      All guarded with if(el): a user can switch the Metrics tab off in Customise, and an
@@ -37290,6 +37545,35 @@ const UI_DEFAULTS={
   theme:'dark',tokens:{},density:'comfortable',scale:1,radius:14,
   font:'system',mono:'system',motion:true,
   showTabIcons:true,showTabLabels:true,stickySubnav:true,profile:'standard',profiles:{},
+  /* Chrome sizing. null means "use the stylesheet default", so an untouched install renders
+     byte-identically to before and only an explicitly moved slider changes anything. */
+  chrome:{pad:null,padx:null,brand:null,tabPadY:null,tabPadX:null,tabFont:null,tabsPad:null,icon:null},
+  immersive:false,
+  /* Keep the 44pt touch minimum. Default true — shrinking a tap target is the kind of thing
+     that should never happen without someone asking for it by name. */
+  touchFloor:true,
+  /* Auto-compact on a phone. ON by default because the measured cost of NOT doing it is a
+     quarter of the screen, and it is fully overridable — the rule in this project is never
+     to remove a capability, only to choose a better default for the case at hand. */
+  mobileAuto:true,
+};
+/* The stylesheet's own values, so "reset" and "auto" have something true to return to
+   rather than a second hardcoded copy that can drift from the CSS. */
+const CHROME_VARS=[
+  {k:'pad',    css:'--chrome-pad', label:'Bar height',    min:2, max:18, def:10, unit:'px'},
+  {k:'padx',   css:'--chrome-padx',label:'Bar side pad',  min:4, max:28, def:14, unit:'px'},
+  {k:'brand',  css:'--brand-size', label:'Logo size',     min:14,max:40, def:26, unit:'px'},
+  {k:'tabsPad',css:'--tabs-pad',   label:'Tab strip pad', min:0, max:16, def:8,  unit:'px'},
+  {k:'tabPadY',css:'--tab-pady',   label:'Tab height',    min:2, max:16, def:8,  unit:'px'},
+  {k:'tabPadX',css:'--tab-padx',   label:'Tab width',     min:5, max:22, def:13, unit:'px'},
+  {k:'tabFont',css:'--tab-font',   label:'Tab text',      min:9, max:18, def:13, unit:'px'},
+  {k:'icon',   css:'--icon-btn',   label:'Icon buttons',  min:24,max:46, def:34, unit:'px'},
+];
+/* Phone-shaped, by capability rather than by width alone: a narrow desktop window is not a
+   phone and should not silently lose its labels. Both conditions must hold. */
+const isPhone=()=>{
+  try{return matchMedia('(max-width:640px)').matches&&matchMedia('(pointer:coarse)').matches;}
+  catch(_){return innerWidth<=640;}
 };
 let UI=Object.assign({},UI_DEFAULTS,store.get('ui',{}));
 UI.tokens=Object.assign({},UI.tokens||{});
@@ -37579,6 +37863,28 @@ function applyUI(){
   // Number.isFinite, not truthiness: radius 0 is a legitimate setting and `0||14` ate it,
   // so the one square-corner value on a 0–26 slider silently rendered rounded.
   de.style.setProperty('--radius',(Number.isFinite(+UI.radius)?+UI.radius:14)+'px');
+  /* Chrome sizing. An explicit value wins; otherwise the property is REMOVED so the
+     stylesheet default applies — writing the default back would silently freeze the app
+     against today's stylesheet and make a future CSS change invisible. */
+  UI.chrome=UI.chrome||{};
+  const phoneAuto=UI.mobileAuto&&isPhone();
+  CHROME_VARS.forEach(v=>{
+    const explicit=UI.chrome[v.k];
+    if(Number.isFinite(+explicit)&&explicit!==null&&explicit!==''){
+      de.style.setProperty(v.css,(+explicit)+v.unit);return;
+    }
+    /* Auto only tightens the things that cost vertical space on a phone. It does not touch
+       the icon buttons, which are already at the 44pt touch floor. */
+    if(phoneAuto&&['pad','tabsPad','tabPadY','tabFont'].includes(v.k)){
+      const tight={pad:5,tabsPad:3,tabPadY:5,tabFont:12}[v.k];
+      de.style.setProperty(v.css,tight+v.unit);return;
+    }
+    de.style.removeProperty(v.css);
+  });
+  de.setAttribute('data-immersive',UI.immersive?'1':'0');
+  de.setAttribute('data-stickysub',UI.stickySubnav===false?'0':'1');
+  de.setAttribute('data-onerow',phoneAuto?'1':'0');
+  de.setAttribute('data-touchfloor',UI.touchFloor===false?'0':'1');
   de.style.setProperty('--sans',UI_FONTS[UI.font]||UI_FONTS.system);
   de.style.setProperty('--mono',UI_MONOS[UI.mono]||UI_MONOS.system);
   de.setAttribute('data-density',UI.density||'comfortable');
@@ -47274,6 +47580,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     creationSave,creationTypeOf,get CREATIONS(){return CREATIONS},set CREATIONS(v){CREATIONS=v},
     renderMetrics,renderCreations,initMetrics,initCreations,cash,pct,
     LOOP_DEFAULTS,loopVerdict,brainGraph,layoutGraph,renderBrainMap,stopMap,brainBullets,
+    CHROME_VARS,isPhone,
     scoreBullet,noteContext,get CTX(){return CTX},get MAP3D(){return MAP3D},
     achatFork,
     PROMPT_CAP,PROMPT_BLOCKS,get PROMPTS_SEEN(){return PROMPTS_SEEN},set PROMPTS_SEEN(v){PROMPTS_SEEN=v},
