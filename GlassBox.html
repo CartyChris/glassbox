@@ -1293,6 +1293,15 @@ input[type=range]{flex:1;accent-color:var(--acc)}
    screen, and the setting says exactly what it costs. Default keeps the floor. */
 :root[data-touchfloor="0"]{--touch-floor:0px}
 
+/* The update bar. Fixed to the BOTTOM and above the home indicator, because on a phone the
+   top of the screen is where the app's own chrome lives and a bar there covers it. */
+#pwa-update{position:fixed;left:12px;right:12px;z-index:80;
+  bottom:calc(12px + env(safe-area-inset-bottom));
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:var(--panel);border:1px solid var(--acc);border-radius:12px;
+  padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.45);font-size:13px}
+#pwa-update span{flex:1;min-width:140px}
+
 /* Hidden by default at every width. This lived inside @media(max-width:640px), so on a
    desktop it had no display rule at all and a <button> fell back to inline-block — the
    overflow control was visible on every wide screen it has no job on. */
@@ -2936,6 +2945,15 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           <label class="chk"><input type="checkbox" id="cz-touchfloor"> keep 44pt touch targets on phones
             <span class="muted">— off lets the sliders go smaller than a fingertip</span></label>
           <div id="cz-chrome" style="margin-top:12px"></div>
+        </div>
+
+        <div class="card">
+          <h3>🗂 Chrome per tab</h3>
+          <p class="help">One setting is wrong between tabs — a 3D viewport wants every pixel and
+            Settings wants readable controls. Give any tab its own preset and the bars resize as
+            you move between them. A slider you drag above still wins, so this never quietly
+            overrides a size you chose yourself.</p>
+          <div id="cz-tabchrome" style="margin-top:10px"></div>
         </div>
         <div class="card">
           <h3>Typography</h3>
@@ -5115,6 +5133,55 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
       <div id="gauntlet-settings"></div>
       <div id="persist-panel"></div>
       <div id="pwa-panel"></div>
+
+      <div class="card">
+        <h3>📱 Best setup — phone, browser and install</h3>
+        <p class="help">All of this is measured against how this app actually works: it is one
+          HTML file that keeps everything in your browser's own storage. That single fact decides
+          every recommendation below.</p>
+
+        <h4 style="margin-top:12px">On iPhone</h4>
+        <p class="help"><b>Use Safari to install it, even if you browse in Chrome.</b> On iOS every
+          browser runs on WebKit, but only Safari can add a real installed app to the Home Screen —
+          Share → <i>Add to Home Screen</i>. A Chrome shortcut opens back inside Chrome and does not
+          get its own storage.</p>
+        <p class="help"><b>Storage lives with the app.</b> Because everything is stored locally,
+          <i>Clear History and Website Data</i> erases your work. Settings → Safari → Advanced →
+          Website Data → keep this site. And export a file now and then — Settings has the button;
+          a file on your device survives anything the browser does.</p>
+        <p class="help"><b>Leave “Prevent Cross-Site Tracking” on.</b> It does not affect this app —
+          your model calls go straight from your device to your provider, first-party.</p>
+        <p class="help"><b>Low Power Mode pauses background timers.</b> Monitors and scheduled runs
+          will not fire while it is on and the app is in the background. Nothing is lost; it simply
+          waits.</p>
+
+        <h4 style="margin-top:12px">On a computer</h4>
+        <p class="help"><b>Chrome or Edge give you the most.</b> Both support choosing a real folder
+          on disk, which is what turns backups from a download into a synced folder and lets the
+          Brain read and write actual <span class="mono">.md</span> files. Safari and Firefox have
+          no folder API — everything still works, but backups come out as downloads.</p>
+        <p class="help"><b>Firefox and Safari</b> are fine for everything else, including the 3D
+          editor and local models.</p>
+
+        <h4 style="margin-top:12px">Keeping it up to date</h4>
+        <p class="help">An installed app checks for a new version when you return to it, and again
+          every half hour. When one is ready a bar appears at the bottom — nothing reloads under you
+          mid-task. If you ever think you are on an old version, <b>Check for updates</b> below
+          forces the check; <b>Remove the offline copy</b> is the bigger hammer and never needs a
+          delete-and-reinstall.</p>
+
+        <h4 style="margin-top:12px">Local models</h4>
+        <p class="help">Ollama and LM Studio only answer a page served over
+          <span class="mono">http://localhost</span> or <span class="mono">https</span>. The hosted
+          copy works. Opening the HTML file directly from disk does not — the page has no origin and
+          Ollama refuses it.</p>
+
+        <div class="row" style="gap:8px;margin-top:12px;flex-wrap:wrap">
+          <button class="btn small" id="setup-check">↻ Check for updates</button>
+          <button class="btn ghost small" id="setup-diag">🩺 What am I running?</button>
+        </div>
+        <div id="setup-diag-out" class="mini muted" style="margin-top:8px"></div>
+      </div>
       <div id="xd-panel"></div>
       <div class="card" id="proj-card">
         <h3>🗂 Projects</h3>
@@ -24687,6 +24754,38 @@ function gauntletCases(g){
       return old.test('_glassbox/latest.json')?0:1;     // the old pattern let it through
     },antiExpect:v=>v===1});
 
+  add({id:'per-tab-chrome-precedence',sub:'ui',uses:['CHROME_PRESETS','applyUI'],
+    what:'a tab preset applies, and a slider the user dragged still beats it',
+    run:()=>{
+      /* Precedence is the whole design: explicit slider > tab preset > phone auto > CSS.
+         If a preset outranked a slider, dragging one on a preset-ed tab would appear to do
+         nothing at all — the user would conclude the slider is broken. */
+      const de=document.documentElement;
+      const keepC=JSON.parse(JSON.stringify(g.UI.chrome||{}));
+      const keepT=JSON.parse(JSON.stringify(g.UI.tabChrome||{}));
+      const keepV=(typeof currentView==='function'&&currentView())||'lab';
+      g.UI.chrome={};g.UI.tabChrome={};g.applyUI();
+      const base=de.style.getPropertyValue('--tab-pady');
+      g.UI.tabChrome[keepV]='roomy';g.applyUI();
+      const preset=de.style.getPropertyValue('--tab-pady');
+      g.UI.chrome.tabPadY=3;g.applyUI();
+      const slider=de.style.getPropertyValue('--tab-pady');
+      g.UI.chrome=keepC;g.UI.tabChrome=keepT;g.applyUI();
+      const presetApplied=preset==='10px'&&preset!==base;
+      const sliderWins=slider==='3px';
+      const immersivePreset=CHROME_PRESETS.immersive.immersive===true;
+      const standardIsNoop=Object.keys(CHROME_PRESETS.standard.vals).length===0;
+      return (presetApplied&&sliderWins&&immersivePreset&&standardIsNoop)?'correct':'wrong';
+    },expect:v=>v==='correct',
+    antiWhat:'and the hazard is real: if a preset outranked the slider, dragging it does nothing',
+    anti:()=>{
+      /* Order matters. Applying the preset last overwrites the explicit choice. */
+      const el=document.createElement('div');
+      el.style.setProperty('--x','3px');      // the slider
+      el.style.setProperty('--x','10px');     // a preset applied afterwards
+      return el.style.getPropertyValue('--x')==='10px'?1:0;
+    },antiExpect:v=>v===1});
+
   add({id:'chrome-sizing-honest',sub:'ui',uses:['CHROME_VARS','applyUI'],
     what:'chrome size variables apply, and an untouched slider keeps the stylesheet default',
     run:()=>{
@@ -36353,6 +36452,31 @@ function renderCustomise(){
     const ss=$('#cz-stickysub');
     if(ss){ss.checked=UI.stickySubnav!==false;
       ss.onchange=()=>{UI.stickySubnav=ss.checked;saveUI();applyUI();};}
+    /* Per-tab presets. Built from REGISTRY.tabs so it lists the tabs that actually exist,
+       including any the user made — a hardcoded list would silently omit those. */
+    (()=>{
+      const host=$('#cz-tabchrome');if(!host)return;
+      UI.tabChrome=UI.tabChrome||{};
+      const tabs=((typeof REGISTRY!=='undefined'&&REGISTRY.tabs)||[]).filter(t=>t&&t.id);
+      if(!tabs.length){host.innerHTML='<p class="help">Tabs are still registering — reopen Customise.</p>';return;}
+      host.innerHTML=tabs.map(t=>`<div class="row" style="gap:8px;align-items:center;margin-bottom:5px">
+        <span class="grow" style="min-width:0">${esc(t.label||t.id)}</span>
+        <select data-tcp="${esc(t.id)}" style="width:auto">
+          ${Object.entries(CHROME_PRESETS).map(([k,v])=>
+            `<option value="${k}"${(UI.tabChrome[t.id]||'standard')===k?' selected':''}>${esc(v.label)}</option>`).join('')}
+        </select></div>`).join('')
+        +`<button class="btn ghost small" id="cz-tc-clear" style="margin-top:8px">↺ All tabs back to Standard</button>`;
+      $$('[data-tcp]').forEach(sel=>sel.onchange=()=>{
+        const id=sel.dataset.tcp;
+        if(sel.value==='standard')delete UI.tabChrome[id];else UI.tabChrome[id]=sel.value;
+        saveUI();applyUI();
+        toast(esc(id)+' → '+CHROME_PRESETS[sel.value].label,2200);
+      });
+      const cl=$('#cz-tc-clear');
+      if(cl)cl.onclick=()=>{UI.tabChrome={};saveUI();applyUI();
+        $$('[data-tcp]').forEach(x=>x.value='standard');toast('Every tab back to Standard',2400);};
+    })();
+
     const tf=$('#cz-touchfloor');
     if(tf){tf.checked=UI.touchFloor!==false;
       tf.onchange=()=>{UI.touchFloor=tf.checked;saveUI();applyUI();
@@ -37552,6 +37676,10 @@ const UI_DEFAULTS={
   /* Keep the 44pt touch minimum. Default true — shrinking a tap target is the kind of thing
      that should never happen without someone asking for it by name. */
   touchFloor:true,
+  /* Per-tab chrome. `{ three:'immersive', settings:'roomy' }` — one global setting is wrong
+     between tabs: a 3D viewport wants every pixel, Settings wants readable controls. Empty
+     by default, so nothing changes until a tab is given a preset. */
+  tabChrome:{},
   /* Auto-compact on a phone. ON by default because the measured cost of NOT doing it is a
      quarter of the screen, and it is fully overridable — the rule in this project is never
      to remove a capability, only to choose a better default for the case at hand. */
@@ -37559,6 +37687,15 @@ const UI_DEFAULTS={
 };
 /* The stylesheet's own values, so "reset" and "auto" have something true to return to
    rather than a second hardcoded copy that can drift from the CSS. */
+/* Named presets, so a per-tab choice is one word rather than eight numbers. `null` values
+   mean "leave the stylesheet default", which is what makes `standard` a true no-op instead
+   of a ninth set of hardcoded numbers. */
+const CHROME_PRESETS={
+  standard:{label:'Standard',   immersive:false,vals:{}},
+  tight:   {label:'Tight',      immersive:false,vals:{pad:5,padx:10,brand:20,tabsPad:3,tabPadY:5,tabPadX:9,tabFont:12,icon:32}},
+  roomy:   {label:'Roomy',      immersive:false,vals:{pad:14,padx:18,brand:30,tabsPad:10,tabPadY:10,tabPadX:16,tabFont:14,icon:38}},
+  immersive:{label:'Immersive', immersive:true, vals:{}},
+};
 const CHROME_VARS=[
   {k:'pad',    css:'--chrome-pad', label:'Bar height',    min:2, max:18, def:10, unit:'px'},
   {k:'padx',   css:'--chrome-padx',label:'Bar side pad',  min:4, max:28, def:14, unit:'px'},
@@ -37866,12 +38003,23 @@ function applyUI(){
   /* Chrome sizing. An explicit value wins; otherwise the property is REMOVED so the
      stylesheet default applies — writing the default back would silently freeze the app
      against today's stylesheet and make a future CSS change invisible. */
-  UI.chrome=UI.chrome||{};
+  UI.chrome=UI.chrome||{};UI.tabChrome=UI.tabChrome||{};
   const phoneAuto=UI.mobileAuto&&isPhone();
+  /* The preset for the tab being shown. Read at apply time rather than stored, so switching
+     tabs re-resolves it and a preset changed in Customise takes effect immediately. */
+  const _view=(typeof currentView==='function'&&currentView())||'';
+  const _preset=CHROME_PRESETS[UI.tabChrome[_view]]||null;
+  const _presetVals=(_preset&&_preset.vals)||{};
   CHROME_VARS.forEach(v=>{
+    /* Precedence, most specific first: an explicit slider the user dragged, then this tab's
+       preset, then phone auto-compact, then the stylesheet. A slider must win over a preset
+       or dragging one on a preset-ed tab would appear to do nothing. */
     const explicit=UI.chrome[v.k];
     if(Number.isFinite(+explicit)&&explicit!==null&&explicit!==''){
       de.style.setProperty(v.css,(+explicit)+v.unit);return;
+    }
+    if(Number.isFinite(+_presetVals[v.k])){
+      de.style.setProperty(v.css,(+_presetVals[v.k])+v.unit);return;
     }
     /* Auto only tightens the things that cost vertical space on a phone. It does not touch
        the icon buttons, which are already at the 44pt touch floor. */
@@ -37881,7 +38029,9 @@ function applyUI(){
     }
     de.style.removeProperty(v.css);
   });
-  de.setAttribute('data-immersive',UI.immersive?'1':'0');
+  /* Immersive is either global or asked for by this tab's preset. Kept as an OR so leaving a
+     tab whose preset is immersive restores the bars, without clearing a global choice. */
+  de.setAttribute('data-immersive',(UI.immersive||(_preset&&_preset.immersive))?'1':'0');
   de.setAttribute('data-stickysub',UI.stickySubnav===false?'0':'1');
   de.setAttribute('data-onerow',phoneAuto?'1':'0');
   de.setAttribute('data-touchfloor',UI.touchFloor===false?'0':'1');
@@ -43908,7 +44058,80 @@ async function persistInit(){
    So offline support is strictly an enhancement of the served copy. When sw.js is missing, or
    the page came from file://, nothing here fails — it reports honestly that offline is not
    available and why. */
-const PWA={reg:null,state:'unknown',why:'',prompt:null};
+/* A build stamp the running page can compare against what the server now has. The service
+   worker updating is NOT the same thing as the user seeing the new app: clients.claim() makes
+   a new worker control the page, but the HTML already parsed keeps running until something
+   reloads it. This is what lets the app notice and say so. */
+const APP_BUILD='2026-09-10T00:00:00Z';
+const PWA={reg:null,state:'unknown',why:'',prompt:null,update:null,checking:false,lastCheck:0};
+
+/* ── Staying current, which is the whole problem on iOS ──────────────────────
+   A homescreen PWA on iOS is SUSPENDED rather than navigated. It can run for weeks without
+   the browser ever re-fetching sw.js, because the update check normally rides on a
+   navigation that never happens. The symptom is an app that is quietly weeks out of date
+   and a user who deletes and re-adds it to the homescreen — which is exactly what happened.
+
+   Three things are needed, and only the first was here:
+     1. a correct network-first worker                          (already true)
+     2. actively asking the registration to re-check            (added)
+     3. telling the user a new version is ready, and reloading  (added)
+   `reg.update()` bypasses the HTTP cache for the worker script, so it is the honest check. */
+async function pwaCheckUpdate(opts){
+  opts=opts||{};
+  if(!PWA.reg||PWA.checking)return{ok:false,why:'not registered'};
+  /* iOS fires visibilitychange generously; without a floor this would hammer the network
+     every time the user glanced at another app. */
+  if(!opts.force&&Date.now()-PWA.lastCheck<60000)return{ok:false,why:'checked recently'};
+  PWA.checking=true;PWA.lastCheck=Date.now();
+  try{
+    await PWA.reg.update();
+    const waiting=PWA.reg.waiting;
+    if(waiting){PWA.update=waiting;pwaAnnounceUpdate();return{ok:true,found:true};}
+    /* A worker can be byte-identical while the HTML is not — the page is cached separately.
+       Comparing the served build stamp catches the case the worker cannot see. */
+    let served='';
+    try{
+      const r=await fetch('./index.html',{cache:'no-store'});
+      const t=await r.text();
+      const m=/const APP_BUILD='([^']+)'/.exec(t);
+      served=m?m[1]:'';
+    }catch(_){}
+    if(served&&served!==APP_BUILD){PWA.update='html';pwaAnnounceUpdate();return{ok:true,found:true,served};}
+    return{ok:true,found:false};
+  }catch(e){return{ok:false,why:e.message};}
+  finally{PWA.checking=false;}
+}
+/* Offered, never forced. Reloading out from under someone mid-prompt would lose their work,
+   and this app's whole storage story is "nothing is lost unless you do everything wrong". */
+function pwaAnnounceUpdate(){
+  if($('#pwa-update'))return;
+  const bar=document.createElement('div');
+  bar.id='pwa-update';
+  bar.innerHTML=`<span>A newer version of Glassbox Jet is ready.</span>
+    <button class="btn small" id="pwa-doupdate">Update now</button>
+    <button class="btn ghost small" id="pwa-later">Later</button>`;
+  document.body.appendChild(bar);
+  $('#pwa-doupdate').onclick=()=>pwaApplyUpdate();
+  $('#pwa-later').onclick=()=>bar.remove();
+  try{if(typeof notify2==='function')notify2('update','Update ready','A newer Glassbox Jet is available — reload to get it.');}catch(_){}
+}
+async function pwaApplyUpdate(){
+  try{
+    const w=PWA.reg&&PWA.reg.waiting;
+    if(w){
+      /* Tell the waiting worker to take over, then reload once it has. Reloading first would
+         just re-open the old one. */
+      w.postMessage('skipWaiting');
+      let done=false;
+      navigator.serviceWorker.addEventListener('controllerchange',()=>{
+        if(done)return;done=true;location.reload();
+      });
+      setTimeout(()=>{if(!done){done=true;location.reload();}},2500);
+      return;
+    }
+    location.reload();
+  }catch(_){location.reload();}
+}
 async function pwaInit(){
   if(!('serviceWorker' in navigator)){PWA.state='unsupported';PWA.why='This browser has no service worker support.';return;}
   if(!/^https?:$/.test(location.protocol)){
@@ -43924,6 +44147,25 @@ async function pwaInit(){
   try{
     PWA.reg=await navigator.serviceWorker.register('./sw.js',{scope:'./'});
     PWA.state='ready';
+    /* A worker already waiting from a previous visit — announce it rather than sitting on it
+       until every tab closes, which for a homescreen PWA is close to never. */
+    if(PWA.reg.waiting){PWA.update=PWA.reg.waiting;pwaAnnounceUpdate();}
+    PWA.reg.addEventListener('updatefound',()=>{
+      const nw=PWA.reg.installing;if(!nw)return;
+      nw.addEventListener('statechange',()=>{
+        /* `controller` distinguishes an UPDATE from a first install: with no controller this
+           is the very first worker and there is nothing to update to. */
+        if(nw.state==='installed'&&navigator.serviceWorker.controller){
+          PWA.update=nw;pwaAnnounceUpdate();
+        }
+      });
+    });
+    /* Resume from background is the moment an iOS PWA can check, because it is the only
+       moment it reliably gets. */
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)pwaCheckUpdate();});
+    addEventListener('focus',()=>pwaCheckUpdate());
+    setTimeout(()=>pwaCheckUpdate({force:true}),4000);
+    setInterval(()=>pwaCheckUpdate(),30*60*1000);
     if(!document.querySelector('link[rel="manifest"]')){
       const l=document.createElement('link');l.rel='manifest';l.href='./manifest.webmanifest';
       document.head.appendChild(l);
@@ -43982,6 +44224,36 @@ function renderPwa(){
       <p class="help" style="margin-top:8px">Nothing you type is cached — only the app's own files.
         Model calls go straight to your provider and are never stored by the offline layer.</p>
     </div>`;
+  /* Setup card. Reports what is TRUE on this device rather than restating the advice —
+     "you are installed, on a folder-capable browser, running build X" answers the question
+     the advice above can only generalise about. */
+  const sc=$('#setup-check');
+  if(sc)sc.onclick=async()=>{
+    sc.disabled=true;sc.textContent='Checking…';
+    const r=await pwaCheckUpdate({force:true});
+    sc.disabled=false;sc.textContent='↻ Check for updates';
+    toast(r.found?'A newer version is ready — the bar at the bottom will install it'
+      :r.ok?'You are on the newest version'
+      :'Could not check: '+(r.why||'unknown'),3600);
+  };
+  const sd=$('#setup-diag');
+  if(sd)sd.onclick=()=>{
+    const o=$('#setup-diag-out');if(!o)return;
+    const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+    const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||
+      (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+    const folder=typeof window.showDirectoryPicker==='function';
+    const secure=window.isSecureContext;
+    const row=(k,v,good)=>`<div>${esc(k)}: <b style="color:${good?'var(--good)':'var(--warn,#ffb020)'}">${esc(v)}</b></div>`;
+    o.innerHTML=
+      row('Installed as an app',standalone?'yes':'no — running in a browser tab',standalone)+
+      row('Platform',ios?'iOS / iPadOS':'desktop or Android',true)+
+      row('Folder access',folder?'yes — backups can go to a real folder':'no — backups download instead',folder)+
+      row('Secure context',secure?'yes':'no — service worker and folder access need https or localhost',secure)+
+      row('Storage tier',(typeof IDB!=='undefined'&&IDB.label?IDB.label():'unknown'),true)+
+      row('Build',APP_BUILD,true)+
+      (ios&&!standalone?`<div style="margin-top:6px">On iPhone, install from <b>Safari</b> — Share → Add to Home Screen. Only Safari can create a real installed app on iOS.</div>`:'');
+  };
   const i=$('#pwa-install');if(i)i.onclick=pwaInstall;
   const r=$('#pwa-reset');if(r)r.onclick=pwaReset;
 }
@@ -47158,12 +47430,41 @@ function toggleFullscreenView(){
   if(document.fullscreenElement){document.exitFullscreen();return;}
   (el.requestFullscreen||el.webkitRequestFullscreen||function(){toast('Fullscreen is not available in this browser',2600);}).call(el);
 }
-function popOutView(){
-  const view=currentView();if(!view)return;
-  const w=window.open(location.pathname+location.search+'#pop='+view,'_blank',
-    'width=1180,height=820,menubar=no,toolbar=no,location=no,status=no');
-  if(!w)toast('Pop-out was blocked by the browser — allow pop-ups for this page',3200);
-  else toast('Opened in its own window — it reads the same saved data, so changes you save here will show up there too',3600);
+/* Opens the current tab as its own browser tab/window.
+
+   The feature string is the whole iOS story. `window.open(url,'_blank','width=…')` asks for a
+   POPUP, and Safari and Chrome on iOS have no popup windows — the request is either blocked or
+   silently redirected into the current tab, which is what "the pop-out button does nothing on
+   my phone" actually is. Dropped on touch devices, it opens a real tab, which is the thing
+   that exists on that platform.
+
+   A named target rather than a bare '_blank' on desktop, so pressing it twice for the same
+   panel focuses the window that is already open instead of stacking duplicates. */
+function popOutView(view){
+  view=view||currentView();if(!view)return;
+  const url=location.pathname+location.search+'#pop='+view;
+  const touch=(()=>{try{return matchMedia('(pointer:coarse)').matches;}catch(_){return false;}})();
+  let w=null;
+  try{
+    w=touch
+      ? window.open(url,'_blank')                       // a real tab — iOS has nothing else
+      : window.open(url,'gbpop-'+view,'width=1180,height=820,menubar=no,toolbar=no,location=no,status=no');
+  }catch(_){w=null;}
+  if(!w){
+    /* Blocked. Rather than a dead end, hand over a link the user can act on — on iOS a
+       user-activated anchor succeeds where a scripted open was refused. */
+    const a=document.createElement('a');
+    a.href=url;a.target='_blank';a.rel='noopener';
+    a.textContent='Open “'+view+'” in a new tab';
+    a.className='btn small';a.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:90';
+    document.body.appendChild(a);
+    setTimeout(()=>a.remove(),12000);
+    toast('Your browser blocked the automatic open — tap the button at the bottom',5200);
+    return null;
+  }
+  try{w.focus();}catch(_){}
+  toast('Opened in its own tab — it reads the same saved data, so anything you save here shows up there too',3600);
+  return w;
 }
 /* A popped-out window is a second, independent load of this same app (same origin), not a
    clone of live DOM — a moved DOM node cannot be driven by the original document's `$()`.
@@ -47230,6 +47531,10 @@ document.addEventListener('click',e=>{
       ()=>toast('Could not copy',2000));}
 });
 function go(view){
+  /* Chrome follows the tab. applyUI resolves the per-tab preset from the CURRENT view, so it
+     has to run after the switch — scheduled rather than called inline because the active
+     class is set further down this function and currentView() would still report the old one. */
+  setTimeout(()=>{try{applyUI();}catch(_){}},0);
   /* The office loop is stopped on navigation; the brain-map, neural view and Viz loops were
      not, so they kept running requestAnimationFrame off-screen for the rest of the session.
      Each holds a full graph, so this is retained memory as well as wasted frames. */
@@ -47580,9 +47885,10 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     creationSave,creationTypeOf,get CREATIONS(){return CREATIONS},set CREATIONS(v){CREATIONS=v},
     renderMetrics,renderCreations,initMetrics,initCreations,cash,pct,
     LOOP_DEFAULTS,loopVerdict,brainGraph,layoutGraph,renderBrainMap,stopMap,brainBullets,
-    CHROME_VARS,isPhone,
+    CHROME_VARS,CHROME_PRESETS,isPhone,popOutView,
     scoreBullet,noteContext,get CTX(){return CTX},get MAP3D(){return MAP3D},
     achatFork,
+    APP_BUILD,pwaCheckUpdate,pwaApplyUpdate,pwaAnnounceUpdate,
     PROMPT_CAP,PROMPT_BLOCKS,get PROMPTS_SEEN(){return PROMPTS_SEEN},set PROMPTS_SEEN(v){PROMPTS_SEEN=v},
     promptBlocks,promptCapture,promptDiff,promptScrub,
     spendByFeature,SEARCH_SOURCES,gbSearch,
