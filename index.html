@@ -90,9 +90,39 @@ nav.tabs::-webkit-scrollbar{display:none}
 .tab{transition:color .12s,background .12s}
 /* Tab grouping. A group chip is deliberately NOT a .tab — it carries no data-view, and the
    gauntlet flags any .tab that navigates nowhere. */
+/* `pointer-events:none` is left over from when this was a LABEL. It became a real <button>
+   with a fold handler, and the property was never removed — so every real tap passed straight
+   through it and folding appeared not to work at all. It kept passing tests because
+   chip.click() fires a handler regardless of pointer-events; only elementFromPoint at the
+   chip's own centre exposes it. That is the check the gauntlet case now makes. */
 .tabgroup{display:none;align-self:center;white-space:nowrap;font-size:10px;font-weight:800;
-  letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);opacity:.62;
-  padding:3px 9px;margin:0 2px 0 8px;border-left:1px solid var(--edge);pointer-events:none}
+  letter-spacing:.09em;text-transform:uppercase;color:var(--ink2);opacity:.85;
+  padding:5px 10px;margin:0 2px 0 8px;border-left:1px solid var(--edge);
+  background:transparent;border-top:none;border-right:none;border-bottom:none;
+  cursor:pointer;border-radius:8px;pointer-events:auto;
+  min-height:var(--touch-floor,28px)}
+.tabgroup:hover{color:var(--ink);opacity:1;background:color-mix(in srgb,var(--panel) 60%,transparent)}
+.tabgroup:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.tabgroup.folded{border:1px dashed var(--edge);border-left:1px dashed var(--edge);
+  color:var(--ink2);opacity:1}
+.tabgroup .tg-car{display:inline-block;margin-right:4px;opacity:.8}
+.tabgroup .tg-n{display:inline-block;margin-left:5px;padding:1px 5px;border-radius:999px;
+  background:var(--acc);color:#fff;font-size:9px;vertical-align:middle}
+.tabmenu{position:fixed;z-index:95;min-width:210px;padding:6px;
+  background:var(--panel);border:1px solid var(--edge);border-radius:12px;
+  box-shadow:0 14px 40px rgba(0,0,0,.5);font-size:13px}
+.tabmenu .tm-head{padding:6px 9px 4px;font-weight:700;color:var(--ink)}
+.tabmenu .tm-sec{padding:6px 9px 3px;font-size:10px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink3)}
+.tabmenu .tm-sep{height:1px;background:var(--edge);margin:5px 4px}
+.tabmenu .tm-item{display:block;width:100%;text-align:left;background:transparent;border:0;
+  color:var(--ink2);padding:7px 9px;border-radius:8px;cursor:pointer;font-size:13px;
+  min-height:var(--touch-floor,32px)}
+.tabmenu .tm-item:hover{background:var(--bg2);color:var(--ink)}
+.tabmenu .tm-item.on{color:var(--ink)}
+/* Dragging a whole section. Mirrors the per-tab drag so both feel the same. */
+.tabgroup.tg-drag{opacity:.55;transform:scale(.97)}
+.tabgroup.tg-drop{box-shadow:inset 0 -2px 0 var(--acc)}
 .tabgroup:first-child{border-left:none;margin-left:0}
 body[data-tabmode=grouped] .tabgroup{display:inline-block}
 /* Simple mode hides the rest, but never the tab you are actually on — landing somewhere with
@@ -24754,6 +24784,77 @@ function gauntletCases(g){
       return old.test('_glassbox/latest.json')?0:1;     // the old pattern let it through
     },antiExpect:v=>v===1});
 
+  add({id:'group-chip-is-really-clickable',sub:'ui',uses:['tabGroupToggle','applyTabMode'],
+    what:'a REAL tap lands on the section chip, and folding hides that section',
+    run:()=>{
+      /* The bug this exists for: the chip kept `pointer-events:none` from when it was a
+         label, so every real tap passed straight through and folding appeared dead. It
+         survived because chip.click() fires a handler REGARDLESS of pointer-events — only
+         hit-testing at the chip's own centre can tell the difference. Hence elementFromPoint
+         rather than a synthetic click. */
+      const nav=document.getElementById('tabs');if(!nav)return 'no nav';
+      const keepMode=(typeof TABMODE!=='undefined')?TABMODE:'grouped';
+      const keepFold=(g.UI.foldedGroups||[]).slice();
+      g.UI.foldedGroups=[];g.applyTabMode();
+      const chip=nav.querySelector('.tabgroup[data-tabgroup="setup"]');
+      if(!chip){g.UI.foldedGroups=keepFold;g.applyTabMode();return 'no setup chip';}
+      const pe=getComputedStyle(chip).pointerEvents;
+      /* nav.tabs sets scroll-behavior:smooth, so scrollIntoView is ASYNC — reading the rect
+         straight after it measures the chip mid-flight, off-screen, and elementFromPoint
+         returns null for reasons that have nothing to do with the bug. Scroll instantly, and
+         only hit-test when the chip is genuinely on screen; if the bar cannot show it at all,
+         fall back to the computed property, which is the thing that actually regressed. */
+      chip.scrollIntoView({inline:'center',block:'nearest',behavior:'instant'});
+      const r=chip.getBoundingClientRect();
+      const onScreen=r.width>0&&r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;
+      const hit=onScreen
+        ? document.elementFromPoint(Math.round(r.left+r.width/2),Math.round(r.top+r.height/2))
+        : null;
+      const tappable=pe!=='none'&&(onScreen?(!!hit&&(hit===chip||chip.contains(hit))):true);
+      /* And that folding actually removes the section's tabs from the bar. */
+      g.tabGroupToggle('setup');
+      const hidden=['customise','settings','help'].every(v=>{
+        const t=nav.querySelector('.tab[data-view="'+v+'"]');
+        return t&&getComputedStyle(t).display==='none';});
+      g.UI.foldedGroups=keepFold;g.applyTabMode();
+      return (tappable&&hidden)?'clickable':(tappable?'taps land but nothing folds':'REAL TAPS PASS THROUGH');
+    },expect:v=>v==='clickable'||v==='no setup chip',
+    antiWhat:'and the hazard is real: .click() succeeds on an element a real tap cannot reach',
+    anti:()=>{
+      /* This is precisely why the bug shipped: a programmatic click ignores pointer-events. */
+      const d=document.createElement('button');
+      d.style.cssText='position:fixed;left:0;top:0;width:40px;height:40px;pointer-events:none';
+      document.body.appendChild(d);
+      let fired=false;d.onclick=()=>{fired=true;};
+      d.click();                                   // succeeds despite pointer-events:none
+      const unreachable=document.elementFromPoint(20,20)!==d;
+      d.remove();
+      return (fired&&unreachable)?1:0;
+    },antiExpect:v=>v===1});
+
+  add({id:'section-order-is-one-authority',sub:'ui',uses:['groupOrderedIds','groupMove'],
+    what:'section order has one source of truth and the DOM follows it',
+    run:()=>{
+      const keep=(g.UI.groupOrder||[]).slice();
+      g.UI.groupOrder=[];g.applyTabMode();
+      const before=g.groupOrderedIds().slice();
+      g.groupMove(before[2],-1);
+      const after=g.groupOrderedIds().slice();
+      const dom=[...document.querySelectorAll('#tabs .tabgroup')].map(c=>c.dataset.tabgroup);
+      const moved=after.indexOf(before[2])===1;
+      const domAgrees=JSON.stringify(dom)===JSON.stringify(after);
+      const clamped=g.groupMove(after[0],-1)===false;      // cannot fall off the front
+      const sameSet=before.slice().sort().join()===after.slice().sort().join();
+      g.UI.groupOrder=keep;g.applyTabMode();
+      return (moved&&domAgrees&&clamped&&sameSet)?'one-authority':'diverged';
+    },expect:v=>v==='one-authority',
+    antiWhat:'and the hazard is real: a move that rebuilds from TAB_GROUPS ignores the saved order',
+    anti:()=>{
+      const shipped=['a','b','c'],saved=['c','a','b'];
+      /* Rendering from the shipped list rather than the saved one silently discards a drag. */
+      return JSON.stringify(shipped)!==JSON.stringify(saved)?1:0;
+    },antiExpect:v=>v===1});
+
   add({id:'per-tab-chrome-precedence',sub:'ui',uses:['CHROME_PRESETS','applyUI'],
     what:'a tab preset applies, and a slider the user dragged still beats it',
     run:()=>{
@@ -37665,7 +37766,7 @@ const UI_FX={
 };
 const UI_DEFAULTS={
   fx:'none',fxReduce:true,userCss:'',
-  hiddenTabs:[],hiddenCards:[],tabOrder:[],foldedGroups:[],
+  hiddenTabs:[],hiddenCards:[],tabOrder:[],foldedGroups:[],groupOrder:[],
   theme:'dark',tokens:{},density:'comfortable',scale:1,radius:14,
   font:'system',mono:'system',motion:true,
   showTabIcons:true,showTabLabels:true,stickySubnav:true,profile:'standard',profiles:{},
@@ -39750,6 +39851,29 @@ function tabMove(id,delta){
   UI.tabOrder=order;saveUI();applyTabMode();
   return true;
 }
+/* Section order, same shape as tabOrderedIds: saved order first, anything new appended, and
+   ids that no longer exist dropped. One function so the bar, the drag and any future manager
+   cannot disagree about what the order IS. */
+function groupOrderedIds(){
+  const real=TAB_GROUPS.map(g=>g.id);
+  const saved=(UI.groupOrder||[]).filter(id=>real.includes(id));
+  real.forEach(id=>{if(!saved.includes(id))saved.push(id);});
+  return saved;
+}
+function groupsOrdered(){
+  const rank=groupOrderedIds();
+  return TAB_GROUPS.slice().sort((a,b)=>rank.indexOf(a.id)-rank.indexOf(b.id));
+}
+/* Move a section n places. Mirrors tabMove so a drag, a key and a menu item agree. */
+function groupMove(id,delta){
+  const order=groupOrderedIds();
+  const i=order.indexOf(id);if(i<0)return false;
+  const j=Math.max(0,Math.min(order.length-1,i+delta));
+  if(i===j)return false;
+  order.splice(j,0,order.splice(i,1)[0]);
+  UI.groupOrder=order;saveUI();applyTabMode();
+  return true;
+}
 function tabGroupOf(view){
   const g=TAB_GROUPS.find(g=>g.views.includes(view));
   return g?g.id:null;
@@ -39781,7 +39905,8 @@ function applyTabMode(){
       .forEach(c=>nav.appendChild(c));
   }else{
     const seen=new Set();
-    TAB_GROUPS.forEach(g=>{
+    /* Sections in the user's order — the tabs inside each keep their own order from `rank`. */
+    groupsOrdered().forEach(g=>{
       const mine=tabs.filter(t=>g.views.includes(t.dataset.view));
       if(!mine.length)return;
       /* The chip is a real button now, not a label: pressing it folds the group away. With
@@ -39844,6 +39969,153 @@ function tabDropTarget(nav,held,x){
   });
   return best;
 }
+/* ── Dragging a whole SECTION ───────────────────────────────────────────────
+   Same shape as the per-tab drag on purpose: press-and-hold, pointer events (so it works on
+   touch, which HTML5 drag-and-drop does not), and it commits through groupMove so a drag and
+   a keyboard move cannot disagree. A short tap still folds — the hold threshold is what
+   separates "fold this" from "move this". */
+function groupDropTarget(nav,held,x){
+  let best=null,bestD=Infinity;
+  [...nav.querySelectorAll('.tabgroup')].forEach(c=>{
+    if(c===held)return;
+    const r=c.getBoundingClientRect();if(!r.width)return;
+    const d=x<r.left?r.left-x:x>r.right?x-r.right:0;
+    if(d<bestD){bestD=d;best=c;}
+  });
+  return best;
+}
+function initGroupDrag(){
+  const nav=$('#tabs');if(!nav||initGroupDrag._done)return;initGroupDrag._done=true;
+  let held=null,timer=null,startX=0,moved=false,armed=false;
+  const clear=()=>{clearTimeout(timer);timer=null;
+    if(held)held.classList.remove('tg-drag');
+    nav.querySelectorAll('.tg-drop').forEach(x=>x.classList.remove('tg-drop'));
+    held=null;armed=false;moved=false;};
+  nav.addEventListener('pointerdown',e=>{
+    const c=e.target.closest('.tabgroup');if(!c)return;
+    held=c;startX=e.clientX;moved=false;armed=false;
+    timer=setTimeout(()=>{
+      armed=true;c.classList.add('tg-drag');
+      try{c.setPointerCapture(e.pointerId);}catch(_){}
+      try{navigator.vibrate&&navigator.vibrate(8);}catch(_){}
+    },TAB_DRAG_HOLD);
+  });
+  nav.addEventListener('pointermove',e=>{
+    if(!held)return;
+    if(Math.abs(e.clientX-startX)>4)moved=true;
+    if(!armed){if(moved)clear();return;}   // a scroll should not become a drag
+    const t=groupDropTarget(nav,held,e.clientX);
+    nav.querySelectorAll('.tg-drop').forEach(x=>x.classList.remove('tg-drop'));
+    if(t)t.classList.add('tg-drop');
+  });
+  nav.addEventListener('pointerup',e=>{
+    if(!held){clear();return;}
+    if(armed){
+      const t=groupDropTarget(nav,held,e.clientX);
+      if(t){
+        const order=groupOrderedIds();
+        const from=order.indexOf(held.dataset.tabgroup),to=order.indexOf(t.dataset.tabgroup);
+        if(from>=0&&to>=0&&from!==to)groupMove(held.dataset.tabgroup,to-from);
+      }
+      /* Swallow the click that follows a drag, or releasing also folds the section. */
+      const sink=ev=>{ev.stopPropagation();ev.preventDefault();};
+      nav.addEventListener('click',sink,{capture:true,once:true});
+    }
+    clear();
+  });
+  nav.addEventListener('pointercancel',clear);
+  /* Keyboard equivalent, so section order is reachable without a pointer at all. */
+  nav.addEventListener('keydown',e=>{
+    const c=e.target.closest&&e.target.closest('.tabgroup');if(!c)return;
+    if(!(e.metaKey||e.ctrlKey))return;
+    if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
+      e.preventDefault();
+      groupMove(c.dataset.tabgroup,e.key==='ArrowLeft'?-1:1);
+      const again=$(`#tabs .tabgroup[data-tabgroup="${c.dataset.tabgroup}"]`);
+      if(again)again.focus();
+    }
+  });
+}
+
+/* ── Right-click a tab ──────────────────────────────────────────────────────
+   Everything you can do to one tab, where you are already pointing at it. Built because the
+   per-tab chrome preset had no home but a list in Customise, which is a long way from the
+   tab it applies to. Long-press opens it on touch, where there is no right button. */
+function closeTabMenu(){const m=$('#tabmenu');if(m)m.remove();}
+function openTabMenu(view,x,y){
+  closeTabMenu();
+  const label=(REGISTRY.tabs||[]).find(t=>t.id===view);
+  const grp=TAB_GROUPS.find(g=>g.views.includes(view));
+  const cur=(UI.tabChrome||{})[view]||'standard';
+  const m=document.createElement('div');
+  m.id='tabmenu';m.className='tabmenu';
+  m.innerHTML=
+    `<div class="tm-head">${esc((label&&label.label)||view)}</div>`+
+    `<div class="tm-sec">Chrome for this tab</div>`+
+    Object.entries(CHROME_PRESETS).map(([k,v])=>
+      `<button class="tm-item${cur===k?' on':''}" data-tmchrome="${k}">${cur===k?'✓ ':'&nbsp;&nbsp;'}${esc(v.label)}</button>`).join('')+
+    `<div class="tm-sep"></div>`+
+    `<button class="tm-item" data-tmpop="1">↗ Open in a new tab</button>`+
+    (grp?`<button class="tm-item" data-tmfold="${esc(grp.id)}">${tabGroupFolded(grp.id)?'▾ Unfold':'▸ Fold'} “${esc(grp.label)}”</button>`:'')+
+    `<button class="tm-item" data-tmhide="1">✕ Hide this tab</button>`;
+  document.body.appendChild(m);
+  /* Clamp inside the viewport — a menu opened near the right edge would otherwise render
+     off-screen with no way to reach it. */
+  const r=m.getBoundingClientRect();
+  m.style.left=Math.max(6,Math.min(x,innerWidth-r.width-6))+'px';
+  m.style.top=Math.max(6,Math.min(y,innerHeight-r.height-6))+'px';
+  m.addEventListener('click',e=>{
+    const b=e.target.closest('button');if(!b)return;
+    if(b.dataset.tmchrome){
+      UI.tabChrome=UI.tabChrome||{};
+      if(b.dataset.tmchrome==='standard')delete UI.tabChrome[view];
+      else UI.tabChrome[view]=b.dataset.tmchrome;
+      saveUI();applyUI();
+      toast(view+' → '+CHROME_PRESETS[b.dataset.tmchrome].label,2200);
+    }
+    else if(b.dataset.tmpop)popOutView(view);
+    else if(b.dataset.tmfold){tabGroupToggle(b.dataset.tmfold);}
+    else if(b.dataset.tmhide){
+      UI.hiddenTabs=[...new Set([...(UI.hiddenTabs||[]),view])];
+      saveUI();applyUI();applyTabMode();
+      toast('Hidden — turn it back on in Customise',3200);
+      if(currentView()===view)go(firstVisibleTab());
+    }
+    closeTabMenu();
+  });
+  setTimeout(()=>{
+    addEventListener('click',closeTabMenu,{once:true});
+    addEventListener('keydown',function esc(ev){
+      if(ev.key==='Escape'){closeTabMenu();removeEventListener('keydown',esc);}
+    });
+  },0);
+}
+function initTabMenu(){
+  const nav=$('#tabs');if(!nav||initTabMenu._done)return;initTabMenu._done=true;
+  nav.addEventListener('contextmenu',e=>{
+    const t=e.target.closest('.tab[data-view]');if(!t)return;
+    e.preventDefault();
+    openTabMenu(t.dataset.view,e.clientX,e.clientY);
+  });
+  /* Touch has no right button. A long press is the platform equivalent, and it must not
+     collide with the drag: the drag arms at TAB_DRAG_HOLD, so the menu waits longer and
+     stands down the moment a drag actually starts moving. */
+  let lp=null,lpX=0;
+  nav.addEventListener('pointerdown',e=>{
+    if(e.pointerType!=='touch')return;
+    const t=e.target.closest('.tab[data-view]');if(!t)return;
+    lpX=e.clientX;
+    lp=setTimeout(()=>{
+      if(!document.querySelector('.tab.dragging'))
+        openTabMenu(t.dataset.view,e.clientX,e.clientY);
+    },TAB_DRAG_HOLD+320);
+  });
+  const kill=()=>{clearTimeout(lp);lp=null;};
+  nav.addEventListener('pointerup',kill);
+  nav.addEventListener('pointercancel',kill);
+  nav.addEventListener('pointermove',e=>{if(lp&&Math.abs(e.clientX-lpX)>6)kill();});
+}
+
 function initTabDrag(){
   const nav=$('#tabs');if(!nav||initTabDrag._done)return;initTabDrag._done=true;
   let held=null,timer=null,startX=0,moved=false;
@@ -47652,7 +47924,7 @@ async function boot(){
   });
   $('#helpBtn').onclick=showHelp;
   $('#modeBtn').onclick=openTabModeMenu;
-  applyTabMode();initTabDrag();
+  applyTabMode();initTabDrag();initGroupDrag();initTabMenu();
   /* The groups have always folded; nothing said so. A dashed outline reads as "this is a
      control" rather than "this is a label", and the hint fires ONCE — a tip that reappears is
      an annoyance, one that never appears is a feature nobody finds. */
@@ -47987,6 +48259,8 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     get SPL(){return SPL},set SPL(v){SPL=v},
     get SPL_STATE(){return SPL_STATE},set SPL_STATE(v){SPL_STATE=v},
     TAB_GROUPS,TAB_ESSENTIALS,TAB_MODES,tabGroupOf,applyTabMode,setTabMode,openTabModeMenu,
+    groupOrderedIds,groupsOrdered,groupMove,groupDropTarget,initGroupDrag,
+    openTabMenu,closeTabMenu,initTabMenu,tabGroupToggle,tabGroupFolded,
     tabOrderedIds,tabMove,initTabDrag,tabGroupFolded,tabGroupToggle,tabGroupsAll,
     get TABMODE(){return TABMODE},set TABMODE(v){TABMODE=v},
     openModal,closeModal,focusablesIn,FOCUSABLE,wosFocusEl,
