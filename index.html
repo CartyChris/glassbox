@@ -2042,6 +2042,65 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
 .fb-note{background:var(--bg2);border:1px solid var(--edge);border-radius:7px;padding:3px 8px;
   font-size:12px;color:var(--ink)}
 
+/* ── Launcher ────────────────────────────────────────────────────────────────
+   `.btn.bad` is used in two places that predate this panel and has never had a rule, so a
+   destructive button has been rendering identically to a confirming one. */
+.btn.bad{background:var(--bad);color:#280808}
+.btn.bad:hover{filter:brightness(1.08)}
+.lx-ctl{display:flex;flex-direction:column;gap:9px;width:100%}
+.lx-ctl .row{gap:10px;align-items:flex-end}
+/* Emoji have wildly different line boxes, so buttons labelled with one came out 26px, 28px and
+   30px tall side by side. A fixed box makes the row read as one row. */
+.lx-actions .btn{height:30px;display:inline-flex;align-items:center;gap:5px;line-height:1;padding:0 11px}
+.lx-actions .btn.on{border-color:var(--acc);color:var(--acc)}
+.lx-drop{margin-top:12px;border:1.5px dashed var(--edge2);border-radius:var(--radius);
+  padding:26px 18px;text-align:center;color:var(--ink3);cursor:pointer;transition:.16s;background:var(--bg)}
+.lx-drop:hover{border-color:var(--acc);color:var(--ink2)}
+.lx-drop.over{border-color:var(--acc);background:color-mix(in oklab,var(--acc) 12%,var(--bg));color:var(--ink)}
+.lx-drop b{display:block;font-size:14px;color:var(--ink);margin-bottom:3px}
+.lx-stagewrap{background:var(--bg);border:1px solid var(--edge);border-radius:var(--radius);
+  padding:14px;margin-top:12px}
+.lx-stagewrap:fullscreen{padding:0;border:0;border-radius:0;display:flex;align-items:center;justify-content:center}
+.lx-stagewrap:fullscreen .lx-stage{height:100%!important;width:100%}
+.lx-stagewrap:fullscreen .lx-box{width:100%!important;height:100%!important;transform:none!important;border-radius:0}
+.lx-stage{display:flex;align-items:flex-start;justify-content:center;overflow:auto;min-height:340px}
+.lx-box{position:relative;transform-origin:top center;background:#fff;border-radius:6px;
+  overflow:hidden;flex:none;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.lx-box iframe{display:block;width:100%;height:100%;border:0;background:#fff}
+/* The bezel is drawn OUTSIDE the content box with spread shadows, so the page inside still
+   reports exactly the device's own viewport — a frame drawn with padding would lie about it. */
+.lx-box.lx-device{border-radius:34px;
+  box-shadow:0 0 0 11px #0f1218,0 0 0 12.5px #38425e,0 26px 70px rgba(0,0,0,.55)}
+.lx-box.lx-device::after{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:42%;max-width:150px;height:22px;background:#0f1218;border-radius:0 0 14px 14px;
+  pointer-events:none;z-index:3}
+.lx-box.lx-round{border-radius:44px}
+.lx-box.lx-round::after{display:none}
+.lx-log{max-height:230px;overflow:auto;background:var(--bg);border:1px solid var(--edge);
+  border-radius:10px;padding:8px;font-family:var(--mono);font-size:11.5px}
+.lx-line{display:flex;gap:8px;padding:2px 0;border-bottom:1px solid color-mix(in oklab,var(--edge) 55%,transparent)}
+.lx-line:last-child{border-bottom:0}
+.lx-line>span{flex:none;width:44px;color:var(--ink3);text-transform:uppercase;font-size:9.5px;padding-top:2px}
+.lx-line>code{flex:1;white-space:pre-wrap;word-break:break-word;color:var(--ink2)}
+.lx-line.error>span{color:var(--bad)}
+.lx-line.error>code{color:var(--bad)}
+.lx-line.warn>span,.lx-line.warn>code{color:var(--warn)}
+.lx-line.info>code{color:var(--ink3)}
+.lx-lib{display:grid;gap:8px}
+.lx-item{display:flex;gap:6px;align-items:stretch}
+.lx-item.on .lx-hit{border-color:var(--acc)}
+.lx-hit{flex:1;display:flex;align-items:center;gap:11px;text-align:left;background:var(--bg);
+  border:1px solid var(--edge);border-radius:10px;padding:9px 12px;color:var(--ink)}
+.lx-hit:hover{border-color:var(--edge2)}
+.lx-ico{font-size:19px;flex:none}
+.lx-meta{display:flex;flex-direction:column;gap:1px;min-width:0}
+.lx-meta b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lx-kinds{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:9px}
+.lx-kind{background:var(--bg);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}
+.lx-kind b{display:block;font-size:12.5px;margin-bottom:3px}
+.lx-kind span{font-size:11px;color:var(--ink3);line-height:1.5}
+@media(max-width:720px){.lx-kinds{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -2113,6 +2172,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
     <button class="tab" data-view="models">📚 Catalog</button>
     <button class="tab" data-view="history">🗄️ History</button>
     <button class="tab" data-view="awards">🏆 Awards</button>
+    <button class="tab" data-view="launch">📲 Launcher</button>
     <button class="tab" data-view="webos">🪟 WebOS</button>
     <button class="tab" data-view="connect">🔗 Connections</button>
     <button class="tab" data-view="help">❓ Help</button>
@@ -5125,6 +5185,76 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
 
     <section class="view" id="view-awards"><div class="wrap">
       <div id="aw-panel"></div>
+    </div></section>
+
+    <!-- ============ LAUNCHER ============ -->
+    <section class="view" id="view-launch"><div class="wrap">
+      <div class="card">
+        <h3>📲 Launcher — open anything and actually run it</h3>
+        <p class="help">A single <span class="mono">.html</span> game, a <span class="mono">.jsx</span>
+          screen, a React Native app in a phone frame, or a whole project <b>folder or .zip</b> —
+          opened, wired up and running, with no build step and nothing uploaded anywhere.
+          Imports, CSS imports, images, fonts and audio all resolve, because the missing bundler is
+          built in. Run it in the panel, fill the screen, or throw it into its own tab.</p>
+        <p class="help"><b>It runs sandboxed.</b> Every launched app gets its own opaque origin, so it
+          cannot read your API keys, your chats or your saved work — and that stays true in the
+          popped-out tab. What it cannot do: reach a server that is not there. Anything expecting a
+          backend, a database or <span class="mono">npm run dev</span> will run its front end and fail
+          its fetches, which the console below will show you.</p>
+        <div class="row" id="lx-open" style="margin-top:12px"></div>
+        <div class="lx-drop" id="lx-drop">
+          <b>Drop a file, a folder or a .zip here</b>
+          Folders keep their structure. Zips are unpacked in the browser.
+        </div>
+        <div class="row" style="margin-top:12px;gap:8px">
+          <input id="lx-ghrepo" class="mono" style="flex:1;min-width:200px" placeholder="owner/repo — run straight from GitHub">
+          <button class="btn ghost" id="lx-ghgo">Fetch &amp; run</button>
+          <span class="mini muted" id="lx-ghstatus"></span>
+        </div>
+        <div class="row" style="margin-top:8px;gap:8px">
+          <input id="lx-url" class="mono" style="flex:1;min-width:200px" placeholder="https://… a page or a .zip (the site has to allow cross-origin reads)">
+          <button class="btn ghost" id="lx-urlgo">Fetch &amp; run</button>
+        </div>
+        <p class="help" style="margin-top:12px">Or start from one of these — they need no files, no key
+          and, apart from Python, no network:</p>
+        <div class="row" id="lx-samples" style="gap:6px;margin-top:6px"></div>
+      </div>
+
+      <div class="card">
+        <h3>▶ Stage <span class="muted" id="lx-status"></span></h3>
+        <p class="help" id="lx-detect"></p>
+        <div class="row" id="lx-controls" style="margin-top:10px;align-items:flex-end"></div>
+        <div class="lx-stagewrap" id="lx-stagewrap">
+          <div class="lx-stage" id="lx-stage">
+            <div class="lx-box" id="lx-box">
+              <iframe id="lx-frame" title="The app you launched"
+                sandbox="allow-scripts allow-forms allow-modals allow-popups allow-pointer-lock allow-downloads"></iframe>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🖥 Console <button class="btn ghost small" id="lx-clearlog" style="float:right">Clear</button></h3>
+        <p class="help">Everything the running app logs, warns or throws, plus what the Launcher did to
+          get it running. A blank frame always has a reason and it is usually here.</p>
+        <div class="lx-log" id="lx-log" style="margin-top:10px"></div>
+      </div>
+
+      <div class="card">
+        <h3>🗂 Library</h3>
+        <p class="help">Kept projects, files and all, in this browser's own storage.</p>
+        <div id="lx-lib" style="margin-top:10px"></div>
+      </div>
+
+      <div class="card">
+        <h3>🧩 What it can run</h3>
+        <p class="help">The runtime is detected from the files and you can always override it with the
+          picker above. Libraries are fetched from unpkg and jsdelivr the first time they are needed —
+          the two hosts this app's security policy allows — so the first run of a given kind needs a
+          connection and every run after it is cached.</p>
+        <div id="lx-kinds" style="margin-top:10px"></div>
+      </div>
     </div></section>
 
     <section class="view nopad" id="view-webos"><div id="wos-root" class="wos"></div></section>
@@ -15727,7 +15857,11 @@ function crc32(u8){
   for(let i=0;i<u8.length;i++)c=CRCT[(c^u8[i])&0xFF]^(c>>>8);
   return (c^0xFFFFFFFF)>>>0;
 }
-function makeZip(files){
+/* Split so the byte assembly can be tested without a Blob read, which is async and therefore
+   invisible to a synchronous regression suite. The Launcher's zip READER is checked against
+   exactly these bytes. */
+function makeZip(files){return new Blob([zipBytes(files)],{type:'application/zip'});}
+function zipBytes(files){
   const enc=new TextEncoder(),parts=[],central=[];let off=0,n=0;
   for(const name of Object.keys(files)){
     const data=enc.encode(String(files[name]));
@@ -15750,7 +15884,10 @@ function makeZip(files){
   const end=new Uint8Array(22),ev=new DataView(end.buffer);
   ev.setUint32(0,0x06054b50,true);ev.setUint16(8,n,true);ev.setUint16(10,n,true);
   ev.setUint32(12,cdSize,true);ev.setUint32(16,off,true);
-  return new Blob(parts.concat(central,[end]),{type:'application/zip'});
+  const all=parts.concat(central,[end]);
+  const out=new Uint8Array(all.reduce((a,p)=>a+p.length,0));
+  let at=0;all.forEach(p=>{out.set(p,at);at+=p.length;});
+  return out;
 }
 async function bridgePost(pathname,body){
   const base=(settings.bridge||'http://127.0.0.1:8791').replace(/\/$/,'');
@@ -23670,6 +23807,205 @@ function gauntletCases(g){
       return ops.filter(o=>o.op==='spawn'&&o.kind==='mesh'&&o.name!=='ground'&&o.position[1]<0).length;
     },antiExpect:v=>v===0});
 
+
+  /* ── LAUNCHER ─────────────────────────────────────────────────────────────
+     The Launcher runs code nobody in this project wrote, which makes two things load-bearing:
+     it must never run that code on this origin, and when something does not appear on screen it
+     must say why. Both are checked here, along with the parsing that everything else sits on. */
+
+  /* Central-directory parsing is pure arithmetic, so it is testable with no file and no network.
+     The anti-fixture is the whole reason the reader is written this way: scanning for the local
+     header signature finds phantom entries inside compressed data, so a buffer with that
+     signature and no directory must be REFUSED rather than half-read. */
+  add({id:'lx-zip-roundtrip',sub:'launcher',uses:['zipBytes','lxZipEntries'],
+    what:'a written zip reads back with the right names and the right data offsets',
+    run:()=>{
+      const bytes=g.zipBytes({'a/b.txt':'hello','c.js':'x=1'});
+      const{entries}=g.lxZipEntries(bytes);
+      const dec=new TextDecoder();
+      return entries.map(e=>e.path+'='+dec.decode(bytes.subarray(e.start,e.start+e.csize))).join('|');
+    },expect:v=>v==='a/b.txt=hello|c.js=x=1',
+    antiWhat:'and a buffer carrying a local-header signature but no directory is refused, not half-read',
+    anti:()=>{
+      const junk=new Uint8Array(200);
+      new DataView(junk.buffer).setUint32(40,0x04034b50,true);   // the signature, mid-buffer
+      try{g.lxZipEntries(junk);return 'accepted';}catch(e){return 'refused';}
+    },antiExpect:v=>v==='refused'});
+
+  /* Detection decides which runtime a project gets, and a wrong answer is a blank screen. */
+  add({id:'lx-detect-discriminates',sub:'launcher',uses:['lxDetect'],
+    what:'each kind of project is recognised as itself',
+    run:()=>{
+      const F=[
+        [{'index.html':'<h1>hi</h1>'},'html'],
+        [{'index.html':'<h1>hi</h1>','app.js':'1','style.css':'a{}'},'web'],
+        [{'src/App.jsx':"import React from 'react';export default()=><b>x</b>;"},'react'],
+        [{'App.js':"import {View} from 'react-native';export default()=>null;"},'native'],
+        [{'App.vue':'<template><b/></template>'},'vue'],
+        [{'App.svelte':'<h1>x</h1>'},'svelte'],
+        [{'main.py':'print(1)'},'python'],
+        [{'sketch.js':'function setup(){}\nfunction draw(){}'},'p5'],
+        [{'notes.md':'# hi'},'markdown'],
+      ];
+      return F.filter(([f,want])=>g.lxDetect(f,{}).id===want).length+'/'+F.length;
+    },expect:v=>v==='9/9',
+    antiWhat:'and it does not simply answer the same thing for everything',
+    anti:()=>{
+      const wrong=[
+        [{'index.html':'<h1>hi</h1>'},'react'],
+        [{'src/App.jsx':"import React from 'react';export default()=><b>x</b>;"},'html'],
+        [{'main.py':'print(1)'},'web'],
+      ];
+      return wrong.filter(([f,no])=>g.lxDetect(f,{}).id===no).length;
+    },antiExpect:v=>v===0});
+
+  /* A Vite project has BOTH src/main.jsx and src/App.jsx. Starting at App silently drops the
+     providers, router and global CSS that main sets up — the app renders, slightly wrong, which
+     is worse than not rendering at all. */
+  add({id:'lx-entry-main-not-app',sub:'launcher',uses:['lxEntryFor','lxContext'],
+    what:'the entry is the file that mounts the app, not the component it mounts',
+    run:()=>{
+      const files={'src/main.jsx':'x','src/App.jsx':'y','src/components/Button.jsx':'z','index.html':'<div id=root>'};
+      return g.lxEntryFor(g.lxContext(files,{}),'react');
+    },expect:v=>v==='src/main.jsx',
+    antiWhat:'and with no main it still finds App rather than the first file it happens to see',
+    anti:()=>{
+      const files={'src/components/Button.jsx':'z','src/App.jsx':'y'};
+      return g.lxEntryFor(g.lxContext(files,{}),'react');
+    },antiExpect:v=>v==='src/App.jsx'});
+
+  /* The project's own source is handed to the frame inside a script tag. A file containing
+     a closing script tag would close the tag it is sitting in, and the rest of the project
+     would be parsed as HTML instead of run. */
+  add({id:'lx-doc-escapes-source',sub:'launcher',uses:['lxJson'],
+    what:'source handed to the frame cannot break out of the tag carrying it',
+    run:()=>{
+      const s=g.lxJson({a:'</'+'script><img onerror=1>',b:'line\u2028break'});
+      return ((/<\/script/i.test(s)?'raw-close ':'')+(/\u2028/.test(s)?'raw-2028':''))||'safe';
+    },expect:v=>v==='safe',
+    antiWhat:'and the escaping is reversible, so the file still arrives byte-for-byte',
+    anti:()=>{
+      const orig={a:'</'+'script>',b:'x\u2028y',c:'<div class="q">'};
+      return JSON.parse(g.lxJson(orig)).a===orig.a&&
+             JSON.parse(g.lxJson(orig)).b===orig.b&&
+             JSON.parse(g.lxJson(orig)).c===orig.c?'exact':'lossy';
+    },antiExpect:v=>v==='exact'});
+
+  /* A game dropped in as one .js file says `new THREE.Scene()` and imports nothing. Loading
+     libraries only on an import statement leaves it undefined at line one. */
+  add({id:'lx-libs-from-globals',sub:'launcher',uses:['lxLibsFor','lxContext'],
+    what:'a library used as a bare global is loaded even with no import statement',
+    run:()=>{
+      const ctx=g.lxContext({'game.js':'const s=new THREE.Scene();const r=new THREE.WebGLRenderer();'},{});
+      return g.lxLibsFor(ctx,'vanilla').map(l=>l.id).join(',');
+    },expect:v=>v==='three',
+    antiWhat:'and a page that needs nothing pulls nothing in',
+    anti:()=>{
+      const ctx=g.lxContext({'index.html':'<h1>just words</h1>'},{});
+      return g.lxLibsFor(ctx,'html').length;
+    },antiExpect:v=>v===0});
+
+  /* A classic script that sets globals for the NEXT script has to stay a classic script.
+     Routing it through the module loader scopes its `var game` and every later script breaks —
+     the failure looks like the loader is broken when it is the routing decision that is wrong. */
+  add({id:'lx-web-keeps-classic-global',sub:'launcher',uses:['lxWeb','lxContext'],
+    what:'a plain script is inlined as-is, so its globals survive for the next one',
+    run:()=>{
+      const files={'index.html':'<html><head></head><body><script src="a.js"></'+'script></body></html>',
+        'a.js':'var GAME_MARKER=42;'};
+      const out=g.lxWeb(g.lxContext(files,{}),{entry:'index.html'});
+      return (out.indexOf('var GAME_MARKER=42;')>=0?'inlined':'lost')+
+        (out.indexOf('__lxRequire("a.js")')>=0||out.indexOf("__lxRequire('a.js')")>=0?'+routed':'');
+    },expect:v=>v==='inlined',
+    antiWhat:'and a script that really is a module DOES go through the loader',
+    anti:()=>{
+      const files={'index.html':'<html><body><script type="module" src="m.js"></'+'script></body></html>',
+        'm.js':'import "./x.js";'};
+      const out=g.lxWeb(g.lxContext(files,{}),{entry:'index.html'});
+      /* Deliberately matches EITHER call: a module goes through the queue today, but what the
+         case is actually about is that it does not get inlined as a classic script. */
+      return /__lx(Require|Queue)\(\s*["']m\.js["']\s*\)/.test(out)?'routed':'inlined';
+    },antiExpect:v=>v==='routed'});
+
+  /* Relative paths have to be rewired or a folder project loads a blank page with broken images
+     and no styling — and remote references must be left exactly alone. */
+  add({id:'lx-web-rewires-locals',sub:'launcher',uses:['lxWeb','lxContext'],
+    what:'local stylesheets and images are inlined so they resolve with no server',
+    run:()=>{
+      const files={'index.html':'<html><head><link rel="stylesheet" href="./s.css"></head>'+
+        '<body><img src="pic.png"></body></html>','s.css':'body{color:#abcdef}'};
+      const out=g.lxWeb(g.lxContext(files,{'pic.png':'data:image/png;base64,AAAA'}),{entry:'index.html'});
+      return (out.indexOf('#abcdef')>=0?'css':'nocss')+'/'+
+        (out.indexOf('src="data:image/png;base64,AAAA"')>=0?'img':'noimg');
+    },expect:v=>v==='css/img',
+    antiWhat:'and a remote URL is left untouched rather than mangled into a dead local path',
+    anti:()=>{
+      const files={'index.html':'<html><body><img src="https://example.com/a.png">'+
+        '<script src="https://cdn.example/x.js"></'+'script></body></html>'};
+      const out=g.lxWeb(g.lxContext(files,{}),{entry:'index.html'});
+      return out.indexOf('https://example.com/a.png')>=0&&out.indexOf('https://cdn.example/x.js')>=0
+        ?'untouched':'mangled';
+    },antiExpect:v=>v==='untouched'});
+
+  /* The pop-out is the easy place to get this wrong: the new tab IS same-origin with this app,
+     so if the document it writes ran the user's code directly instead of nesting it in the same
+     sandboxed frame, every launched app would gain read access to the API keys. */
+  add({id:'lx-popout-sandboxed',sub:'launcher',uses:['lxPopShell','lxBuildDoc'],
+    what:'the popped-out tab runs the app in a sandbox, not in the tab itself',
+    run:()=>{
+      const doc=g.lxBuildDoc({'index.html':'<h1>x</h1>'},{},{mode:'html'}).html;
+      const shell=g.lxPopShell(doc,'App','HTML page');
+      const m=shell.match(/sandbox="([^"]*)"/);
+      if(!m)return 'no-sandbox';
+      if(/allow-same-origin/.test(m[1]))return 'same-origin';
+      /* and the app's own document must be INSIDE that frame, never written into the shell */
+      return shell.indexOf('<h1>x</h1>')>=0?'app-in-shell':'sandboxed';
+    },expect:v=>v==='sandboxed',
+    antiWhat:'and the app document is genuinely carried across rather than an empty frame opening',
+    anti:()=>{
+      const doc=g.lxBuildDoc({'index.html':'<h1>carried</h1>'},{},{mode:'html'}).html;
+      const shell=g.lxPopShell(doc,'App','HTML page');
+      /* The document is embedded lxJson-escaped — `<` becomes \u003c — so a raw substring
+         search for the markup can never match. Search for what is actually written. */
+      return shell.indexOf(g.lxJson(doc).slice(1,-1))>=0?'carried':'empty';
+    },antiExpect:v=>v==='carried'});
+
+  /* The security line of the whole feature. Without allow-same-origin the launched app has an
+     opaque origin and cannot reach this page's localStorage, where the API keys live. */
+  add({id:'lx-sandbox-opaque',sub:'launcher',uses:['lxBuildDoc'],
+    what:'the stage frame never grants same-origin to code the user did not write',
+    run:()=>{
+      const f=document.getElementById('lx-frame');
+      if(!f)return 'no-frame';
+      return /allow-same-origin/.test(f.getAttribute('sandbox')||'')?'same-origin':'opaque';
+    },expect:v=>v==='opaque',
+    antiWhat:'and the failure overlay is genuinely injected, so a blank frame always explains itself',
+    anti:()=>{
+      const b=g.lxBuildDoc({'index.html':'<h1>x</h1>'},{},{mode:'html'});
+      return b.html.indexOf('__lxFail')>=0&&b.html.indexOf('unhandledrejection')>=0?'guarded':'bare';
+    },antiExpect:v=>v==='guarded'});
+
+  /* Every sample is a fixture for a different runtime, so this one case covers all of them.
+     A sample that stops matching its own runtime is the cheapest possible early warning that a
+     builder has drifted. */
+  add({id:'lx-samples-build',sub:'launcher',uses:['LX_SAMPLES','lxBuildDoc','lxDetect'],
+    what:'every built-in sample still produces a real document for its runtime',
+    run:()=>{
+      const bad=[];
+      g.LX_SAMPLES.forEach(s=>{
+        try{
+          const files=s.files();
+          const b=g.lxBuildDoc(files,{},{mode:s.mode});
+          if(b.html.length<400)bad.push(s.id+':short');
+          else if(!/<\/html>|<body/i.test(b.html))bad.push(s.id+':not-html');
+        }catch(e){bad.push(s.id+':'+e.message);}
+      });
+      return bad.join(',');
+    },expect:v=>v==='',
+    antiWhat:'and each sample is still detected as the runtime it claims to be',
+    anti:()=>g.LX_SAMPLES.filter(s=>g.lxDetect(s.files(),{}).id!==s.mode).map(s=>s.id).join(','),
+    antiExpect:v=>v===''});
+
   /* ── This pass's four bug classes ─────────────────────────────────────────
      Each of these guards something that was measured broken, not something imagined. */
 
@@ -25398,6 +25734,21 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'lx-detect-blind',export:'lxDetect',
+   why:'every project opens as a plain HTML page, so React and React Native silently never run',
+   broken:()=>()=>({id:'html',why:'x'})},
+  {id:'lx-json-raw',export:'lxJson',
+   why:'a source file containing a closing script tag breaks out of the tag carrying it',
+   broken:()=>o=>JSON.stringify(o)},
+  {id:'lx-entry-first',export:'lxEntryFor',
+   why:'a Vite project starts at a component instead of the file that mounts it',
+   broken:()=>ctx=>Object.keys(ctx.files)[0]||''},
+  {id:'lx-web-flat',export:'lxWeb',
+   why:'a folder project loads with no stylesheet, no scripts and broken images',
+   broken:()=>(ctx,o)=>ctx.files[o.entry]||''},
+  {id:'lx-libs-deaf',export:'lxLibsFor',
+   why:'a three.js game dropped in as one file runs with THREE undefined',
+   broken:()=>()=>[]},
   {id:'brain-positional',export:'connToBrain',
    why:'the Brain connector goes back to positional args and silently saves empty notes',
    broken:()=>function(p){const t=p.data;return brainAdd(p.title||'x',t);}},
@@ -39790,7 +40141,7 @@ const TAB_GROUPS=[
   {id:'make',  label:'Create',           icon:'🎨',
    views:['gen','design','studio','three','spline','office','creations']},
   {id:'build', label:'Build & ship',     icon:'🏗',
-   views:['factory','forge','library','handoff','webos','connect']},
+   views:['factory','forge','library','handoff','launch','webos','connect']},
   {id:'models',label:'Models & cost',    icon:'🎚',
    views:['modelhub','models','local','metrics','graphs','viz']},
   {id:'agents',label:'Agents & teams',   icon:'🤖',
@@ -40273,6 +40624,8 @@ const CONN_KINDS={
 const CONN_PORTS=[
   {id:'studio',    tab:'studio',  icon:'🛠', label:'Studio',        takes:['html','files'],
    why:'edit and run it live', run:p=>connToStudio(p)},
+  {id:'launch',    tab:'launch',  icon:'📲', label:'Launcher',      takes:['html','files'],
+   why:'run it — in a device frame, full screen, or its own tab', run:p=>connToLaunch(p)},
   {id:'webos',     tab:'webos',   icon:'🪟', label:'WebOS',         takes:['html'],
    why:'install it as a real app on the desktop', run:p=>connToWebos(p)},
   {id:'writer',    tab:'office',  icon:'📝', label:'Office Writer', takes:['text','doc'],
@@ -40695,7 +41048,7 @@ const ONB_INTERESTS=[
      middle option pointless and the first two identical on screen. */
   {id:'build',   icon:'🛠', label:'Build apps & sites',
    why:'Write, preview and ship real HTML/JS',
-   core:['studio','relay'],           more:['webos','design','devices','handoff']},
+   core:['studio','relay'],           more:['launch','webos','design','devices','handoff']},
   {id:'write',   icon:'📝', label:'Write & documents',
    why:'Docs, spreadsheets, decks',
    core:['office'],                   more:['brain','creations','library']},
@@ -40704,7 +41057,7 @@ const ONB_INTERESTS=[
    core:['gen'],                      more:['design','spline','creations','viz']},
   {id:'3d',      icon:'🧊', label:'3D & games',
    why:'Scenes, models, ThreeUI',
-   core:['three'],                    more:['spline','gen','studio','webos']},
+   core:['three'],                    more:['spline','gen','studio','webos','launch']},
   {id:'research',icon:'🔬', label:'Research & reasoning',
    why:'See models actually think',
    core:['lab'],                      more:['council','compare','transplant','pane']},
@@ -41040,6 +41393,20 @@ const HELP_TOPICS=[
         rather than files you have to re-open. Anything from Studio installs in one click, and you can
         drop in any HTML file or paste a URL. Windows drag, resize, snap and maximise; there are fourteen
         desktop themes; and it can pop out into its own window that stays in sync.</p>`},
+    {q:'I have an app on my disk — how do I just run it?',
+     a:`<p><b>Launcher.</b> Drop in a file, a folder or a <code>.zip</code> and it runs. A single
+        HTML game runs as-is; a folder with <code>index.html</code>, a stylesheet and scripts gets
+        its relative paths rewired so everything resolves with no server; a <code>.jsx</code> or a
+        React project is compiled in the browser; a React Native or Expo app runs in a phone frame
+        through a compatibility shim. You can also paste a repo as <code>owner/repo</code> and run it
+        straight from GitHub — including projects that would normally need <code>npm install</code>,
+        because the imports a bundler would resolve are resolved at run time instead.</p>
+        <p><b>What it cannot do:</b> be a server. Anything that needs a backend, a database or an API
+        key of its own will render its front end and fail its requests — the console under the stage
+        shows exactly which ones. Native modules in a React Native app are named as unavailable rather
+        than crashing anonymously.</p>
+        <p>Everything runs sandboxed with no access to this app's storage, so an app you did not write
+        cannot read your keys — including after you send it to its own tab with ↗.</p>`},
     {q:'The bridge — what it unlocks and what it risks',
      a:`<p>A small Node companion on your own machine. With it, the app can read and write real files,
         run allow-listed commands, drive local CLIs, and proxy providers that block browser requests.</p>
@@ -41110,6 +41477,2547 @@ function renderHelp(){
 }
 
 
+
+
+/* ═══════════════════ APP LAUNCHER ═══════════════════
+   Open anything and actually run it — a single .html game, a .jsx screen, a React Native app,
+   or a whole project folder or .zip — inside a device frame, or full-screen in its own tab.
+
+   Three decisions shape everything below.
+
+   1. NOTHING RUNS ON THIS ORIGIN. Every launched app lives in an iframe sandboxed WITHOUT
+      `allow-same-origin`, so it gets an opaque origin: it cannot read this page's localStorage,
+      where the API keys live. That holds for the pop-out too — the new tab is a thin shell whose
+      only content is the same sandboxed frame. A launcher that ran user code same-origin would
+      be a credential-theft tool with a play button on it.
+
+   2. THERE IS NO BUILD STEP, SO THE BUNDLER IS A `require`. A real project folder (`src/App.jsx`
+      importing `./Button.jsx` importing `./styles.css`) has a module graph, and a browser with no
+      Node cannot resolve it. Babel-standalone compiles each file to CommonJS on demand and
+      `lxBundler` below implements the `require` that ties them together. CommonJS rather than
+      ES-module blob URLs for one concrete reason: blob URLs are immutable once created, so a
+      circular import cannot be expressed at all, whereas a CJS registry that publishes
+      `exports` BEFORE running the module handles cycles exactly the way Node does.
+
+   3. EVERY LIBRARY IS PINNED TO A URL THAT IS ALREADY IN THIS APP'S CSP. `script-src` allows
+      `unpkg.com` and `cdn.jsdelivr.net` and nothing else, and a srcdoc frame INHERITS the
+      embedder's CSP — so a library loaded from anywhere else fails silently inside the frame,
+      with no error the user could act on. The pins below were each fetched and verified. */
+
+const LX_CDN={
+  babel:    'https://unpkg.com/@babel/standalone@7.26.4/babel.min.js',
+  react:    'https://unpkg.com/react@18.3.1/umd/react.production.min.js',
+  reactdom: 'https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js',
+  vue:      'https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js',
+  svelte:   'https://unpkg.com/svelte@4.2.19/compiler.cjs',
+  /* Svelte 4 ignores the `format` option and always emits `import … from "svelte/internal"`,
+     so the runtime has to be resolvable by that name. It is ESM-only — there is no build that
+     defines a global — so it is import()ed at boot and registered as a bare module. The public
+     entry points live in separate sub-modules and are registered the same way; mapping them all
+     to `internal` would resolve and then be missing half its exports. */
+  svelteRt:   'https://unpkg.com/svelte@4.2.19/src/runtime/internal/index.js',
+  svelteMain: 'https://unpkg.com/svelte@4.2.19/src/runtime/index.js',
+  svelteStore:'https://unpkg.com/svelte@4.2.19/src/runtime/store/index.js',
+  svelteTrans:'https://unpkg.com/svelte@4.2.19/src/runtime/transition/index.js',
+  svelteEase: 'https://unpkg.com/svelte@4.2.19/src/runtime/easing/index.js',
+  svelteAnim: 'https://unpkg.com/svelte@4.2.19/src/runtime/animate/index.js',
+  p5:       'https://unpkg.com/p5@1.11.2/lib/p5.min.js',
+  three:    'https://unpkg.com/three@0.160.0/build/three.module.js',
+  phaser:   'https://unpkg.com/phaser@3.87.0/dist/phaser.min.js',
+  pixi:     'https://unpkg.com/pixi.js@8.6.6/dist/pixi.min.js',
+  matter:   'https://unpkg.com/matter-js@0.20.0/build/matter.min.js',
+  cannon:   'https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js',
+  gsap:     'https://unpkg.com/gsap@3.12.5/dist/gsap.min.js',
+  tone:     'https://unpkg.com/tone@15.0.4/build/Tone.js',
+  howler:   'https://unpkg.com/howler@2.2.4/dist/howler.min.js',
+  d3:       'https://unpkg.com/d3@7.9.0/dist/d3.min.js',
+  chart:    'https://unpkg.com/chart.js@4.4.7/dist/chart.umd.js',
+  lodash:   'https://unpkg.com/lodash@4.17.21/lodash.min.js',
+  marked:   'https://unpkg.com/marked@15.0.6/marked.min.js',
+  pyodide:  'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js',
+};
+
+/* A bare `import x from 'three'` has to resolve to something. Each entry maps a package name to
+   a classic script that defines a global, and `expr` is how the module object is read back out
+   of that global. Ordered: a library that needs another one is listed after it. */
+const LX_LIBS=[
+  {id:'react',      names:['react'],                       url:LX_CDN.react,    expr:'window.React'},
+  {id:'react-dom',  names:['react-dom','react-dom/client'],url:LX_CDN.reactdom, expr:'window.ReactDOM', after:'react'},
+  {id:'vue',        names:['vue'],                         url:LX_CDN.vue,      expr:'window.Vue'},
+  {id:'three',      names:['three'],                       url:'',              expr:'window.THREE', esm:LX_CDN.three},
+  {id:'p5',         names:['p5'],                          url:LX_CDN.p5,       expr:'window.p5'},
+  {id:'phaser',     names:['phaser'],                      url:LX_CDN.phaser,   expr:'window.Phaser'},
+  {id:'pixi.js',    names:['pixi.js','pixi'],              url:LX_CDN.pixi,     expr:'window.PIXI'},
+  {id:'matter-js',  names:['matter-js'],                   url:LX_CDN.matter,   expr:'window.Matter'},
+  {id:'cannon-es',  names:['cannon-es','cannon'],          url:'',              expr:'window.CANNON', esm:LX_CDN.cannon},
+  {id:'gsap',       names:['gsap'],                        url:LX_CDN.gsap,     expr:'window.gsap'},
+  {id:'tone',       names:['tone'],                        url:LX_CDN.tone,     expr:'window.Tone'},
+  {id:'howler',     names:['howler'],                      url:LX_CDN.howler,   expr:'window.Howl?{Howl:window.Howl,Howler:window.Howler}:null'},
+  {id:'d3',         names:['d3'],                          url:LX_CDN.d3,       expr:'window.d3'},
+  {id:'chart.js',   names:['chart.js','chart.js/auto'],    url:LX_CDN.chart,    expr:'window.Chart'},
+  {id:'lodash',     names:['lodash','lodash-es'],          url:LX_CDN.lodash,   expr:'window._'},
+  {id:'marked',     names:['marked'],                      url:LX_CDN.marked,   expr:'window.marked'},
+];
+const lxLib=name=>LX_LIBS.find(l=>l.names.indexOf(name)>=0);
+
+/* ── Reading a .zip in the browser ────────────────────────────────────────────
+   `makeZip` above writes stored (uncompressed) entries, which is all this app needs to emit.
+   Reading is the harder half: anything produced by Finder, Windows Explorer, GitHub's
+   "Download ZIP" or `zip(1)` is DEFLATE, and the only way to inflate it without shipping a
+   library is `DecompressionStream('deflate-raw')` — Chrome 80+, Safari 16.4+, Firefox 113+.
+   Missing support is reported as such rather than producing an empty, "corrupt-looking" import. */
+const LX_ZIP_OK=(()=>{try{new DecompressionStream('deflate-raw');return true;}catch(_){return false;}})();
+async function lxInflate(bytes){
+  const s=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  return new Uint8Array(await new Response(s).arrayBuffer());
+}
+/* Text by extension, not by sniffing: a .js that happens to start with a BOM or a UTF-16 file
+   would both mis-sniff, and getting this wrong turns source code into an unusable data: URL. */
+const LX_TEXT_EXT=/\.(html?|htm|js|jsx|mjs|cjs|ts|tsx|css|scss|sass|less|json|jsonc|md|markdown|txt|svg|xml|yml|yaml|py|rb|sh|toml|ini|env|gitignore|vue|svelte|astro|glsl|vert|frag|csv|tsv|graphql|gql|lock)$/i;
+const LX_MIME={png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',
+  avif:'image/avif',bmp:'image/bmp',ico:'image/x-icon',svg:'image/svg+xml',
+  mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',m4a:'audio/mp4',flac:'audio/flac',
+  mp4:'video/mp4',webm:'video/webm',mov:'video/quicktime',
+  ttf:'font/ttf',otf:'font/otf',woff:'font/woff',woff2:'font/woff2',
+  glb:'model/gltf-binary',gltf:'model/gltf+json',wasm:'application/wasm',pdf:'application/pdf'};
+const lxExt=p=>(String(p).match(/\.([a-z0-9]+)$/i)||['',''])[1].toLowerCase();
+const lxMime=p=>LX_MIME[lxExt(p)]||'application/octet-stream';
+const lxIsText=p=>LX_TEXT_EXT.test(String(p));
+/* Files no project needs and every real-world archive is full of. Keeping them would push a
+   50-file project over the asset budget with Finder metadata. */
+const LX_JUNK=/(^|\/)(__MACOSX\/|\.DS_Store$|Thumbs\.db$|\.git\/|node_modules\/|\.next\/|dist\/\.vite\/)/i;
+const LX_MAX_TOTAL=64*1024*1024;      // whole import
+const LX_MAX_ASSET=8*1024*1024;       // one binary file, because it becomes a base64 data: URL
+
+function lxB64(bytes){
+  let s='';const CH=0x8000;
+  for(let i=0;i<bytes.length;i+=CH)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+CH));
+  return btoa(s);
+}
+const lxDataUrl=(bytes,path)=>'data:'+lxMime(path)+';base64,'+lxB64(bytes);
+
+/* Walks the central directory rather than scanning for local-header signatures. Signature
+   scanning is the tempting shortcut and it is wrong: those four bytes occur inside compressed
+   data often enough to produce phantom entries on real archives.
+
+   Split in two on purpose. Locating the entries is pure arithmetic over a byte array and is
+   therefore testable without a network, a file picker or a promise; only the INFLATE step has
+   to be asynchronous, because `DecompressionStream` is. The regression suite tests the half
+   that does the reasoning. */
+function lxZipEntries(u8){
+  const dv=new DataView(u8.buffer,u8.byteOffset,u8.byteLength);
+  const notes=[],out=[];
+  let eocd=-1;
+  // The comment can be 65535 bytes, so the record can sit that far from the end.
+  for(let i=u8.length-22;i>=Math.max(0,u8.length-65557);i--)
+    if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;}
+  if(eocd<0)throw new Error('Not a zip file (no end-of-central-directory record).');
+  if(dv.getUint32(eocd+16,true)===0xFFFFFFFF)
+    notes.push('This is a ZIP64 archive. Entries past the 4GB boundary cannot be located and were skipped.');
+  const n=dv.getUint16(eocd+10,true);
+  let off=dv.getUint32(eocd+16,true),total=0;
+  for(let k=0;k<n;k++){
+    if(off+46>u8.length||dv.getUint32(off,true)!==0x02014b50)break;
+    const flag=dv.getUint16(off+8,true),method=dv.getUint16(off+10,true),
+          csize=dv.getUint32(off+20,true),usize=dv.getUint32(off+24,true),
+          nlen=dv.getUint16(off+28,true),elen=dv.getUint16(off+30,true),
+          clen=dv.getUint16(off+32,true),lho=dv.getUint32(off+42,true);
+    const name=new TextDecoder('utf-8').decode(u8.subarray(off+46,off+46+nlen));
+    off+=46+nlen+elen+clen;
+    if(!name||/\/$/.test(name))continue;                        // directory entry
+    if(LX_JUNK.test(name))continue;
+    if(flag&1){notes.push('\u201c'+name+'\u201d is encrypted and was skipped.');continue;}
+    if(method!==0&&method!==8){
+      notes.push('\u201c'+name+'\u201d uses compression method '+method+', which the browser cannot inflate.');
+      continue;}
+    if(method===8&&!LX_ZIP_OK){
+      notes.push('\u201c'+name+'\u201d is deflated and this browser cannot inflate it.');continue;}
+    total+=usize;
+    if(total>LX_MAX_TOTAL){
+      notes.push('Stopped at '+lxBytes(LX_MAX_TOTAL)+' \u2014 the rest of the archive was not read.');break;}
+    /* The central directory records the LOCAL header offset, not the data offset, and the local
+       header carries its own name and extra-field lengths which can differ from the central
+       ones. Trusting the central lengths here is the classic off-by-a-few-bytes zip bug. */
+    if(lho+30>u8.length||dv.getUint32(lho,true)!==0x04034b50){
+      notes.push('\u201c'+name+'\u201d has a broken local header and was skipped.');continue;}
+    const start=lho+30+dv.getUint16(lho+26,true)+dv.getUint16(lho+28,true);
+    out.push({path:name,method,start,csize,usize});
+  }
+  return{entries:out,notes};
+}
+async function lxUnzip(buf){
+  const u8=new Uint8Array(buf);
+  const{entries,notes}=lxZipEntries(u8);
+  if(!LX_ZIP_OK)notes.unshift('This browser has no DecompressionStream, so only uncompressed zip '+
+    'entries can be read. Chrome 80+, Safari 16.4+ or Firefox 113+ read everything.');
+  const out=[];
+  for(const e of entries){
+    const raw=u8.subarray(e.start,e.start+e.csize);
+    let data;
+    try{data=e.method===8?await lxInflate(raw):raw.slice();}
+    catch(err){notes.push('\u201c'+e.path+'\u201d failed to inflate: '+err.message);continue;}
+    out.push({path:e.path,bytes:data});
+  }
+  if(!out.length&&!notes.length)notes.push('The archive parsed but contained no files.');
+  return{entries:out,notes};
+}
+
+const lxBytes=n=>n>=1048576?(n/1048576).toFixed(1)+' MB':n>=1024?Math.round(n/1024)+' KB':n+' B';
+
+/* Archives and folder drops almost always carry one wrapping directory
+   (`my-game-main/index.html`). Left in place, every relative path in the project still resolves
+   — but the entry finder and every "is this at the root" rule get it wrong, so strip it. Only
+   when it is genuinely common to EVERY path, otherwise a two-app archive would lose a level. */
+function lxStripRoot(paths){
+  if(paths.length<1)return '';
+  const first=paths[0].split('/')[0];
+  if(!first||paths.some(p=>p.indexOf('/')<0))return '';
+  return paths.every(p=>p.split('/')[0]===first)?first+'/':'';
+}
+
+/* One shape for everything downstream: text files as strings (the same `{name:source}` map the
+   rest of this app already passes around), binaries as data: URLs. */
+function lxNormalize(entries){
+  const notes=[],files={},assets={};
+  const keep=entries.filter(e=>!LX_JUNK.test(e.path));
+  const root=lxStripRoot(keep.map(e=>e.path));
+  keep.forEach(e=>{
+    const path=root&&e.path.indexOf(root)===0?e.path.slice(root.length):e.path;
+    if(!path)return;
+    if(typeof e.text==='string'){files[path]=e.text;return;}
+    const bytes=e.bytes;
+    if(lxIsText(path)){
+      files[path]=new TextDecoder('utf-8').decode(bytes);
+      return;
+    }
+    if(bytes.length>LX_MAX_ASSET){
+      notes.push('“'+path+'” is '+lxBytes(bytes.length)+' — too big to inline, so it was left out.');
+      return;
+    }
+    assets[path]=lxDataUrl(bytes,path);
+  });
+  if(root)notes.push('Unwrapped the “'+root.replace(/\/$/,'')+'” folder so paths resolve from the project root.');
+  return{files,assets,notes};
+}
+
+/* ── Reading whatever the user gave us ───────────────────────────────────────
+   A File from a picker, a folder (webkitRelativePath), a dropped directory (entry API) and a
+   zip all end up in the same place. */
+async function lxFromFileList(list){
+  const fs=Array.from(list||[]);
+  if(fs.length===1&&/\.zip$/i.test(fs[0].name)){
+    const z=await lxUnzip(await fs[0].arrayBuffer());
+    const norm=lxNormalize(z.entries);
+    norm.notes=z.notes.concat(norm.notes);
+    norm.name=fs[0].name.replace(/\.zip$/i,'');
+    return norm;
+  }
+  const entries=[];
+  for(const f of fs){
+    const path=f.webkitRelativePath||f.name;
+    if(LX_JUNK.test(path))continue;
+    entries.push({path,bytes:new Uint8Array(await f.arrayBuffer())});
+  }
+  const norm=lxNormalize(entries);
+  norm.name=fs.length===1?fs[0].name.replace(/\.[a-z0-9]+$/i,''):
+    ((fs[0]&&fs[0].webkitRelativePath||'').split('/')[0]||'Dropped project');
+  return norm;
+}
+/* Dropping a FOLDER gives DataTransferItems, not Files — `dataTransfer.files` is empty for a
+   directory, which is why a plain files-only drop handler looks like it ignored the drop. */
+async function lxFromDrop(dt){
+  const items=Array.from(dt.items||[]);
+  const roots=items.map(i=>i.webkitGetAsEntry&&i.webkitGetAsEntry()).filter(Boolean);
+  if(!roots.length||!roots.some(r=>r.isDirectory))return lxFromFileList(dt.files);
+  const entries=[];
+  const readDir=d=>new Promise(res=>{
+    const rd=d.createReader(),all=[];
+    const step=()=>rd.readEntries(b=>{if(!b.length)return res(all);all.push.apply(all,b);step();},()=>res(all));
+    step();
+  });
+  const file=e=>new Promise(res=>e.file(f=>res(f),()=>res(null)));
+  const walk=async(e,base)=>{
+    const path=base?base+'/'+e.name:e.name;
+    if(LX_JUNK.test(path+(e.isDirectory?'/':'')))return;
+    if(e.isFile){
+      const f=await file(e);
+      if(f)entries.push({path,bytes:new Uint8Array(await f.arrayBuffer())});
+      return;
+    }
+    const kids=await readDir(e);
+    for(const k of kids)await walk(k,path);
+  };
+  for(const r of roots)await walk(r,'');
+  const norm=lxNormalize(entries);
+  norm.name=roots[0]?roots[0].name:'Dropped project';
+  return norm;
+}
+
+/* ── What is this, actually ──────────────────────────────────────────────────
+   Detection is a ranked list of rules, each of which states its reason in the user's words.
+   The reason is shown next to the runtime picker, because detection WILL be wrong sometimes and
+   "React, because src/App.jsx imports react" is something a user can disagree with; a bare
+   "React" is not. The picker overrides it, always. */
+function lxContext(files,assets){
+  const names=Object.keys(files||{}),anames=Object.keys(assets||{});
+  const src=names.filter(n=>/\.(js|jsx|ts|tsx|mjs|cjs)$/i.test(n));
+  const blob=src.concat(names.filter(n=>/\.(vue|svelte|json|py)$/i.test(n)))
+    .map(n=>files[n]).join('\n').slice(0,400000);
+  let pkg=null;
+  try{pkg=files['package.json']?JSON.parse(files['package.json']):null;}catch(_){pkg=null;}
+  const deps=pkg?Object.assign({},pkg.dependencies,pkg.devDependencies):{};
+  return{files:files||{},assets:assets||{},names,anames,src,blob,pkg,deps,
+    html:names.filter(n=>/\.html?$/i.test(n)),
+    has:re=>re.test(blob),
+    dep:d=>Object.prototype.hasOwnProperty.call(deps,d)};
+}
+const LX_DETECT=[
+  {id:'native', when:c=>(c.dep('react-native')||c.dep('expo')||c.has(/from\s+['"]react-native['"]|require\(['"]react-native['"]\)|from\s+['"]expo[-/]?/))
+    &&c.src.length>0,
+   why:'something here imports react-native or expo'},
+  {id:'svelte', when:c=>c.names.some(n=>/\.svelte$/i.test(n)), why:'there is a .svelte component'},
+  {id:'vue',    when:c=>c.names.some(n=>/\.vue$/i.test(n))||(c.dep('vue')&&c.src.length>0), why:'there is a .vue component or a Vue dependency'},
+  {id:'react',  when:c=>c.dep('react')||c.has(/from\s+['"]react['"]|require\(['"]react['"]\)/)||
+    c.names.some(n=>/\.(jsx|tsx)$/i.test(n)), why:'JSX or a React import'},
+  {id:'python', when:c=>c.names.some(n=>/\.py$/i.test(n))&&!c.html.length, why:'this is Python source'},
+  {id:'web',    when:c=>c.html.length>0&&(c.names.length+c.anames.length)>1, why:'an HTML entry with other files beside it'},
+  {id:'html',   when:c=>c.html.length>0, why:'a single self-contained HTML page'},
+  {id:'p5',     when:c=>c.has(/function\s+setup\s*\(|new\s+p5\s*\(/)&&c.has(/function\s+draw\s*\(/), why:'setup() and draw() — a p5 sketch'},
+  {id:'markdown',when:c=>c.names.length>0&&c.names.every(n=>/\.(md|markdown|txt)$/i.test(n)), why:'only Markdown'},
+  {id:'svg',    when:c=>c.names.length===1&&/\.svg$/i.test(c.names[0]), why:'a single SVG'},
+  {id:'json',   when:c=>c.names.length>0&&c.names.every(n=>/\.(json|jsonc)$/i.test(n)), why:'only JSON'},
+  {id:'vanilla',when:c=>c.src.length>0, why:'plain JavaScript with no framework'},
+];
+function lxDetect(files,assets){
+  const c=lxContext(files,assets);
+  for(const r of LX_DETECT)
+    {try{if(r.when(c))return{id:r.id,why:r.why};}catch(_){}}
+  return{id:'text',why:'nothing here looks runnable, so it is shown as text'};
+}
+
+
+/* ── What gets injected into every launched page ─────────────────────────────
+   These are written as real functions and serialised with String() rather than kept as
+   template literals. Two reasons, both learned the expensive way in this file: a 200-line
+   string full of `\${` and escaped backticks is unreadable and one missed escape corrupts the
+   whole document, and — more importantly — a real function is parsed by `node --check` in the
+   pre-commit gate, so a syntax error in the injected code is caught before it ships instead of
+   surfacing as a blank frame. */
+
+/* Runs first in every launched document: the safety net the app is about to need. */
+function lxRuntimeBody(){
+  var W=window;
+  /* A sandboxed frame has an OPAQUE origin, so `localStorage` exists as a property and THROWS
+     on access — a SecurityError before the first line of the app's own code. A large share of
+     real apps touch it during boot, so they would all die here. An in-memory stand-in keeps
+     them running; it is per-session by nature and the panel says so rather than implying the
+     app's saves are durable. */
+  try{void W.localStorage.length;}catch(_){
+    var mk=function(){
+      var m={};
+      return{getItem:function(k){return Object.prototype.hasOwnProperty.call(m,k)?m[k]:null;},
+        setItem:function(k,v){m[k]=String(v);},removeItem:function(k){delete m[k];},
+        clear:function(){m={};},key:function(i){return Object.keys(m)[i]||null;},
+        get length(){return Object.keys(m).length;}};
+    };
+    try{Object.defineProperty(W,'localStorage',{value:mk(),configurable:true});}catch(__){}
+    try{Object.defineProperty(W,'sessionStorage',{value:mk(),configurable:true});}catch(__){}
+  }
+  /* A folder project's `<script type="module" src="./game.js">` is rewritten to a call into the
+     module loader — but the loader is only ready once the libraries have loaded, which is
+     asynchronous. So the call is QUEUED here and drained by the boot, in document order.
+     This is not a workaround: a real `<script type="module">` is deferred by specification, so
+     running it after the document has parsed is what a browser does anyway. */
+  W.__LX_QUEUE=[];
+  W.__lxQueue=function(spec,inline,from){W.__LX_QUEUE.push({spec:spec,inline:inline,from:from});};
+  var post=function(o){try{parent.postMessage(Object.assign({__lx:1},o),'*');}catch(_){}};
+  var fmt=function(a){
+    try{
+      if(a instanceof Error)return a.stack||a.message;
+      if(typeof a==='string')return a;
+      if(a&&typeof a==='object')return JSON.stringify(a,function(k,v){
+        return typeof v==='function'?'[fn]':v;},1).slice(0,2000);
+      return String(a);
+    }catch(_){return '[unprintable]';}
+  };
+  ['log','info','warn','error','debug'].forEach(function(lvl){
+    var orig=console[lvl];
+    console[lvl]=function(){
+      try{post({t:'log',lvl:lvl,msg:Array.prototype.map.call(arguments,fmt).join(' ')});}catch(_){}
+      try{orig.apply(console,arguments);}catch(_){}
+    };
+  });
+  /* An error overlay INSIDE the frame as well as a message to the parent. The parent's console
+     panel can be scrolled away or closed; a white rectangle with no explanation is the single
+     worst outcome this feature can produce, so the failure is put where the eye already is. */
+  W.__lxFail=function(what,err){
+    var msg=(err&&(err.stack||err.message))||String(err||'unknown error');
+    post({t:'error',msg:what+': '+msg});
+    var box=document.getElementById('__lx_err');
+    if(!box){
+      box=document.createElement('div');box.id='__lx_err';
+      box.setAttribute('style','position:fixed;inset:0;z-index:2147483647;overflow:auto;'+
+        'background:#160d11;color:#ffd9d9;font:12px/1.55 ui-monospace,Menlo,Consolas,monospace;padding:18px');
+      document.documentElement.appendChild(box);
+    }
+    var h=document.createElement('div');
+    h.setAttribute('style','max-width:760px');
+    h.innerHTML='<div style="font:700 14px system-ui;color:#ff9c9c;margin-bottom:6px"></div><pre style="white-space:pre-wrap;margin:0"></pre>';
+    h.firstChild.textContent=what;
+    h.lastChild.textContent=msg;
+    box.appendChild(h);
+  };
+  W.addEventListener('error',function(e){
+    if(e&&e.message)W.__lxFail('Uncaught error',(e.error&&(e.error.stack||e.error.message))||
+      (e.message+(e.filename?'  ('+e.filename+':'+e.lineno+')':'')));
+  });
+  W.addEventListener('unhandledrejection',function(e){
+    W.__lxFail('Unhandled promise rejection',(e&&e.reason&&(e.reason.stack||e.reason.message))||String(e&&e.reason));
+  });
+  /* The parent asks "did you actually render anything?" — the honest answer to which is what
+     separates a working launch from a silent blank frame. */
+  W.addEventListener('message',function(e){
+    var d=e.data;
+    if(!d||d.__lxAsk!==1)return;
+    var body=document.body;
+    var text=(body&&body.innerText||'').trim();
+    var painted=!!(body&&(body.children.length>0));
+    var canvas=document.querySelector('canvas');
+    post({t:'probe',id:d.id,ok:painted,
+      chars:text.length,nodes:body?body.querySelectorAll('*').length:0,
+      canvas:canvas?(canvas.width+'x'+canvas.height):'',
+      failed:!!document.getElementById('__lx_err'),
+      title:document.title||''});
+  });
+  post({t:'ready'});
+}
+
+/* The `require` that makes a multi-file project runnable with no build step. */
+function lxBundlerBody(){
+  var W=window,VFS=W.__LX_VFS||{},ASSETS=W.__LX_ASSETS||{},GLOBALS=W.__LX_GLOBALS||{};
+  var cache={},styleEl=null;
+  var norm=function(p){
+    var out=[],parts=String(p).split('/');
+    for(var i=0;i<parts.length;i++){
+      var s=parts[i];
+      if(!s||s==='.')continue;
+      if(s==='..'){out.pop();continue;}
+      out.push(s);
+    }
+    return out.join('/');
+  };
+  var dir=function(p){return String(p).replace(/[^/]*$/,'');};
+  /* Extension guessing, in the order Node tries it. `/index.*` last so `./ui` prefers `ui.js`
+     over `ui/index.js` when both exist, which is also what a bundler does. */
+  var EXT=['','.js','.jsx','.ts','.tsx','.mjs','.cjs','.json','.css','.vue','.svelte',
+           '/index.js','/index.jsx','/index.ts','/index.tsx','/index.json'];
+  var resolve=function(spec,from){
+    var base=/^\//.test(spec)?spec.replace(/^\/+/,''):dir(from||'')+spec;
+    var p=norm(base);
+    for(var i=0;i<EXT.length;i++){
+      var c=p+EXT[i];
+      if(Object.prototype.hasOwnProperty.call(VFS,c))return c;
+      if(Object.prototype.hasOwnProperty.call(ASSETS,c))return c;
+    }
+    return null;
+  };
+  var addStyle=function(css){
+    if(!styleEl){styleEl=document.createElement('style');document.head.appendChild(styleEl);}
+    styleEl.textContent+='\n'+css;
+  };
+  var presetsFor=function(path){
+    var ts=/\.tsx?$/.test(path);
+    var p=[['env',{modules:'commonjs',targets:{esmodules:true}}],['react',{runtime:'classic'}]];
+    if(ts)p.push(['typescript',{isTSX:true,allExtensions:true}]);
+    return p;
+  };
+  /* A .vue single-file component, split by hand. The real @vue/compiler-sfc is ESM-only and
+     would have to be module-loaded before anything else could run; splitting the three blocks
+     covers the Options API, which is what a component written to be readable uses. `<script
+     setup>` genuinely needs the compiler and is reported as such rather than half-working. */
+  var vueSfc=function(path,src){
+    var tpl=(src.match(/<template[^>]*>([\s\S]*?)<\/template>/i)||[])[1]||'';
+    var styles=[],sre=/<style[^>]*>([\s\S]*?)<\/style>/gi,m;
+    while((m=sre.exec(src)))styles.push(m[1]);
+    var sm=src.match(/<script([^>]*)>([\s\S]*?)<\/script>/i);
+    var attrs=(sm&&sm[1])||'',js=(sm&&sm[2])||'export default {}';
+    if(/\bsetup\b/.test(attrs))
+      throw new Error(path+' uses <script setup>, which needs Vue\u2019s own SFC compiler '+
+        '(ESM-only, so it cannot be loaded here). Rewrite this component with the Options API '+
+        '— export default { data(), methods, computed } — and it will run.');
+    if(styles.length)js+='\n;__lxAddStyle('+JSON.stringify(styles.join('\n'))+');';
+    /* The template is attached after the module body so it wins over a `template:` the author
+       did not write, and does not fight one they did. */
+    js+='\n;(function(){var __d=(typeof exports!=="undefined"&&exports.default)||module.exports;'+
+        'if(__d&&!__d.template&&!__d.render)__d.template='+JSON.stringify(tpl)+';})();';
+    return js;
+  };
+  var svelteSfc=function(path,src){
+    if(!W.svelte||!W.svelte.compile)
+      throw new Error('The Svelte compiler did not load, so '+path+' cannot be built.');
+    var out;
+    try{out=W.svelte.compile(src,{generate:'dom',name:(path.split('/').pop()||'App').replace(/\.svelte$/,'')||'App',
+      filename:path,css:'injected'});}
+    catch(e){throw new Error(path+' \u2014 '+(e&&e.message||e));}
+    (out.warnings||[]).forEach(function(w){console.warn('[svelte] '+path+': '+(w.message||w));});
+    /* Svelte 4 always emits `import ... from "svelte/internal"`; the runtime is registered as a
+       bare module, so leaving the specifier alone and letting require() resolve it is enough. */
+    return out.js.code.replace(/import\s+"svelte\/internal\/disclose-version";?/g,'');
+  };
+  var compile=function(path,src){
+    if(!W.Babel)throw new Error('The compiler did not load. That is almost always the network — '+
+      'the Launcher fetches Babel from unpkg.com the first time you run source files.');
+    try{
+      return W.Babel.transform(src,{presets:presetsFor(path),filename:path,sourceType:'module',
+        compact:false,retainLines:false}).code;
+    }catch(e){
+      var m=String(e&&e.message||e).replace(/^unknown( file)?:\s*/i,'');
+      throw new Error(path+' — '+m);
+    }
+  };
+  var req=function(spec,from){
+    spec=String(spec||'');
+    if(!/^[./]/.test(spec)){
+      /* A bare specifier. Exact name first, then the longest matching package prefix, so
+         `lodash/debounce` finds `lodash` but `react-dom/client` still prefers its own entry. */
+      if(Object.prototype.hasOwnProperty.call(GLOBALS,spec))return GLOBALS[spec];
+      var best='';
+      for(var k in GLOBALS)
+        if(spec.indexOf(k+'/')===0&&k.length>best.length)best=k;
+      if(best)return GLOBALS[best];
+      throw new Error('Cannot find module "'+spec+'". The Launcher supplies a fixed set of '+
+        'libraries from a CDN — everything else would need a real install step. '+
+        'Known here: '+Object.keys(GLOBALS).sort().join(', '));
+    }
+    var path=resolve(spec,from);
+    if(path===null)
+      throw new Error('Cannot find "'+spec+'"'+(from?' imported by '+from:'')+
+        '. Files in this project: '+Object.keys(VFS).concat(Object.keys(ASSETS)).slice(0,40).join(', '));
+    if(Object.prototype.hasOwnProperty.call(cache,path))return cache[path].exports;
+    if(Object.prototype.hasOwnProperty.call(ASSETS,path)){
+      var a={exports:ASSETS[path]};a.exports['default']=ASSETS[path];
+      cache[path]={exports:ASSETS[path]};return cache[path].exports;
+    }
+    var src=VFS[path];
+    if(/\.(css|scss|sass|less)$/i.test(path)){
+      if(/\.(scss|sass|less)$/i.test(path))
+        console.warn('[launcher] '+path+' is a preprocessor stylesheet — it was injected as-is, '+
+          'so anything needing compilation (nesting, variables, mixins) will not apply.');
+      addStyle(src);cache[path]={exports:{}};return cache[path].exports;
+    }
+    if(/\.json$/i.test(path)){
+      var j;try{j=JSON.parse(src);}catch(e){throw new Error(path+' is not valid JSON: '+e.message);}
+      cache[path]={exports:j};return j;
+    }
+    var sfc='';
+    if(/\.vue$/i.test(path))sfc='vue';
+    else if(/\.svelte$/i.test(path))sfc='svelte';
+    if(!sfc&&!/\.(js|jsx|ts|tsx|mjs|cjs)$/i.test(path)){
+      cache[path]={exports:src};return src;                    // text imported as a string
+    }
+    /* Published BEFORE the body runs. This one line is what makes a circular import behave the
+       way Node does — a partially-filled exports object — instead of recursing forever. */
+    var mod={exports:{},id:path};
+    cache[path]=mod;
+    var code;
+    try{
+      var js=sfc==='vue'?vueSfc(path,src):sfc==='svelte'?svelteSfc(path,src):src;
+      code=compile(sfc?path.replace(/\.(vue|svelte)$/i,'.js'):path,js);
+    }
+    catch(e){delete cache[path];throw e;}
+    var fn;
+    try{
+      fn=new Function('require','module','exports','__filename','__dirname','process','global',code);
+    }catch(e){delete cache[path];throw new Error(path+' — '+e.message);}
+    try{
+      fn(function(s){return req(s,path);},mod,mod.exports,path,dir(path).replace(/\/$/,''),
+        W.process||{env:{NODE_ENV:'development'},platform:'browser',cwd:function(){return '/';}},W);
+    }catch(e){
+      delete cache[path];
+      e.message=path+' — '+(e.message||e);
+      throw e;
+    }
+    return mod.exports;
+  };
+  W.__lxAddStyle=addStyle;
+  /* An inline `<script type="module">` in someone's index.html can `import './game.js'`, which
+     no browser will resolve for a document with no origin. It is compiled and run through the
+     same registry as everything else, with the page itself as its resolution base. */
+  W.__lxRunInline=function(src,fromPath){
+    try{
+      var code=compile(fromPath||'index.html',src);
+      var mod={exports:{}};
+      new Function('require','module','exports','__filename','__dirname',code)(
+        function(s){return req(s,fromPath||'');},mod,mod.exports,fromPath||'index.html',
+        dir(fromPath||'').replace(/\/$/,''));
+    }catch(e){if(W.__lxFail)W.__lxFail('Inline module script',e);else throw e;}
+  };
+  /* The public entry point takes a PROJECT PATH ("src/main.jsx", "sky.js"), not a module
+     specifier — but `require` has to keep working for a bare package name too, because user code
+     calls it. So a name that matches a real file in the project wins, and anything else falls
+     through to the library table. Without this, every entry file in the project root was read as
+     a missing npm package. */
+  W.__lxRequire=function(spec){
+    if(!/^[./]/.test(spec)&&resolve('./'+spec,'')!==null)return req('./'+spec,'');
+    return req(spec,'');
+  };
+  W.require=W.require||W.__lxRequire;
+  W.__lxHas=function(spec){return resolve(spec,'')!==null;};
+  W.__lxList=function(){return Object.keys(VFS).concat(Object.keys(ASSETS));};
+}
+
+/* ── React Native, on the web, without react-native-web ──────────────────────
+   react-native-web is CommonJS with a deep internal graph; there is no browser build that
+   defines a global, so it cannot be loaded the way every other library here is. What follows is
+   a shim over React DOM covering the primitives a screen actually uses.
+
+   It is deliberately a SHIM and the panel says so. It will run a typical Expo starter, a list,
+   a form and a navigation stack. It will not run anything that reaches for a native module,
+   and it says which one when that happens rather than failing as `undefined is not a function`. */
+function lxRnBody(){
+  var W=window,R=W.React;
+  if(!R)throw new Error('React must load before the react-native shim.');
+  var h=R.createElement;
+  /* RN's defaults are not the web's: a View is a column flex container, and `overflow:hidden`
+     is the default. Getting this wrong makes every layout silently horizontal. */
+  var BASE={display:'flex',flexDirection:'column',alignItems:'stretch',flexShrink:0,
+    position:'relative',minHeight:0,minWidth:0,boxSizing:'border-box'};
+  var TEXTBASE={fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif',
+    fontSize:14,color:'#000',margin:0,padding:0,whiteSpace:'pre-wrap',wordBreak:'break-word'};
+  var DROP={shadowColor:1,shadowOffset:1,shadowOpacity:1,shadowRadius:1,elevation:1,
+    textAlignVertical:1,includeFontPadding:1,writingDirection:1};
+  function flatten(s){
+    if(!s)return{};
+    if(Array.isArray(s)){
+      var o={};
+      for(var i=0;i<s.length;i++)Object.assign(o,flatten(s[i]));
+      return o;
+    }
+    return s;
+  }
+  /* RN accepts numbers where the web needs units, and carries a handful of props the DOM has no
+     equivalent for. Passing those straight through produces a console full of React warnings
+     that bury the app's own output. */
+  function toCss(s){
+    var f=flatten(s),o={};
+    for(var k in f){
+      if(DROP[k]){
+        if(k==='shadowColor'&&f.shadowOpacity!==0)
+          o.boxShadow='0 1px 3px '+(typeof f.shadowColor==='string'?f.shadowColor:'rgba(0,0,0,.25)');
+        continue;
+      }
+      var v=f[k];
+      if(k==='flex'&&typeof v==='number'){o.flexGrow=v;o.flexShrink=v?1:0;o.flexBasis=v?'0%':'auto';continue;}
+      o[k]=v;
+    }
+    return o;
+  }
+  function view(tag,extra){
+    return R.forwardRef(function(p,ref){
+      var q=Object.assign({},p);
+      var style=Object.assign({},BASE,extra||{},toCss(q.style));
+      delete q.style;
+      var press=q.onPress;delete q.onPress;
+      ['onLayout','testID','accessibilityLabel','pointerEvents','collapsable','removeClippedSubviews',
+       'accessibilityRole','accessible','nativeID','hitSlop','shouldRasterizeIOS','needsOffscreenAlphaCompositing']
+        .forEach(function(k){if(k in q){if(k==='testID')q['data-testid']=q[k];
+          if(k==='accessibilityLabel')q['aria-label']=q[k];delete q[k];}});
+      if(press)q.onClick=function(e){press({nativeEvent:{},preventDefault:function(){},target:e.target});};
+      q.style=style;q.ref=ref;
+      return h(tag,q);
+    });
+  }
+  var View=view('div');
+  var Text=R.forwardRef(function(p,ref){
+    var q=Object.assign({},p);
+    var style=Object.assign({},TEXTBASE,toCss(q.style));
+    delete q.style;
+    var press=q.onPress;delete q.onPress;
+    delete q.numberOfLines;delete q.ellipsizeMode;delete q.selectable;delete q.allowFontScaling;
+    if(p.numberOfLines){
+      style.display='-webkit-box';style.WebkitLineClamp=p.numberOfLines;
+      style.WebkitBoxOrient='vertical';style.overflow='hidden';
+    }
+    if(press)q.onClick=function(){press({nativeEvent:{}});};
+    q.style=style;q.ref=ref;
+    return h('span',q);
+  });
+  var ScrollView=R.forwardRef(function(p,ref){
+    var q=Object.assign({},p);
+    var horiz=!!q.horizontal;
+    var style=Object.assign({},BASE,{overflowX:horiz?'auto':'hidden',overflowY:horiz?'hidden':'auto',
+      WebkitOverflowScrolling:'touch',flexGrow:1,flexShrink:1,flexDirection:horiz?'row':'column'},toCss(q.style));
+    var inner=Object.assign({},BASE,{flexDirection:horiz?'row':'column',flexShrink:0},toCss(q.contentContainerStyle));
+    ['horizontal','contentContainerStyle','showsVerticalScrollIndicator','showsHorizontalScrollIndicator',
+     'keyboardShouldPersistTaps','refreshControl','bounces','scrollEventThrottle','onScroll',
+     'stickyHeaderIndices','alwaysBounceVertical','nestedScrollEnabled']
+      .forEach(function(k){delete q[k];});
+    if(p.onScroll)q.onScroll=function(e){p.onScroll({nativeEvent:{contentOffset:{x:e.target.scrollLeft,y:e.target.scrollTop},
+      contentSize:{width:e.target.scrollWidth,height:e.target.scrollHeight},
+      layoutMeasurement:{width:e.target.clientWidth,height:e.target.clientHeight}}});};
+    var kids=q.children;delete q.children;delete q.style;
+    q.style=style;q.ref=ref;
+    return h('div',q,h('div',{style:inner},kids));
+  });
+  var Touchable=function(name,defStyle){
+    return function(p){
+      var q=Object.assign({},p);
+      var st=Object.assign({},BASE,defStyle||{},toCss(q.style),
+        q.disabled?{opacity:.5,cursor:'default'}:{cursor:'pointer'});
+      var press=q.onPress,long=q.onLongPress;
+      ['onPress','onLongPress','activeOpacity','underlayColor','disabled','delayLongPress',
+       'android_ripple','hitSlop','accessibilityRole','testID'].forEach(function(k){delete q[k];});
+      var timer=null;
+      q.style=st;
+      q.onClick=function(e){if(!p.disabled&&press)press({nativeEvent:{},target:e.target});};
+      if(long){
+        q.onPointerDown=function(){timer=setTimeout(function(){long({nativeEvent:{}});timer=null;},p.delayLongPress||500);};
+        q.onPointerUp=q.onPointerLeave=function(){if(timer){clearTimeout(timer);timer=null;}};
+      }
+      /* Pressable passes a function child `({pressed}) => node`, which React DOM would try to
+         render as a child and throw on. */
+      if(typeof q.children==='function')q.children=q.children({pressed:false,hovered:false});
+      return h('div',q);
+    };
+  };
+  var TouchableOpacity=Touchable('TouchableOpacity');
+  var TextInput=R.forwardRef(function(p,ref){
+    var q=Object.assign({},p);
+    var multi=!!q.multiline;
+    var st=Object.assign({},{fontFamily:TEXTBASE.fontFamily,fontSize:14,border:'1px solid #ccc',
+      borderRadius:6,padding:'8px 10px',background:'#fff',color:'#000',outline:'none',
+      boxSizing:'border-box',resize:'none'},toCss(q.style));
+    var onChangeText=q.onChangeText;
+    ['onChangeText','multiline','placeholderTextColor','autoCapitalize','autoCorrect','keyboardType',
+     'returnKeyType','secureTextEntry','underlineColorAndroid','blurOnSubmit','onSubmitEditing',
+     'textContentType','clearButtonMode','maxFontSizeMultiplier','numberOfLines']
+      .forEach(function(k){delete q[k];});
+    if(p.secureTextEntry)q.type='password';
+    if(p.keyboardType==='numeric'||p.keyboardType==='number-pad')q.inputMode='numeric';
+    if(p.keyboardType==='email-address')q.type='email';
+    if(p.onSubmitEditing)q.onKeyDown=function(e){if(e.key==='Enter')p.onSubmitEditing({nativeEvent:{text:e.target.value}});};
+    q.onChange=function(e){
+      if(onChangeText)onChangeText(e.target.value);
+      if(p.onChange)p.onChange({nativeEvent:{text:e.target.value}});
+    };
+    if(q.value===undefined&&q.defaultValue===undefined)q.defaultValue='';
+    q.style=st;q.ref=ref;
+    if(multi){q.rows=p.numberOfLines||4;return h('textarea',q);}
+    return h('input',q);
+  });
+  var Image=function(p){
+    var q=Object.assign({},p);
+    var s=q.source;
+    var uri=typeof s==='string'?s:(s&&s.uri)||(s&&s['default'])||'';
+    var st=Object.assign({},{objectFit:(p.resizeMode==='contain'?'contain':p.resizeMode==='stretch'?'fill':'cover'),
+      display:'block'},toCss(q.style));
+    ['source','resizeMode','defaultSource','onLoadEnd','fadeDuration','testID'].forEach(function(k){delete q[k];});
+    q.style=st;q.src=uri;q.alt=p.accessibilityLabel||'';
+    if(p.onLoadEnd)q.onLoad=p.onLoadEnd;
+    return h('img',q);
+  };
+  function FlatList(p){
+    var data=p.data||[];
+    var key=p.keyExtractor||function(it,i){return (it&&(it.id||it.key))||String(i);};
+    var sep=p.ItemSeparatorComponent;
+    var items=[];
+    for(var i=0;i<data.length;i++){
+      items.push(h(R.Fragment,{key:key(data[i],i)},
+        p.renderItem?p.renderItem({item:data[i],index:i,separators:{}}):null,
+        sep&&i<data.length-1?h(sep,null):null));
+    }
+    var body=items.length?items:(p.ListEmptyComponent?
+      (typeof p.ListEmptyComponent==='function'?h(p.ListEmptyComponent,null):p.ListEmptyComponent):null);
+    return h(ScrollView,{style:p.style,horizontal:p.horizontal,contentContainerStyle:p.contentContainerStyle},
+      p.ListHeaderComponent?(typeof p.ListHeaderComponent==='function'?h(p.ListHeaderComponent,null):p.ListHeaderComponent):null,
+      body,
+      p.ListFooterComponent?(typeof p.ListFooterComponent==='function'?h(p.ListFooterComponent,null):p.ListFooterComponent):null);
+  }
+  function SectionList(p){
+    var out=[],secs=p.sections||[];
+    secs.forEach(function(s,si){
+      if(p.renderSectionHeader)out.push(h(R.Fragment,{key:'h'+si},p.renderSectionHeader({section:s})));
+      (s.data||[]).forEach(function(it,i){
+        out.push(h(R.Fragment,{key:si+'-'+i},p.renderItem?p.renderItem({item:it,index:i,section:s}):null));
+      });
+    });
+    return h(ScrollView,{style:p.style,contentContainerStyle:p.contentContainerStyle},out);
+  }
+  /* `env(safe-area-inset-*)` is supplied by the BROWSER from the real device it is running on,
+     so inside a simulated phone frame it is always zero and the notch would sit on top of the
+     app's first row. The chosen device's real insets are injected as custom properties instead. */
+  var SafeAreaView=function(p){
+    var st=Object.assign({},BASE,{paddingTop:'var(--lx-safe-t,0px)',paddingBottom:'var(--lx-safe-b,0px)',
+      flexGrow:1},toCss(p.style));
+    return h('div',Object.assign({},p,{style:st}));
+  };
+  var ActivityIndicator=function(p){
+    var sz=p.size==='large'?34:18;
+    return h('div',{style:{width:sz,height:sz,border:'2px solid '+(p.color||'#888'),
+      borderTopColor:'transparent',borderRadius:'50%',animation:'__lxspin .8s linear infinite',
+      alignSelf:'center'}});
+  };
+  var Switch=function(p){
+    return h('input',{type:'checkbox',checked:!!p.value,disabled:p.disabled,
+      onChange:function(e){if(p.onValueChange)p.onValueChange(e.target.checked);},
+      style:Object.assign({width:40,height:24,accentColor:(p.trackColor&&p.trackColor['true'])||'#34c759'},toCss(p.style))});
+  };
+  function Modal(p){
+    if(p.visible===false)return null;
+    return h('div',{style:{position:'fixed',inset:0,zIndex:999,display:'flex',flexDirection:'column',
+      background:p.transparent?'rgba(0,0,0,.35)':'#fff'}},p.children);
+  }
+  var Button=function(p){
+    return h(TouchableOpacity,{onPress:p.onPress,disabled:p.disabled,
+      style:{background:p.color||'#2f6bff',borderRadius:8,padding:'11px 16px',alignItems:'center'}},
+      h(Text,{style:{color:'#fff',fontWeight:'600',textAlign:'center'}},p.title));
+  };
+  var StatusBar=function(){return null;};
+  var dims=function(){return{width:W.innerWidth,height:W.innerHeight,
+    scale:W.devicePixelRatio||2,fontScale:1};};
+  var Dimensions={get:function(){return dims();},addEventListener:function(t,f){
+    var h2=function(){f({window:dims(),screen:dims()});};
+    W.addEventListener('resize',h2);return{remove:function(){W.removeEventListener('resize',h2);}};},
+    removeEventListener:function(){}};
+  var Platform={OS:(W.__LX_PLATFORM||'ios'),Version:(W.__LX_PLATFORM==='android'?34:17),
+    isPad:false,isTV:false,
+    select:function(o){return Object.prototype.hasOwnProperty.call(o,Platform.OS)?o[Platform.OS]:o['default'];}};
+  /* window.alert is blocked unless the frame is given allow-modals, and even then it freezes
+     the whole frame. A real in-page dialog behaves the way the native one does. */
+  var Alert={alert:function(title,msg,buttons){
+    var host=document.createElement('div');
+    host.setAttribute('style','position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.4);'+
+      'display:flex;align-items:center;justify-content:center;font-family:-apple-system,system-ui,sans-serif');
+    var card=document.createElement('div');
+    card.setAttribute('style','background:#fff;color:#000;border-radius:14px;padding:18px;min-width:250px;max-width:82%;text-align:center');
+    var t=document.createElement('div');t.setAttribute('style','font-weight:700;font-size:15px');t.textContent=title||'';
+    var m=document.createElement('div');m.setAttribute('style','font-size:13px;margin-top:6px;color:#444');m.textContent=msg||'';
+    var row=document.createElement('div');row.setAttribute('style','display:flex;gap:8px;margin-top:14px;justify-content:center');
+    (buttons&&buttons.length?buttons:[{text:'OK'}]).forEach(function(b){
+      var btn=document.createElement('button');
+      btn.textContent=b.text||'OK';
+      btn.setAttribute('style','flex:1;padding:9px 12px;border-radius:9px;border:1px solid #ddd;background:'+
+        (b.style==='destructive'?'#ffecec':'#f4f6fb')+';font-weight:600;cursor:pointer');
+      btn.onclick=function(){host.remove();if(b.onPress)b.onPress();};
+      row.appendChild(btn);
+    });
+    card.appendChild(t);card.appendChild(m);card.appendChild(row);host.appendChild(card);
+    document.body.appendChild(host);
+  },prompt:function(t,m,cb){var v=null;try{v=W.prompt(m||t||'');}catch(_){}
+    if(typeof cb==='function')cb(v);else if(cb&&cb[0]&&cb[0].onPress)cb[0].onPress(v);}};
+  /* Animated: real interpolation on a real rAF clock, driving a re-render. Not the native
+     driver, and `useNativeDriver:true` is accepted and ignored — saying so here because a
+     silently-ignored flag is how people conclude the shim is broken when it is only honest. */
+  function AnimatedValue(v){this._v=v;this._subs=[];}
+  AnimatedValue.prototype.setValue=function(v){this._v=v;this._subs.forEach(function(f){f(v);});};
+  AnimatedValue.prototype.addListener=function(f){this._subs.push(f);return this._subs.length-1;};
+  AnimatedValue.prototype.removeAllListeners=function(){this._subs=[];};
+  AnimatedValue.prototype.interpolate=function(cfg){
+    var self=this,ir=cfg.inputRange,or=cfg.outputRange;
+    var o={__interp:function(){
+      var x=self._v,i=0;
+      while(i<ir.length-2&&x>ir[i+1])i++;
+      var t=(x-ir[i])/((ir[i+1]-ir[i])||1);
+      t=Math.max(0,Math.min(1,t));
+      var a=or[i],b=or[i+1];
+      if(typeof a==='number')return a+(b-a)*t;
+      return t<.5?a:b;
+    },addListener:function(f){return self.addListener(f);},removeAllListeners:function(){}};
+    return o;
+  };
+  var timing=function(val,cfg){
+    return{start:function(cb){
+      var from=val._v,to=cfg.toValue,dur=cfg.duration==null?300:cfg.duration,t0=0;
+      var step=function(ts){
+        if(!t0)t0=ts;
+        var k=dur?Math.min(1,(ts-t0)/dur):1;
+        var e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
+        val.setValue(from+(to-from)*e);
+        if(k<1)requestAnimationFrame(step);else if(cb)cb({finished:true});
+      };
+      requestAnimationFrame(step);
+    },stop:function(){}};
+  };
+  var animComp=function(Base){
+    return function(p){
+      var q=Object.assign({},p);
+      var st=flatten(q.style),out={};
+      var force=R.useState(0)[1];
+      R.useEffect(function(){
+        var vals=[];
+        var collect=function(o){
+          for(var k in o){
+            var v=o[k];
+            if(v instanceof AnimatedValue||(v&&v.__interp))vals.push(v);
+            else if(Array.isArray(v))v.forEach(collect);
+            else if(v&&typeof v==='object')collect(v);
+          }
+        };
+        collect(st);
+        var ids=vals.map(function(v){return[v,v.addListener(function(){force(function(x){return x+1;});})];});
+        return function(){ids.forEach(function(pair){pair[0].removeAllListeners();});};
+      });
+      var resolve=function(o){
+        var r=Array.isArray(o)?[]:{};
+        for(var k in o){
+          var v=o[k];
+          if(v instanceof AnimatedValue)r[k]=v._v;
+          else if(v&&v.__interp)r[k]=v.__interp();
+          else if(Array.isArray(v))r[k]=v.map(function(x){return typeof x==='object'?resolve(x):x;});
+          else if(v&&typeof v==='object')r[k]=resolve(v);
+          else r[k]=v;
+        }
+        return r;
+      };
+      out=resolve(st);
+      q.style=out;
+      return h(Base,q);
+    };
+  };
+  var Animated={Value:AnimatedValue,View:animComp(View),Text:animComp(Text),Image:animComp(Image),
+    ScrollView:animComp(ScrollView),timing:timing,spring:function(v,c){return timing(v,{toValue:c.toValue,duration:420});},
+    decay:function(v,c){return timing(v,{toValue:v._v,duration:200});},
+    parallel:function(list){return{start:function(cb){list.forEach(function(a){a.start();});if(cb)setTimeout(function(){cb({finished:true});},400);}};},
+    sequence:function(list){return{start:function(cb){
+      var i=0;var next=function(){if(i>=list.length)return cb&&cb({finished:true});list[i++].start(next);};next();}};},
+    loop:function(a){return{start:function(){var go=function(){a.start(go);};go();},stop:function(){}};},
+    createAnimatedComponent:function(C){return animComp(C);},
+    Easing:{linear:function(x){return x;},ease:function(x){return x;}}};
+  var missing=function(name){
+    return new Proxy({},{get:function(t,k){
+      if(k==='__esModule')return false;
+      throw new Error('react-native’s "'+name+'" module is native code — the Launcher runs a web '+
+        'shim, so '+name+'.'+String(k)+' has no browser equivalent. Everything that is pure '+
+        'JavaScript or plain layout does work.');
+    }});
+  };
+  var RN={View:View,Text:Text,ScrollView:ScrollView,TouchableOpacity:TouchableOpacity,
+    TouchableHighlight:Touchable('TouchableHighlight'),TouchableWithoutFeedback:Touchable('TouchableWithoutFeedback'),
+    Pressable:Touchable('Pressable'),Button:Button,TextInput:TextInput,Image:Image,
+    ImageBackground:function(p){
+      var s=p.source,uri=typeof s==='string'?s:(s&&s.uri)||'';
+      return h(View,Object.assign({},p,{style:[{backgroundImage:'url('+uri+')',backgroundSize:'cover',
+        backgroundPosition:'center'},p.style]}));},
+    FlatList:FlatList,SectionList:SectionList,VirtualizedList:FlatList,
+    SafeAreaView:SafeAreaView,ActivityIndicator:ActivityIndicator,Switch:Switch,Modal:Modal,
+    StatusBar:StatusBar,KeyboardAvoidingView:View,RefreshControl:function(){return null;},
+    StyleSheet:{create:function(o){return o;},flatten:flatten,hairlineWidth:1,absoluteFill:
+      {position:'absolute',top:0,left:0,right:0,bottom:0},
+      absoluteFillObject:{position:'absolute',top:0,left:0,right:0,bottom:0},compose:function(a,b){return[a,b];}},
+    Platform:Platform,Dimensions:Dimensions,PixelRatio:{get:function(){return W.devicePixelRatio||2;},
+      getFontScale:function(){return 1;},roundToNearestPixel:function(n){return Math.round(n);},
+      getPixelSizeForLayoutSize:function(n){return Math.round(n*(W.devicePixelRatio||2));}},
+    Alert:Alert,Animated:Animated,Easing:Animated.Easing,
+    Linking:{openURL:function(u){try{W.open(u,'_blank','noopener');}catch(_){}return Promise.resolve();},
+      canOpenURL:function(){return Promise.resolve(true);},addEventListener:function(){return{remove:function(){}};},
+      getInitialURL:function(){return Promise.resolve(null);}},
+    Vibration:{vibrate:function(){try{navigator.vibrate&&navigator.vibrate(30);}catch(_){}},cancel:function(){}},
+    Keyboard:{dismiss:function(){try{document.activeElement.blur();}catch(_){}},
+      addListener:function(){return{remove:function(){}};}},
+    Appearance:{getColorScheme:function(){return W.__LX_SCHEME||'light';},
+      addChangeListener:function(){return{remove:function(){}};}},
+    useColorScheme:function(){return W.__LX_SCHEME||'light';},
+    useWindowDimensions:function(){
+      var s=R.useState(dims());
+      R.useEffect(function(){
+        var f=function(){s[1](dims());};
+        W.addEventListener('resize',f);return function(){W.removeEventListener('resize',f);};
+      },[]);
+      return s[0];},
+    AppState:{currentState:'active',addEventListener:function(){return{remove:function(){}};}},
+    BackHandler:{addEventListener:function(){return{remove:function(){}};},exitApp:function(){}},
+    InteractionManager:{runAfterInteractions:function(f){setTimeout(f,0);return{cancel:function(){}};}},
+    LayoutAnimation:{configureNext:function(){},Presets:{easeInEaseOut:{},linear:{},spring:{}}},
+    UIManager:{setLayoutAnimationEnabledExperimental:function(){}},
+    I18nManager:{isRTL:false,forceRTL:function(){}},
+    Share:{share:function(o){Alert.alert('Share',(o&&(o.message||o.url))||'');return Promise.resolve({action:'sharedAction'});}},
+    PermissionsAndroid:missing('PermissionsAndroid'),
+    NativeModules:{},
+    requireNativeComponent:function(n){return function(){return h(View,null);};},
+    AppRegistry:{registerComponent:function(name,fn){W.__LX_RN_ROOT=fn();return name;},
+      runApplication:function(){},getAppKeys:function(){return[];}}};
+  RN['default']=RN;
+  return RN;
+}
+
+
+/* The packages an Expo app imports before it imports anything of its own. Without these a
+   stock `npx create-expo-app` project dies on line 1 of App.js, which would make the whole
+   React Native runtime look broken when the only thing missing is a status bar. */
+function lxExpoBody(){
+  var W=window,R=W.React,RN=W.__LX_RN,h=R.createElement;
+  var G={};
+  G['expo-status-bar']={StatusBar:function(){return null;},setStatusBarStyle:function(){}};
+  G['expo-constants']={'default':{expoConfig:{name:'Launcher app',slug:'launcher'},
+    manifest:{},platform:{},sessionId:'launcher',statusBarHeight:20}};
+  G['expo-font']={useFonts:function(){return[true,null];},loadAsync:function(){return Promise.resolve();},
+    isLoaded:function(){return true;}};
+  G['expo-haptics']={impactAsync:function(){try{navigator.vibrate&&navigator.vibrate(12);}catch(_){}return Promise.resolve();},
+    notificationAsync:function(){return Promise.resolve();},selectionAsync:function(){return Promise.resolve();},
+    ImpactFeedbackStyle:{Light:'light',Medium:'medium',Heavy:'heavy'},
+    NotificationFeedbackType:{Success:'success',Warning:'warning',Error:'error'}};
+  G['expo-splash-screen']={preventAutoHideAsync:function(){return Promise.resolve();},
+    hideAsync:function(){return Promise.resolve();}};
+  G['expo-linear-gradient']={LinearGradient:function(p){
+    var cols=(p.colors||['#000','#fff']).join(',');
+    var dir=(p.start&&p.end&&p.start.y!==p.end.y)?'to bottom':'to right';
+    return h(RN.View,Object.assign({},p,{style:[{backgroundImage:'linear-gradient('+dir+','+cols+')'},p.style]}));
+  }};
+  /* Every icon set collapses to one component. A name-shaped box is a deliberate choice over a
+     blank: you can see WHERE an icon belongs and WHICH one it was, so a layout can be judged. */
+  var Icon=function(p){
+    return h(RN.Text,{style:[{fontSize:p.size||22,color:p.color||'#444',lineHeight:1,
+      fontFamily:'system-ui'},p.style]},lxGlyphFor(p.name));
+  };
+  var iconSets={};
+  ['Ionicons','MaterialIcons','MaterialCommunityIcons','FontAwesome','FontAwesome5','Feather',
+   'AntDesign','Entypo','EvilIcons','Foundation','Octicons','SimpleLineIcons','Zocial']
+    .forEach(function(k){iconSets[k]=Icon;});
+  iconSets.createIconSet=function(){return Icon;};
+  G['@expo/vector-icons']=iconSets;
+  G['react-native-vector-icons']=iconSets;
+  Object.keys(iconSets).forEach(function(k){
+    if(typeof iconSets[k]==='function'&&k!=='createIconSet')
+      G['@expo/vector-icons/'+k]={'default':Icon,__esModule:true};
+  });
+  var safe=W.__LX_SAFE||{top:0,bottom:0};
+  var insets={top:safe.top||0,bottom:safe.bottom||0,left:0,right:0};
+  G['react-native-safe-area-context']={
+    SafeAreaProvider:function(p){return h(RN.View,{style:[{flexGrow:1},p.style]},p.children);},
+    SafeAreaView:RN.SafeAreaView,
+    useSafeAreaInsets:function(){return insets;},
+    SafeAreaInsetsContext:R.createContext(insets),
+    initialWindowMetrics:{insets:insets,frame:{x:0,y:0,width:W.innerWidth,height:W.innerHeight}}};
+  /* AsyncStorage over the in-memory localStorage stand-in the runtime installed. */
+  var AS={
+    getItem:function(k){return Promise.resolve(W.localStorage.getItem(k));},
+    setItem:function(k,v){W.localStorage.setItem(k,v);return Promise.resolve();},
+    removeItem:function(k){W.localStorage.removeItem(k);return Promise.resolve();},
+    clear:function(){W.localStorage.clear();return Promise.resolve();},
+    getAllKeys:function(){var a=[];for(var i=0;i<W.localStorage.length;i++)a.push(W.localStorage.key(i));
+      return Promise.resolve(a);},
+    multiGet:function(ks){return Promise.resolve(ks.map(function(k){return[k,W.localStorage.getItem(k)];}));},
+    multiSet:function(ps){ps.forEach(function(p){W.localStorage.setItem(p[0],p[1]);});return Promise.resolve();}};
+  G['@react-native-async-storage/async-storage']=Object.assign({'default':AS,__esModule:true},AS);
+  G['expo-secure-store']={getItemAsync:AS.getItem,setItemAsync:AS.setItem,deleteItemAsync:AS.removeItem};
+
+  /* A stack navigator small enough to read and big enough to run the apps people actually
+     write. It is one screen deep in the DOM at a time, which is what the native one does too. */
+  var NavCtx=R.createContext(null);
+  function NavigationContainer(p){return h(R.Fragment,null,p.children);}
+  function makeStack(){
+    function Navigator(p){
+      var screens=[];
+      R.Children.forEach(p.children,function(c){if(c&&c.props&&c.props.name)screens.push(c.props);});
+      var first=p.initialRouteName||(screens[0]&&screens[0].name);
+      var st=R.useState([{name:first,params:{}}]),stack=st[0],setStack=st[1];
+      var top=stack[stack.length-1]||{name:first,params:{}};
+      var scr=screens.filter(function(s){return s.name===top.name;})[0]||screens[0];
+      var nav={
+        navigate:function(n,pr){setStack(function(s){
+          var i=-1;for(var k=0;k<s.length;k++)if(s[k].name===n)i=k;
+          if(i>=0)return s.slice(0,i+1);
+          return s.concat([{name:n,params:pr||{}}]);});},
+        push:function(n,pr){setStack(function(s){return s.concat([{name:n,params:pr||{}}]);});},
+        replace:function(n,pr){setStack(function(s){return s.slice(0,-1).concat([{name:n,params:pr||{}}]);});},
+        goBack:function(){setStack(function(s){return s.length>1?s.slice(0,-1):s;});},
+        popToTop:function(){setStack(function(s){return s.slice(0,1);});},
+        canGoBack:function(){return stack.length>1;},
+        setOptions:function(){},setParams:function(){},
+        addListener:function(){return function(){};},isFocused:function(){return true;},
+        getState:function(){return{routes:stack,index:stack.length-1};},
+        dispatch:function(){}};
+      if(!scr)return h(RN.View,null,h(RN.Text,null,'No screens registered in this navigator.'));
+      var opts=Object.assign({},p.screenOptions,typeof scr.options==='function'
+        ?scr.options({route:top,navigation:nav}):scr.options);
+      var Comp=scr.component||(scr.children?function(){return scr.children({navigation:nav,route:top});}:null);
+      var showHeader=opts.headerShown!==false;
+      return h(NavCtx.Provider,{value:{nav:nav,route:top}},
+        h(RN.View,{style:{flexGrow:1,background:(opts.contentStyle&&opts.contentStyle.backgroundColor)||'#fff'}},
+          showHeader?h(RN.View,{style:{flexDirection:'row',alignItems:'center',gap:8,
+            padding:'12px 14px',borderBottom:'1px solid rgba(0,0,0,.10)',
+            background:(opts.headerStyle&&opts.headerStyle.backgroundColor)||'#f7f8fb',flexShrink:0}},
+            stack.length>1?h(RN.TouchableOpacity,{onPress:nav.goBack,style:{padding:'2px 8px'}},
+              h(RN.Text,{style:{fontSize:17,color:opts.headerTintColor||'#2f6bff'}},'‹ Back')):null,
+            h(RN.Text,{style:{fontWeight:'700',fontSize:16,color:opts.headerTintColor||'#111'}},
+              opts.title||scr.name)):null,
+          h(RN.View,{style:{flexGrow:1,minHeight:0,overflow:'auto'}},
+            Comp?h(Comp,{navigation:nav,route:top}):null)));
+    }
+    function Screen(){return null;}
+    return{Navigator:Navigator,Screen:Screen,Group:function(p){return p.children;}};
+  }
+  G['@react-navigation/native']={NavigationContainer:NavigationContainer,
+    useNavigation:function(){var c=R.useContext(NavCtx);return c?c.nav:{navigate:function(){},goBack:function(){}};},
+    useRoute:function(){var c=R.useContext(NavCtx);return c?c.route:{params:{},name:''};},
+    useIsFocused:function(){return true;},
+    useFocusEffect:function(f){R.useEffect(function(){return f();},[]);},
+    DefaultTheme:{dark:false,colors:{primary:'#2f6bff',background:'#fff',card:'#f7f8fb',text:'#111',border:'#e2e6ef',notification:'#ff3b30'}},
+    DarkTheme:{dark:true,colors:{primary:'#6ea8ff',background:'#0b0d12',card:'#151925',text:'#e8ecf6',border:'#26304a',notification:'#ff6b6b'}}};
+  G['@react-navigation/native-stack']={createNativeStackNavigator:makeStack};
+  G['@react-navigation/stack']={createStackNavigator:makeStack};
+  /* Tabs, as tabs. Reusing the stack here would put a Back button where a tab bar belongs. */
+  G['@react-navigation/bottom-tabs']={createBottomTabNavigator:function(){
+    function Navigator(p){
+      var screens=[];
+      R.Children.forEach(p.children,function(c){if(c&&c.props&&c.props.name)screens.push(c.props);});
+      var st=R.useState(p.initialRouteName||(screens[0]&&screens[0].name)),cur=st[0],set=st[1];
+      var scr=screens.filter(function(s){return s.name===cur;})[0]||screens[0];
+      var nav={navigate:function(n){set(n);},goBack:function(){},setOptions:function(){},
+        addListener:function(){return function(){};},isFocused:function(){return true;}};
+      var route={name:cur,params:{}};
+      return h(NavCtx.Provider,{value:{nav:nav,route:route}},
+        h(RN.View,{style:{flexGrow:1,minHeight:0,background:'#fff'}},
+          h(RN.View,{style:{flexGrow:1,minHeight:0,overflow:'auto'}},
+            scr&&scr.component?h(scr.component,{navigation:nav,route:route}):null),
+          h(RN.View,{style:{flexDirection:'row',borderTop:'1px solid rgba(0,0,0,.1)',
+            background:'#f7f8fb',flexShrink:0}},
+            screens.map(function(s){
+              return h(RN.TouchableOpacity,{key:s.name,onPress:function(){set(s.name);},
+                style:{flexGrow:1,alignItems:'center',padding:'9px 4px 12px'}},
+                h(RN.Text,{style:{fontSize:12,fontWeight:cur===s.name?'700':'500',
+                  color:cur===s.name?'#2f6bff':'#8a90a0'}},(s.options&&s.options.title)||s.name));
+            }))));
+    }
+    return{Navigator:Navigator,Screen:function(){return null;},Group:function(p){return p.children;}};
+  }};
+  G['react-native-gesture-handler']=Object.assign({},RN,{GestureHandlerRootView:RN.View,
+    gestureHandlerRootHOC:function(C){return C;}});
+  G['react-native-screens']={enableScreens:function(){},Screen:RN.View,ScreenContainer:RN.View};
+  G['react-native-reanimated']=Object.assign({'default':RN.Animated,__esModule:true},RN.Animated,{
+    useSharedValue:function(v){return{value:v};},
+    useAnimatedStyle:function(f){try{return f();}catch(_){return{};}},
+    withTiming:function(v){return v;},withSpring:function(v){return v;},withDelay:function(d,v){return v;},
+    withRepeat:function(v){return v;},runOnJS:function(f){return f;},Easing:RN.Easing});
+  G['react-native-svg']=(function(){
+    var mk=function(tag){return function(p){
+      var q=Object.assign({},p);delete q.style;
+      return h(tag,Object.assign({},q,{style:p.style}));};};
+    var S=mk('svg');
+    return Object.assign({'default':S,__esModule:true,Svg:S},
+      {Circle:mk('circle'),Rect:mk('rect'),Path:mk('path'),Line:mk('line'),G:mk('g'),
+       Text:mk('text'),Polygon:mk('polygon'),Polyline:mk('polyline'),Ellipse:mk('ellipse'),
+       Defs:mk('defs'),LinearGradient:mk('linearGradient'),Stop:mk('stop'),ClipPath:mk('clipPath')});
+  })();
+  return G;
+}
+/* Icon names are kebab-case and descriptive, which is enough to pick a recognisable glyph for
+   the common ones. Everything here is deliberately a BMP character: an astral-plane emoji
+   inside a serialised function is one surrogate-pair mistake away from mojibake, and a broken
+   glyph in the middle of someone's layout reads as the shim being broken. Anything unmatched
+   gets a dot rather than the raw name, which would blow out the box it has to sit in. */
+function lxGlyphBody(){
+  window.lxGlyphFor=function(name){
+    var n=String(name||'').toLowerCase();
+    var map=[[/home|house/,'\u2302'],[/search|magnif/,'\u26B2'],[/heart|like|favorite|favourite/,'\u2665'],
+      [/star|rate/,'\u2605'],[/settings|gear|cog|options/,'\u2699'],
+      [/person|user|account|profile|avatar/,'\u263A'],[/add|plus|new/,'\uFF0B'],
+      [/close|cancel|times|remove|clear/,'\u2715'],[/check|done|tick|complete/,'\u2713'],
+      [/back|arrow-?left|chevron-?left|caret-?left/,'\u2039'],
+      [/forward|arrow-?right|chevron-?right|caret-?right/,'\u203A'],
+      [/arrow-?up|chevron-?up|up$/,'\u2191'],[/arrow-?down|chevron-?down|down$/,'\u2193'],
+      [/menu|bars|hamburger|list/,'\u2630'],[/trash|delete|bin/,'\u2326'],
+      [/edit|pencil|create|compose/,'\u270E'],[/mail|envelope|inbox/,'\u2709'],
+      [/bell|notification|alarm/,'\u266A'],[/camera|photo/,'\u25C9'],
+      [/cart|basket|bag|shop/,'\u26C1'],[/play/,'\u25B6'],[/pause/,'\u23F8'],[/stop|square/,'\u25A0'],
+      [/lock|secure|private/,'\u26BF'],[/calendar|date|schedule/,'\u26AC'],
+      [/clock|time|history|recent/,'\u25F4'],[/map|location|pin|marker|place/,'\u2316'],
+      [/chat|message|comment|bubble/,'\u25CB'],[/share|export/,'\u2934'],
+      [/download|save/,'\u2B07'],[/upload/,'\u2B06'],[/refresh|reload|sync|repeat/,'\u21BB'],
+      [/info|help|question/,'\u2139'],[/warn|alert|error/,'\u26A0'],
+      [/moon|dark|night/,'\u263E'],[/sun|light|day|bright/,'\u2600'],
+      [/music|note|audio|sound/,'\u266B'],[/image|picture|gallery/,'\u25F0'],
+      [/file|document|page|doc/,'\u2637'],[/folder|directory/,'\u25B1'],
+      [/wifi|signal|network/,'\u25E0'],[/battery|power/,'\u25AD'],
+      [/flame|fire|hot|trend/,'\u2668'],[/cloud|weather/,'\u2601'],
+      [/mic|voice|record/,'\u25CF'],[/video|film|movie/,'\u25B7'],
+      [/link|chain|url/,'\u26AD'],[/eye|view|show|visible/,'\u25C9'],
+      [/filter|sort/,'\u25BD'],[/grid|apps|dashboard/,'\u2637'],
+      [/phone|call/,'\u260E'],[/globe|world|web|language/,'\u2295'],
+      [/flag|report/,'\u2691'],[/key|token/,'\u26B7'],[/gift|present|reward/,'\u2740'],
+      [/send|paper-?plane/,'\u27A4'],[/scan|qr|barcode/,'\u2338']];
+    for(var i=0;i<map.length;i++)if(map[i][0].test(n))return map[i][1];
+    return '\u25CF';
+  };
+}
+
+
+/* Boots the launched document once every library it needs is actually present. Written as one
+   async function because two of the libraries (three, cannon-es) ship ESM only and have to be
+   `import()`ed — a synchronous boot would run before they existed and report them as missing. */
+function lxBootBody(){
+  var W=window;
+  var run=async function(){
+    var esm=W.__LX_ESM||[];
+    for(var i=0;i<esm.length;i++){
+      try{
+        var m=await import(esm[i].url);
+        W[esm[i].global]=(m&&m.default&&Object.keys(m).length===1)?m.default:m;
+      }catch(e){
+        W.__lxFail('Could not load '+esm[i].global+' from the CDN',e);
+      }
+    }
+    var G={};
+    (W.__LX_LIBMAP||[]).forEach(function(l){
+      var v=null;
+      try{v=new Function('return ('+l.expr+')')();}catch(_){v=null;}
+      if(v==null||v===undefined)return;
+      l.names.forEach(function(n){G[n]=v;});
+    });
+    /* React 18 moved createRoot to `react-dom/client`; the UMD bundle keeps it on the same
+       object. Registering the subpath separately means an app can import it either way. */
+    if(G['react-dom'])G['react-dom/client']=G['react-dom'];
+    if(W.__LX_MODE==='native'){
+      lxGlyphBody();
+      try{W.__LX_RN=lxRnBody();}catch(e){return W.__lxFail('The React Native shim failed to start',e);}
+      G['react-native']=W.__LX_RN;
+      G['react-native-web']=W.__LX_RN;
+      try{
+        var ex=lxExpoBody();
+        for(var k in ex)if(!G[k])G[k]=ex[k];
+      }catch(e){W.__lxFail('The Expo compatibility layer failed to start',e);}
+    }
+    W.__LX_GLOBALS=G;
+    try{lxBundlerBody();}catch(e){return W.__lxFail('The module loader failed to start',e);}
+    /* Everything the document asked for while the loader was still coming up, in the order the
+       page asked for it. One failure is reported and the rest still run — a project with four
+       module scripts should not lose three of them to a typo in the first. */
+    (W.__LX_QUEUE||[]).forEach(function(q){
+      try{
+        if(q.inline!=null)W.__lxRunInline(q.inline,q.from);
+        else W.__lxRequire(q.spec);
+      }catch(e){W.__lxFail('Running '+(q.spec||q.from||'a module script'),e);}
+    });
+    W.__LX_QUEUE=[];
+    var mode=W.__LX_MODE,entry=W.__LX_ENTRY;
+    try{
+      if(mode==='react'||mode==='native'){
+        /* Whether the entry mounts itself decides whether we mount it, and the obvious test —
+           "is #root empty after the entry ran?" — is WRONG on React 18: a concurrent root
+           schedules its first render, so the node is still empty when the entry returns. That
+           read as "nothing was rendered" and put a red overlay over an app that was about to
+           appear perfectly. So the signal is the call itself, not the DOM a moment later. */
+        var RD=W.ReactDOM;
+        if(RD)['createRoot','hydrateRoot','render'].forEach(function(k){
+          if(typeof RD[k]!=='function')return;
+          var orig=RD[k];
+          RD[k]=function(){W.__LX_MOUNTED=true;return orig.apply(RD,arguments);};
+        });
+        var mod=W.__lxRequire(entry)||{};
+        var Comp=W.__LX_RN_ROOT||mod['default']||mod.App||mod.Main||
+          (typeof mod==='function'?mod:null);
+        var host=document.getElementById('root');
+        if(!W.__LX_MOUNTED&&host&&typeof Comp==='function'){
+          if(RD&&RD.createRoot)RD.createRoot(host).render(W.React.createElement(Comp));
+          else if(RD&&RD.render)RD.render(W.React.createElement(Comp),host);
+          else throw new Error('react-dom did not load.');
+        }else if(!W.__LX_MOUNTED){
+          throw new Error('"'+entry+'" ran but nothing will be rendered: it neither exports a '+
+            'component as its default nor calls createRoot(...).render(...) itself. '+
+            'Pick a different entry file with the picker above.');
+        }
+      }else if(mode==='vue'){
+        var vm=W.__lxRequire(entry)||{};
+        var App=vm['default']||vm;
+        if(App&&App.__lxMounted)return;
+        var el=document.getElementById('app')||document.getElementById('root');
+        if(W.Vue&&W.Vue.createApp&&el&&!el.children.length)W.Vue.createApp(App).mount(el);
+      }else if(mode==='svelte'){
+        var sm=W.__lxRequire(entry)||{};
+        var C=sm['default']||sm;
+        var t=document.getElementById('app');
+        if(typeof C==='function'&&t&&!t.children.length)new C({target:t});
+      }else if(mode==='bundle'){
+        W.__lxRequire(entry);
+      }
+      /* Plain script files, run only now that the libraries are up. INDIRECT eval on purpose:
+         it evaluates in global scope, so `var`, `function` and class declarations become real
+         globals exactly as they would in a classic <script> — which is the whole reason these
+         files are not put through the module loader. Running them inline in the body instead
+         was a real bug: a one-file three.js game started before three.js, which ships ESM-only
+         and therefore cannot be loaded by a plain script tag at all. */
+      if(W.__LX_RAW&&W.__LX_RAW.length){
+        var geval=eval;
+        W.__LX_RAW.forEach(function(f){
+          try{geval(f.src+'\n//# sourceURL='+f.name);}
+          catch(e){W.__lxFail('Running '+f.name,e);}
+        });
+        W.__LX_RAW=[];
+      }
+    }catch(e){W.__lxFail('Running '+entry,e);}
+    try{parent.postMessage({__lx:1,t:'booted',mode:mode,entry:entry},'*');}catch(_){}
+  };
+  run();
+}
+
+/* Turning a project's files into one runnable document. */
+/* A closing script tag inside a JSON blob ends the tag it is sitting in, and U+2028/U+2029 are
+   literal line terminators in JavaScript source but legal inside a JSON string — both turn a
+   valid document into a syntax error at the exact point the app's own files are handed over. */
+const lxJson=o=>JSON.stringify(o).replace(/</g,'\\u003c')
+  .replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
+const lxSrc=fn=>String(fn);
+const lxTag=(body)=>'<scr'+'ipt>'+body+'</scr'+'ipt>';
+const lxScriptSrc=(url)=>'<scr'+'ipt src="'+url+'"></scr'+'ipt>';
+
+/* Which libraries this project actually reaches for. Scans bare imports AND bare globals,
+   because a game dropped in as one .js file says `new THREE.Scene()` and never imports
+   anything — loading libraries only on an import statement would leave it undefined. */
+function lxLibsFor(ctx,mode){
+  const want=new Set();
+  if(mode==='react'||mode==='native'){want.add('react');want.add('react-dom');}
+  if(mode==='vue')want.add('vue');
+  const imports=ctx.blob.match(/(?:from|import|require)\s*\(?\s*['"]([^'".][^'"]*)['"]/g)||[];
+  imports.forEach(m=>{
+    const s=(m.match(/['"]([^'"]+)['"]/)||[])[1]||'';
+    const l=lxLib(s)||LX_LIBS.find(x=>x.names.some(n=>s.indexOf(n+'/')===0));
+    if(l)want.add(l.id);
+  });
+  [[/\bTHREE\./,'three'],[/\bPhaser\./,'phaser'],[/\bPIXI\./,'pixi.js'],[/\bMatter\./,'matter-js'],
+   [/\bCANNON\./,'cannon-es'],[/\bgsap\b/,'gsap'],[/\bTone\./,'tone'],[/\bnew\s+Howl\b/,'howler'],
+   [/\bd3\./,'d3'],[/\bnew\s+Chart\b/,'chart.js'],[/\b_\.[a-z]/,'lodash'],[/\bmarked\b/,'marked'],
+   [/\bnew\s+p5\b|function\s+setup\s*\(/,'p5']]
+    .forEach(([re,id])=>{if(re.test(ctx.blob))want.add(id);});
+  if(mode==='p5')want.add('p5');
+  const out=[];
+  LX_LIBS.forEach(l=>{                       // LX_LIBS order is the dependency order
+    if(!want.has(l.id))return;
+    if(l.after&&!want.has(l.after))want.add(l.after);
+    out.push(l);
+  });
+  return LX_LIBS.filter(l=>want.has(l.id));
+}
+
+/* The file to start from. Order matters — a Vite project has BOTH `src/main.jsx` (the real
+   entry) and `src/App.jsx` (what it renders), and picking App would silently drop the
+   providers, router and global CSS that main sets up. */
+const LX_ENTRY_ORDER={
+  react:['src/main.jsx','src/main.tsx','src/index.jsx','src/index.tsx','src/main.js','src/index.js',
+         'main.jsx','main.tsx','index.jsx','index.tsx','src/App.jsx','src/App.tsx','App.jsx','App.tsx','app.jsx'],
+  native:['index.js','App.js','App.jsx','App.tsx','src/App.js','src/App.jsx','src/App.tsx',
+          'app/index.js','app/_layout.js','src/index.js'],
+  vue:['src/main.js','src/main.ts','main.js','src/App.vue','App.vue','index.js'],
+  svelte:['src/main.js','src/main.ts','main.js','src/App.svelte','App.svelte'],
+  bundle:['src/main.js','src/index.js','main.js','index.js'],
+  /* Without this, "shallowest first" picked whichever file sorted earliest — for a CommonJS
+     project that is usually a leaf module, and the entry point never ran. */
+  vanilla:['main.js','index.js','src/main.js','src/index.js','app.js','game.js','sketch.js'],
+};
+function lxEntryFor(ctx,mode){
+  const order=LX_ENTRY_ORDER[mode]||[];
+  for(const p of order)if(ctx.files[p]!==undefined)return p;
+  const pkgMain=ctx.pkg&&(ctx.pkg.main||ctx.pkg.module);
+  if(pkgMain&&ctx.files[pkgMain.replace(/^\.\//,'')]!==undefined)return pkgMain.replace(/^\.\//,'');
+  if(mode==='vue'){const v=ctx.names.find(n=>/\.vue$/i.test(n));if(v)return v;}
+  if(mode==='svelte'){const v=ctx.names.find(n=>/\.svelte$/i.test(n));if(v)return v;}
+  /* Shallowest first, so a root-level file beats one buried in `src/components`. */
+  const cand=ctx.src.slice().sort((a,b)=>a.split('/').length-b.split('/').length||a.length-b.length);
+  const jsx=cand.find(n=>/\.(jsx|tsx)$/i.test(n));
+  return jsx||cand[0]||ctx.names[0]||'';
+}
+
+/* Mount points are emitted through one helper rather than typed into each runtime. Two reasons.
+   The name matters — user code looks up `#root` (React) and `#app` (Vue), so it cannot be
+   invented per runtime — and this file is scanned for duplicate DOM ids, which cannot tell a
+   div destined for a sandboxed iframe from one in this page. Writing the id in exactly one
+   place settles both without teaching the scanner an exception it would then apply everywhere. */
+const lxEl=(tag,id,style,inner)=>'<'+tag+' id="'+id+'"'+(style?' style="'+style+'"':'')+'>'+
+  (inner||'')+'</'+tag+'>';
+
+/* What makes a file part of a module graph rather than a standalone script. ESM syntax, yes —
+   but also CommonJS, which has neither `import` nor `export` and is what a model writes when
+   asked for "plain JavaScript in several files". */
+const LX_MODULAR=/^\s*(?:import|export)\b|[\n;]\s*(?:import|export)\s|\bimport\s*\(|\brequire\s*\(\s*['"]\.|\bmodule\.exports\b|\bexports\.[A-Za-z_$]/;
+
+const LX_BASE_CSS=
+ 'html,body{margin:0;padding:0;height:100%;background:#fff;color:#111;'+
+ 'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}'+
+ '#root,#app{min-height:100%}'+
+ '@keyframes __lxspin{to{transform:rotate(360deg)}}'+
+ '*{-webkit-tap-highlight-color:transparent}';
+
+/* Head content every launched document gets: the safety net, the file system, and the
+   serialised helper functions the boot needs. */
+function lxPreamble(ctx,mode,opts){
+  const libs=lxLibsFor(ctx,mode);
+  const esm=libs.filter(l=>l.esm).map(l=>({global:(l.expr.match(/window\.([A-Za-z_$][\w$]*)/)||[])[1],url:l.esm}));
+  const libmap=libs.map(l=>({names:l.names,expr:l.expr}));
+  if(mode==='svelte')[['svelteRt','svelte/internal','__SV_INT'],['svelteMain','svelte','__SV'],
+    ['svelteStore','svelte/store','__SV_STORE'],['svelteTrans','svelte/transition','__SV_TR'],
+    ['svelteEase','svelte/easing','__SV_EASE'],['svelteAnim','svelte/animate','__SV_ANIM']]
+    .forEach(([key,name,glob])=>{
+      esm.push({global:glob,url:LX_CDN[key]});
+      libmap.push({names:[name],expr:'window.'+glob});
+    });
+  const needBabel=mode!=='html'&&mode!=='markdown'&&mode!=='svg'&&mode!=='json'&&mode!=='text'&&
+    mode!=='python'&&(mode!=='p5'||false)&&opts.bundler!==false;
+  const scheme=opts.scheme||'light';
+  const safe={top:opts.safeT||0,bottom:opts.safeB||0};
+  let s='<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'+
+    '<style>'+LX_BASE_CSS+':root{--lx-safe-t:'+safe.top+'px;--lx-safe-b:'+safe.bottom+'px}</style>'+
+    lxTag('window.__LX_SAFE='+lxJson(safe)+';'+
+      'window.__LX_PLATFORM='+lxJson(opts.platform||'ios')+';window.__LX_SCHEME='+lxJson(scheme)+';'+
+      'window.__LX_MODE='+lxJson(mode)+';window.__LX_ENTRY='+lxJson(opts.entry||'')+';'+
+      'window.__LX_VFS='+lxJson(ctx.files)+';window.__LX_ASSETS='+lxJson(ctx.assets)+';'+
+      'window.__LX_ESM='+lxJson(esm)+';window.__LX_LIBMAP='+lxJson(libmap)+';')+
+    lxTag('('+lxSrc(lxRuntimeBody)+')();');
+  if(needBabel)s+=lxScriptSrc(LX_CDN.babel);
+  if(mode==='svelte')s+=lxScriptSrc(LX_CDN.svelte);
+  libs.filter(l=>l.url).forEach(l=>{s+=lxScriptSrc(l.url);});
+  if(mode==='native')s+=lxTag(lxSrc(lxGlyphBody)+lxSrc(lxRnBody)+lxSrc(lxExpoBody));
+  s+=lxTag(lxSrc(lxBundlerBody));
+  return s;
+}
+/* `<head>` is where this has to go: a script appended to the body would run after the app's own
+   inline scripts, so the error handler would be installed too late to catch a boot failure. */
+function lxInjectHead(html,inject){
+  if(/<head[^>]*>/i.test(html))return html.replace(/<head[^>]*>/i,m=>m+inject);
+  if(/<html[^>]*>/i.test(html))return html.replace(/<html[^>]*>/i,m=>m+'<head>'+inject+'</head>');
+  return '<!doctype html><html><head>'+inject+'</head><body>'+html+'</body></html>';
+}
+const lxAttrEsc=s=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* Rewriting a real HTML project so it runs with no server behind it. Every relative reference
+   has to become something a document with no origin can resolve — a data: URL for an asset, or
+   inlined source for code. */
+function lxWeb(ctx,opts){
+  const entry=opts.entry||ctx.html[0];
+  let html=ctx.files[entry]||'';
+  const base=entry.replace(/[^/]*$/,'');
+  const look=ref=>{
+    const clean=String(ref).replace(/^\.\//,'').replace(/[?#].*$/,'');
+    if(/^(https?:|data:|blob:|#|mailto:|\/\/)/i.test(clean))return null;
+    const tries=[clean,base+clean,clean.replace(/^\//,''),base+clean.replace(/^\//,'')];
+    for(const t of tries){
+      const n=t.split('/').reduce((a,p)=>{if(p==='.'||!p)return a;if(p==='..'){a.pop();return a;}a.push(p);return a;},[]).join('/');
+      if(ctx.assets[n]!==undefined)return{kind:'asset',path:n,url:ctx.assets[n]};
+      if(ctx.files[n]!==undefined)return{kind:'file',path:n};
+    }
+    return null;
+  };
+  const cssUrls=css=>css.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g,(m,q,ref)=>{
+    const f=look(ref);
+    if(f&&f.kind==='asset')return 'url("'+f.url+'")';
+    if(f&&f.kind==='file'&&/\.svg$/i.test(f.path))
+      return 'url("data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(ctx.files[f.path])))+'")';
+    return m;
+  });
+  // stylesheets
+  html=html.replace(/<link\b[^>]*>/gi,tag=>{
+    if(!/rel\s*=\s*["']?stylesheet/i.test(tag))return tag;
+    const href=(tag.match(/href\s*=\s*["']([^"']+)["']/i)||[])[1];
+    const f=href&&look(href);
+    if(!f||f.kind!=='file')return tag;
+    return '<style>'+cssUrls(ctx.files[f.path])+'</style>';
+  });
+  html=html.replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi,(m,css)=>'<style>'+cssUrls(css)+'</style>');
+  /* A classic script that sets globals for the NEXT script must stay a classic script — routing
+     it through the module loader would scope its `var game` and break everything after it. Only
+     source that actually declares imports or exports goes to the loader. */
+  const isModule=src=>LX_MODULAR.test(src);
+  html=html.replace(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi,(m,attrs,inline)=>{
+    const src=(attrs.match(/\bsrc\s*=\s*["']([^"']+)["']/i)||[])[1];
+    const typed=(attrs.match(/\btype\s*=\s*["']([^"']+)["']/i)||[])[1]||'';
+    if(/json|importmap|text\/template/i.test(typed))return m;
+    if(src){
+      const f=look(src);
+      if(!f)return m;                                              // remote script, left alone
+      if(f.kind!=='file')return m;
+      const code=ctx.files[f.path];
+      if(/module/i.test(typed)||isModule(code))
+        return lxTag('window.__lxQueue('+lxJson(f.path)+');');
+      return lxTag(code);
+    }
+    if(/module/i.test(typed)&&isModule(inline))
+      return lxTag('window.__lxQueue(null,'+lxJson(inline)+','+lxJson(entry)+');');
+    return m;
+  });
+  // media and image references
+  html=html.replace(/\b(src|href|poster|data-src)\s*=\s*["']([^"']+)["']/gi,(m,attr,ref)=>{
+    if(/^(https?:|data:|blob:|#|mailto:|javascript:)/i.test(ref))return m;
+    const f=look(ref);
+    if(f&&f.kind==='asset')return attr+'="'+f.url+'"';
+    if(f&&f.kind==='file'&&/\.svg$/i.test(f.path))
+      return attr+'="data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(ctx.files[f.path])))+'"';
+    return m;
+  });
+  html=lxInjectHead(html,lxPreamble(ctx,'web',Object.assign({},opts,{entry})));
+  /* At the END of the body, not the head: the boot drains the module queue, and the queue is
+     not complete until the document's own scripts have been parsed. */
+  const boot=lxTag('('+lxSrc(lxBootBody)+')();');
+  return /<\/body>/i.test(html)?html.replace(/<\/body>/i,boot+'</body>'):html+boot;
+}
+
+function lxShell(ctx,mode,opts,bodyHtml,bootExtra){
+  return '<!doctype html><html lang="en"><head><title>'+lxAttrEsc(opts.title||'App')+'</title>'+
+    lxPreamble(ctx,mode,opts)+'</head><body>'+bodyHtml+
+    (bootExtra||'')+lxTag('('+lxSrc(lxBootBody)+')();')+'</body></html>';
+}
+
+/* Every runtime the Launcher knows how to run. `build` returns a complete HTML document; the
+   frame is what the app is shown inside by default. */
+const LX_RUNTIMES=[
+  {id:'html',icon:'\u{1F310}',label:'HTML page or game',frame:'free',
+   blurb:'A self-contained .html file. Runs exactly as written, plus an error overlay and a console.',
+   build:(ctx,o)=>lxInjectHead(ctx.files[o.entry||ctx.html[0]]||'',lxPreamble(ctx,'html',o))},
+  {id:'web',icon:'\u{1F4C1}',label:'Multi-file web project',frame:'free',
+   blurb:'A folder or zip with an index.html. Stylesheets, scripts, images, audio and fonts are '+
+     'rewired so every relative path resolves with no server behind it.',
+   build:(ctx,o)=>lxWeb(ctx,o)},
+  {id:'react',icon:'⚛️',label:'React (.jsx / .tsx)',frame:'free',
+   blurb:'React 18 + Babel. Multi-file projects work: imports, CSS imports, JSON and images all resolve.',
+   build:(ctx,o)=>lxShell(ctx,'react',o,lxEl('div','root'))},
+  {id:'native',icon:'\u{1F4F1}',label:'React Native / Expo',frame:'phone',
+   blurb:'Runs a mobile app in a phone frame through a React Native shim — layout primitives, '+
+     'lists, inputs, Animated, Alert, navigation and the common Expo modules.',
+   build:(ctx,o)=>lxShell(ctx,'native',o,lxEl('div','root','height:100%;display:flex;flex-direction:column'))},
+  {id:'vue',icon:'\u{1F7E9}',label:'Vue 3',frame:'free',
+   blurb:'Vue 3 with a built-in single-file-component splitter for .vue files using the Options API.',
+   build:(ctx,o)=>lxShell(ctx,'vue',o,lxEl('div','app'))},
+  {id:'svelte',icon:'\u{1F7E0}',label:'Svelte 4',frame:'free',
+   blurb:'Compiles .svelte components in the browser with the real Svelte compiler.',
+   build:(ctx,o)=>lxShell(ctx,'svelte',o,lxEl('div','app'))},
+  {id:'p5',icon:'\u{1F3A8}',label:'p5.js sketch',frame:'free',
+   blurb:'A sketch with setup() and draw(). Kept in p5 global mode, so the sketch needs no changes.',
+   build:(ctx,o)=>lxShell(ctx,'p5',Object.assign({},o,{bundler:false}),'',
+     lxTag(ctx.src.map(n=>ctx.files[n]).join('\n;\n')))},
+  {id:'vanilla',icon:'\u{1F4DC}',label:'Plain JavaScript',frame:'free',
+   blurb:'Script files with a canvas and a page ready for them. Libraries referenced by name '+
+     '(THREE, Phaser, PIXI, Matter, gsap, d3 and more) are loaded automatically.',
+   build:(ctx,o)=>{
+     /* `require()` and `module.exports` make a project modular just as surely as `import` does.
+        Missing that concatenated every file into one classic script, so two modules that each
+        declared a `const a` collided and the whole project died on a duplicate declaration. */
+     const modular=ctx.src.some(n=>LX_MODULAR.test(ctx.files[n]||''));
+     const body=lxEl('div','root')+lxEl('canvas','canvas','display:block');
+     if(modular)return lxShell(ctx,'bundle',Object.assign({},o,{entry:o.entry||lxEntryFor(ctx,'bundle')}),body);
+     /* Handed to the boot rather than written inline, so the libraries this code names as bare
+        globals are loaded first. */
+     /* bundler:false only suppresses the Babel DOWNLOAD, which plain scripts never need — the
+        boot and the loader are still there, so a library is still resolvable if the code asks. */
+     return lxShell(ctx,'vanilla',Object.assign({},o,{bundler:false}),body,
+       lxTag('window.__LX_RAW='+lxJson(ctx.src.map(n=>({name:n,src:ctx.files[n]})))+';'));
+   }},
+  {id:'python',icon:'\u{1F40D}',label:'Python (Pyodide)',frame:'free',
+   blurb:'Real CPython compiled to WebAssembly. Prints, loops and the standard library work; '+
+     'anything needing the operating system or a native wheel does not.',
+   build:(ctx,o)=>lxPython(ctx,o)},
+  {id:'markdown',icon:'\u{1F4DD}',label:'Markdown',frame:'free',
+   blurb:'Rendered as a readable document.',
+   build:(ctx,o)=>lxViewer(ctx,o,'markdown')},
+  {id:'svg',icon:'\u{1F5BC}️',label:'SVG',frame:'free',
+   blurb:'Shown at full size on a checkerboard so transparency is visible.',
+   build:(ctx,o)=>lxViewer(ctx,o,'svg')},
+  {id:'json',icon:'\u{1F5C3}️',label:'JSON',frame:'free',
+   blurb:'A collapsible tree, with the parse error and its position when the file is malformed.',
+   build:(ctx,o)=>lxViewer(ctx,o,'json')},
+  {id:'text',icon:'\u{1F4C4}',label:'Text',frame:'free',
+   blurb:'Whatever it is, shown as text rather than pretending it can run.',
+   build:(ctx,o)=>lxViewer(ctx,o,'text')},
+];
+const lxRuntime=id=>LX_RUNTIMES.find(r=>r.id===id)||LX_RUNTIMES[0];
+
+function lxPython(ctx,o){
+  const entry=o.entry||ctx.names.find(n=>/\.py$/i.test(n))||ctx.names[0];
+  const code=ctx.files[entry]||'';
+  const body=lxEl('div','root','padding:14px;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace',
+    lxEl('div','lxpy-status','color:#888','Loading CPython (about 10 MB, cached after the first run)\u2026')+
+    lxEl('pre','lxpy-out','white-space:pre-wrap;margin:10px 0 0'));
+  const boot=lxTag(
+    'window.__LX_PY='+lxJson(code)+';window.__LX_PYFILES='+lxJson(
+      Object.keys(ctx.files).filter(n=>/\.py$/i.test(n)).reduce((a,n)=>(a[n]=ctx.files[n],a),{}))+';'+
+    '(function(){var s=document.createElement("script");s.src='+lxJson(LX_CDN.pyodide)+';'+
+    's.onload=async function(){'+
+    ' var out=document.getElementById("lxpy-out"),st=document.getElementById("lxpy-status");'+
+    ' try{'+
+    '  var py=await loadPyodide({stdout:function(t){out.textContent+=t+"\\n";},'+
+    '    stderr:function(t){out.textContent+=t+"\\n";console.error(t);}});'+
+    '  st.textContent="CPython "+py.version+" \\u2014 running "+'+lxJson(entry)+';'+
+    '  for(var k in window.__LX_PYFILES)py.FS.writeFile(k.split("/").pop(),window.__LX_PYFILES[k]);'+
+    '  await py.runPythonAsync(window.__LX_PY);'+
+    '  st.textContent="CPython "+py.version+" \\u2014 finished";'+
+    ' }catch(e){st.textContent="Python stopped";window.__lxFail("Python",e);}'+
+    '};s.onerror=function(){window.__lxFail("Pyodide","could not be fetched from the CDN. '+
+    'Pyodide is about 10 MB and needs a connection the first time.");};'+
+    'document.head.appendChild(s);})();');
+  return lxShell(ctx,'python',Object.assign({},o,{entry,bundler:false}),body,boot);
+}
+
+function lxViewer(ctx,o,kind){
+  const entry=o.entry||ctx.names[0]||'';
+  const text=ctx.files[entry]||'';
+  const pre=lxEl('div','root','padding:18px');
+  let script;
+  if(kind==='markdown'){
+    script=lxTag('(function(){var s=document.createElement("script");s.src='+lxJson(LX_CDN.marked)+';'+
+      's.onload=function(){document.getElementById("root").innerHTML=window.marked.parse('+lxJson(text)+');'+
+      'document.getElementById("root").setAttribute("style","padding:24px;max-width:760px;margin:0 auto;line-height:1.65");};'+
+      's.onerror=function(){var p=document.createElement("pre");p.textContent='+lxJson(text)+';'+
+      'p.setAttribute("style","white-space:pre-wrap");document.getElementById("root").appendChild(p);};'+
+      'document.head.appendChild(s);})();');
+  }else if(kind==='svg'){
+    script=lxTag('document.getElementById("root").setAttribute("style",'+
+      lxJson('padding:0;min-height:100%;display:flex;align-items:center;justify-content:center;'+
+        'background:repeating-conic-gradient(#eee 0 25%,#fff 0 50%) 0 0/22px 22px')+');'+
+      'document.getElementById("root").innerHTML='+lxJson(text)+';');
+  }else if(kind==='json'){
+    script=lxTag('(function(){var t='+lxJson(text)+',r=document.getElementById("root");'+
+      'try{var v=JSON.parse(t);var p=document.createElement("pre");'+
+      'p.setAttribute("style","font:12px/1.55 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap");'+
+      'p.textContent=JSON.stringify(v,null,2);r.appendChild(p);}'+
+      'catch(e){window.__lxFail("Invalid JSON",e);}})();');
+  }else{
+    script=lxTag('var p=document.createElement("pre");p.textContent='+lxJson(text)+';'+
+      'p.setAttribute("style","font:12.5px/1.6 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap");'+
+      'document.getElementById("root").appendChild(p);');
+  }
+  return '<!doctype html><html lang="en"><head><title>'+lxAttrEsc(entry)+'</title>'+
+    lxPreamble(ctx,kind,Object.assign({},o,{entry,bundler:false}))+'</head><body>'+pre+script+'</body></html>';
+}
+
+/* One call from every caller: files in, runnable document out. */
+function lxBuildDoc(files,assets,opts){
+  opts=opts||{};
+  const ctx=lxContext(files,assets);
+  const det=lxDetect(files,assets);
+  const mode=opts.mode||det.id;
+  const rt=lxRuntime(mode);
+  const entry=opts.entry||(mode==='html'||mode==='web'?(ctx.html[0]||ctx.names[0]):lxEntryFor(ctx,mode));
+  const o=Object.assign({},opts,{entry,title:opts.title||entry||'App'});
+  return{html:rt.build(ctx,o),mode,entry,detected:det,runtime:rt,
+    libs:lxLibsFor(ctx,mode).map(l=>l.id)};
+}
+
+
+/* ── The frames things run inside ────────────────────────────────────────────
+   Built from the existing DEVICES list rather than a second copy of it, plus the shapes a
+   launcher needs that a phone-defect sweep does not: a watch, a folding phone, a handheld, a
+   TV, and "fit", which is the honest default for anything that is not a mobile app. */
+const LX_FRAMES=[{id:'fit',name:'Fit the panel',w:0,h:0,os:'Web',safeT:0,safeB:0,chrome:false}]
+  .concat(DEVICES.map(d=>Object.assign({},d,{chrome:d.w<=744})))
+  .concat([
+    {id:'watch',   name:'Apple Watch 45mm', w:198,h:242, dpr:2,os:'watchOS',safeT:8, safeB:8, chrome:true,round:true},
+    {id:'fold-in', name:'Fold (unfolded)',  w:690,h:829, dpr:2,os:'Android',safeT:24,safeB:24,chrome:true},
+    {id:'fold-out',name:'Fold (closed)',    w:344,h:882, dpr:2,os:'Android',safeT:24,safeB:24,chrome:true},
+    {id:'deck',    name:'Steam Deck',       w:1280,h:800,dpr:1,os:'Linux',  safeT:0, safeB:0, chrome:false},
+    {id:'tv',      name:'TV 720p',          w:1280,h:720,dpr:1,os:'TV',     safeT:0, safeB:0, chrome:false},
+    {id:'wide',    name:'Desktop 1600',     w:1600,h:900,dpr:1,os:'Web',    safeT:0, safeB:0, chrome:false},
+  ]);
+const lxFrame=id=>LX_FRAMES.find(f=>f.id===id)||LX_FRAMES[0];
+
+const LX_DEFAULTS={frame:'fit',rot:false,zoom:'fit',scheme:'light',showLog:true,items:[],last:''};
+let LAUNCH=Object.assign({},LX_DEFAULTS,store.get('launcher',{}));
+const saveLaunch=()=>{if(LAUNCH.items.length>60)LAUNCH.items.length=60;store.set('launcher',LAUNCH);};
+/* The project currently on the stage. Files live here rather than in LAUNCH because a 5MB
+   project has no business in localStorage — saved projects go to IndexedDB. */
+let LXCUR=null;
+let LX_LOG=[];
+let LX_DOC='';
+
+const lxSave=(id,payload)=>IDB.set('lxApp:'+id,payload);
+const lxLoad=id=>IDB.get('lxApp:'+id,null);
+
+function lxLog(lvl,msg){
+  LX_LOG.push({lvl,msg:String(msg),ts:Date.now()});
+  if(LX_LOG.length>400)LX_LOG.splice(0,LX_LOG.length-400);
+  lxRenderLog();
+}
+function lxRenderLog(){
+  const host=$('#lx-log');if(!host)return;
+  if(!LX_LOG.length){host.innerHTML='<p class="help" style="margin:0">Nothing logged yet. Anything the app prints, warns or throws shows up here.</p>';return;}
+  host.innerHTML=LX_LOG.slice(-200).map(l=>
+    `<div class="lx-line ${esc(l.lvl)}"><span>${esc(l.lvl)}</span><code>${esc(l.msg)}</code></div>`).join('');
+  host.scrollTop=host.scrollHeight;
+}
+
+/* ── Taking delivery of a project ────────────────────────────────────────────
+   Everything that can produce one lands here, so the panel, the runtime picker, the library
+   entry and the stage all stay in step no matter which door the project came through. */
+function lxAccept(bundle,src){
+  const files=bundle.files||{},assets=bundle.assets||{};
+  if(!Object.keys(files).length&&!Object.keys(assets).length){
+    toast('Nothing readable in that — no text or asset files were found',4200);
+    return null;
+  }
+  const det=lxDetect(files,assets);
+  LXCUR={id:uid(),name:bundle.name||'Untitled app',files,assets,
+    mode:det.id,detected:det,entry:'',src:src||'files',
+    notes:(bundle.notes||[]).slice(),
+    bytes:Object.values(files).reduce((a,s)=>a+s.length,0)+
+          Object.values(assets).reduce((a,s)=>a+s.length,0)};
+  LXCUR.entry=LXCUR.mode==='html'||LXCUR.mode==='web'
+    ? (lxContext(files,assets).html[0]||Object.keys(files)[0]||'')
+    : lxEntryFor(lxContext(files,assets),LXCUR.mode);
+  LX_LOG=[];
+  if(typeof sfx==='function')sfx('install');
+  renderLaunch();
+  lxRun();
+  return LXCUR;
+}
+
+async function lxOpenFiles(list,src){
+  try{
+    const b=await lxFromFileList(list);
+    (b.notes||[]).forEach(n=>lxLog('info',n));
+    return lxAccept(b,src||'files');
+  }catch(e){toast('Could not read that: '+e.message,5200);return null;}
+}
+function lxPick(kind){
+  const i=document.createElement('input');
+  i.type='file';
+  if(kind==='folder'){i.webkitdirectory=true;i.multiple=true;}
+  else if(kind==='zip'){i.accept='.zip,application/zip';}
+  else{i.multiple=true;}
+  i.onchange=()=>{if(i.files&&i.files.length)lxOpenFiles(i.files,kind);};
+  i.click();
+}
+/* A repo that needs `npm install` still cannot be built here — but it no longer has to be.
+   The module loader resolves the imports a bundler would have resolved, so a Vite React app
+   from GitHub runs from its source tree directly. */
+async function lxOpenGithub(input){
+  const st=$('#lx-ghstatus');
+  const say=m=>{if(st)st.textContent=m;};
+  try{
+    say('Reading the repository…');
+    const scan=await ghScan(input);
+    const tree=await ghApi('repos/'+scan.g.owner+'/'+scan.g.repo+'/git/trees/'+
+      encodeURIComponent(scan.g.ref)+'?recursive=1');
+    const blobs=(tree.tree||[]).filter(t=>t.type==='blob'&&!LX_JUNK.test(t.path));
+    const text=blobs.filter(b=>lxIsText(b.path)&&b.size<600000).slice(0,200);
+    const bin=blobs.filter(b=>!lxIsText(b.path)&&LX_MIME[lxExt(b.path)]).slice(0,60);
+    if(!text.length)throw new Error('No readable source files in that repository.');
+    say('Fetching '+text.length+' files…');
+    const files={},assets={};
+    /* Six at a time: raw.githubusercontent has no documented per-file limit but a 200-way
+       parallel burst is how you get throttled rather than how you go faster. */
+    let i=0;
+    const worker=async()=>{
+      while(i<text.length){
+        const b=text[i++];
+        try{files[b.path]=await ghRaw(scan.g,b.path);}catch(e){lxLog('warn',b.path+': '+e.message);}
+        if(i%10===0)say('Fetching… '+i+'/'+text.length);
+      }
+    };
+    await Promise.all([worker(),worker(),worker(),worker(),worker(),worker()]);
+    /* Binaries stay as URLs. Fetching and base64-ing them would multiply the download for no
+       gain — the frame's CSP already allows images and media from anywhere. */
+    bin.forEach(b=>{assets[b.path]=GH_RAW+scan.g.owner+'/'+scan.g.repo+'/'+scan.g.ref+'/'+b.path;});
+    const norm=lxNormalize(Object.keys(files).map(p=>({path:p,text:files[p]})));
+    Object.keys(assets).forEach(p=>{norm.assets[p]=assets[p];});
+    norm.name=scan.g.owner+'/'+scan.g.repo;
+    if(scan.truncated)norm.notes.push('GitHub truncated the file tree — this is a partial copy of a very large repo.');
+    say('');
+    return lxAccept(norm,'github');
+  }catch(e){say('');toast('GitHub: '+e.message,5600);return null;}
+}
+async function lxOpenUrl(url){
+  try{
+    const r=await fetch(url);
+    if(!r.ok)throw new Error('the server returned '+r.status);
+    const ct=r.headers.get('content-type')||'';
+    if(/zip/.test(ct)||/\.zip(\?|$)/i.test(url)){
+      const z=await lxUnzip(await r.arrayBuffer());
+      const n=lxNormalize(z.entries);n.notes=z.notes.concat(n.notes);
+      n.name=url.split('/').pop().replace(/\.zip.*$/i,'')||'Downloaded app';
+      return lxAccept(n,'url');
+    }
+    const text=await r.text();
+    const name=(url.split('/').pop()||'index.html').split('?')[0]||'index.html';
+    return lxAccept({name:name.replace(/\.[a-z0-9]+$/i,''),files:{[name]:text},assets:{}},'url');
+  }catch(e){
+    toast('Could not fetch that URL: '+e.message+
+      (/failed|network/i.test(e.message)?' — most sites block cross-origin reads, which is CORS refusing, not the URL being wrong.':''),6200);
+    return null;
+  }
+}
+/* Pasting source straight in is the fastest path from "a model wrote this" to "I can see it
+   run", and it is also what the hand-off from Studio/Relay/Creations uses. */
+function lxOpenText(text,name){
+  const files=parseFiles(text);
+  if(Object.keys(files).length>1||/^[=\-]{2,}\s*FILE:/m.test(text))
+    return lxAccept({name:name||'Pasted project',files,assets:{}},'paste');
+  const t=String(text||'').trim();
+  if(!t){toast('Nothing to run',2200);return null;}
+  let fname=name||'';
+  if(!/\.[a-z0-9]+$/i.test(fname)){
+    fname=/^\s*</.test(t)&&/<html|<body|<!doctype/i.test(t)?'index.html'
+      :/<[A-Za-z][\s\S]*>/.test(t)&&/(function|const|let|=>|import)/.test(t)?'App.jsx'
+      :/^\s*(import|export|const|let|var|function|class)\b/m.test(t)?'main.js'
+      :/^\s*</.test(t)?'index.html':'main.js';
+  }
+  return lxAccept({name:name||fname,files:{[fname]:t},assets:{}},'paste');
+}
+
+/* ── Running it ──────────────────────────────────────────────────────────────*/
+function lxCurrentDoc(){
+  if(!LXCUR)return '';
+  const f=lxFrame(LAUNCH.frame);
+  const built=lxBuildDoc(LXCUR.files,LXCUR.assets,{
+    mode:LXCUR.mode,entry:LXCUR.entry,title:LXCUR.name,
+    platform:/android/i.test(f.os)?'android':'ios',scheme:LAUNCH.scheme,
+    safeT:f.id==='fit'?0:(f.safeT||0),safeB:f.id==='fit'?0:(f.safeB||0)});
+  LXCUR.libs=built.libs;
+  return built.html;
+}
+function lxRun(){
+  const stage=$('#lx-frame');if(!stage)return;
+  if(!LXCUR){stage.removeAttribute('srcdoc');return;}
+  LX_LOG=LX_LOG.filter(l=>l.lvl==='info');
+  try{LX_DOC=lxCurrentDoc();}
+  catch(e){lxLog('error','Could not build the page: '+e.message);lxRenderLog();return;}
+  /* Cleared first: replacing srcdoc on a frame that is already running leaves the old
+     document's timers alive in some browsers until the new one commits, which shows up as two
+     copies of a game's audio. */
+  stage.removeAttribute('srcdoc');
+  stage.srcdoc=LX_DOC;
+  lxLog('info','Launched '+LXCUR.entry+' as '+lxRuntime(LXCUR.mode).label+
+    (LXCUR.libs&&LXCUR.libs.length?' (libraries: '+LXCUR.libs.join(', ')+')':''));
+  lxApplyFrame();
+  lxRenderStatus();
+}
+/* Ask the running app whether anything is actually on screen. The whole point of a launcher is
+   that "it opened" and "it works" are different claims, and only one of them is checkable. */
+function lxProbe(){
+  const fr=$('#lx-frame');
+  if(!fr||!fr.contentWindow||!LXCUR)return Promise.resolve(null);
+  return new Promise(res=>{
+    const id=uid();let done=false;
+    const h=e=>{
+      const d=e.data;
+      if(!d||d.__lx!==1||d.t!=='probe'||d.id!==id)return;
+      done=true;window.removeEventListener('message',h);res(d);
+    };
+    window.addEventListener('message',h);
+    try{fr.contentWindow.postMessage({__lxAsk:1,id},'*');}catch(_){}
+    setTimeout(()=>{if(!done){window.removeEventListener('message',h);res(null);}},4000);
+  });
+}
+function lxApplyFrame(){
+  const f=lxFrame(LAUNCH.frame),stage=$('#lx-stage'),box=$('#lx-box');
+  if(!stage||!box)return;
+  const fit=f.id==='fit';
+  let w=f.w,h=f.h;
+  if(LAUNCH.rot&&!fit){const t=w;w=h;h=t;}
+  box.classList.toggle('lx-device',!fit&&!!f.chrome);
+  box.classList.toggle('lx-round',!fit&&!!f.round);
+  if(fit){
+    /* `height:100%` inside a parent with no resolved height computes to auto, which for an
+       iframe means its 150px default — the app loads, renders into a letterbox, and looks
+       broken. The panel is the thing with a real height, so the number comes from there. */
+    const full=!!document.fullscreenElement;
+    box.style.width='100%';
+    box.style.height=full?'100%':Math.max(360,Math.min(860,window.innerHeight-300))+'px';
+    box.style.transform='';
+    stage.style.height=full?'100%':'';
+  }else{
+    box.style.width=w+'px';box.style.height=h+'px';
+    const avail=stage.clientWidth-28,availH=Math.max(360,Math.min(880,window.innerHeight-330));
+    let z=LAUNCH.zoom==='fit'?Math.min(1,avail/w,availH/h):(parseInt(LAUNCH.zoom,10)/100);
+    if(!isFinite(z)||z<=0)z=1;
+    /* No transform at all when there is nothing to scale. `scale(1)` is not free: it makes the
+       box a containing block, promotes a layer, and marks the frame as CSS-transformed for
+       anything doing hit-testing against it. */
+    box.style.transform=z>=0.999?'':'scale('+z.toFixed(3)+')';
+    stage.style.height=Math.ceil(h*Math.min(z,1))+22+'px';
+  }
+  box.style.setProperty('--lx-safe-t',(f.safeT||0)+'px');
+  box.style.setProperty('--lx-safe-b',(f.safeB||0)+'px');
+  const lbl=$('#lx-framelbl');
+  if(lbl)lbl.textContent=fit?'fills the panel':(w+'×'+h+' · '+f.os);
+}
+function lxRenderStatus(){
+  const el=$('#lx-status');if(!el)return;
+  if(!LXCUR){el.textContent='';return;}
+  const n=Object.keys(LXCUR.files).length,a=Object.keys(LXCUR.assets).length;
+  el.innerHTML=`<b>${esc(LXCUR.name)}</b> · ${n} file${n===1?'':'s'}`+
+    (a?` + ${a} asset${a===1?'':'s'}`:'')+` · ${esc(lxBytes(LXCUR.bytes))}`;
+}
+
+/* ── Full screen, and its own tab ────────────────────────────────────────────*/
+function lxFullscreen(){
+  const el=$('#lx-stagewrap');if(!el)return;
+  if(document.fullscreenElement){document.exitFullscreen();return;}
+  const req=el.requestFullscreen||el.webkitRequestFullscreen;
+  if(!req)return toast('Fullscreen is not available in this browser',2600);
+  req.call(el);
+}
+/* The popped-out window is a shell whose only content is the SAME sandboxed frame. That is the
+   whole security design: the new tab is same-origin with this app, so anything running loose in
+   it could read the API keys — so nothing runs loose in it. The app still gets an opaque origin.
+
+   `document.write` rather than a URL because there is nowhere to put the document: it is
+   generated here, it is often megabytes, and a blob: URL would be same-origin with this app,
+   which is exactly what must not happen. */
+function lxPopOut(){
+  if(!LXCUR)return toast('Open something first',2400);
+  let doc;
+  try{doc=lxCurrentDoc();}catch(e){return toast('Could not build the page: '+e.message,5000);}
+  const touch=(()=>{try{return matchMedia('(pointer:coarse)').matches;}catch(_){return false;}})();
+  let w=null;
+  try{
+    w=touch?window.open('','_blank')
+      :window.open('','lxrun','width=1280,height=860,menubar=no,toolbar=no,location=no,status=no');
+  }catch(_){w=null;}
+  if(!w){
+    toast('Your browser blocked the pop-up. Allow pop-ups for this site, then press ↗ again.',6000);
+    return null;
+  }
+  const shell=lxPopShell(doc,LXCUR.name,lxRuntime(LXCUR.mode).label);
+  try{
+    w.document.open();w.document.write(shell);w.document.close();
+    w.focus();
+  }catch(e){
+    toast('Could not write to the new window: '+e.message,5000);
+    return null;
+  }
+  toast('Opened in its own tab — the app runs sandboxed there too, '+
+    'so it still cannot reach your keys or your saved work',4600);
+  return w;
+}
+/* The popped-out window's whole document, built separately so the thing that carries the
+   security guarantee can be read and tested on its own rather than living inside a function
+   that can only be exercised by opening a window. */
+function lxPopShell(doc,name,runtimeLabel){
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8">'+
+    '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'+
+    '<title>'+lxAttrEsc(name)+'</title><style>'+
+    'html,body{margin:0;height:100%;background:#0b0d12;color:#e8ecf6;'+
+    'font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow:hidden}'+
+    '#bar{position:fixed;inset:0 0 auto 0;height:34px;display:flex;align-items:center;gap:10px;'+
+    'padding:0 12px;background:rgba(11,13,18,.92);border-bottom:1px solid #26304a;z-index:5;'+
+    'transition:transform .22s;transform:translateY(-100%)}'+
+    'body:hover #bar,#bar:focus-within{transform:none}'+
+    '#hot{position:fixed;inset:0 0 auto 0;height:12px;z-index:6}'+
+    'button{background:#1b2130;color:#e8ecf6;border:1px solid #26304a;border-radius:8px;'+
+    'padding:4px 10px;font:inherit;cursor:pointer}'+
+    'iframe{position:fixed;inset:0;width:100%;height:100%;border:0;background:#fff}'+
+    '</style></head><body><div id="hot"></div><div id="bar">'+
+    '<b>'+lxAttrEsc(name)+'</b><span style="opacity:.6">'+lxAttrEsc(runtimeLabel)+
+    ' · sandboxed, no access to your keys</span><span style="flex:1"></span>'+
+    '<button id="rl">Reload</button></div>'+
+    '<iframe id="fr" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-pointer-lock allow-downloads"></iframe>'+
+    lxTag('var D='+lxJson(doc)+';var fr=document.getElementById("fr");'+
+      'var go=function(){fr.removeAttribute("srcdoc");fr.srcdoc=D;};go();'+
+      'document.getElementById("rl").onclick=go;'+
+      'document.title='+lxJson(name)+';')+
+    '</body></html>';
+}
+
+/* ── Keeping it ──────────────────────────────────────────────────────────────*/
+async function lxKeep(){
+  if(!LXCUR)return;
+  const item={id:LXCUR.id,name:LXCUR.name,mode:LXCUR.mode,entry:LXCUR.entry,
+    src:LXCUR.src,ts:nowISO(),files:Object.keys(LXCUR.files).length,
+    assets:Object.keys(LXCUR.assets).length,bytes:LXCUR.bytes};
+  LAUNCH.items=[item].concat((LAUNCH.items||[]).filter(x=>x.id!==item.id));
+  LAUNCH.last=item.id;saveLaunch();
+  await lxSave(item.id,{files:LXCUR.files,assets:LXCUR.assets,
+    name:LXCUR.name,mode:LXCUR.mode,entry:LXCUR.entry});
+  toast('Kept in the library — it survives a reload',3000);
+  renderLaunch();
+}
+async function lxOpenSaved(id){
+  const item=(LAUNCH.items||[]).find(x=>x.id===id);
+  const data=await lxLoad(id);
+  if(!data){
+    toast('That project’s files are gone from storage — the entry has been removed',4200);
+    LAUNCH.items=(LAUNCH.items||[]).filter(x=>x.id!==id);saveLaunch();renderLaunch();
+    return;
+  }
+  LXCUR={id,name:data.name||(item&&item.name)||'App',files:data.files||{},assets:data.assets||{},
+    mode:data.mode||lxDetect(data.files,data.assets).id,entry:data.entry||'',
+    detected:lxDetect(data.files||{},data.assets||{}),src:(item&&item.src)||'library',notes:[],
+    bytes:Object.values(data.files||{}).reduce((a,s)=>a+s.length,0)};
+  LX_LOG=[];renderLaunch();lxRun();
+}
+function lxForget(id){
+  LAUNCH.items=(LAUNCH.items||[]).filter(x=>x.id!==id);saveLaunch();
+  IDB.set('lxApp:'+id,null);
+  if(LXCUR&&LXCUR.id===id)LXCUR=null;
+  renderLaunch();
+}
+function lxExportZip(){
+  if(!LXCUR)return;
+  const files=Object.assign({},LXCUR.files);
+  files['LAUNCHER.md']='# '+LXCUR.name+'\n\nExported from the Glassbox Jet Launcher.\n\n'+
+    '- Runtime: '+lxRuntime(LXCUR.mode).label+'\n- Entry: '+LXCUR.entry+'\n'+
+    '- Files: '+Object.keys(LXCUR.files).length+'\n'+
+    (Object.keys(LXCUR.assets).length?'\nBinary assets were inlined when this project was opened and '+
+      'are not in this archive; the originals are in the folder or zip you opened.\n':'');
+  downloadBlob((LXCUR.name||'app').replace(/[^\w.-]+/g,'-').toLowerCase()+'.zip',makeZip(files));
+}
+/* The built document, as one file that runs anywhere — the single most portable thing the
+   Launcher can produce, because everything is already inlined. */
+function lxExportHtml(){
+  if(!LXCUR)return;
+  let doc;
+  try{doc=lxCurrentDoc();}catch(e){return toast('Could not build the page: '+e.message,5000);}
+  downloadBlob((LXCUR.name||'app').replace(/[^\w.-]+/g,'-').toLowerCase()+'.html',
+    new Blob([doc],{type:'text/html'}));
+}
+
+
+/* ── Samples ─────────────────────────────────────────────────────────────────
+   Seven projects that exercise seven different runtimes, present with no key, no network for
+   most of them and no files of your own. They exist for two reasons: an empty launcher teaches
+   nobody what it does, and a feature whose only test data is "whatever the user happens to
+   drop" has no reproducible test at all — the regression suite runs these exact projects. */
+const LX_SAMPLES=[
+  {id:'breakout',name:'Neon Breakout',icon:'\u{1F3AE}',mode:'html',frame:'fit',
+   blurb:'A canvas game in one HTML file — the plain case.',
+   files:()=>({'index.html':
+`<!doctype html><html><head><meta charset="utf-8"><title>Neon Breakout</title>
+<style>html,body{margin:0;height:100%;background:#0a0b12;overflow:hidden}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+#hud{position:fixed;top:10px;left:12px;color:#7ee0c0;font:600 13px ui-monospace,monospace}</style>
+</head><body><div id="hud">score 0</div><canvas id="board"></canvas>
+<scr`+`ipt>
+const c=document.getElementById('board'),x=c.getContext('2d'),hud=document.getElementById('hud');
+let W=0,H=0,score=0,over=false;
+const fit=()=>{W=c.width=innerWidth;H=c.height=innerHeight;};
+addEventListener('resize',fit);fit();
+const pad={w:96,h:12,x:0},ball={x:0,y:0,vx:3.6,vy:-3.6,r:6};
+let bricks=[];
+function reset(){
+  pad.x=W/2-pad.w/2;ball.x=W/2;ball.y=H*0.62;ball.vx=3.6;ball.vy=-3.6;
+  bricks=[];const cols=Math.max(5,Math.min(11,Math.floor(W/72))),rows=5,bw=(W-40)/cols;
+  for(let r=0;r<rows;r++)for(let i=0;i<cols;i++)
+    bricks.push({x:20+i*bw,y:60+r*26,w:bw-6,h:18,hue:190+r*22});
+}
+reset();
+addEventListener('pointermove',e=>{pad.x=Math.max(0,Math.min(W-pad.w,e.clientX-pad.w/2));});
+addEventListener('pointerdown',()=>{if(over){score=0;over=false;reset();}});
+function step(){
+  x.fillStyle='#0a0b12';x.fillRect(0,0,W,H);
+  if(!over){
+    ball.x+=ball.vx;ball.y+=ball.vy;
+    if(ball.x<ball.r||ball.x>W-ball.r)ball.vx*=-1;
+    if(ball.y<ball.r)ball.vy*=-1;
+    if(ball.y>H-26&&ball.y<H-14&&ball.x>pad.x&&ball.x<pad.x+pad.w){
+      ball.vy=-Math.abs(ball.vy);ball.vx+=(ball.x-(pad.x+pad.w/2))/26;}
+    if(ball.y>H+20)over=true;
+    for(let i=0;i<bricks.length;i++){
+      const b=bricks[i];
+      if(ball.x>b.x&&ball.x<b.x+b.w&&ball.y>b.y&&ball.y<b.y+b.h){
+        bricks.splice(i,1);ball.vy*=-1;score+=10;hud.textContent='score '+score;break;}
+    }
+    if(!bricks.length)reset();
+  }
+  bricks.forEach(b=>{x.fillStyle='hsl('+b.hue+' 80% 58%)';x.fillRect(b.x,b.y,b.w,b.h);});
+  x.fillStyle='#7ee0c0';x.fillRect(pad.x,H-26,pad.w,pad.h);
+  x.beginPath();x.arc(ball.x,ball.y,ball.r,0,7);x.fill();
+  if(over){x.fillStyle='#fff';x.font='600 18px system-ui';x.textAlign='center';
+    x.fillText('tap to play again',W/2,H/2);x.textAlign='left';}
+  requestAnimationFrame(step);
+}
+step();
+</scr`+`ipt></body></html>`})},
+
+  {id:'react',name:'React counter + list',icon:'⚛️',mode:'react',frame:'fit',
+   blurb:'Three files importing each other, plus a CSS import — the module graph in miniature.',
+   files:()=>({
+    'src/main.jsx':`import React from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App.jsx';
+import './styles.css';
+createRoot(document.getElementById('root')).render(<App />);`,
+    'src/App.jsx':`import React, { useState } from 'react';
+import Row from './Row.jsx';
+export default function App(){
+  const [n,setN]=useState(0);
+  const [items,setItems]=useState(['Open a folder','Run it','Pop it out']);
+  const [draft,setDraft]=useState('');
+  return (
+    <div className="wrap">
+      <h1>It compiled, and it is running.</h1>
+      <p className="sub">Three files, one CSS import, no build step.</p>
+      <button className="big" onClick={()=>setN(n+1)}>pressed {n} times</button>
+      <form onSubmit={e=>{e.preventDefault();if(!draft.trim())return;setItems([...items,draft]);setDraft('');}}>
+        <input value={draft} onChange={e=>setDraft(e.target.value)} placeholder="add something" />
+        <button type="submit">add</button>
+      </form>
+      <ul>{items.map((t,i)=><Row key={i} text={t} onGone={()=>setItems(items.filter((_,j)=>j!==i))} />)}</ul>
+    </div>);
+}`,
+    'src/Row.jsx':`import React from 'react';
+export default function Row({text,onGone}){
+  return <li><span>{text}</span><button onClick={onGone}>remove</button></li>;
+}`,
+    'src/styles.css':`body{background:#0f1320;color:#e8ecf6;font-family:system-ui,sans-serif}
+.wrap{max-width:560px;margin:0 auto;padding:36px 22px}
+h1{font-size:23px;margin:0 0 4px}
+.sub{color:#8b96b0;margin:0 0 22px}
+.big{background:#6ea8ff;color:#08101f;border:0;border-radius:11px;padding:12px 18px;font-weight:700;font-size:15px;cursor:pointer}
+form{display:flex;gap:8px;margin:20px 0 10px}
+input{flex:1;background:#151925;border:1px solid #2b3350;color:#e8ecf6;border-radius:9px;padding:10px 12px}
+form button{background:#2b3350;color:#e8ecf6;border:0;border-radius:9px;padding:10px 16px;cursor:pointer}
+ul{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+li{display:flex;align-items:center;gap:10px;background:#151925;border:1px solid #232b44;border-radius:10px;padding:11px 13px}
+li span{flex:1}
+li button{background:none;border:0;color:#8b96b0;cursor:pointer;font-size:12px}`})},
+
+  {id:'native',name:'React Native notes app',icon:'\u{1F4F1}',mode:'native',frame:'iphone-15',
+   blurb:'Screens, a stack navigator, a list, an input and Alert — running in a phone frame.',
+   files:()=>({
+    'App.js':`import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, SafeAreaView } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { StatusBar } from 'expo-status-bar';
+
+const Stack = createNativeStackNavigator();
+let SEED = [
+  { id: '1', title: 'Ship the launcher', body: 'Folders, zips, jsx, the lot.' },
+  { id: '2', title: 'Groceries', body: 'Oats, coffee, something green.' },
+];
+
+function ListScreen({ navigation }) {
+  const [notes, setNotes] = useState(SEED);
+  const [draft, setDraft] = useState('');
+  const add = () => {
+    if (!draft.trim()) return Alert.alert('Nothing to add', 'Type a title first.');
+    const next = [{ id: String(Date.now()), title: draft, body: 'Tap to open.' }, ...notes];
+    setNotes(next); SEED = next; setDraft('');
+  };
+  return (
+    <SafeAreaView style={s.screen}>
+      <View style={s.composer}>
+        <TextInput style={s.input} value={draft} onChangeText={setDraft}
+          placeholder="New note" onSubmitEditing={add} />
+        <TouchableOpacity style={s.add} onPress={add}><Text style={s.addText}>Add</Text></TouchableOpacity>
+      </View>
+      <FlatList data={notes} keyExtractor={n => n.id}
+        ListEmptyComponent={<Text style={s.empty}>No notes yet.</Text>}
+        renderItem={({ item }) => (
+          <TouchableOpacity style={s.card} onPress={() => navigation.navigate('Note', { note: item })}>
+            <Text style={s.title}>{item.title}</Text>
+            <Text style={s.body} numberOfLines={1}>{item.body}</Text>
+          </TouchableOpacity>
+        )} />
+      <StatusBar style="auto" />
+    </SafeAreaView>
+  );
+}
+function NoteScreen({ route }) {
+  const note = route.params.note;
+  return (
+    <View style={s.detail}>
+      <Text style={s.detailTitle}>{note.title}</Text>
+      <Text style={s.detailBody}>{note.body}</Text>
+      <TouchableOpacity style={s.add} onPress={() => Alert.alert(note.title, note.body)}>
+        <Text style={s.addText}>Show an alert</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+export default function App() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator>
+        <Stack.Screen name="Notes" component={ListScreen} options={{ title: 'Notes' }} />
+        <Stack.Screen name="Note" component={NoteScreen} options={{ title: 'Note' }} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+const s = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: '#f6f7fb' },
+  composer: { flexDirection: 'row', gap: 8, padding: 14 },
+  input: { flex: 1, backgroundColor: '#fff', borderColor: '#dfe3ee', borderWidth: 1,
+           borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15 },
+  add: { backgroundColor: '#2f6bff', borderRadius: 10, paddingHorizontal: 16, justifyContent: 'center' },
+  addText: { color: '#fff', fontWeight: '700' },
+  card: { backgroundColor: '#fff', marginHorizontal: 14, marginBottom: 10, padding: 14,
+          borderRadius: 12, borderWidth: 1, borderColor: '#e7eaf3' },
+  title: { fontSize: 16, fontWeight: '700', color: '#141a26' },
+  body: { fontSize: 13, color: '#6b768f', marginTop: 3 },
+  empty: { textAlign: 'center', color: '#98a1b5', marginTop: 30 },
+  detail: { flex: 1, padding: 20, backgroundColor: '#fff' },
+  detailTitle: { fontSize: 22, fontWeight: '800', color: '#141a26' },
+  detailBody: { fontSize: 15, color: '#455068', marginTop: 8, marginBottom: 20 },
+});`})},
+
+  {id:'vue',name:'Vue single-file component',icon:'\u{1F7E9}',mode:'vue',frame:'fit',
+   blurb:'A .vue file split into template, script and style by the built-in SFC splitter.',
+   files:()=>({'App.vue':
+`<template>
+  <div class="card">
+    <h1>{{ greeting }}</h1>
+    <p>The clock is live, so you can see it is really running.</p>
+    <p class="clock">{{ now }}</p>
+    <button @click="bump">clicked {{ count }} times</button>
+  </div>
+</template>
+<scr`+`ipt>
+export default {
+  data(){ return { count:0, now:new Date().toLocaleTimeString(), greeting:'Vue 3, no build step' }; },
+  mounted(){ this.t=setInterval(()=>{ this.now=new Date().toLocaleTimeString(); },1000); },
+  unmounted(){ clearInterval(this.t); },
+  methods:{ bump(){ this.count++; } }
+};
+</scr`+`ipt>
+<style>
+body{background:#0f1320;color:#e8ecf6;font-family:system-ui,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center}
+.card{background:#151925;border:1px solid #232b44;border-radius:16px;padding:30px 34px;text-align:center;max-width:420px}
+h1{margin:0 0 6px;font-size:21px;color:#7ee0c0}
+p{color:#8b96b0;margin:4px 0}
+.clock{font:600 30px ui-monospace,Menlo,monospace;color:#e8ecf6;margin:16px 0}
+button{background:#42b883;color:#06221a;border:0;border-radius:10px;padding:11px 18px;font-weight:700;cursor:pointer}
+</style>`})},
+
+  {id:'svelte',name:'Svelte component',icon:'\u{1F7E0}',mode:'svelte',frame:'fit',
+   blurb:'Compiled in the browser by the real Svelte compiler.',
+   files:()=>({'App.svelte':
+`<scr`+`ipt>
+  let count = 0;
+  let items = ['reactive', 'compiled in the browser', 'no bundler'];
+  $: doubled = count * 2;
+</scr`+`ipt>
+<main>
+  <h1>Svelte, compiled here</h1>
+  <button on:click={() => count++}>count {count}</button>
+  <p>doubled: {doubled}</p>
+  <ul>{#each items as it}<li>{it}</li>{/each}</ul>
+</main>
+<style>
+  :global(body){background:#0f1320;margin:0;font-family:system-ui,sans-serif}
+  main{max-width:440px;margin:0 auto;padding:46px 22px;color:#e8ecf6;text-align:center}
+  h1{font-size:22px;color:#ff7a4d}
+  button{background:#ff3e00;color:#fff;border:0;border-radius:10px;padding:11px 20px;font-weight:700;cursor:pointer}
+  p{color:#8b96b0}
+  ul{list-style:none;padding:0;display:grid;gap:7px;margin-top:20px}
+  li{background:#151925;border:1px solid #232b44;border-radius:9px;padding:10px}
+</style>`})},
+
+  {id:'p5',name:'p5.js flow field',icon:'\u{1F3A8}',mode:'p5',frame:'fit',
+   blurb:'A sketch with setup() and draw(), kept in p5 global mode.',
+   files:()=>({'sketch.js':
+`let pts=[];
+function setup(){
+  createCanvas(windowWidth,windowHeight);
+  background(8,10,18);
+  for(let i=0;i<900;i++)pts.push({x:random(width),y:random(height)});
+  stroke(126,224,192,26);
+  noFill();
+}
+function draw(){
+  for(const p of pts){
+    const a=noise(p.x*0.0016,p.y*0.0016,frameCount*0.0022)*TWO_PI*2.4;
+    const nx=p.x+cos(a)*1.5,ny=p.y+sin(a)*1.5;
+    line(p.x,p.y,nx,ny);
+    p.x=nx;p.y=ny;
+    if(p.x<0||p.x>width||p.y<0||p.y>height){p.x=random(width);p.y=random(height);}
+  }
+  if(frameCount%420===0){noStroke();fill(8,10,18,34);rect(0,0,width,height);stroke(126,224,192,26);noFill();}
+}
+function windowResized(){resizeCanvas(windowWidth,windowHeight);background(8,10,18);}`})},
+
+  {id:'web',name:'Multi-file web project',icon:'\u{1F4C1}',mode:'web',frame:'fit',
+   blurb:'index.html with a separate stylesheet, a module script and an inline SVG asset — '+
+     'the folder case, wired up with no server.',
+   files:()=>({
+    'index.html':`<!doctype html><html><head><meta charset="utf-8"><title>Starfield</title>
+<link rel="stylesheet" href="./style.css"></head>
+<body><header><img src="./logo.svg" alt="" width="34" height="34"><h1>Starfield</h1></header>
+<canvas id="sky"></canvas><p id="note">style.css, sky.js and logo.svg were all separate files.</p>
+<scr`+`ipt type="module" src="./sky.js"></scr`+`ipt></body></html>`,
+    'style.css':`body{margin:0;background:#05060c;color:#cfd8ee;font-family:system-ui,sans-serif;overflow:hidden}
+header{position:fixed;top:14px;left:18px;display:flex;align-items:center;gap:10px;z-index:2}
+h1{font-size:17px;margin:0;letter-spacing:.04em}
+#note{position:fixed;bottom:14px;left:18px;margin:0;font-size:12px;color:#5d6a89;z-index:2}
+canvas{display:block;width:100vw;height:100vh}`,
+    'sky.js':`import { makeStars } from './stars.js';
+const c=document.getElementById('sky'),x=c.getContext('2d');
+let stars=[];
+const fit=()=>{c.width=innerWidth;c.height=innerHeight;stars=makeStars(340,c.width,c.height);};
+addEventListener('resize',fit);fit();
+(function loop(){
+  x.fillStyle='#05060c';x.fillRect(0,0,c.width,c.height);
+  for(const s of stars){
+    s.z-=s.v;
+    if(s.z<1){s.z=c.width;s.x=Math.random()*c.width;s.y=Math.random()*c.height;}
+    const k=128/s.z,px=(s.x-c.width/2)*k+c.width/2,py=(s.y-c.height/2)*k+c.height/2;
+    const r=Math.max(.4,(1-s.z/c.width)*2.4);
+    x.fillStyle='rgba(207,216,238,'+(1-s.z/c.width).toFixed(2)+')';
+    x.beginPath();x.arc(px,py,r,0,7);x.fill();
+  }
+  requestAnimationFrame(loop);
+})();`,
+    'stars.js':`export function makeStars(n,w,h){
+  const out=[];
+  for(let i=0;i<n;i++)out.push({x:Math.random()*w,y:Math.random()*h,z:Math.random()*w,v:1+Math.random()*3});
+  return out;
+}`,
+    'logo.svg':`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="none" stroke="#7ee0c0" stroke-width="2"/><circle cx="16" cy="16" r="4" fill="#7ee0c0"/></svg>`})},
+
+  {id:'python',name:'Python — primes and a plot',icon:'\u{1F40D}',mode:'python',frame:'fit',
+   blurb:'Real CPython in WebAssembly. Downloads about 10 MB the first time.',
+   files:()=>({'main.py':
+`import sys, time
+print("CPython", sys.version.split()[0], "running in the browser")
+
+def primes(limit):
+    sieve = bytearray([1]) * limit
+    sieve[0:2] = b"\\x00\\x00"
+    for n in range(2, int(limit ** 0.5) + 1):
+        if sieve[n]:
+            sieve[n*n::n] = bytearray(len(sieve[n*n::n]))
+    return [i for i, f in enumerate(sieve) if f]
+
+t = time.time()
+p = primes(200000)
+print(f"{len(p)} primes below 200,000 in {time.time()-t:.3f}s")
+print("last ten:", p[-10:])
+
+width = 48
+print()
+print("gaps between consecutive primes, first 20:")
+for a, b in zip(p[:20], p[1:21]):
+    print(f"{a:>6} -> {b:<6} " + "#" * (b - a))
+`})},
+];
+function lxSample(id){
+  const s=LX_SAMPLES.find(x=>x.id===id);if(!s)return null;
+  /* Set the frame BEFORE accepting. Doing it after meant a second launch (the app booted
+     twice, and a game with audio started twice) and left the Device picker showing whatever
+     was selected before, which then disagreed with the frame actually on screen. */
+  if(s.frame){LAUNCH.frame=s.frame;saveLaunch();}
+  return lxAccept({name:s.name,files:s.files(),assets:{}},'sample');
+}
+
+
+/* ── The panel ───────────────────────────────────────────────────────────────
+   Every list here is built from its data table — frames from LX_FRAMES, runtimes from
+   LX_RUNTIMES, samples from LX_SAMPLES, the library from LAUNCH.items. This file has produced
+   the same bug three times: a nav typed out by hand, and a new entry added to the data that
+   silently never appears. */
+function renderLaunch(){
+  lxRenderOpen();
+  lxRenderControls();
+  lxRenderStatus();
+  lxRenderLog();
+  lxRenderLibrary();
+  lxRenderKinds();
+  lxApplyFrame();
+}
+function lxRenderOpen(){
+  const host=$('#lx-open');if(!host)return;
+  host.innerHTML=
+    `<button class="btn" data-lxopen="files">📄 Open file(s)</button>`+
+    `<button class="btn ghost" data-lxopen="folder">📁 Open a folder</button>`+
+    `<button class="btn ghost" data-lxopen="zip">🗜 Open a .zip</button>`+
+    `<button class="btn ghost" data-lxopen="paste">⌨ Paste code</button>`;
+  $$('[data-lxopen]').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.lxopen;
+    if(k==='paste')return lxPasteModal();
+    lxPick(k);
+  });
+  const s=$('#lx-samples');
+  if(s){
+    s.innerHTML=LX_SAMPLES.map(x=>
+      `<button class="chip" data-lxsample="${esc(x.id)}" title="${esc(x.blurb)}">${x.icon} ${esc(x.name)}</button>`).join('');
+    $$('[data-lxsample]').forEach(b=>b.onclick=()=>lxSample(b.dataset.lxsample));
+  }
+}
+function lxPasteModal(){
+  openModal(`<h3 style="margin-top:0">Paste code</h3>
+    <p class="help">One file, or several using the <span class="mono">===FILE: name===</span> format the
+      rest of this app uses. The runtime is worked out from what you paste, and you can override it after.</p>
+    <label class="field" style="margin-top:10px">Name<input type="text" id="lxp-name" placeholder="My app"></label>
+    <textarea id="lxp-src" class="mono" rows="14" style="width:100%;margin-top:8px"
+      placeholder="&lt;!doctype html&gt;…  or  export default function App(){…}"></textarea>
+    <div class="row" style="margin-top:10px"><button class="btn" id="lxp-go">Run it</button></div>`);
+  const go=$('#lxp-go');
+  if(go)go.onclick=()=>{
+    const t=($('#lxp-src')||{}).value||'';
+    const n=(($('#lxp-name')||{}).value||'').trim();
+    closeModal();
+    lxOpenText(t,n);
+  };
+}
+function lxRenderControls(){
+  const host=$('#lx-controls');if(!host)return;
+  const cur=LXCUR;
+  const runtimes=LX_RUNTIMES.map(r=>
+    `<option value="${esc(r.id)}"${cur&&cur.mode===r.id?' selected':''}>${r.icon} ${esc(r.label)}</option>`).join('');
+  const entries=cur?Object.keys(cur.files).map(n=>
+    `<option value="${esc(n)}"${n===cur.entry?' selected':''}>${esc(n)}</option>`).join(''):'';
+  const frames=LX_FRAMES.map(f=>
+    `<option value="${esc(f.id)}"${LAUNCH.frame===f.id?' selected':''}>${esc(f.name)}${f.w?' — '+f.w+'×'+f.h:''}</option>`).join('');
+  const act=(id,label,cls)=>`<button class="btn ${cls||'ghost'} small" data-lxact="${id}"${cur?'':' disabled'}>${label}</button>`;
+  /* Two rows of their own rather than one wrapping row: the pickers and the verbs are different
+     kinds of control, and interleaving them put "Run" in a different place depending on how wide
+     the window happened to be. */
+  host.innerHTML=`<div class="lx-ctl">
+    <div class="row">
+      <label class="field" style="min-width:190px">Runtime<select data-lxsel="mode"${cur?'':' disabled'}>${runtimes}</select></label>
+      <label class="field" style="min-width:180px">Entry file<select data-lxsel="entry"${cur?'':' disabled'}>${entries}</select></label>
+      <label class="field" style="min-width:200px">Device<select data-lxsel="frame">${frames}</select></label>
+      <label class="field" style="min-width:96px">Zoom<select data-lxsel="zoom">`+
+        ['fit','100','75','50','33'].map(z=>
+          `<option value="${z}"${LAUNCH.zoom===z?' selected':''}>${z==='fit'?'fit':z+'%'}</option>`).join('')+
+      `</select></label>
+      <span class="mini muted" id="lx-framelbl" style="align-self:flex-end;padding-bottom:9px"></span>
+    </div>
+    <div class="row lx-actions">
+      ${act('run','▶ Run','good')}
+      <button class="btn ghost small${LAUNCH.rot?' on':''}" data-lxact="rotate">⟳ Rotate</button>
+      <button class="btn ghost small" data-lxact="scheme">${LAUNCH.scheme==='dark'?'🌙 Dark':'☀️ Light'}</button>
+      ${act('full','⛶ Fullscreen')}
+      ${act('pop','↗ Own tab')}
+      ${act('check','🔍 Did it render?')}
+      ${act('keep','💾 Keep')}
+      ${act('zip','🗜 .zip')}
+      ${act('html','📄 One .html')}
+      ${act('send','➦ Send to…')}
+    </div></div>`;
+  $$('[data-lxsel]').forEach(sel=>sel.onchange=()=>{
+    const k=sel.dataset.lxsel,v=sel.value;
+    if(k==='mode'&&LXCUR){
+      LXCUR.mode=v;
+      const ctx=lxContext(LXCUR.files,LXCUR.assets);
+      LXCUR.entry=(v==='html'||v==='web')?(ctx.html[0]||Object.keys(LXCUR.files)[0]||''):lxEntryFor(ctx,v);
+      renderLaunch();lxRun();return;
+    }
+    if(k==='entry'&&LXCUR){LXCUR.entry=v;lxRun();lxRenderControls();return;}
+    LAUNCH[k]=v;saveLaunch();
+    if(k==='frame'){lxRun();}else lxApplyFrame();
+  });
+  $$('[data-lxact]').forEach(b=>b.onclick=()=>{
+    const a=b.dataset.lxact;
+    if(a==='rotate'){LAUNCH.rot=!LAUNCH.rot;saveLaunch();lxApplyFrame();lxRenderControls();}
+    else if(a==='scheme'){LAUNCH.scheme=LAUNCH.scheme==='dark'?'light':'dark';saveLaunch();lxRun();lxRenderControls();}
+    else if(a==='run')lxRun();
+    else if(a==='full')lxFullscreen();
+    else if(a==='pop')lxPopOut();
+    else if(a==='check')lxCheck();
+    else if(a==='keep')lxKeep();
+    else if(a==='zip')lxExportZip();
+    else if(a==='html')lxExportHtml();
+    else if(a==='send')lxSend();
+  });
+  const det=$('#lx-detect');
+  if(det)det.innerHTML=LXCUR
+    ? `Opened as <b>${esc(lxRuntime(LXCUR.mode).label)}</b> — detected because ${esc(LXCUR.detected.why)}.`+
+      (LXCUR.mode!==LXCUR.detected.id?' <b>You have overridden the detection.</b>':'')+
+      (LXCUR.notes&&LXCUR.notes.length?'<br>'+LXCUR.notes.map(esc).join('<br>'):'')
+    : 'Nothing open yet. Open a file, a folder or a zip — or try one of the samples above.';
+}
+/* "It launched" and "it works" are different claims. This one asks the running app. */
+async function lxCheck(){
+  const p=await lxProbe();
+  if(!p)return toast('The app did not answer — it may still be loading, or it replaced the page entirely',5200);
+  if(p.failed)return toast('It is running but it threw — see the red overlay and the console below',5200);
+  if(!p.ok||(p.nodes<2&&!p.canvas))
+    return toast('It loaded but rendered nothing: '+p.nodes+' elements, no canvas. That is usually a wrong entry file.',6200);
+  toast('Rendering: '+p.nodes+' elements'+(p.canvas?', canvas '+p.canvas:'')+
+    (p.chars?', '+p.chars+' characters of text':''),4600);
+}
+function lxSend(){
+  if(!LXCUR)return;
+  let doc;
+  try{doc=lxCurrentDoc();}catch(e){return toast('Could not build the page: '+e.message,5000);}
+  /* A single runnable page is what every other surface here can take — Studio edits it, the
+     WebOS installs it as a desktop app, Creations keeps it. The multi-file original goes along
+     as `files` so Studio gets the real tree rather than the flattened build. */
+  connMenu(connMake(Object.keys(LXCUR.files).length>1?'files':'html',
+    Object.keys(LXCUR.files).length>1?LXCUR.files:doc,LXCUR.name,'launch'));
+}
+function lxRenderLibrary(){
+  const host=$('#lx-lib');if(!host)return;
+  const items=LAUNCH.items||[];
+  if(!items.length){
+    host.innerHTML='<p class="help" style="margin:0">Nothing kept yet. Press <b>Keep</b> on anything you '+
+      'open and it lands here, files and all, so it survives a reload and a restart.</p>';
+    return;
+  }
+  host.innerHTML='<div class="lx-lib">'+items.map(it=>{
+    const r=lxRuntime(it.mode);
+    return `<div class="lx-item${LXCUR&&LXCUR.id===it.id?' on':''}">
+      <button class="lx-hit" data-lxlib="${esc(it.id)}">
+        <span class="lx-ico">${r.icon}</span>
+        <span class="lx-meta"><b>${esc(it.name)}</b>
+          <span class="mini muted">${esc(r.label)} · ${it.files} file${it.files===1?'':'s'} · ${esc(lxBytes(it.bytes||0))}</span></span>
+      </button>
+      <button class="btn ghost small" data-lxdrop="${esc(it.id)}" title="Remove from the library">✕</button>
+    </div>`;
+  }).join('')+'</div>';
+  $$('[data-lxlib]').forEach(b=>b.onclick=()=>lxOpenSaved(b.dataset.lxlib));
+  $$('[data-lxdrop]').forEach(b=>b.onclick=()=>{
+    const it=(LAUNCH.items||[]).find(x=>x.id===b.dataset.lxdrop);
+    openModal(`<h3 style="margin-top:0">Remove “${esc(it?it.name:'this')}”?</h3>
+      <p class="help">The files are deleted from this browser. Anything you exported as a zip or an
+        HTML file is untouched.</p>
+      <div class="row" style="margin-top:12px">
+        <button class="btn bad" data-lxconfirm="${esc(b.dataset.lxdrop)}">Remove it</button>
+        <button class="btn ghost" data-lxcancel="1">Keep it</button></div>`);
+    const y=$('[data-lxconfirm]'),n=$('[data-lxcancel]');
+    if(y)y.onclick=()=>{lxForget(y.dataset.lxconfirm);closeModal();};
+    if(n)n.onclick=closeModal;
+  });
+}
+function lxRenderKinds(){
+  const host=$('#lx-kinds');if(!host)return;
+  host.innerHTML='<div class="lx-kinds">'+LX_RUNTIMES.map(r=>
+    `<div class="lx-kind"><b>${r.icon} ${esc(r.label)}</b><span>${esc(r.blurb)}</span></div>`).join('')+'</div>';
+}
+
+/* ── Wiring ──────────────────────────────────────────────────────────────────*/
+let LX_WIRED=false;
+function lxInit(){
+  if(LX_WIRED)return;
+  LX_WIRED=true;
+  const drop=$('#lx-drop');
+  if(drop){
+    const stop=e=>{e.preventDefault();e.stopPropagation();};
+    ['dragenter','dragover'].forEach(t=>drop.addEventListener(t,e=>{stop(e);drop.classList.add('over');}));
+    ['dragleave','drop'].forEach(t=>drop.addEventListener(t,e=>{stop(e);drop.classList.remove('over');}));
+    drop.addEventListener('drop',async e=>{
+      try{
+        const b=await lxFromDrop(e.dataTransfer);
+        (b.notes||[]).forEach(n=>lxLog('info',n));
+        lxAccept(b,'drop');
+      }catch(err){toast('Could not read that drop: '+err.message,5200);}
+    });
+    drop.onclick=()=>lxPick('files');
+  }
+  const gh=$('#lx-ghgo'),ghi=$('#lx-ghrepo');
+  if(gh&&ghi){
+    gh.onclick=()=>{const v=ghi.value.trim();if(v)lxOpenGithub(v);};
+    ghi.onkeydown=e=>{if(e.key==='Enter'){const v=ghi.value.trim();if(v)lxOpenGithub(v);}};
+  }
+  const ur=$('#lx-urlgo'),uri=$('#lx-url');
+  if(ur&&uri){
+    ur.onclick=()=>{const v=uri.value.trim();if(v)lxOpenUrl(v);};
+    uri.onkeydown=e=>{if(e.key==='Enter'){const v=uri.value.trim();if(v)lxOpenUrl(v);}};
+  }
+  const cl=$('#lx-clearlog');
+  if(cl)cl.onclick=()=>{LX_LOG=[];lxRenderLog();};
+  /* One listener for the whole feature. It has to check the SOURCE, not just the shape of the
+     message: any page that can reach this window can post `{__lx:1}`, and a launcher that
+     believed it would be echoing attacker-controlled strings into the console panel. */
+  window.addEventListener('message',e=>{
+    const d=e.data;
+    if(!d||d.__lx!==1)return;
+    const fr=$('#lx-frame');
+    if(!fr||e.source!==fr.contentWindow)return;
+    if(d.t==='log')lxLog(d.lvl==='error'?'error':d.lvl==='warn'?'warn':'log',d.msg);
+    else if(d.t==='error'){lxLog('error',d.msg);if(typeof sfx==='function')sfx('fail');}
+    else if(d.t==='booted')lxLog('info','Booted — '+d.mode+' · '+d.entry);
+  });
+  window.addEventListener('resize',()=>{if(currentView()==='launch')lxApplyFrame();});
+  /* Entering and leaving fullscreen changes the height the frame should take, and nothing else
+     re-measures it — the app would stay letterboxed in the middle of a full screen. */
+  document.addEventListener('fullscreenchange',()=>{if(currentView()==='launch')lxApplyFrame();});
+}
+/* Anything elsewhere in the app can hand work here: Studio's current build, a Relay result, a
+   creation, a file tree from Reverse. */
+function connToLaunch(p){
+  goEnsure('launch','it is where a build actually runs');
+  if(p.kind==='files'&&p.data&&typeof p.data==='object')
+    lxAccept({name:p.title||'From '+(p.from||'elsewhere'),files:p.data,assets:{}},'connect');
+  else lxOpenText(String(p.data||''),p.title||('From '+(p.from||'elsewhere')));
+}
 
 /* ═══════════════════ WEBOS ═══════════════════
    A desktop inside the app. Three sources are merged and all three are kept whole:
@@ -42826,7 +45734,10 @@ async function persistDir(){
 }
 /* ── What "all my work" actually is ────────────────────────────────────── */
 const PERSIST_KEYS=['ws','projects','creations','ofw','ofc','webos','brainDir','moaPresets',
-  'skillCtx','connx','ui','onboarding','skills','history','traces','persist','trueforge','notes'];
+  'skillCtx','connx','ui','onboarding','skills','history','traces','persist','trueforge','notes',
+  /* The Launcher library. Keeping a project there is a promise that it survives — a promise the
+     user's own backup has to carry too, or "Keep" means "until this browser clears its data". */
+  'launcher'];
 /* ═══════════════════ STREAM OF CONSCIOUSNESS ═══════════════════
    Adapted from the AI OS's SoC engine. Its own one-line description is the clearest statement of
    what makes this different from the group chat next door:
@@ -44160,6 +47071,12 @@ async function persistCollect(){
     if(a.kind==='project'){const f=await IDB.get('wosFiles:'+a.id,null);if(f)out.idb['wosFiles:'+a.id]=f;}
     else{const b=await IDB.get('wosApp:'+a.id,'');if(b)out.idb['wosApp:'+a.id]=b;}
   }
+  /* Launcher projects live in IndexedDB like WebOS apps do, and the localStorage entry alone is
+     just a name and a file count — restoring from it without these would give back a library of
+     items that all fail to open. */
+  for(const it of ((out.data.launcher&&out.data.launcher.items)||[])){
+    try{const d=await IDB.get('lxApp:'+it.id,null);if(d)out.idb['lxApp:'+it.id]=d;}catch(_){}
+  }
   return out;
 }
 async function persistBackupNow(opts){
@@ -44217,6 +47134,7 @@ It contains no API keys — those are deliberately left behind.
 - **brain/**       — your Brain: notes, facts and everything the assistant remembers.
 - **work/**        — documents, spreadsheets, projects and Creations.
 - **webos/**       — every app installed on your WebOS desktop, as real runnable files.
+- **launcher/**    — every project you kept in the Launcher, as its original file tree.
 - **workspace.json** — the machine-readable copy. Import this back into Glassbox Jet
   (Settings → Cross-device → Import a bundle) to restore everything exactly.
 
@@ -44268,6 +47186,13 @@ Every file under \`brain/\` and \`work/\` is plain Markdown or JSON, and everyth
       const b=snap.idb['wosApp:'+a.id];
       if(b)files['webos/'+safe+'.html']=b;
     }
+  });
+  // Launcher projects, as the real file trees they were opened from
+  ((snap.data.launcher&&snap.data.launcher.items)||[]).forEach(it=>{
+    const d=snap.idb['lxApp:'+it.id];
+    if(!d||!d.files)return;
+    const safe=(it.name||'app').replace(/[^\w \-]+/g,'').slice(0,50)||'app';
+    Object.entries(d.files).forEach(([n,c])=>{files['launcher/'+safe+'/'+n]=c;});
   });
   if(typeof makeZip!=='function'){
     downloadText(JSON.stringify(snap,null,2),'glassbox-workspace.json','application/json');
@@ -47903,6 +50828,7 @@ function go(view){
     renderActLedger();renderSkillSources();renderGauntlet('#gauntlet-settings');
     renderCrossDevice();renderPersist();renderPwa();renderSfx();renderWhy();});
   if(view==='help')panelGuard(view,()=>renderHelp());
+  if(view==='launch')panelGuard(view,()=>{lxInit();renderLaunch();});
   if(view==='webos')panelGuard(view,()=>{wosInit();wosRender();wosFillFolders();wosClockTick();});
 }
 async function boot(){
@@ -48300,6 +51226,20 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     wosOpen,wosClose,wosFocus,wosMax,wosMin,wosSnap,wosApplyTheme,wosRender,wosRenderNotifs,
     wosInit,wosNewApp,wosInstallFromStudio,wosInstallAI,wosBroadcast,wosPreset,wosIconPos,
     GH_RAW,ghParse,ghApi,ghScan,ghRaw,renderGhImport,
+    zipBytes,
+    LX_CDN,LX_LIBS,lxLib,LX_ZIP_OK,lxInflate,LX_TEXT_EXT,LX_MIME,lxExt,lxMime,lxIsText,LX_JUNK,
+    LX_MAX_TOTAL,LX_MAX_ASSET,lxB64,lxDataUrl,lxZipEntries,lxUnzip,lxBytes,lxStripRoot,lxNormalize,
+    lxFromFileList,lxFromDrop,lxContext,LX_DETECT,lxDetect,
+    lxRuntimeBody,lxBundlerBody,lxRnBody,lxExpoBody,lxGlyphBody,lxBootBody,
+    lxJson,lxSrc,lxTag,lxScriptSrc,lxLibsFor,LX_MODULAR,LX_ENTRY_ORDER,lxEntryFor,LX_BASE_CSS,lxPreamble,
+    lxInjectHead,lxAttrEsc,lxEl,lxWeb,lxShell,LX_RUNTIMES,lxRuntime,lxPython,lxViewer,lxBuildDoc,
+    LX_FRAMES,lxFrame,LX_DEFAULTS,get LAUNCH(){return LAUNCH},set LAUNCH(v){LAUNCH=v},saveLaunch,
+    get LXCUR(){return LXCUR},set LXCUR(v){LXCUR=v},get LX_LOG(){return LX_LOG},set LX_LOG(v){LX_LOG=v},
+    lxSave,lxLoad,lxLog,lxRenderLog,lxAccept,lxOpenFiles,lxPick,lxOpenGithub,lxOpenUrl,lxOpenText,
+    lxCurrentDoc,lxRun,lxProbe,lxApplyFrame,lxRenderStatus,lxFullscreen,lxPopOut,lxPopShell,lxKeep,
+    lxOpenSaved,lxForget,lxExportZip,lxExportHtml,LX_SAMPLES,lxSample,
+    renderLaunch,lxRenderOpen,lxPasteModal,lxRenderControls,lxCheck,lxSend,lxRenderLibrary,
+    lxRenderKinds,lxInit,connToLaunch,
     STX_DEVICES,STX_PRESETS,get STX(){return STX},set STX(v){STX=v},stxApplyDevice,stxFind,
     stxReplaceAll,stxUpgrade,stxComposeFrom,renderStxCandidate,renderStudioX,
     get TFORGE(){return TFORGE},set TFORGE(v){TFORGE=v},saveTforge,tfUrl,tfFetch,tfProbe,tfAgents,
