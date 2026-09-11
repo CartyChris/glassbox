@@ -4284,7 +4284,8 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
             <span style="flex:1"></span><span id="ofc-send"></span></div>
         </div>
         <div id="of-live-frame-wrap" style="display:none;flex:1;min-height:0;flex-direction:column">
-          <iframe id="of-live-frame" style="flex:1;border:none;min-height:0" allow="clipboard-write"></iframe>
+          <iframe id="of-live-frame" data-firstparty="CryptPad on its own origin — cross-origin already, and it needs storage to work"
+            style="flex:1;border:none;min-height:0" allow="clipboard-write"></iframe>
           <p class="help" style="padding:8px 14px 0">This is a real, separate site (CryptPad) running its own document in this frame — no account needed. Because it is a different origin, AI cannot write into it directly the way it can in the native editor above; draft with AI there first and paste it in here, or type directly. If the frame stays blank, the "New tab" button opens the same document outside this app.</p>
         </div>
       </div>
@@ -4839,7 +4840,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
       <div class="sub" id="bsub-openbot">
         <div class="card">
           <h3>🤖 OpenBot</h3>
-          <p class="help">CopilotKit's <a href="https://github.com/CopilotKit/OpenBot" target="_blank"
+          <p class="help">CopilotKit's <a href="https://github.com/CopilotKit/OpenBot" target="_blank" rel="noopener noreferrer"
             rel="noopener">OpenBot</a> (MIT) gives each AI coworker a real computer — a browser with
             real logins, a filesystem, tools — and governs it: every action is decided before it
             happens and recorded after. That is the same model as this app's Bot Network, so the two
@@ -5023,7 +5024,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
               </div>
             </div>
             <div class="ed3-view">
-              <iframe id="ed3-frame" title="3D viewport"></iframe>
+              <iframe id="ed3-frame" title="3D viewport" data-firstparty="this app's own editor document, not user or model code"></iframe>
               <div class="ed3-hint" id="ed3-hint">W move · E rotate · R scale · F focus · ⌘Z undo · click to select</div>
             </div>
             <div class="ed3-side ed3-right">
@@ -5557,7 +5558,13 @@ const PRESETS=[
 const EFFORTS=['minimal','low','medium','high','xhigh','max'];
 
 /* ===================== catalog ===================== */
-let REMOTE=store.get('catalog',[]);
+/* The model catalogue was the single largest thing in localStorage: 297KB of 434KB, for a CACHE
+   of a public list this app refetches from /models anyway. localStorage has no eviction policy
+   — when it fills, writes fail, and the write that fails is whichever one comes next, which is
+   usually the user's. IndexedDB has roughly 4GB here and is the right home for a cache.
+   Hydration is asynchronous, which costs nothing: an empty catalogue is the state a first run
+   already handles, and mergeCatalog() is the same path a live fetch takes when it lands. */
+let REMOTE=[];
 let OLLAMA_MODELS=[],BRIDGE_MODELS=[];
 let CATALOG=[],CATMAP=new Map();
 let opsReady=false;
@@ -6105,7 +6112,9 @@ function advisorSys(adv,plan,extra){
 
 /* ═══════════════════ SKILLS (Claude-Code style .md) ═══════════════════ */
 let SKILLS=store.get('skills',[]);
-const saveSkills=()=>store.set('skills',SKILLS);
+/* skillsSlim is declared much later in the file; a function declaration is hoisted but a const
+   is not, so this is guarded for the handful of saves that can happen during boot. */
+const saveSkills=()=>store.set('skills',typeof skillsSlim==='function'?skillsSlim(SKILLS):SKILLS);
 function parseSkillMd(text,fallbackName){
   let name=fallbackName||'untitled-skill',desc='',body=text||'';
   const fm=/^---\s*\r?\n([\s\S]*?)\r?\n---\s*\r?\n?/.exec(body);
@@ -7621,7 +7630,9 @@ function initThree(){
       const html=(acc.content||'').replace(/^```html\n?/m,'').replace(/```\s*$/,'');
       WS.files=WS.files||{};WS.files['index.html']=html;WS.entry='index.html';
       $('#g3-out').innerHTML=`<p class="help">✓ built${acc.cost?' · '+cash(acc.cost):''} — sent to Studio</p>
-        <iframe style="width:100%;height:52vh;border:0;border-radius:12px;background:#0b0f16" srcdoc="${esc(html)}"></iframe>`;
+        <iframe style="width:100%;height:52vh;border:0;border-radius:12px;background:#0b0f16"
+          sandbox="allow-scripts allow-modals allow-popups allow-pointer-lock"
+          srcdoc="${esc(html)}"></iframe>`;
       $('#g3-status').textContent='';
       /* creationSave destructures its argument — three positional args made
          `title` undefined and `files` {}, so every generated game was saved as an
@@ -7652,10 +7663,7 @@ function deployFiles(name){
         {key:'Referrer-Policy',value:'no-referrer'},
         /* The app talks to model providers, the local bridge and Ollama from the page, so
            connect-src must stay open. Everything that can be locked down, is. */
-        {key:'Content-Security-Policy',value:
-          "default-src 'self'; img-src * data: blob:; media-src * blob:; "+
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net; "+
-          "style-src 'self' 'unsafe-inline'; connect-src *; frame-src 'self' blob: data:"}]}]
+        {key:'Content-Security-Policy',value:APP_CSP}]}]
     },null,2),
     'package.json':JSON.stringify({
       name:n,version:'1.0.0',private:true,
@@ -9635,6 +9643,10 @@ const post=(k,v)=>parent.postMessage({__ed3:1,k,v},'*');
 
 /* ── host commands ─────────────────────────────────────────────────────── */
 addEventListener('message',ev=>{
+  /* Only the embedder may drive this frame. Not a demonstrated hole \u2014 reaching a frame
+     needs a handle to it, which in practice only the parent has \u2014 but every other listener
+     in this app checks its sender, and a rule with four exceptions is not a rule. */
+  if(ev.source!==parent)return;
   const d=ev.data;if(!d||!d.__ed3cmd)return;
   const {cmd,a}=d;
   try{
@@ -10469,12 +10481,13 @@ function renderOutputs(){
     const n=b.dataset.ofDl;downloadText(n.split('/').pop(),ARTIFACTS[n].content);});
   el.querySelectorAll('[data-of-open]').forEach(b=>b.onclick=()=>{
     const n=b.dataset.ofOpen,a=ARTIFACTS[n];
-    const w=window.open('','_blank');
-    if(!w)return toast('Popup blocked — use the download button instead',3400);
-    if(/\.html?$/i.test(n))w.document.write(a.content);
-    else{w.document.write('<pre style="font:13px ui-monospace,monospace;white-space:pre-wrap;padding:16px">'+
-      esc(a.content)+'</pre>');}
-    w.document.close();});
+    /* An artifact is whatever a bot wrote, which is model output. Opening it used to write it
+       straight into a new window — and a window this page opens inherits this page's origin, so
+       a generated file containing a script tag could read gb.key. Now it runs sandboxed. */
+    const html=/\.html?$/i.test(n)?a.content
+      :'<!doctype html><meta charset="utf-8"><pre style="font:13px ui-monospace,monospace;'+
+       'white-space:pre-wrap;padding:16px">'+esc(a.content)+'</pre>';
+    openSandboxed(html,n.split('/').pop(),'artifact · '+esc(a.by||'a bot'),'gb-artifact');});
 }
 function initVoControls(){
   if(!$('#steer-save'))return;
@@ -15439,6 +15452,52 @@ if(!store.get('skillsSeeded4',false)){
   saveSkills();store.set('skillsSeeded4',true);
 }
 
+/* ── What actually gets written to localStorage ───────────────────────────────
+   Every seeded skill's body is ALREADY in this file. Seeding copied it into localStorage on
+   first run and every save wrote it back, so 119KB of a 434KB localStorage budget was a second
+   copy of bytes the page already carries — and localStorage is the one web storage with no
+   eviction story, shared with the user's actual documents and projects.
+
+   What is persisted now is the DELTA. An unedited seeded skill is stored as a stub and
+   rehydrated from the constant on load; edit one and the changed body is stored, because at
+   that point it is the user's work and not ours. */
+const SEED_ALL=[].concat(SEED_SKILLS,SEED_SKILLS_2,SEED_SKILLS_3,SEED_SKILLS_4,SEED_SKILLS_5);
+const SEED_BY_NAME=new Map(SEED_ALL.map(k=>[k.name,k]));
+function skillsSlim(list){
+  return (list||[]).map(s=>{
+    const seed=SEED_BY_NAME.get(s.name);
+    /* Idempotent: a record that is already a stub must stay one. Without this, slimming a
+       not-yet-rehydrated list would compare `undefined` against the seed body, call it edited,
+       and store a skill with no body at all. */
+    const already=s.fromSeed||s.body===undefined;
+    if(!seed&&!already)return s;
+    if(!already&&(s.body!==seed.body||s.desc!==seed.desc))return s;   // the user changed it
+    const c=Object.assign({},s);
+    delete c.body;delete c.desc;delete c.chars;
+    c.fromSeed=1;
+    return c;
+  });
+}
+function skillsFat(list){
+  const out=[];
+  (list||[]).forEach(s=>{
+    if(!s.fromSeed)return out.push(s);
+    const seed=SEED_BY_NAME.get(s.name);
+    /* A seed this version no longer ships cannot be rehydrated, and the body was never the
+       user's. Dropping the stub is right — keeping it would inject an empty skill silently. */
+    if(!seed)return;
+    const c=Object.assign({},s,{body:seed.body,desc:seed.desc,chars:seed.body.length});
+    delete c.fromSeed;
+    out.push(c);
+  });
+  return out;
+}
+/* Rehydrate here rather than at the declaration: SKILLS is loaded long before these constants
+   exist, and reading a `const` from above its declaration is a TDZ crash that `node --check`
+   happily accepts. */
+SKILLS=skillsFat(SKILLS);
+saveSkills();
+
 /* ═══════════════════ PROMPT LIBRARY ═══════════════════ */
 const SEED_PROMPTS=[
 {name:'⚔️ Gauntlet Loop — AAA three.js game',tags:'game,three.js,long-horizon',body:
@@ -15897,6 +15956,28 @@ async function bridgePost(pathname,body){
   return r.json();
 }
 
+/* The policy this app is actually served under. It lives here as one string because it was
+   drifting: the copy written into the deploy kit had lost `blob:` from script-src, `worker-src`,
+   `child-src`, `font-src data:` and the Spline frame hosts, so anyone who exported the kit and
+   hosted it got an app whose Launcher could not load an inlined font, whose Python runtime could
+   not start a worker, and whose Spline tab framed nothing — with no error saying why, because a
+   CSP refusal is silent by design.
+
+   Each directive earns its place:
+     script-src   unpkg + jsdelivr are the only two CDNs anything here loads from, and a srcdoc
+                  frame inherits this policy, so a launched app is held to the same list.
+                  'unsafe-eval' is required by the Launcher's compiler and Pyodide.
+     worker-src   Pyodide and any launched app that spawns a worker.
+     font-src     data: because the Launcher inlines a project's fonts as data URLs.
+     connect-src  open: the app talks to whichever provider the user chose, plus a local bridge
+                  and Ollama on 127.0.0.1. Narrowing it would mean guessing the user's provider. */
+const APP_CSP=
+  "default-src 'self'; img-src * data: blob:; media-src * blob:; "+
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://unpkg.com https://cdn.jsdelivr.net; "+
+  "worker-src 'self' blob:; child-src 'self' blob:; "+
+  "style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src *; "+
+  "frame-src 'self' blob: data: https://app.spline.design https://my.spline.design";
+
 /* ═══════════════════ COST FORECAST ═══════════════════ */
 function forecastRun(maxRounds){
   const rounds=maxRounds||(PERF[($('#relay-perf')||{}).value||'solid']||{rounds:4}).rounds;
@@ -15943,13 +16024,38 @@ function catalogSlim(list){
     return c;
   });
 }
+/* Read once at boot, before the network is asked for anything. */
+async function catalogHydrate(){
+  try{
+    let cached=await IDB.get('catalog',null);
+    const legacy=store.get('catalog',null);
+    if(legacy&&legacy.length){
+      if(!cached||!cached.length){cached=legacy;await IDB.set('catalog',legacy);}
+      try{localStorage.removeItem('gb.catalog');}catch(_){}
+    }
+    if(cached&&cached.length){REMOTE=cached;mergeCatalog();}
+  }catch(_){}
+  return REMOTE.length;
+}
+async function catalogCache(list){
+  /* IDB falls back to localStorage when IndexedDB is unavailable — a private window, or storage
+     switched off. Caching there would put the 297KB straight back into the budget this move
+     exists to protect, in exactly the setting where it is tightest. The catalogue is refetched
+     on every boot anyway, so not caching costs one request and nothing else. */
+  try{
+    if(typeof IDB.probe==='function')await IDB.probe();
+    if(IDB.mode!=='idb')return false;
+    await IDB.set('catalog',catalogSlim(list));
+    return true;
+  }catch(_){return false;}
+}
 async function loadCatalog(force){
   if(REMOTE.length&&!force)return CATALOG;
   try{
     const r=await fetch(settings.base.replace(/\/$/,'')+'/models',{headers:API_KEY?{'Authorization':'Bearer '+API_KEY}:{}});
     const j=await r.json();
     const list=(j.data||[]).filter(m=>m.id&&!m.id.startsWith('~'));
-    if(list.length){REMOTE=list;store.set('catalog',catalogSlim(REMOTE));mergeCatalog();
+    if(list.length){REMOTE=list;catalogCache(REMOTE);mergeCatalog();
       if(force)toast('Catalog: '+REMOTE.length+' models');}
     else if(force)toast('Catalog returned no models');
   }catch(e){ if(force)toast('Catalog fetch failed — check connection'); }
@@ -16850,7 +16956,9 @@ function initStudio(){
   $('#st-run').onclick=runPreview;
   $('#st-download').onclick=()=>{const n=Object.keys(WS.files);
     if(n.length===1)downloadText(n[0],WS.files[n[0]]);else downloadText('workspace.html',composePreview(false));};
-  $('#st-openwin').onclick=()=>{const b=new Blob([composePreview(false)],{type:'text/html'});window.open(URL.createObjectURL(b),'_blank');};
+  /* A blob: URL inherits the origin of whoever created it, so this was the Studio's build —
+     model-written code — running with full access to this app's storage. */
+  $('#st-openwin').onclick=()=>openSandboxed(composePreview(false),'Studio preview','your build','gb-studio');
   $('#st-reset').onclick=()=>{if(confirm('Reset workspace?')){WS=JSON.parse(JSON.stringify(DEFAULT_WS));wsSave();renderStudio();runPreview();}};
   $('#st-fixit').onclick=()=>fixErrorsWithAI();
   $('#st-format').onclick=()=>{const t=$('#st-editor');t.value=t.value.replace(/[ \t]+$/gm,'');WS.files[WS.active]=t.value;wsSave();};
@@ -17025,6 +17133,10 @@ function composePreview(withShim=true){
       return out;
     }
     window.addEventListener('message',function(e){
+      /* Only the embedder may drive this frame. Not a demonstrated hole \u2014 reaching a
+         frame needs a handle to it, which in practice only the parent has \u2014 but every other
+         listener in this app checks its sender, and a rule with four exceptions is not a rule. */
+      if(e.source!==parent)return;
       var d=e.data;if(!d||!d.__gbAsk)return;
       try{
         if(d.__gbAsk==='capture'){
@@ -23808,6 +23920,124 @@ function gauntletCases(g){
     },antiExpect:v=>v===0});
 
 
+  /* The deploy kit hands the user a Content-Security-Policy. If it does not match what this app
+     actually needs, every feature it forgets fails SILENTLY — a CSP refusal has no error the
+     user can act on. This drifted once already. */
+  add({id:'ship-csp-covers-app',sub:'storage',uses:['APP_CSP','deployFiles','LX_CDN'],
+    what:'the policy shipped in the deploy kit allows everything this app actually loads',
+    run:()=>{
+      const csp=JSON.parse(g.deployFiles('x')['vercel.json'])
+        .headers[0].headers.filter(h=>/Content-Security-Policy/i.test(h.key))[0].value;
+      const need=[[/script-src[^;]*unpkg\.com/,'unpkg'],[/script-src[^;]*jsdelivr\.net/,'jsdelivr'],
+        [/script-src[^;]*unsafe-eval/,'unsafe-eval'],[/worker-src[^;]*blob:/,'worker blob'],
+        [/font-src[^;]*data:/,'font data:'],[/frame-src[^;]*blob:/,'frame blob'],
+        [/img-src[^;]*data:/,'img data:']];
+      return need.filter(([re])=>!re.test(csp)).map(([,n])=>n).join(',');
+    },expect:v=>v==='',
+    antiWhat:'and it is still a real policy rather than one that permits everything',
+    anti:()=>{
+      const csp=JSON.parse(g.deployFiles('x')['vercel.json'])
+        .headers[0].headers.filter(h=>/Content-Security-Policy/i.test(h.key))[0].value;
+      /* script-src must NOT be wide open — that is the directive that matters most here */
+      return /script-src[^;]*\*/.test(csp)?'wide-open':'bounded';
+    },antiExpect:v=>v==='bounded'});
+
+  /* ── STORAGE BUDGET ───────────────────────────────────────────────────────
+     localStorage is the only web storage with no eviction policy: when it fills, the next write
+     fails, and the next write is usually the user's document rather than the cache that filled
+     it. Two caches had grown to 97% of the budget — a copy of skill text already present in
+     this file, and a 297KB cache of a public model list refetched on every boot. */
+  add({id:'store-no-bulk-in-localstorage',sub:'storage',uses:['store'],
+    what:'nothing parks a large blob in the storage the user\u2019s work has to share',
+    run:()=>{
+      const CAP=65536;
+      return Object.keys(localStorage)
+        .filter(k=>k.indexOf('gb.')===0&&(localStorage.getItem(k)||'').length>CAP)
+        .map(k=>k+':'+Math.round((localStorage.getItem(k)||'').length/1024)+'KB').join(',');
+    },expect:v=>v==='',
+    antiWhat:'and the check would actually notice one, rather than passing on an empty profile',
+    anti:()=>{
+      const k='gb.__gauntlet_bulk_probe';
+      try{localStorage.setItem(k,JSON.stringify('x'.repeat(70000)));}catch(_){return 'could-not-plant';}
+      const seen=(localStorage.getItem(k)||'').length>65536;
+      try{localStorage.removeItem(k);}catch(_){}
+      return seen?'would-catch':'blind';
+    },antiExpect:v=>v==='would-catch'||v==='could-not-plant'});
+
+  /* A seeded skill's body already ships inside this file. Persisting a second copy is what put
+     119KB in the budget above — but slimming it is only safe if an EDIT still survives. */
+  add({id:'store-skills-delta',sub:'storage',uses:['skillsSlim','skillsFat','SEED_BY_NAME'],
+    what:'an unedited seeded skill is stored as a stub and comes back whole',
+    run:()=>{
+      const seed=g.SEED_BY_NAME.values().next().value;
+      if(!seed)return 'no-seeds';
+      const one=[{id:'t1',name:seed.name,desc:seed.desc,body:seed.body,tags:['seed'],on:false}];
+      const slim=g.skillsSlim(one);
+      if(slim[0].body!==undefined)return 'body-still-stored';
+      const back=g.skillsFat(slim);
+      return back.length===1&&back[0].body===seed.body?'stub+rehydrated':'lost';
+    },expect:v=>v==='stub+rehydrated',
+    antiWhat:'and an edited one is stored whole, so the user\u2019s change is never slimmed away',
+    anti:()=>{
+      const seed=g.SEED_BY_NAME.values().next().value;
+      if(!seed)return 'kept';
+      const edited=[{id:'t2',name:seed.name,desc:seed.desc,body:seed.body+'\nMY EDIT',tags:['seed'],on:true}];
+      const slim=g.skillsSlim(edited);
+      if(slim[0].fromSeed||!/MY EDIT/.test(slim[0].body||''))return 'slimmed-away';
+      /* and a skill that was never a seed is untouched */
+      const mine=g.skillsSlim([{id:'t3',name:'not-a-seed-'+Date.now(),body:'MINE',tags:['mine']}]);
+      return (!mine[0].fromSeed&&mine[0].body==='MINE')?'kept':'slimmed-away';
+    },antiExpect:v=>v==='kept'});
+
+  /* ── ORIGIN CONTAINMENT ───────────────────────────────────────────────────
+     Four surfaces opened model-written HTML in a way that handed it THIS origin, where the API
+     keys live: `window.open('','_blank')` then document.write, `window.open(blob:)`, and an
+     `<iframe srcdoc>` with no sandbox. None of those looks like a security decision in the
+     diff that introduces it — which is exactly why it needs a guard rather than care. */
+  add({id:'sec-sandbox-shell',sub:'security',uses:['sandboxDoc'],
+    what:'the window generated code opens in never grants it this origin',
+    run:()=>{
+      const shell=g.sandboxDoc('<h1>x</h1>','App','sub');
+      const m=shell.match(/sandbox="([^"]*)"/);
+      if(!m)return 'no-sandbox';
+      if(/allow-same-origin/.test(m[1]))return 'same-origin';
+      /* and the code must be INSIDE that frame, never written into the shell document */
+      return shell.indexOf('<h1>x</h1>')>=0?'app-in-shell':'contained';
+    },expect:v=>v==='contained',
+    antiWhat:'and it still actually carries the document, rather than opening an empty frame',
+    anti:()=>{
+      const doc='<h1>carried-marker</h1>';
+      return g.sandboxDoc(doc,'App','sub').indexOf(g.lxJson(doc).slice(1,-1))>=0?'carried':'empty';
+    },antiExpect:v=>v==='carried'});
+
+  /* Every frame in the page, checked where it actually lives. An exemption has to be DECLARED
+     on the element — a missing sandbox attribute and a forgotten one are indistinguishable. */
+  add({id:'sec-frames-sandboxed',sub:'security',uses:['esc'],
+    what:'no iframe in this page runs local content on this origin',
+    run:()=>{
+      const bad=[...document.querySelectorAll('iframe')].filter(f=>{
+        if(f.hasAttribute('data-firstparty'))return false;        // declared, with a reason
+        const src=f.getAttribute('src')||'';
+        if(/^https?:\/\//i.test(src)){                            // another origin cannot read us
+          try{if(new URL(src).origin!==location.origin)return false;}catch(_){}
+        }
+        const sb=f.getAttribute('sandbox');
+        return !sb||/allow-same-origin/.test(sb);
+      });
+      return bad.map(f=>f.id||f.className||'(anonymous)').join(',');
+    },expect:v=>v==='',
+    antiWhat:'and the check would notice one that was not, rather than passing on an empty page',
+    anti:()=>{
+      const f=document.createElement('iframe');
+      f.style.cssText='position:fixed;left:-9999px;width:1px;height:1px';
+      f.id='gauntlet-unsandboxed-probe';
+      document.body.appendChild(f);
+      const seen=[...document.querySelectorAll('iframe')].some(x=>
+        x.id==='gauntlet-unsandboxed-probe'&&!x.getAttribute('sandbox'));
+      f.remove();
+      return seen?'would-catch':'blind';
+    },antiExpect:v=>v==='would-catch'});
+
   /* ── LAUNCHER ─────────────────────────────────────────────────────────────
      The Launcher runs code nobody in this project wrote, which makes two things load-bearing:
      it must never run that code on this origin, and when something does not appear on screen it
@@ -25734,6 +25964,12 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'skills-slim-eats-edits',export:'skillsSlim',
+   why:'editing a built-in skill appears to work and the change is dropped on the next reload',
+   broken:()=>list=>(list||[]).map(x=>{const c=Object.assign({},x);delete c.body;c.fromSeed=1;return c;})},
+  {id:'sec-origin-handed-over',export:'sandboxDoc',
+   why:'generated code opens with this app\u2019s origin and can read the API keys',
+   broken:()=>(doc,name)=>'<!doctype html><body>'+String(doc)},
   {id:'lx-detect-blind',export:'lxDetect',
    why:'every project opens as a plain HTML page, so React and React Native silently never run',
    broken:()=>()=>({id:'html',why:'x'})},
@@ -40667,6 +40903,8 @@ function connTargets(kind,fromId){
     .map(p=>Object.assign({},p,{hidden:tabHidden(p.tab)}));
 }
 let CONNX=Object.assign({custom:[],log:[],suggested:[],dismissed:[]},store.get('connx',{}));
+/* One-time cleanup for anyone who already has payloads parked in their saved copy. */
+if(CONNX._pending){delete CONNX._pending;try{store.set('connx',CONNX);}catch(_){}}
 const saveConnx=()=>store.set('connx',CONNX);
 
 /* One payload shape everywhere: {kind, data, title, from}. `data` meaning depends on kind and
@@ -40687,12 +40925,30 @@ async function connRun(portId,payload){
     connLearn();
   }catch(e){toast('Could not send: '+e.message,3200);}
 }
+/* Where a payload waits between drawing the menu and picking a destination.
+
+   This used to be `CONNX._pending`, which is part of the object saveConnx() writes to
+   localStorage — so every "Send to…" menu that was ever DRAWN (not clicked) put a full payload
+   into durable storage, and nothing ever removed one. Measured at 59KB from ordinary use, with
+   an entire multi-file project inside; a bigger project would simply keep going until a write
+   failed, and the write that fails is whichever one comes next.
+
+   In memory is also the only place this can work. The id is a handle to a DOM node, so a
+   payload that outlives the page it was drawn on has nothing left to belong to. */
+const CONN_PENDING=new Map();
+function connPark(id,payload){
+  CONN_PENDING.set(id,payload);
+  /* Menus are drawn far more often than they are used, so the oldest are dropped rather than
+     kept forever. Insertion order is Map's own, so the first key is the oldest. */
+  while(CONN_PENDING.size>40)CONN_PENDING.delete(CONN_PENDING.keys().next().value);
+  return id;
+}
 /* Menu HTML any surface can drop next to an output. */
 function connMenu(payload){
   const t=connTargets(payload.kind,payload.from);
   if(!t.length)return '';
   const id='cx'+uid();
-  CONNX._pending=CONNX._pending||{};CONNX._pending[id]=payload;
+  connPark(id,payload);
   return `<span class="cx-w" data-cx="${esc(id)}">
     <button class="cx-b" data-cxopen="${esc(id)}" title="Send this somewhere useful">→ Send to…</button>
     <span class="cx-menu" hidden>${t.map(p=>
@@ -40712,7 +40968,7 @@ function connInit(){
     }
     const go=ev.target.closest('[data-cxgo]');
     if(go){
-      const payload=(CONNX._pending||{})[go.dataset.cxgo];
+      const payload=CONN_PENDING.get(go.dataset.cxgo);
       const m=go.closest('.cx-menu');if(m)m.hidden=true;
       if(payload)connRun(go.dataset.cxport,payload);
       return;
@@ -41877,6 +42133,10 @@ function lxRuntimeBody(){
   /* The parent asks "did you actually render anything?" — the honest answer to which is what
      separates a working launch from a silent blank frame. */
   W.addEventListener('message',function(e){
+    /* Only the embedder may drive this frame. Not a demonstrated hole \u2014 reaching a
+       frame needs a handle to it, which in practice only the parent has \u2014 but every other
+       listener in this app checks its sender, and a rule with four exceptions is not a rule. */
+    if(e.source!==parent)return;
     var d=e.data;
     if(!d||d.__lxAsk!==1)return;
     var body=document.body;
@@ -43352,32 +43612,31 @@ function lxPopOut(){
   if(!LXCUR)return toast('Open something first',2400);
   let doc;
   try{doc=lxCurrentDoc();}catch(e){return toast('Could not build the page: '+e.message,5000);}
-  const touch=(()=>{try{return matchMedia('(pointer:coarse)').matches;}catch(_){return false;}})();
-  let w=null;
-  try{
-    w=touch?window.open('','_blank')
-      :window.open('','lxrun','width=1280,height=860,menubar=no,toolbar=no,location=no,status=no');
-  }catch(_){w=null;}
-  if(!w){
-    toast('Your browser blocked the pop-up. Allow pop-ups for this site, then press ↗ again.',6000);
-    return null;
-  }
-  const shell=lxPopShell(doc,LXCUR.name,lxRuntime(LXCUR.mode).label);
-  try{
-    w.document.open();w.document.write(shell);w.document.close();
-    w.focus();
-  }catch(e){
-    toast('Could not write to the new window: '+e.message,5000);
-    return null;
-  }
-  toast('Opened in its own tab — the app runs sandboxed there too, '+
+  const w=openSandboxed(doc,LXCUR.name,lxRuntime(LXCUR.mode).label,'lxrun');
+  if(w)toast('Opened in its own tab — the app runs sandboxed there too, '+
     'so it still cannot reach your keys or your saved work',4600);
   return w;
 }
-/* The popped-out window's whole document, built separately so the thing that carries the
-   security guarantee can be read and tested on its own rather than living inside a function
-   that can only be exercised by opening a window. */
-function lxPopShell(doc,name,runtimeLabel){
+/* The Launcher's own caller. The shell itself is shared — every surface in this app that opens
+   generated code in a window uses the same one. */
+function lxPopShell(doc,name,runtimeLabel){return sandboxDoc(doc,name,runtimeLabel);}
+
+/* ═══════════════════ OPENING GENERATED CODE SAFELY ═══════════════════
+   Four places in this app used to open model-written HTML in a new window, and all four handed
+   it THIS ORIGIN — where the API keys live.
+
+       window.open('','_blank'); w.document.write(html)     // about:blank inherits the opener
+       window.open(URL.createObjectURL(new Blob([html])))   // blob: inherits the creator
+       <iframe srcdoc="…"> with no sandbox attribute        // srcdoc inherits the embedder
+
+   None of those is a URL to somewhere else; they are all this page's own origin wearing a
+   different address. Verified by planting a canary key and writing a document that read it
+   back: it worked, from a document the page created itself.
+
+   The fix is one shell used everywhere: the new window is a thin frame host, and the generated
+   code goes inside an iframe sandboxed WITHOUT allow-same-origin, exactly as it is inside the
+   app. The window being same-origin stops mattering once nothing in it is untrusted. */
+function sandboxDoc(doc,name,subtitle){
   return '<!doctype html><html lang="en"><head><meta charset="utf-8">'+
     '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'+
     '<title>'+lxAttrEsc(name)+'</title><style>'+
@@ -43392,7 +43651,7 @@ function lxPopShell(doc,name,runtimeLabel){
     'padding:4px 10px;font:inherit;cursor:pointer}'+
     'iframe{position:fixed;inset:0;width:100%;height:100%;border:0;background:#fff}'+
     '</style></head><body><div id="hot"></div><div id="bar">'+
-    '<b>'+lxAttrEsc(name)+'</b><span style="opacity:.6">'+lxAttrEsc(runtimeLabel)+
+    '<b>'+lxAttrEsc(name)+'</b><span style="opacity:.6">'+lxAttrEsc(subtitle||'')+
     ' · sandboxed, no access to your keys</span><span style="flex:1"></span>'+
     '<button id="rl">Reload</button></div>'+
     '<iframe id="fr" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-pointer-lock allow-downloads"></iframe>'+
@@ -43401,6 +43660,25 @@ function lxPopShell(doc,name,runtimeLabel){
       'document.getElementById("rl").onclick=go;'+
       'document.title='+lxJson(name)+';')+
     '</body></html>';
+}
+/* Opens generated HTML in its own tab, sandboxed. Returns the window, or null if the browser
+   blocked the pop-up — in which case it says so rather than failing silently. */
+function openSandboxed(html,name,subtitle,winName){
+  const touch=(()=>{try{return matchMedia('(pointer:coarse)').matches;}catch(_){return false;}})();
+  let w=null;
+  try{
+    w=touch?window.open('','_blank')
+      :window.open('',winName||'gbrun','width=1280,height=860,menubar=no,toolbar=no,location=no,status=no');
+  }catch(_){w=null;}
+  if(!w){
+    toast('Your browser blocked the pop-up. Allow pop-ups for this site and try again.',6000);
+    return null;
+  }
+  try{
+    w.document.open();w.document.write(sandboxDoc(String(html||''),name||'Preview',subtitle||''));
+    w.document.close();w.focus();
+  }catch(e){toast('Could not write to the new window: '+e.message,5000);return null;}
+  return w;
 }
 
 /* ── Keeping it ──────────────────────────────────────────────────────────────*/
@@ -45232,8 +45510,10 @@ function wosInit(){
         let html;
         if(a&&a.kind==='project'){const f=await wosFiles(a.id);html=wosCompose(f||{});}
         else html=await wosBody(w.app);
-        const b=new Blob([html],{type:'text/html'});const u=URL.createObjectURL(b);
-        window.open(u,'_blank');setTimeout(()=>URL.revokeObjectURL(u),20000);}
+        /* The desktop is careful to run installed apps in a sandboxed frame — and then this
+           handed the same app a blob: URL, which inherits this origin, undoing all of it the
+           moment someone popped a window out. Same shell as everywhere else now. */
+        openSandboxed(html,(a&&a.name)||'App','WebOS app','gb-wosapp');}
       return;}
     if((el=g('data-wrun'))){
       const a=wosApp(el.dataset.wrun);if(!a)return;
@@ -46930,10 +47210,22 @@ const saveAct=()=>store.set('actlog',ACT.slice(0,ACT_CAP));
 /* Deliberately small per row. A ledger that stores every full response becomes the biggest
    thing in localStorage within a day and then starts failing writes — the row keeps a size and
    a short excerpt, and points at the log entry that holds the rest. */
+/* A capped ROW COUNT is not a capped SIZE. `detail` is whatever the caller passed, so 400 rows
+   each carrying a file list or a payload is still unbounded — and this is one of the few things
+   written to localStorage on nearly every action. The ledger exists to say what happened, not
+   to hold a second copy of it, so anything past a few hundred bytes becomes a summary that
+   states its own original size. */
+function actDetail(d){
+  if(!d||typeof d!=='object')return{note:String(d==null?'':d).slice(0,160)};
+  let j;
+  try{j=JSON.stringify(d);}catch(_){return{note:'(detail could not be recorded)'};}
+  if(j.length<=600)return d;
+  return{note:j.slice(0,560)+'\u2026',truncatedFrom:j.length};
+}
 function actLog(actor,action,detail){
   const row={id:uid(),ts:nowISO(),actor:ACTOR_KINDS[actor]?actor:'system',
     action:String(action||'').slice(0,60),
-    detail:detail&&typeof detail==='object'?detail:{note:String(detail||'').slice(0,160)}};
+    detail:actDetail(detail)};
   ACT=[row].concat(ACT).slice(0,ACT_CAP);
   saveAct();
   if(typeof renderActLedger==='function'&&$('#act-ledger'))renderActLedger();
@@ -49839,6 +50131,10 @@ const PLUG_SHIM=`<script>
 (function(){
   var ID=null,seq=0,waiting={};
   addEventListener('message',function(e){
+    /* Only the embedder may drive this frame. Not a demonstrated hole \u2014 reaching a
+       frame needs a handle to it, which in practice only the parent has \u2014 but every other
+       listener in this app checks its sender, and a rule with four exceptions is not a rule. */
+    if(e.source!==parent)return;
     var d=e.data;
     if(d&&d.__plugid){ID=d.__plugid;dispatchEvent(new Event('glassbox-ready'));return;}
     if(d&&d.__plugres&&waiting[d.rid]){var w=waiting[d.rid];delete waiting[d.rid];
@@ -50915,7 +51211,7 @@ async function boot(){
     if((e.metaKey||e.ctrlKey)&&e.key>='1'&&e.key<='9'){const t=$$('.tab')[+e.key-1];if(t){e.preventDefault();go(t.dataset.view);}}
     if(e.key==='?'&&e.target.tagName!=='TEXTAREA'&&e.target.tagName!=='INPUT')showHelp();
   });
-  loadCatalog(false).then(()=>{if(!REMOTE.length)loadCatalog(true);});
+  catalogHydrate().then(()=>loadCatalog(false)).then(()=>{if(!REMOTE.length)loadCatalog(true);});
   if(settings.ollamaAuto!==false)syncOllama(true).then(n=>{if(!n)showOriginBanner();});
   else if(opaqueOrigin())showOriginBanner();
   if(settings.bridgeAuto!==false)probeBridge(true);
@@ -51226,7 +51522,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     wosOpen,wosClose,wosFocus,wosMax,wosMin,wosSnap,wosApplyTheme,wosRender,wosRenderNotifs,
     wosInit,wosNewApp,wosInstallFromStudio,wosInstallAI,wosBroadcast,wosPreset,wosIconPos,
     GH_RAW,ghParse,ghApi,ghScan,ghRaw,renderGhImport,
-    zipBytes,
+    zipBytes,APP_CSP,CONN_PENDING,connPark,actDetail,SEED_ALL,SEED_BY_NAME,skillsSlim,skillsFat,catalogHydrate,catalogCache,
     LX_CDN,LX_LIBS,lxLib,LX_ZIP_OK,lxInflate,LX_TEXT_EXT,LX_MIME,lxExt,lxMime,lxIsText,LX_JUNK,
     LX_MAX_TOTAL,LX_MAX_ASSET,lxB64,lxDataUrl,lxZipEntries,lxUnzip,lxBytes,lxStripRoot,lxNormalize,
     lxFromFileList,lxFromDrop,lxContext,LX_DETECT,lxDetect,
@@ -51236,7 +51532,8 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     LX_FRAMES,lxFrame,LX_DEFAULTS,get LAUNCH(){return LAUNCH},set LAUNCH(v){LAUNCH=v},saveLaunch,
     get LXCUR(){return LXCUR},set LXCUR(v){LXCUR=v},get LX_LOG(){return LX_LOG},set LX_LOG(v){LX_LOG=v},
     lxSave,lxLoad,lxLog,lxRenderLog,lxAccept,lxOpenFiles,lxPick,lxOpenGithub,lxOpenUrl,lxOpenText,
-    lxCurrentDoc,lxRun,lxProbe,lxApplyFrame,lxRenderStatus,lxFullscreen,lxPopOut,lxPopShell,lxKeep,
+    lxCurrentDoc,lxRun,lxProbe,lxApplyFrame,lxRenderStatus,lxFullscreen,lxPopOut,lxPopShell,
+    sandboxDoc,openSandboxed,lxKeep,
     lxOpenSaved,lxForget,lxExportZip,lxExportHtml,LX_SAMPLES,lxSample,
     renderLaunch,lxRenderOpen,lxPasteModal,lxRenderControls,lxCheck,lxSend,lxRenderLibrary,
     lxRenderKinds,lxInit,connToLaunch,
