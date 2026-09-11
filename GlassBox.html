@@ -2053,6 +2053,37 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
    30px tall side by side. A fixed box makes the row read as one row. */
 .lx-actions .btn{height:30px;display:inline-flex;align-items:center;gap:5px;line-height:1;padding:0 11px}
 .lx-actions .btn.on{border-color:var(--acc);color:var(--acc)}
+.pipe-chips{display:flex;flex-wrap:wrap;gap:6px}
+.pipe-chip{background:var(--bg);border:1px solid var(--edge);border-radius:999px;padding:6px 12px;
+  font-size:12px;font-weight:600;color:var(--ink2)}
+.pipe-chip:hover{border-color:var(--edge2);color:var(--ink)}
+.pipe-chip.on{border-color:var(--acc);color:var(--acc);background:color-mix(in oklab,var(--acc) 10%,var(--bg))}
+.pipe-body{margin-top:12px;background:var(--bg);border:1px solid var(--edge);border-radius:var(--radius);padding:14px}
+.pipe-head{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline}
+.pipe-head b{font-size:14px}
+.pipe-roles{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.pipe-role{display:inline-flex;gap:6px;align-items:center;background:var(--panel2);
+  border:1px solid var(--edge);border-radius:7px;padding:3px 9px;font-size:11px;color:var(--ink2)}
+.pipe-role b{color:var(--ink3);text-transform:uppercase;font-size:9.5px;letter-spacing:.05em}
+.pipe-grid{display:flex;flex-wrap:wrap;gap:16px;margin:4px 0 12px}
+.pipe-metric{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--ink3)}
+.pipe-bar{display:inline-flex;gap:2px}
+.pipe-bar i{width:11px;height:6px;border-radius:2px;background:var(--edge);display:block}
+.pipe-bar i.on{background:var(--acc)}
+.pipe-tradeoff{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.pipe-tradeoff>div{background:var(--panel2);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}
+.pipe-tradeoff b{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.pipe-tradeoff span{font-size:11.5px;line-height:1.55;color:var(--ink2)}
+.pipe-good b{color:var(--good)} .pipe-bad b{color:var(--bad)} .pipe-eviq b{color:var(--warn)}
+.pipe-warn{margin-top:10px;border-radius:9px;padding:9px 12px;font-size:11.5px;line-height:1.55;
+  border:1px solid var(--warn);color:var(--ink);background:color-mix(in oklab,var(--warn) 10%,var(--bg))}
+.pipe-warn.bad{border-color:var(--bad);background:color-mix(in oklab,var(--bad) 12%,var(--bg))}
+.pipe-table-wrap{overflow-x:auto;margin-top:10px}
+.pipe-table{width:100%;border-collapse:collapse;font-size:12px;min-width:840px}
+.pipe-table th{text-align:left;padding:7px 9px;border-bottom:1px solid var(--edge2);
+  font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink3)}
+.pipe-table td{padding:9px;border-bottom:1px solid var(--edge);vertical-align:top}
+.pipe-table tr.on td{background:color-mix(in oklab,var(--acc) 8%,transparent)}
 .lx-drop{margin-top:12px;border:1.5px dashed var(--edge2);border-radius:var(--radius);
   padding:26px 18px;text-align:center;color:var(--ink3);cursor:pointer;transition:.16s;background:var(--bg)}
 .lx-drop:hover{border-color:var(--acc);color:var(--ink2)}
@@ -2289,7 +2320,22 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
               <option value="perfect">Perfect — ≥98, ≤10 rounds</option>
             </select></label></div>
         </div>
-        <label class="field" style="margin-top:12px">Task for the team
+      </div>
+
+      <div class="card">
+        <h3>🔀 Pipeline shape — who does which half of the work</h3>
+        <p class="help">The knobs further down control HOW each model behaves. This controls
+          something that matters more and is usually never chosen deliberately: which model
+          plans, which one writes the code, and whether anything reviews it. Every shape below
+          is a different bet about where the risk in your task actually lives, and each one
+          says what it costs you when that bet is wrong — including the two configurations
+          that have been measured to make results WORSE rather than merely not better.</p>
+        <div id="pipe-panel"></div>
+      </div>
+
+      <div class="card">
+        <h3>📝 The brief</h3>
+        <label class="field">Task for the team
           <textarea id="relay-task">Build a single-file HTML canvas game: a neon "Asteroid Drift" arcade shooter. Ship with thrust+inertia, wrapping screen, asteroids that split, particle explosions, score + lives HUD, pause, and a game-over restart. Juicy feel, mobile touch controls, no dependencies.</textarea>
         </label>
         <div class="row" style="margin-top:10px;align-items:center">
@@ -17252,8 +17298,12 @@ let relayAbort=null,RS=null,tourModels=['deepseek/deepseek-v4-flash-0731','anthr
 function initRelay(){
   // The Relay's Architect picker and Ops advisor #1 are the same knob in two places.
   pickers.relayArch=makePicker('#relay-arch',{value:OPS.advisors[0].model||settings.archModel,role:'arch',
-    onchange:v=>{OPS.advisors[0].model=v;saveOps();renderAdvisors();renderForecast();}});
-  pickers.relayBuild=makePicker('#relay-build',{value:settings.buildModel,role:'build'});
+    onchange:v=>{OPS.advisors[0].model=v;saveOps();renderAdvisors();renderForecast();
+      /* The warnings are about the PAIR, so both pickers have to repaint them. */
+      if(typeof pipeRender==='function')pipeRender();}});
+  pickers.relayBuild=makePicker('#relay-build',{value:settings.buildModel,role:'build',
+    onchange:()=>{if(typeof pipeRender==='function')pipeRender();}});
+  pipeRender();
   $('#relay-start').onclick=()=>startRelay();
   $('#relay-step').onclick=()=>oneMoreRound();
   $('#relay-stop').onclick=()=>relayAbort&&relayAbort.abort();
@@ -19428,6 +19478,415 @@ function modelTier(model){
   if(TIER_OVERRIDE[id])return TIER_OVERRIDE[id];
   for(const [rx,t] of TIER_RULES)if(rx.test(id))return t;
   return 'mid';
+}
+
+
+/* ═══════════════════ PIPELINE SHAPES ═══════════════════
+   This app already had every knob a reasoning-to-builder pipeline needs — advisors with roles
+   and caps, functional voting, cost-per-completed-task routing, trace transplant, gates. What
+   it did not have was an answer to the only question that actually decides the outcome:
+
+       WHICH MODEL SHOULD DO WHICH HALF OF THE WORK?
+
+   The default assumption everywhere — frontier thinks, cheap model types — is not the free win
+   it looks like, and the measurements say so plainly:
+
+   • In an April 2026 head-to-head building a full Rails 8 app, SOLO Opus 4.7 scored 97/100 at
+     $4 and 18 minutes. Across seven forced planner+executor variants, NOT ONE beat it on
+     quality and cost at the same time; forced delegation came in 2–7 points lower and slower.
+     When the same models were allowed to choose freely whether to delegate, they delegated
+     ZERO times.
+   • The split does pay in one specific shape: when the frontier model is very expensive
+     relative to the builder. The same benchmark cut ~$16 down to ~$1–3 for a 3-point quality
+     loss — worth it or not depending entirely on what those 3 points are worth to you.
+   • Review is ASYMMETRIC and can be negative. A stronger, different-family reviewer repairing
+     a weaker writer's code took pass rate 71.6% → 89.7% (+18.1 points, 26 fixed / 5 broken).
+     The SAME pairing reversed — the weaker model reviewing the stronger one's code — took
+     91.4% → 82.8%, a LOSS of 8.6 points, fixing 3 and breaking 13. A reviewer weaker than the
+     writer does not merely fail to help. It destroys working code.
+
+   So the shapes below are not presets for convenience. Each one is a different bet about where
+   the risk in your task actually lives, and each states what it costs you when that bet is
+   wrong. `evidence` separates what has been measured from what is reasoning about mechanism —
+   a trade-off table that cannot tell you which is which is marketing. */
+
+/* Relative, on a 1–5 scale, and comparative rather than absolute: `cost` 5 means "this is the
+   expensive one", not a dollar figure. Real spend depends entirely on your two models, which is
+   why the forecast under the picker uses live prices instead of these. */
+const PIPE_MODES=[
+  {id:'solo',icon:'\u{1F9CD}',label:'Solo frontier',
+   shape:'One strong model plans, writes and fixes everything. No hand-off.',
+   roles:{plan:'frontier',build:'frontier'},
+   cost:4,quality:5,speed:4,moving:1,
+   best:'Almost any real coding task you can afford to run this way. Nothing is lost in '+
+     'translation between a plan and the person implementing it, because there is no seam.',
+   worst:'Bulk work that is genuinely repetitive — twenty near-identical files — where you are '+
+     'paying frontier prices for typing. And any setup where the builder would have been free.',
+   evidence:'MEASURED: 97/100 at $4 / 18 min on a full Rails 8 app; no planner+executor '+
+     'combination in the same test beat it on quality and cost together.',
+   apply(o){/* the baseline already switches every hand-off off; Solo is exactly that */}},
+
+  {id:'architect',icon:'\u{1F9E0}',label:'Architect → builder',
+   shape:'Frontier model plans and judges. Cheaper model writes the code, every round.',
+   roles:{plan:'frontier',build:'cheap'},
+   cost:2,quality:4,speed:3,moving:3,
+   best:'When the builder is FREE — a local model — or when the frontier costs many times what '+
+     'the builder does. Also when one plan is reused across many rounds, so you pay for the '+
+     'thinking once and the typing repeatedly.',
+   worst:'Short tasks. The hand-off costs more than it saves, and the plan becomes a ceiling: '+
+     'nothing downstream can be better than it, because the builder is not strong enough to '+
+     'notice it was wrong.',
+   evidence:'MEASURED: one split of this shape cut ~$16 to ~$1–3 for a 3-point quality loss. '+
+     'MECHANISM: planner quality dominates executor quality in agentic pipelines, so this shape '+
+     'spends where the leverage is — as long as the plan is genuinely better than the builder '+
+     'would have managed alone.',
+   apply(o){o.advisors[0].on=true;o.advisors[0].role='plan';o.advisors[0].content='both';
+     o.advisors[0].when='first';o.passes=1;}},
+
+  {id:'implementer',icon:'\u{1F528}',label:'Frontier BUILDS (cheap plans)',
+   shape:'A cheap model decomposes the work. The frontier model writes every line of it.',
+   roles:{plan:'cheap',build:'frontier'},
+   cost:4,quality:5,speed:3,moving:3,
+   best:'When the design is already settled and the risk is in the CODE — a port, a refactor, '+
+     'a ticket with acceptance criteria, a long file with invariants that must hold. '+
+     'Decomposition is the commoditised half here; getting the code exactly right is not.',
+   worst:'Open-ended work. Because planner quality dominates, a weak plan does not just waste '+
+     'the cheap call — it points an expensive builder at the wrong target and you pay full '+
+     'price for the wrong thing, confidently built.',
+   evidence:'MECHANISM, not a head-to-head: the same research that shows planning dominates '+
+     'also means this shape is only safe when the plan is near-mechanical. Implementation-heavy '+
+     'benchmarks are where the strongest models separate most, which is what this buys.',
+   apply(o){o.advisors[0].on=true;o.advisors[0].role='plan';o.advisors[0].content='plain';
+     o.advisors[0].verbosity='terse';o.advisors[0].cap=Math.min(o.advisors[0].cap,0.05);
+     o.advisors[0].when='first';o.passes=1;}},
+
+  {id:'direct',icon:'\u{26A1}',label:'Straight to code',
+   shape:'No planning pass at all. The brief IS the spec; the frontier model writes it.',
+   roles:{plan:'none',build:'frontier'},
+   cost:3,quality:4,speed:5,moving:1,
+   best:'When you already know exactly what you want and have written it down. A planning pass '+
+     'on a precise brief mostly restates the brief, and you pay for it in tokens and in latency.',
+   worst:'Anything ambiguous. With no plan there is nothing to catch a misreading before it is '+
+     'code, and the first sign of trouble is a finished build that solves the wrong problem.',
+   evidence:'MECHANISM: strips the seam and the planning tokens. The fastest shape here, and '+
+     'the one most sensitive to how well you wrote the brief.',
+   /* The difference from Solo is not cosmetic: Solo lets the model think as long as its dollar
+      cap allows, while this caps the reasoning budget so the pass goes straight to output. */
+   apply(o){o.maxReasoningTokens=2000;o.compact.on=true;}},
+
+  {id:'repair',icon:'\u{1FA79}',label:'Cheap draft → frontier repair',
+   shape:'A cheap model writes the first draft. The frontier model repairs it rather than '+
+     'rewriting from scratch.',
+   roles:{plan:'cheap',build:'cheap',review:'frontier'},
+   cost:3,quality:4,speed:3,moving:4,
+   best:'When drafts come out mostly right. You pay frontier prices on a fraction of the tokens '+
+     '— a repair reads one file and edits it, rather than generating everything.',
+   worst:'When the draft is bad enough that repairing costs more than starting over, which is '+
+     'exactly the case you cannot detect until after you have paid for both.',
+   evidence:'MEASURED: a stronger different-family repairer took a weaker writer from 71.6% to '+
+     '89.7% — 26 tasks fixed against 5 broken — for about $0.25 and 74 seconds per task. '+
+     'The gain scales with how much stronger the repairer is; with no gap there is no gain.',
+   apply(o){o.advisors[0].on=true;o.advisors[0].role='review';o.advisors[0].content='code';
+     o.advisors[0].when='every';o.passes=1;}},
+
+  {id:'cascade',icon:'\u{1FA9C}',label:'Cascade — escalate only on failure',
+   shape:'Cheapest model that can pass goes first. It is only escalated to a stronger one when '+
+     'the gates actually fail.',
+   roles:{plan:'cheap',build:'cheap',escalate:'frontier'},
+   cost:2,quality:4,speed:3,moving:4,
+   best:'Mixed workloads where most rounds are easy and a few are not. This is the only shape '+
+     'here that can beat solo on cost AND quality at once, because frontier tokens are spent '+
+     'only on the work that provably needed them.',
+   worst:'When nearly everything fails the first pass — then you have paid for the cheap '+
+     'attempt AND the expensive one, and you would have been better off starting at the top.',
+   evidence:'MEASURED in published routing work: cascade routing cut cost 85–98% while '+
+     'holding roughly 95% of frontier quality, by sending only the hard fraction up. '+
+     'CONDITIONAL: that holds only where the cheap tier passes most of the time.',
+   apply(o){o.advisors[0].on=true;o.advisors[0].role='review';o.advisors[0].when='never';
+     o.autoRoute=true;o.passes=1;}},
+
+  {id:'bestof',icon:'\u{1F5F3}',label:'Best of N, judged by behaviour',
+   shape:'The same model writes N candidates; they are RUN, grouped by what they actually do, '+
+     'and the majority behaviour wins.',
+   roles:{plan:'frontier',build:'cheap'},
+   cost:4,quality:5,speed:2,moving:3,
+   best:'One hard, self-contained piece whose correctness you can check by running it. Grouping '+
+     'by observed behaviour rather than by text is what makes this honest — three candidates '+
+     'that read differently but behave identically are one answer, not three.',
+   worst:'Long multi-file work. You pay N times for a decision the gates would have made for '+
+     'free, and the candidates diverge in ways behaviour-grouping cannot separate.',
+   evidence:'MEASURED: verifier-ranked selection beats self-consistency at low N using 1–3× '+
+     'fewer tokens, and on code the gains saturate early — past about 16 candidates you are '+
+     'buying nothing. This app caps N at 5 for that reason.',
+   apply(o){o.vote.on=true;o.vote.n=Math.max(3,Math.min(5,o.vote.n||3));}},
+
+  {id:'crossreview',icon:'\u{1F500}',label:'Cross-family review',
+   shape:'One family writes. A DIFFERENT family, at least as strong, reviews and repairs.',
+   roles:{plan:'frontier',build:'cheap',review:'frontier-other'},
+   cost:3,quality:5,speed:2,moving:4,
+   best:'When the writer is the weaker of the two. A different family fails differently, so it '+
+     'sees what self-review structurally cannot.',
+   worst:'REVERSED, this is actively destructive — see the warning the picker raises if you '+
+     'configure it that way.',
+   evidence:'MEASURED, and the asymmetry is the whole finding: stronger-reviews-weaker gave '+
+     '+18.1 points; the same two models with the weaker one reviewing gave −8.6 points, '+
+     'fixing 3 and BREAKING 13. Self-review of the same family gave +12.9 at half the cost. '+
+     'The mechanism they observed: the stronger reviewer keeps the writer’s interface and '+
+     'repairs one invariant, while the weaker one throws away working structure when unsure.',
+   apply(o){o.advisors[0].on=true;o.advisors[0].role='review';o.advisors[0].content='code';
+     o.advisors[0].when='every';o.vote.on=false;}},
+
+  {id:'specfreeze',icon:'\u{1F4CB}',label:'Spec freeze',
+   shape:'The frontier model writes acceptance criteria FIRST and they are frozen. The builder '+
+     'implements against them, and the gates check the criteria rather than the prose.',
+   roles:{plan:'frontier',build:'cheap'},
+   cost:3,quality:5,speed:2,moving:4,
+   best:'Work that must not drift — a port, a rewrite, anything where "looks right" is not '+
+     'good enough. The spec becomes the thing you diff against, so a regression is visible '+
+     'instead of arguable.',
+   worst:'Exploratory work. A spec written before you understand the problem gets obeyed '+
+     'precisely, and precision aimed at the wrong target is worse than vagueness.',
+   evidence:'MECHANISM: the 2026 spec-driven tooling wave exists because identical prompts '+
+     'produce functionally different code run to run, and a frozen, checkable spec is what '+
+     'turns that non-determinism from a correctness problem into a diff.',
+   apply(o){o.advisors[0].on=true;o.advisors[0].role='plan';o.advisors[0].content='plain';
+     o.advisors[0].when='first';o.stageChecks=true;o.regressionGate=true;}},
+
+  {id:'swarm',icon:'\u{1F41D}',label:'Parallel slices',
+   shape:'The work is cut into files that do not overlap, and one builder per slice runs at once.',
+   roles:{plan:'frontier',build:'cheap'},
+   cost:3,quality:3,speed:5,moving:5,
+   best:'Work that genuinely decomposes into parts that do not need to see each other '+
+     'half-finished. Wall-clock is where this wins, and it is the only shape here that does.',
+   worst:'Anything whose parts share an interface that is still moving. Slices finish '+
+     'individually correct and do not fit together, which costs more to reconcile than doing '+
+     'it serially would have cost in the first place.',
+   evidence:'MECHANISM: parallelism buys wall-clock, never quality — and the same benchmark '+
+     'that found solo winning also found that when models were free to choose, they did not '+
+     'delegate at all. Reach for this when you are waiting, not when you want it better.',
+   apply(o){o.swarm.on=true;o.advisors[0].on=true;o.advisors[0].role='plan';}},
+];
+const pipeMode=id=>PIPE_MODES.find(m=>m.id===id)||PIPE_MODES[0];
+
+const PIPE_DEFAULTS={mode:'architect',applied:'',shownWarn:''};
+let PIPE=Object.assign({},PIPE_DEFAULTS,store.get('pipe',{}));
+const savePipe=()=>store.set('pipe',PIPE);
+
+/* Strength ordering, used to decide whether a configuration is one of the known-harmful ones.
+   modelTier already classifies; this only gives it an order so two models can be compared. */
+const PIPE_RANK={weak:0,mid:1,strong:2,frontier:3};
+const pipeRank=m=>PIPE_RANK[modelTier(m)]==null?1:PIPE_RANK[modelTier(m)];
+/* Family matters for review: a reviewer that fails the same way as the writer cannot see what
+   the writer missed, which is why cross-family review beats self-review in the measurement. */
+function pipeFamily(id){
+  const s=String(id||'').toLowerCase();
+  if(/claude|anthropic/.test(s))return 'anthropic';
+  if(/gpt|openai|codex|o[134]-/.test(s))return 'openai';
+  if(/gemini|google/.test(s))return 'google';
+  if(/grok|xai/.test(s))return 'xai';
+  if(/deepseek/.test(s))return 'deepseek';
+  if(/qwen/.test(s))return 'qwen';
+  if(/kimi|moonshot/.test(s))return 'moonshot';
+  if(/glm|zhipu/.test(s))return 'zhipu';
+  if(/llama|meta/.test(s))return 'meta';
+  if(/mistral/.test(s))return 'mistral';
+  if(/ollama\/|:\d+b/.test(s))return 'local';
+  return 'other';
+}
+
+/* The part of this worth having. A pipeline shape is not right or wrong on its own — it is
+   right or wrong FOR THE TWO MODELS YOU PICKED, and one combination in particular is known to
+   make things worse rather than merely failing to help. */
+function pipeWarn(id,arch,build){
+  const m=pipeMode(id),out=[];
+  const ra=pipeRank(arch),rb=pipeRank(build);
+  const reviewing=m.roles.review||m.id==='repair'||m.id==='crossreview';
+  if(reviewing&&arch&&build&&ra<rb)
+    out.push({level:'bad',msg:'Your reviewer is WEAKER than your writer. This is the one '+
+      'configuration measured to go backwards: the same two models in this order took pass '+
+      'rate from 91.4% down to 82.8%, fixing 3 things and breaking 13. A weaker reviewer '+
+      'discards structure it does not understand. Swap them, or turn review off.'});
+  if(m.id==='crossreview'&&arch&&build&&pipeFamily(arch)===pipeFamily(build))
+    out.push({level:'warn',msg:'Both models are from the same family, so this is self-review '+
+      'rather than cross-review. Still useful — measured at +12.9 points for about half the '+
+      'cost — but a different family found 5 points more, because it fails differently.'});
+  if(m.roles.build==='frontier'&&m.roles.plan==='cheap'&&arch&&ra>=rb)
+    out.push({level:'warn',msg:'This shape wants a CHEAP planner and an expensive builder, and '+
+      'your planner is not cheaper than your builder. As configured you are paying twice for '+
+      'the same tier.'});
+  if(m.roles.plan==='frontier'&&m.roles.build==='cheap'&&arch&&build&&ra<=rb)
+    out.push({level:'warn',msg:'This shape wants the stronger model planning, and yours is not '+
+      'stronger than the builder. The plan is the ceiling for everything downstream.'});
+  if(m.id==='architect'&&ra===3&&rb===3)
+    out.push({level:'warn',msg:'Both are frontier models. You are paying frontier rates for the '+
+      'typing as well as the thinking — the measured result for that configuration was '+
+      'WORSE than one frontier model doing the whole job alone, by 2 to 7 points.'});
+  if(m.id==='cascade'&&arch&&build&&ra<=rb)
+    out.push({level:'warn',msg:'A cascade needs somewhere to escalate TO. Your fallback is not '+
+      'stronger than your first choice, so a failed gate will retry at the same capability.'});
+  if(m.id==='bestof'&&!( $('#relay-studio')&&$('#relay-studio').checked ))
+    out.push({level:'warn',msg:'Best-of-N here judges candidates by RUNNING them. With '+
+      '“build into Studio + live-test” switched off there is nothing to run, so the vote '+
+      'falls back to picking the first candidate.'});
+  if((m.id==='solo'||m.id==='direct')&&rb<2)
+    out.push({level:'warn',msg:'This shape puts everything on one model, and yours is not a '+
+      'strong one. With nothing planning or reviewing, there is no second chance at a mistake.'});
+  return out;
+}
+
+/* What the two pickers SHOULD hold for this shape, given the two models the user already chose.
+   It never invents a model id — it only says which of yours belongs where, and offers the swap. */
+function pipeSuggest(id,arch,build){
+  const m=pipeMode(id);
+  if(!arch||!build||arch===build)return null;
+  const strongIsArch=pipeRank(arch)>=pipeRank(build);
+  const wantStrongBuilder=m.roles.build==='frontier'&&m.roles.plan!=='frontier';
+  const wantStrongArch=m.roles.plan==='frontier'&&m.roles.build==='cheap';
+  if(wantStrongBuilder&&strongIsArch&&pipeRank(arch)!==pipeRank(build))
+    return{swap:true,why:'wants your stronger model BUILDING, not planning'};
+  if(wantStrongArch&&!strongIsArch&&pipeRank(arch)!==pipeRank(build))
+    return{swap:true,why:'wants your stronger model PLANNING, not building'};
+  return null;
+}
+
+/* The fields a SHAPE owns. Everything else in OPS — caps, models, caching, budgets, the
+   fallback chain — belongs to the user and is never touched here.
+
+   This exists because the first version only ever turned things ON. Applying Parallel slices
+   and then Solo left the swarm running; applying Spec freeze left its gates on under every
+   later shape. Measured across all ten: only 8 distinct configurations came out, and the one
+   you were looking at was not the one you would have got. A preset that adds but never removes
+   is not a preset, it is an accumulator. */
+function pipeBaseline(o){
+  const a=o.advisors[0];
+  if(a){a.on=false;a.role='plan';a.content='both';a.when='first';a.verbosity='auto';}
+  o.passes=1;
+  o.vote.on=false;
+  o.autoRoute=false;
+  o.swarm.on=false;
+  o.stageChecks=false;
+  o.regressionGate=false;
+  o.maxReasoningTokens=0;          // 0 = let the dollar cap decide, the app's own default
+}
+function pipeApply(id){
+  const m=pipeMode(id);
+  PIPE.mode=id;PIPE.applied=nowISO();savePipe();
+  try{pipeBaseline(OPS);m.apply(OPS);}catch(e){toast('Could not apply that shape: '+e.message,4200);}
+  saveOps();
+  if(typeof renderAdvisors==='function')try{renderAdvisors();}catch(_){}
+  if(typeof renderForecast==='function')try{renderForecast();}catch(_){}
+  pipeRender();
+  if(typeof sfx==='function')sfx('toggle');
+  return m;
+}
+
+function cutTo(s,n){return String(s||'').length>n?String(s).slice(0,n-1)+'\u2026':String(s||'');}
+
+/* The two models currently in the Relay pickers. Read from the live pickers rather than from
+   settings, because those are what the next run will actually use. */
+function pipeModels(){
+  /* makePicker returns {get,set,el} — it has no `.value`. Reading `.value` here returned
+     undefined for both models, which would have made every warning below vacuously silent:
+     a guard that never fires is worse than no guard, because it reads as a clean bill. */
+  const g=(k,f)=>{try{return (pickers[k]&&pickers[k].get&&pickers[k].get())||f||'';}
+    catch(_){return f||'';}};
+  return{arch:g('relayArch',(OPS.advisors[0]||{}).model||settings.archModel),
+         build:g('relayBuild',settings.buildModel)};
+}
+function pipeSwapModels(){
+  const{arch,build}=pipeModels();
+  if(!arch||!build)return;
+  try{
+    if(pickers.relayArch&&pickers.relayArch.set)pickers.relayArch.set(build);
+    if(pickers.relayBuild&&pickers.relayBuild.set)pickers.relayBuild.set(arch);
+    OPS.advisors[0].model=build;settings.buildModel=arch;saveOps();store.set('settings',settings);
+  }catch(e){return toast('Could not swap: '+e.message,3600);}
+  toast('Swapped — '+build+' now plans, '+arch+' now builds',4000);
+  pipeRender();
+}
+const PIPE_BARS=[['cost','Cost'],['quality','Quality'],['speed','Speed'],['moving','Moving parts']];
+const pipeBar=n=>'<span class="pipe-bar">'+[1,2,3,4,5].map(i=>
+  `<i class="${i<=n?'on':''}"></i>`).join('')+'</span>';
+
+function pipeRender(){
+  const host=$('#pipe-panel');if(!host)return;
+  const{arch,build}=pipeModels();
+  const cur=pipeMode(PIPE.mode);
+  const warns=pipeWarn(PIPE.mode,arch,build);
+  const sug=pipeSuggest(PIPE.mode,arch,build);
+  /* Built from PIPE_MODES, never typed out — a hand-written list of a data table is the bug
+     this file has produced three times. */
+  const chips=PIPE_MODES.map(m=>
+    `<button class="pipe-chip${m.id===PIPE.mode?' on':''}" data-pipe="${esc(m.id)}"
+      title="${esc(m.shape)}">${m.icon} ${esc(m.label)}</button>`).join('');
+  const roleLine=Object.entries(cur.roles).map(([k,v])=>
+    `<span class="pipe-role"><b>${esc(k)}</b>${esc(v)}</span>`).join('');
+  host.innerHTML=`
+    <div class="pipe-chips">${chips}</div>
+    <div class="pipe-body">
+      <div class="pipe-head"><b>${cur.icon} ${esc(cur.label)}</b>
+        <span class="mini muted">${esc(cur.shape)}</span></div>
+      <div class="pipe-roles">${roleLine}</div>
+      <div class="pipe-grid">
+        ${PIPE_BARS.map(([k,l])=>`<div class="pipe-metric"><span>${l}</span>${pipeBar(cur[k])}</div>`).join('')}
+      </div>
+      <div class="pipe-tradeoff">
+        <div class="pipe-good"><b>Use it when</b><span>${esc(cur.best)}</span></div>
+        <div class="pipe-bad"><b>It costs you when</b><span>${esc(cur.worst)}</span></div>
+        <div class="pipe-eviq"><b>What is actually known</b><span>${esc(cur.evidence)}</span></div>
+      </div>
+      ${warns.map(w=>`<div class="pipe-warn ${w.level}">${esc(w.msg)}</div>`).join('')}
+      ${sug?`<div class="pipe-warn warn">This shape ${esc(sug.why)}.
+        <button class="btn ghost small" id="pipe-swap">⇄ Swap my two models</button></div>`:''}
+      <div class="row" style="margin-top:10px;gap:8px;align-items:center">
+        <button class="btn" id="pipe-apply">Apply this shape</button>
+        <button class="btn ghost small" id="pipe-compare">⚖ Compare all ${PIPE_MODES.length}</button>
+        <span class="mini muted" id="pipe-applied">${PIPE.applied
+          ?'applied '+esc(String(PIPE.applied).replace('T',' ').slice(0,16))
+          :'not applied yet — the knobs below are still whatever you last set'}</span>
+      </div>
+    </div>`;
+  $$('[data-pipe]').forEach(b=>b.onclick=()=>{PIPE.mode=b.dataset.pipe;savePipe();pipeRender();});
+  const ap=$('#pipe-apply');if(ap)ap.onclick=()=>{
+    const m=pipeApply(PIPE.mode);
+    toast('Pipeline set to “'+m.label+'” — the Ops knobs below now match it',4200);
+  };
+  const sw=$('#pipe-swap');if(sw)sw.onclick=pipeSwapModels;
+  const cp=$('#pipe-compare');if(cp)cp.onclick=pipeCompare;
+}
+
+/* One table, so the shapes can be read against each other instead of one at a time. The honest
+   comparison is the point: every row is a different bet, and the last column says which of them
+   has actually been measured rather than reasoned about. */
+function pipeCompare(){
+  const{arch,build}=pipeModels();
+  const rows=PIPE_MODES.map(m=>{
+    const w=pipeWarn(m.id,arch,build);
+    const bad=w.filter(x=>x.level==='bad').length;
+    return `<tr${m.id===PIPE.mode?' class="on"':''}>
+      <td><b>${m.icon} ${esc(m.label)}</b><div class="mini muted">${esc(m.shape)}</div></td>
+      <td>${pipeBar(m.cost)}</td><td>${pipeBar(m.quality)}</td><td>${pipeBar(m.speed)}</td>
+      <td class="mini">${esc(cutTo(m.best,150))}</td>
+      <td class="mini">${esc(cutTo(m.worst,150))}</td>
+      <td class="mini">${/^MEASURED/.test(m.evidence)
+        ? '<b style="color:var(--good)">measured</b>'
+        : '<b style="color:var(--warn)">mechanism</b>'}${bad?'<br><b style="color:var(--bad)">unsafe with your models</b>':''}</td>
+    </tr>`;}).join('');
+  openModal(`<h3 style="margin-top:0">Every pipeline shape, side by side</h3>
+    <p class="help">Bars are RELATIVE to each other, not dollars — the forecast under the Ops
+      console uses your models' live prices for that. “Measured” means a published head-to-head
+      exists; “mechanism” means it follows from how these systems work but nobody has run the
+      comparison. The difference matters, so it is a column rather than a footnote.</p>
+    <div class="pipe-table-wrap"><table class="pipe-table">
+      <thead><tr><th>Shape</th><th>Cost</th><th>Quality</th><th>Speed</th>
+        <th>Use it when</th><th>It costs you when</th><th>Evidence</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+    <p class="help" style="margin-top:12px"><b>If you read one thing:</b> the default assumption
+      that a frontier planner plus a cheap builder is free quality is not supported. In the one
+      published head-to-head on a full app, a single frontier model doing the whole job scored
+      higher than every split tested, and cost less than most of them. The splits earn their
+      keep in specific shapes — a free local builder, a very large price gap, work that is
+      genuinely parallel, or a cascade that only escalates what fails — and not by default.</p>`);
 }
 
 /* ═══════════════════ PER-MODEL TRACKS ═══════════════════
@@ -23952,6 +24411,102 @@ function gauntletCases(g){
       return /script-src[^;]*\*/.test(csp)?'wide-open':'bounded';
     },antiExpect:v=>v==='bounded'});
 
+  /* ── PIPELINE SHAPES ──────────────────────────────────────────────────────
+     The shapes are a data table and the picker is built from it, which is the bug this file
+     has produced three times. And the warnings are the reason the picker exists at all: one
+     configuration is measured to go BACKWARDS, so a warning that never fires is worse than no
+     warning, because it reads as a clean bill of health. */
+  add({id:'pipe-picker-derived',sub:'pipeline',uses:['PIPE_MODES','pipeRender'],
+    what:'every pipeline shape in the table appears in the picker',
+    run:()=>{
+      g.pipeRender();
+      const inDom=[...document.querySelectorAll('#pipe-panel [data-pipe]')].map(b=>b.dataset.pipe);
+      const want=g.PIPE_MODES.map(m=>m.id);
+      if(!inDom.length)return 'picker-empty';
+      return want.filter(id=>inDom.indexOf(id)<0).join(',')||'all-present';
+    },expect:v=>v==='all-present',
+    antiWhat:'and the picker shows nothing the table does not define',
+    anti:()=>{
+      const inDom=[...document.querySelectorAll('#pipe-panel [data-pipe]')].map(b=>b.dataset.pipe);
+      const want=g.PIPE_MODES.map(m=>m.id);
+      return inDom.filter(id=>want.indexOf(id)<0).length;
+    },antiExpect:v=>v===0});
+
+  /* The measured asymmetry: a reviewer WEAKER than the writer took pass rate 91.4% -> 82.8%,
+     fixing 3 and breaking 13. That is the one combination worth interrupting someone over. */
+  add({id:'pipe-warns-on-harmful',sub:'pipeline',uses:['pipeWarn','modelTier'],
+    what:'a reviewer weaker than the writer is flagged as harmful, not merely suboptimal',
+    run:()=>{
+      const w=g.pipeWarn('crossreview','ollama/llama3:8b','anthropic/claude-fable-5');
+      return w.some(x=>x.level==='bad')?'flagged':'silent';
+    },expect:v=>v==='flagged',
+    antiWhat:'and the same check stays quiet when the reviewer is the stronger of the two',
+    anti:()=>{
+      const w=g.pipeWarn('crossreview','anthropic/claude-fable-5','ollama/llama3:8b');
+      return w.some(x=>x.level==='bad')?'false-alarm':'quiet';
+    },antiExpect:v=>v==='quiet'});
+
+  /* A shape must be a COMPLETE configuration, not a diff applied on top of whatever was there.
+     Without this, applying Parallel slices and then Solo left the swarm running — the panel
+     showed one shape and the run used another. */
+  add({id:'pipe-shapes-are-complete',sub:'pipeline',uses:['pipeApply','PIPE_MODES','OPS'],
+    what:'a shape configures the same way no matter which shape preceded it',
+    run:()=>{
+      const keep=g.PIPE.mode;
+      const own=o=>JSON.stringify({on:o.advisors[0].on,role:o.advisors[0].role,
+        content:o.advisors[0].content,when:o.advisors[0].when,passes:o.passes,vote:o.vote.on,
+        route:o.autoRoute,swarm:o.swarm.on,gates:o.stageChecks,regress:o.regressionGate,
+        think:o.maxReasoningTokens});
+      const bad=[];
+      g.PIPE_MODES.forEach(target=>{
+        g.pipeApply(target.id);
+        const clean=own(g.OPS);
+        g.PIPE_MODES.forEach(before=>{
+          if(before.id===target.id)return;
+          g.pipeApply(before.id);g.pipeApply(target.id);
+          if(own(g.OPS)!==clean&&bad.indexOf(target.id+' after '+before.id)<0)
+            bad.push(target.id+' after '+before.id);
+        });
+      });
+      g.pipeApply(keep);
+      return bad.slice(0,3).join(', ');
+    },expect:v=>v==='',
+    antiWhat:'and the shapes are genuinely different from one another, not one shape ten times',
+    anti:()=>{
+      const keep=g.PIPE.mode,seen=new Set();
+      g.PIPE_MODES.forEach(m=>{
+        g.pipeApply(m.id);
+        seen.add(JSON.stringify({on:g.OPS.advisors[0].on,role:g.OPS.advisors[0].role,
+          content:g.OPS.advisors[0].content,when:g.OPS.advisors[0].when,vote:g.OPS.vote.on,
+          route:g.OPS.autoRoute,swarm:g.OPS.swarm.on,gates:g.OPS.stageChecks,
+          think:g.OPS.maxReasoningTokens}));
+      });
+      g.pipeApply(keep);
+      return seen.size;
+    },antiExpect:v=>v>=8});
+
+  /* A preset that does not change anything is decoration. */
+  add({id:'pipe-apply-really-applies',sub:'pipeline',uses:['pipeApply','PIPE_MODES'],
+    what:'choosing a shape actually reconfigures the pipeline',
+    run:()=>{
+      const before=JSON.stringify(g.OPS);
+      const keepMode=g.PIPE.mode;
+      g.pipeApply('solo');
+      const solo=JSON.stringify(g.OPS);
+      g.pipeApply('bestof');
+      const bestof=JSON.stringify(g.OPS);
+      g.pipeApply(keepMode);
+      return (solo!==before||bestof!==solo)&&solo!==bestof?'changes':'no-op';
+    },expect:v=>v==='changes',
+    antiWhat:'and different shapes produce genuinely different settings, not one shape twice',
+    anti:()=>{
+      const keep=g.PIPE.mode;
+      g.pipeApply('solo');const a=!!g.OPS.advisors[0].on;
+      g.pipeApply('architect');const b=!!g.OPS.advisors[0].on;
+      g.pipeApply(keep);
+      return a===b?'identical':'distinct';
+    },antiExpect:v=>v==='distinct'});
+
   /* ── STORAGE BUDGET ───────────────────────────────────────────────────────
      localStorage is the only web storage with no eviction policy: when it fills, the next write
      fails, and the next write is usually the user's document rather than the cache that filled
@@ -26007,6 +26562,9 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'pipe-warns-never-fire',export:'pipeWarn',
+   why:'the one measured-harmful pipeline configuration is accepted in silence',
+   broken:()=>()=>[]},
   {id:'skills-slim-eats-edits',export:'skillsSlim',
    why:'editing a built-in skill appears to work and the change is dropped on the next reload',
    broken:()=>list=>(list||[]).map(x=>{const c=Object.assign({},x);delete c.body;c.fromSeed=1;return c;})},
@@ -51566,6 +52124,9 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     wosInit,wosNewApp,wosInstallFromStudio,wosInstallAI,wosBroadcast,wosPreset,wosIconPos,
     GH_RAW,ghParse,ghApi,ghScan,ghRaw,renderGhImport,
     zipBytes,APP_CSP,CONN_PENDING,connPark,actDetail,
+    PIPE_MODES,pipeMode,PIPE_DEFAULTS,get PIPE(){return PIPE},set PIPE(v){PIPE=v},savePipe,
+    PIPE_RANK,pipeRank,pipeFamily,pipeWarn,pipeSuggest,pipeApply,pipeBaseline,pipeModels,pipeSwapModels,
+    PIPE_BARS,pipeBar,pipeRender,pipeCompare,cutTo,
     get SEED_READY(){return SEED_READY},set SEED_READY(v){SEED_READY=v},SEED_ALL,SEED_BY_NAME,skillsSlim,skillsFat,catalogHydrate,catalogCache,
     LX_CDN,LX_LIBS,lxLib,LX_ZIP_OK,lxInflate,LX_TEXT_EXT,LX_MIME,lxExt,lxMime,lxIsText,LX_JUNK,
     LX_MAX_TOTAL,LX_MAX_ASSET,lxB64,lxDataUrl,lxZipEntries,lxUnzip,lxBytes,lxStripRoot,lxNormalize,
