@@ -6112,9 +6112,17 @@ function advisorSys(adv,plan,extra){
 
 /* ═══════════════════ SKILLS (Claude-Code style .md) ═══════════════════ */
 let SKILLS=store.get('skills',[]);
-/* skillsSlim is declared much later in the file; a function declaration is hoisted but a const
-   is not, so this is guarded for the handful of saves that can happen during boot. */
-const saveSkills=()=>store.set('skills',typeof skillsSlim==='function'?skillsSlim(SKILLS):SKILLS);
+/* The seed lookup skillsSlim needs is a `const` built from five arrays declared ~9000 lines
+   below this point, and the FIRST-RUN seeding blocks down there call saveSkills() before it
+   exists. A hoisted function declaration is not enough: skillsSlim exists, and then throws on
+   the const it reads. So the readiness of the TABLE is what is tracked, initialised here where
+   it genuinely is early, and slimming simply does not happen until it is true.
+
+   This shipped once. It only reproduces on a FIRST RUN — a profile that had already seeded
+   skipped the block and never called saveSkills that early — so a warm browser showed nothing
+   wrong. Test storage changes against a cleared profile, always. */
+let SEED_READY=false;
+const saveSkills=()=>store.set('skills',SEED_READY?skillsSlim(SKILLS):SKILLS);
 function parseSkillMd(text,fallbackName){
   let name=fallbackName||'untitled-skill',desc='',body=text||'';
   const fm=/^---\s*\r?\n([\s\S]*?)\r?\n---\s*\r?\n?/.exec(body);
@@ -15463,7 +15471,9 @@ if(!store.get('skillsSeeded4',false)){
    that point it is the user's work and not ours. */
 const SEED_ALL=[].concat(SEED_SKILLS,SEED_SKILLS_2,SEED_SKILLS_3,SEED_SKILLS_4,SEED_SKILLS_5);
 const SEED_BY_NAME=new Map(SEED_ALL.map(k=>[k.name,k]));
+SEED_READY=true;
 function skillsSlim(list){
+  if(!SEED_READY)return (list||[]).slice();     // before the table exists, store it whole
   return (list||[]).map(s=>{
     const seed=SEED_BY_NAME.get(s.name);
     /* Idempotent: a record that is already a stub must stay one. Without this, slimming a
@@ -23964,6 +23974,31 @@ function gauntletCases(g){
       return seen?'would-catch':'blind';
     },antiExpect:v=>v==='would-catch'||v==='could-not-plant'});
 
+  /* This one shipped. The seeding blocks call saveSkills() ~9000 lines ABOVE the table that
+     slimming needs, and reading a `const` from above its declaration throws — so boot died
+     before window.__gb was ever assigned. It reproduced on a FIRST RUN only: any profile that
+     had already seeded skipped the block entirely, so a warm browser showed nothing wrong. */
+  add({id:'boot-slim-before-seeds',sub:'storage',uses:['skillsSlim','SEED_READY'],
+    what:'saving skills before the seed table exists does not throw',
+    run:()=>{
+      const was=g.SEED_READY;
+      g.SEED_READY=false;
+      let r;
+      try{
+        const out=g.skillsSlim([{id:'a',name:'x',desc:'d',body:'BODY',tags:['seed']}]);
+        r=(out&&out[0]&&out[0].body==='BODY')?'safe':'lost-body';
+      }catch(e){r='threw: '+e.message;}
+      finally{g.SEED_READY=was;}
+      return r;
+    },expect:v=>v==='safe',
+    antiWhat:'and once the table IS ready it really does slim, rather than never slimming at all',
+    anti:()=>{
+      const seed=g.SEED_BY_NAME.values().next().value;
+      if(!seed)return 'slims';
+      const out=g.skillsSlim([{id:'b',name:seed.name,desc:seed.desc,body:seed.body,tags:['seed']}]);
+      return (out[0].body===undefined&&out[0].fromSeed)?'slims':'never-slims';
+    },antiExpect:v=>v==='slims'});
+
   /* A seeded skill's body already ships inside this file. Persisting a second copy is what put
      119KB in the budget above — but slimming it is only safe if an EDIT still survives. */
   add({id:'store-skills-delta',sub:'storage',uses:['skillsSlim','skillsFat','SEED_BY_NAME'],
@@ -25377,9 +25412,17 @@ function gauntletCases(g){
         ? document.elementFromPoint(Math.round(r.left+r.width/2),Math.round(r.top+r.height/2))
         : null;
       const tappable=pe!=='none'&&(onScreen?(!!hit&&(hit===chip||chip.contains(hit))):true);
-      /* And that folding actually removes the section's tabs from the bar. */
+      /* And that folding actually removes the section's tabs from the bar.
+
+         The ACTIVE tab is excluded, because applyTabMode deliberately keeps it visible —
+         hiding the tab you are currently standing on would be nonsense. Without that exclusion
+         this case was flaky in a way that had nothing to do with folding: it went red whenever
+         the last tab visited happened to be Customise, Settings or Help, and green otherwise.
+         A case that reports on unrelated navigation state teaches people to ignore it. */
       g.tabGroupToggle('setup');
-      const hidden=['customise','settings','help'].every(v=>{
+      const active=(document.querySelector('.view.active')||{id:''}).id.replace(/^view-/,'');
+      const members=['customise','settings','help'].filter(v=>v!==active);
+      const hidden=members.length>0&&members.every(v=>{
         const t=nav.querySelector('.tab[data-view="'+v+'"]');
         return t&&getComputedStyle(t).display==='none';});
       g.UI.foldedGroups=keepFold;g.applyTabMode();
@@ -51522,7 +51565,8 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     wosOpen,wosClose,wosFocus,wosMax,wosMin,wosSnap,wosApplyTheme,wosRender,wosRenderNotifs,
     wosInit,wosNewApp,wosInstallFromStudio,wosInstallAI,wosBroadcast,wosPreset,wosIconPos,
     GH_RAW,ghParse,ghApi,ghScan,ghRaw,renderGhImport,
-    zipBytes,APP_CSP,CONN_PENDING,connPark,actDetail,SEED_ALL,SEED_BY_NAME,skillsSlim,skillsFat,catalogHydrate,catalogCache,
+    zipBytes,APP_CSP,CONN_PENDING,connPark,actDetail,
+    get SEED_READY(){return SEED_READY},set SEED_READY(v){SEED_READY=v},SEED_ALL,SEED_BY_NAME,skillsSlim,skillsFat,catalogHydrate,catalogCache,
     LX_CDN,LX_LIBS,lxLib,LX_ZIP_OK,lxInflate,LX_TEXT_EXT,LX_MIME,lxExt,lxMime,lxIsText,LX_JUNK,
     LX_MAX_TOTAL,LX_MAX_ASSET,lxB64,lxDataUrl,lxZipEntries,lxUnzip,lxBytes,lxStripRoot,lxNormalize,
     lxFromFileList,lxFromDrop,lxContext,LX_DETECT,lxDetect,
