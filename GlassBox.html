@@ -2078,6 +2078,8 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
 .pipe-warn{margin-top:10px;border-radius:9px;padding:9px 12px;font-size:11.5px;line-height:1.55;
   border:1px solid var(--warn);color:var(--ink);background:color-mix(in oklab,var(--warn) 10%,var(--bg))}
 .pipe-warn.bad{border-color:var(--bad);background:color-mix(in oklab,var(--bad) 12%,var(--bg))}
+/* A note that says "this works" should not wear the same yellow as one that says "this will not". */
+.pipe-warn.ok{border-color:var(--edge2);background:var(--panel2);color:var(--ink2)}
 .pipe-table-wrap{overflow-x:auto;margin-top:10px}
 .pipe-table{width:100%;border-collapse:collapse;font-size:12px;min-width:840px}
 .pipe-table th{text-align:left;padding:7px 9px;border-bottom:1px solid var(--edge2);
@@ -5004,6 +5006,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
     <section class="view" id="view-three"><div class="wrap">
       <div class="subnav" id="three-nav">
         <button class="subtab on" data-tsub="assets">📦 Assets</button>
+        <button class="subtab" data-tsub="foundry">✦ Foundry</button>
         <button class="subtab" data-tsub="editor">🛠 Editor</button>
         <button class="subtab" data-tsub="img">🖼 Image → 3D</button>
         <button class="subtab" data-tsub="systems">🌍 Systems</button>
@@ -5012,6 +5015,15 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
         <button class="subtab" data-tsub="game">🎮 Build a game</button>
         <button class="subtab" data-tsub="pc">🅿️ PlayCanvas</button>
       </div>
+      <div class="sub" id="tsub-foundry"><div class="card">
+        <h3>✦ Asset Foundry — generate a 3D asset, keep it, reuse it</h3>
+        <p class="help">Generation through Meshy or Tripo, and the parameter discipline those
+          tools are built on written out below so it can be pointed at any model you already
+          pay for. Everything made here is stored with its bytes, so an asset is generated
+          once and placed as many times as you like.</p>
+        <div id="a3d-panel"></div>
+      </div></div>
+
       <div class="sub on" id="tsub-assets">
         <div id="ed3-myassets"></div>
         <div class="card">
@@ -9405,6 +9417,562 @@ function initLocalPlus(){
   renderHwDet(false);renderHwChat();
 }
 
+
+/* ═══════════════════ 3D ASSET FOUNDRY ═══════════════════
+   Generate a 3D asset, KEEP it, and use it again — plus the part that outlives any one vendor:
+   the parameter discipline those tools are built on, applied to whatever model you already pay
+   for.
+
+   Two transports, and the difference was measured rather than assumed:
+
+   • MESHY answers browser requests directly. Its preflight returns
+     `access-control-allow-origin` reflecting this app's origin and allows the Authorization
+     header, so generation runs from the page with nothing else installed.
+   • TRIPO sends no CORS headers at all — a 401 with not one `access-control-*` in the
+     response. A browser cannot call it, no matter how correct the key is. So Tripo goes
+     through the local bridge, and the panel says so up front instead of letting someone
+     conclude their key is broken.
+
+   THE FORMULA. What actually separates these tools' output from "a mesh came back" is not a
+   secret model — it is the shape of the request, and their public parameter lists spell it out:
+   geometry and texture are SEPARATE passes, topology is an explicit choice, polycount is a
+   budget rather than an outcome, pose is canonical so the thing can be rigged, and material is
+   a set of PBR maps rather than an adjective. A3D_AXES below is that discipline written down,
+   and `a3dBrief` compiles it into a brief any model can be steered with — which is why this
+   works with a local model and no vendor account at all. */
+
+const A3D_AXES=[
+  {id:'pass',label:'Two passes, never one',
+   why:'Meshy exposes preview (geometry) and refine (texture) as separate calls, and that is the '+
+     'single biggest lever. A model asked for shape and surface at once compromises both, and an '+
+     'untextured mesh can be judged on silhouette alone — which is the only thing worth judging first.',
+   apply:'Ask for geometry with no mention of colour or material. Look at it. Only then texture it.'},
+  {id:'topology',label:'Topology is a choice',
+   why:'Quads subdivide and deform predictably; triangles do not. Anything that will be rigged, '+
+     'bent or smoothed wants quads, and everything static is cheaper as triangles.',
+   apply:'State quad or triangle explicitly. Never leave it to the default.'},
+  {id:'budget',label:'Polycount is a budget, not an outcome',
+   why:'Meshy takes target_polycount from 100 to 300,000 and Tripo takes face_limit, because the '+
+     'right density is a decision about the asset’s ROLE. A background rock at 60k is a bug.',
+   apply:'Hero 40–80k · character 15–40k · prop 4–15k · background 0.5–3k.'},
+  {id:'pose',label:'Canonical pose or it cannot be rigged',
+   why:'a-pose and t-pose exist as first-class parameters because a character generated mid-stride '+
+     'has its deformation baked in and no rig will fix it afterwards.',
+   apply:'Anything with limbs: A-pose, arms down and slightly out, facing +Z, feet on Y=0.'},
+  {id:'pbr',label:'Material is a set of maps, not an adjective',
+   why:'"Make it metal" produces a grey thing. The APIs return base_color, metallic, roughness and '+
+     'normal as separate maps because that is what a renderer actually consumes.',
+   apply:'Name each channel: base colour, metallic 0–1, roughness 0–1, normal strength.'},
+  {id:'split',label:'The texture prompt is not the geometry prompt',
+   why:'Meshy takes texture_prompt separately from prompt. Shape words in a texture pass produce '+
+     'painted-on detail that fights the silhouette — the classic "it looks like a sticker" failure.',
+   apply:'Geometry prompt: form, proportion, silhouette. Texture prompt: material, wear, palette.'},
+  {id:'subject',label:'One subject, no scene',
+   why:'These are single-object generators. A prompt with ground, sky or lighting in it spends '+
+     'geometry on things you will delete, and confuses the object’s own extents.',
+   apply:'No background, no floor, no lighting, no camera. One noun and its qualities.'},
+  {id:'views',label:'One view is ambiguous',
+   why:'multiview_to_model exists as its own task type because a single image cannot determine '+
+     'the back of anything. Guessing is where the melted look comes from.',
+   apply:'Supply front / side / back where you can; say explicitly what the unseen side does.'},
+  {id:'scale',label:'Real units, stated',
+   why:'A generator has no idea whether a chair is 40cm or 4m, and a scene full of assets at '+
+     'unrelated scales is the most expensive thing to fix later.',
+   apply:'Give the longest dimension in metres and which axis it runs along.'},
+];
+
+/* Role presets. Each is a full set of the axes above, so picking one is picking a coherent
+   answer to all nine rather than nine separate guesses. */
+const A3D_PRESETS=[
+  {id:'gameprop',label:'Game prop',icon:'\u{1F3AE}',
+   poly:8000,topology:'triangle',pose:'',pbr:true,tex:'2k',
+   note:'The default. Cheap enough to place fifty of, detailed enough to stand next to the camera once.'},
+  {id:'hero',label:'Hero asset',icon:'\u{1F451}',
+   poly:60000,topology:'quad',pose:'',pbr:true,tex:'4k',
+   note:'One per scene. Worth the budget only for something the player will look directly at.'},
+  {id:'character',label:'Character (riggable)',icon:'\u{1F9CD}',
+   poly:25000,topology:'quad',pose:'a-pose',pbr:true,tex:'2k',
+   note:'Quads and a canonical pose, because both are unrecoverable after the fact.'},
+  {id:'lowpoly',label:'Low-poly / stylised',icon:'\u{1F53A}',
+   poly:1500,topology:'triangle',pose:'',pbr:false,tex:'2k',
+   note:'Flat colour, no PBR. Reads as deliberate style rather than as a budget asset.'},
+  {id:'background',label:'Background filler',icon:'\u{1F332}',
+   poly:800,topology:'triangle',pose:'',pbr:false,tex:'2k',
+   note:'Silhouette is the whole job. Anything spent on surface here is wasted.'},
+  {id:'print',label:'Printable / watertight',icon:'\u{1F5A8}',
+   poly:120000,topology:'triangle',pose:'',pbr:false,tex:'2k',
+   note:'Density over economy, and no texture at all — a printer reads geometry only.'},
+];
+const a3dPreset=id=>A3D_PRESETS.find(p=>p.id===id)||A3D_PRESETS[0];
+
+/* Compiles the axes into a brief. This is the transferable artefact: it is what gets sent to a
+   vendor as parameters, and to any model you already pay for as instructions. */
+function a3dBrief(spec){
+  const p=a3dPreset(spec.preset);
+  const L=[];
+  L.push('SUBJECT: '+(spec.subject||'(unnamed)').trim());
+  L.push('ONE OBJECT ONLY. No ground plane, no background, no lighting rig, no camera, no scene.');
+  L.push('');
+  L.push('PASS 1 — GEOMETRY ONLY. Do not mention colour, material or texture in this pass.');
+  L.push('  form: '+(spec.form||'as described by the subject').trim());
+  L.push('  topology: '+p.topology+(p.topology==='quad'
+    ? ' — quads, because this will be deformed or subdivided'
+    : ' — triangles, static asset'));
+  L.push('  budget: about '+p.poly.toLocaleString()+' triangles ('+p.label.toLowerCase()+')');
+  if(p.pose)L.push('  pose: '+p.pose.toUpperCase()+', facing +Z, feet at Y=0, arms down and slightly out');
+  L.push('  scale: longest dimension '+(+spec.size||1)+'m along '+(spec.axis||'Y'));
+  L.push('  origin at the base centre, +Y up, +Z forward, real-world proportions');
+  L.push('');
+  if(p.pbr||spec.texture){
+    L.push('PASS 2 — SURFACE, once the silhouette is right.');
+    L.push('  texture brief: '+(spec.texture||'match the subject, no invented branding or text').trim());
+    if(p.pbr){
+      L.push('  PBR channels, each named rather than implied:');
+      L.push('    base colour: '+(spec.baseColour||'from the texture brief'));
+      L.push('    metallic: '+(spec.metallic==null?'0 unless the subject is actually metal':spec.metallic));
+      L.push('    roughness: '+(spec.roughness==null?'0.6 default; lower only for polish or wet':spec.roughness));
+      L.push('    normal: bake surface detail here rather than into geometry');
+    }else L.push('  flat colour only, no PBR maps — this preset is stylised by choice');
+    L.push('  texture resolution: '+p.tex);
+    L.push('');
+  }
+  if(spec.unseen)L.push('UNSEEN SIDES: '+spec.unseen.trim());
+  L.push('REJECT: a scene instead of an object; a pose that cannot be rigged; detail painted into '+
+    'the texture that should be in the silhouette; invented text or logos; non-manifold shells.');
+  return L.join('\n');
+}
+
+/* ── Providers ───────────────────────────────────────────────────────────────
+   `transport` is a measured property of each service, not a preference. */
+const A3D_PROVIDERS=[
+  {id:'meshy',label:'Meshy',icon:'\u{1F7E3}',transport:'direct',
+   site:'https://meshy.ai',keyHint:'starts msy-',
+   note:'Answers browser requests directly — its preflight allows this origin and the '+
+     'Authorization header, so nothing else needs installing. Two-stage by design: a preview '+
+     'pass makes geometry, a refine pass textures it, which is the discipline the briefs above '+
+     'are built from.',
+   base:'https://api.meshy.ai/openapi/v2',
+   /* preview = geometry, refine = texture. Kept as two calls because that is what the API is. */
+   submit(spec,stage,prevId){
+     const p=a3dPreset(spec.preset);
+     if(stage==='refine')return{path:'/text-to-3d',body:{mode:'refine',preview_task_id:prevId,
+       enable_pbr:!!p.pbr,texture_resolution:p.tex,
+       texture_prompt:(spec.texture||'').slice(0,600)||undefined}};
+     return{path:'/text-to-3d',body:{mode:'preview',
+       prompt:a3dGeomPrompt(spec).slice(0,800),
+       ai_model:spec.quality==='max'?'meshy-7':'meshy-6',
+       topology:p.topology,target_polycount:p.poly,
+       pose_mode:p.pose||'',
+       target_formats:['glb']}};
+   },
+   poll:id=>'/text-to-3d/'+id,
+   done:j=>String(j&&j.status||'').toUpperCase()==='SUCCEEDED',
+   failed:j=>['FAILED','CANCELED'].includes(String(j&&j.status||'').toUpperCase()),
+   progress:j=>+((j&&j.progress)||0),
+   glb:j=>(j&&j.model_urls&&j.model_urls.glb)||'',
+   thumb:j=>(j&&j.thumbnail_url)||'',
+   why:j=>(j&&j.task_error&&j.task_error.message)||''},
+
+  {id:'tripo',label:'Tripo',icon:'\u{1F535}',transport:'bridge',
+   site:'https://www.tripo3d.ai',keyHint:'from platform.tripo3d.ai',
+   note:'Sends NO CORS headers — measured: a 401 with not one access-control header on it. The '+
+     'browser cannot call it whatever the key says, so this routes through the local bridge. '+
+     'With the bridge off, this provider is unavailable and says so rather than failing as a '+
+     'mysterious network error.',
+   base:'https://openapi.tripo3d.ai/v3',
+   submit(spec){
+     const p=a3dPreset(spec.preset);
+     return{path:'/generation/text-to-model',body:{
+       prompt:a3dGeomPrompt(spec).slice(0,800),
+       model:'v3.1-20260211',
+       face_limit:Math.max(1000,Math.min(300000,p.poly))}};
+   },
+   poll:id=>'/tasks/'+id,
+   done:j=>{const s=String((j&&(j.status||(j.data&&j.data.status)))||'').toLowerCase();
+     return s==='success'||s==='succeeded';},
+   failed:j=>{const s=String((j&&(j.status||(j.data&&j.data.status)))||'').toLowerCase();
+     return s==='failed'||s==='banned'||s==='expired';},
+   progress:j=>+((j&&(j.progress||(j.data&&j.data.progress)))||0),
+   glb:j=>{const d=(j&&j.data)||j||{};
+     const o=d.output||d.result||{};
+     return o.pbr_model||o.model||o.base_model||'';},
+   thumb:j=>{const d=(j&&j.data)||j||{};return (d.output&&(d.output.rendered_image||d.output.image))||'';},
+   why:j=>(j&&(j.message||(j.data&&j.data.message)))||''},
+];
+const a3dProvider=id=>A3D_PROVIDERS.find(p=>p.id===id)||A3D_PROVIDERS[0];
+
+/* The geometry-pass prompt: subject and form only. Deliberately strips the surface words, because
+   leaving them in is the single most common way these requests come back looking painted-on. */
+function a3dGeomPrompt(spec){
+  const p=a3dPreset(spec.preset);
+  const bits=[(spec.subject||'').trim(),(spec.form||'').trim()].filter(Boolean).join(', ');
+  const shape=[bits,
+    p.pose?p.pose.toUpperCase()+' pose':'',
+    p.topology==='quad'?'clean quad topology':'',
+    'single object, no background, no ground plane, centred, real-world proportions'
+  ].filter(Boolean).join(', ');
+  return shape;
+}
+
+const A3D_DEFAULTS={provider:'meshy',preset:'gameprop',quality:'std',
+  keys:{},items:[],last:'',steerModel:''};
+let A3D=Object.assign({},A3D_DEFAULTS,store.get('foundry',{}));
+const saveA3D=()=>{if(A3D.items.length>120)A3D.items.length=120;store.set('foundry',A3D);};
+const a3dKey=id=>(A3D.keys&&A3D.keys[id])||'';
+
+/* One call for both transports. Meshy is tried direct and only falls back if the browser
+   genuinely refuses; Tripo never tries, because we measured that it cannot work. */
+async function a3dCall(pid,path,init){
+  const P=a3dProvider(pid),key=a3dKey(pid);
+  if(!key)throw new Error('No '+P.label+' API key set — add one in the panel above.');
+  const url=P.base+path;
+  const headers=Object.assign({'Authorization':'Bearer '+key,
+    'Content-Type':'application/json'},(init&&init.headers)||{});
+  const viaBridge=async()=>{
+    if(!BRIDGE_INFO)throw new Error(P.label+' needs the local bridge (it sends no CORS headers, '+
+      'so a browser cannot reach it). Start the bridge from the Local tab and try again.');
+    const r=await bridgePost('/proxy',{url,method:(init&&init.method)||'GET',headers,
+      body:init&&init.body});
+    return typeof r==='string'?JSON.parse(r):r;
+  };
+  if(P.transport==='bridge')return viaBridge();
+  try{
+    const r=await fetch(url,Object.assign({},init,{headers}));
+    const txt=await r.text();
+    if(!r.ok)throw new Error('HTTP '+r.status+(txt?' — '+txt.slice(0,200):''));
+    return txt?JSON.parse(txt):null;
+  }catch(e){
+    if(/HTTP \d/.test(e.message))throw e;        // a real API error, not a transport failure
+    return viaBridge();
+  }
+}
+
+/* ── Generating, and then KEEPING it ─────────────────────────────────────────
+   The point of this panel is the second half. A generated mesh that lives only in a vendor's
+   dashboard is a thing you will regenerate and pay for twice; the library below holds the
+   actual bytes in IndexedDB, so an asset is generated once and reused for as long as the
+   browser keeps its storage — which the Storage panel already makes durable. */
+let A3D_BUSY=null;
+const a3dSave=(id,payload)=>IDB.set('a3dAsset:'+id,payload);
+const a3dLoad=id=>IDB.get('a3dAsset:'+id,null);
+
+function a3dStatus(msg,pct){
+  const el=$('#a3d-status');if(el)el.textContent=msg||'';
+  const bar=$('#a3d-bar');
+  if(bar){bar.hidden=pct==null;bar.style.width=Math.max(0,Math.min(100,pct||0))+'%';}
+}
+/* Fetching the finished model is a separate CORS question from calling the API, and the answer
+   differs by vendor. The bridge is the fallback for exactly that. */
+async function a3dFetchBytes(url){
+  try{
+    const r=await fetch(url);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    return new Uint8Array(await r.arrayBuffer());
+  }catch(e){
+    if(!BRIDGE_INFO)throw new Error('Could not download the model from the vendor CDN ('+
+      e.message+'). That download is cross-origin; the bridge can fetch it if you start it.');
+    const r=await bridgePost('/proxy',{url,method:'GET',headers:{},binary:true});
+    const b64=(typeof r==='string')?r:(r&&(r.base64||r.body||''));
+    const bin=atob(String(b64).replace(/^data:[^,]*,/,''));
+    const out=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);
+    return out;
+  }
+}
+async function a3dGenerate(spec){
+  if(A3D_BUSY)return toast('A generation is already running',2600);
+  const P=a3dProvider(spec.provider||A3D.provider);
+  if(!spec.subject||!spec.subject.trim())return toast('Describe the asset first',2600);
+  A3D_BUSY=spec;a3dRenderPanel();
+  const t0=Date.now();
+  try{
+    a3dStatus('Submitting the geometry pass to '+P.label+'…',2);
+    const s1=P.submit(spec,'preview');
+    const r1=await a3dCall(P.id,s1.path,{method:'POST',body:JSON.stringify(s1.body)});
+    const id1=(r1&&(r1.result||r1.id||r1.task_id||(r1.data&&(r1.data.task_id||r1.data.id))))||'';
+    if(!id1)throw new Error('the provider accepted the request but returned no task id');
+    const geo=await a3dPoll(P,id1,'geometry',5,55);
+    let fin=geo,taskId=id1;
+    /* Texture is a SECOND call on purpose — see A3D_AXES. Only Meshy exposes it separately;
+       Tripo textures in the same task, so there is nothing to do for it here. */
+    if(P.id==='meshy'&&a3dPreset(spec.preset).pbr){
+      a3dStatus('Geometry done — starting the texture pass…',58);
+      const s2=P.submit(spec,'refine',id1);
+      const r2=await a3dCall(P.id,s2.path,{method:'POST',body:JSON.stringify(s2.body)});
+      const id2=(r2&&(r2.result||r2.id||r2.task_id))||'';
+      if(id2){taskId=id2;fin=await a3dPoll(P,id2,'texture',60,95);}
+      else a3dStatus('Texture pass was refused — keeping the untextured mesh',95);
+    }
+    const url=P.glb(fin);
+    if(!url)throw new Error('finished, but no GLB came back'+(P.why(fin)?' — '+P.why(fin):''));
+    a3dStatus('Downloading the model…',96);
+    const bytes=await a3dFetchBytes(url);
+    const item=await a3dKeep(spec,{bytes,thumb:P.thumb(fin),provider:P.id,taskId,
+      seconds:Math.round((Date.now()-t0)/1000)});
+    a3dStatus('');
+    toast('Saved “'+item.name+'” to the library — '+lxBytes(item.bytes)+
+      ', ready to place in the editor',5200);
+    if(typeof sfx==='function')sfx('done');
+    return item;
+  }catch(e){
+    a3dStatus('');
+    toast(P.label+': '+e.message,7000);
+    if(typeof ed3Log==='function')ed3Log('err','foundry: '+e.message);
+    return null;
+  }finally{A3D_BUSY=null;a3dRenderPanel();}
+}
+async function a3dPoll(P,id,what,from,to){
+  const started=Date.now();
+  for(let i=0;i<240;i++){
+    /* 15s is the interval the vendor documentation asks for; a tighter loop is how a key gets
+       rate-limited for no gain, because these jobs take tens of seconds at best. */
+    await new Promise(r=>setTimeout(r,i<3?4000:15000));
+    let j;
+    try{j=await a3dCall(P.id,P.poll(id),{method:'GET'});}
+    catch(e){a3dStatus(what+': '+e.message,from);continue;}
+    const body=(j&&j.data)||j;
+    if(P.failed(body))throw new Error(what+' failed'+(P.why(body)?' — '+P.why(body):''));
+    const pc=P.progress(body);
+    a3dStatus(what+' — '+(pc||0)+'%  ('+Math.round((Date.now()-started)/1000)+'s)',
+      from+((to-from)*(pc||0)/100));
+    if(P.done(body))return body;
+  }
+  throw new Error(what+' did not finish within an hour');
+}
+async function a3dKeep(spec,res){
+  const id=uid();
+  const b64=lxB64(res.bytes);
+  const item={id,name:(spec.subject||'asset').trim().slice(0,60),
+    preset:spec.preset,provider:res.provider,taskId:res.taskId||'',
+    bytes:res.bytes.length,seconds:res.seconds||0,ts:nowISO(),
+    thumb:res.thumb||'',spec:Object.assign({},spec)};
+  A3D.items=[item].concat((A3D.items||[]).filter(x=>x.id!==id));
+  A3D.last=id;saveA3D();
+  await a3dSave(id,{glb:'data:model/gltf-binary;base64,'+b64,thumb:res.thumb||'',spec:item.spec});
+  return item;
+}
+/* Reuse — the whole reason the bytes are kept. Drops the saved GLB straight into the editor
+   scene through the same import path a dragged file uses. */
+async function a3dPlace(id){
+  const it=(A3D.items||[]).find(x=>x.id===id);
+  const d=await a3dLoad(id);
+  if(!d||!d.glb){
+    toast('That asset’s bytes are gone from storage — removing the entry',4200);
+    A3D.items=(A3D.items||[]).filter(x=>x.id!==id);saveA3D();a3dRenderPanel();return;
+  }
+  goEnsure('three','it is where the asset gets placed');
+  const nm=((it&&it.name)||'asset').replace(/[^\w -]+/g,'')+'.glb';
+  if(typeof ed3Send==='function'){
+    ed3Send('import',{name:nm,dataUrl:d.glb});
+    toast('Placed “'+nm+'” in the scene',3200);
+  }else toast('The 3D editor is not ready yet — open it and try again',3600);
+}
+async function a3dDownload(id){
+  const it=(A3D.items||[]).find(x=>x.id===id);
+  const d=await a3dLoad(id);if(!d||!d.glb)return toast('Those bytes are gone',3000);
+  const bin=atob(d.glb.split(',')[1]||'');
+  const u=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+  downloadBlob(((it&&it.name)||'asset').replace(/[^\w -]+/g,'-').toLowerCase()+'.glb',
+    new Blob([u],{type:'model/gltf-binary'}));
+}
+function a3dForget(id){
+  A3D.items=(A3D.items||[]).filter(x=>x.id!==id);saveA3D();
+  IDB.set('a3dAsset:'+id,null);a3dRenderPanel();
+}
+
+/* ── Steering a model you already pay for ────────────────────────────────────
+   No text or vision model emits a GLB, and pretending otherwise is the quickest way to make
+   this feature useless. What they CAN do is two things that matter more than they sound:
+   write the request properly, and look at the result and say what is wrong with it. */
+async function a3dSteer(spec){
+  const model=A3D.steerModel||settings.archModel;
+  if(!model)return toast('Pick a model to steer with first',3000);
+  a3dStatus('Asking '+model+' to write the brief…',null);
+  try{
+    const out=await streamComplete({model,
+      system:'You write generation briefs for single-object 3D asset generators. You know that '+
+        'geometry and texture are separate passes, that topology and polycount are decisions, '+
+        'that a pose must be canonical to be riggable, and that a scene is not an asset. '+
+        'Answer with the brief only — no preamble, no explanation, no markdown headings.',
+      messages:[{role:'user',content:
+        'Rewrite and sharpen this brief. Keep every constraint, make the SUBJECT and FORM lines '+
+        'concrete and specific, and add nothing about scenes, lighting or cameras.\n\n'+
+        a3dBrief(spec)}],
+      maxTokens:900});
+    const text=(out&&(out.content||out.text))||'';
+    if(!text.trim())throw new Error('the model returned nothing');
+    const box=$('#a3d-brief');if(box)box.value=text.trim();
+    a3dStatus('');
+    toast('Brief rewritten — read it before you spend credits on it',4200);
+    return text;
+  }catch(e){a3dStatus('');toast('Steering failed: '+e.message,5000);return null;}
+}
+/* The critique pass. A vision model looking at the actual render is the only thing in this
+   panel that can tell you the silhouette is wrong, and it is cheap next to regenerating. */
+async function a3dCritique(){
+  const model=A3D.steerModel||settings.archModel;
+  if(!model)return toast('Pick a vision-capable model first',3000);
+  a3dStatus('Capturing the viewport…',null);
+  let shot='';
+  try{shot=await ed3Shot();}catch(_){}
+  if(!shot)return a3dStatus(''),toast('Could not capture the editor viewport — open the 3D '+
+    'editor with something in the scene and try again',5200);
+  try{
+    a3dStatus('Asking '+model+' what is wrong with it…',null);
+    const out=await streamComplete({model,
+      system:'You critique 3D assets from a render. Be specific and physical: silhouette, '+
+        'proportion, scale, topology tells, texture that should have been geometry. Name at most '+
+        'five problems, worst first, each with the concrete change that fixes it. If it is good, '+
+        'say so in one line rather than inventing faults.',
+      messages:[{role:'user',content:[
+        {type:'text',text:'This asset was generated from the brief below. What is actually wrong '+
+          'with it?\n\n'+((($('#a3d-brief')||{}).value)||'(no brief)')},
+        {type:'image_url',image_url:{url:shot}}]}],
+      maxTokens:700});
+    const text=(out&&(out.content||out.text))||'';
+    a3dStatus('');
+    openModal('<h3 style="margin-top:0">What the model sees</h3>'+
+      '<img src="'+esc(shot)+'" style="width:100%;border-radius:10px;border:1px solid var(--edge)">'+
+      '<pre class="mono" style="white-space:pre-wrap;font-size:12px;margin-top:12px">'+
+      esc(text||'(the model returned nothing)')+'</pre>');
+    return text;
+  }catch(e){a3dStatus('');toast('Critique failed: '+e.message,5000);return null;}
+}
+
+/* Capture the editor's real rendered frame. The editor already answers a `screenshot` command
+   and its renderer is created with preserveDrawingBuffer, without which a WebGL canvas reads
+   back blank — so the only missing piece was intercepting the reply instead of letting the
+   generic file handler download it, which is what ED3._toStudio already does for HTML. */
+function ed3Shot(){
+  return new Promise((res)=>{
+    if(typeof ED3_FRAME==='undefined'||!ED3_FRAME||!ED3_FRAME.contentWindow)return res('');
+    let done=false;
+    ED3._wantShot=(dataUrl)=>{if(done)return;done=true;ED3._wantShot=null;res(dataUrl||'');};
+    ed3Send('screenshot');
+    setTimeout(()=>{if(!done){done=true;ED3._wantShot=null;res('');}},6000);
+  });
+}
+
+function a3dRenderPanel(){
+  const host=$('#a3d-panel');if(!host)return;
+  const P=a3dProvider(A3D.provider);
+  const pr=a3dPreset(A3D.preset);
+  const busy=!!A3D_BUSY;
+  const provs=A3D_PROVIDERS.map(p=>
+    `<button class="pipe-chip${p.id===A3D.provider?' on':''}" data-a3dp="${esc(p.id)}"
+      title="${esc(p.note)}">${p.icon} ${esc(p.label)}</button>`).join('');
+  const presets=A3D_PRESETS.map(p=>
+    `<button class="pipe-chip${p.id===A3D.preset?' on':''}" data-a3dpre="${esc(p.id)}"
+      title="${esc(p.note)}">${p.icon} ${esc(p.label)}</button>`).join('');
+  const bridgeNeeded=P.transport==='bridge'&&!BRIDGE_INFO;
+  host.innerHTML=`
+    <div class="pipe-chips">${provs}</div>
+    <div class="pipe-warn ${bridgeNeeded?'bad':'ok'}" style="margin-top:10px">${esc(P.note)}${
+      bridgeNeeded?' <b>The bridge is not running, so this provider cannot be used right now.</b>':''}</div>
+    <div class="row" style="margin-top:10px;gap:8px">
+      <label class="field" style="flex:1;min-width:240px">${esc(P.label)} API key
+        <input type="password" id="a3d-key" placeholder="${esc(P.keyHint)}" value="${esc(a3dKey(P.id))}"></label>
+      <a class="btn ghost small" href="${esc(P.site)}" target="_blank" rel="noopener"
+        style="align-self:flex-end;text-decoration:none">Get one ↗</a>
+    </div>
+    <p class="help" style="margin-top:8px">Both services are paid, per generation. The key is kept
+      in this browser like every other key here and is never sent anywhere except that vendor.</p>
+
+    <h4 style="margin:16px 0 6px;font-size:12.5px">What kind of asset</h4>
+    <div class="pipe-chips">${presets}</div>
+    <p class="help" style="margin-top:6px">${esc(pr.note)} — ${pr.poly.toLocaleString()} tris,
+      ${esc(pr.topology)} topology${pr.pose?', '+esc(pr.pose.toUpperCase()):''},
+      ${pr.pbr?'PBR at '+esc(pr.tex):'flat colour, no PBR'}.</p>
+
+    <div class="grid2" style="margin-top:12px">
+      <label class="field">Subject — one object
+        <input type="text" id="a3d-subject" placeholder="a weathered brass diving helmet"
+          value="${esc((A3D.draft&&A3D.draft.subject)||'')}"></label>
+      <label class="field">Longest dimension (m)
+        <input type="number" id="a3d-size" min="0.01" step="0.1"
+          value="${esc(String((A3D.draft&&A3D.draft.size)||1))}"></label>
+    </div>
+    <label class="field" style="margin-top:8px">Form — silhouette and proportion only
+      <input type="text" id="a3d-form" placeholder="rounded dome, three porthole windows, heavy collar flange"
+        value="${esc((A3D.draft&&A3D.draft.form)||'')}"></label>
+    <label class="field" style="margin-top:8px">Surface — material and wear, kept out of the geometry pass
+      <input type="text" id="a3d-texture" placeholder="aged brass, green verdigris in the recesses, scratched high points"
+        value="${esc((A3D.draft&&A3D.draft.texture)||'')}"></label>
+
+    <div class="row" style="margin-top:12px;gap:8px;align-items:center">
+      <button class="btn ${busy?'ghost':''}" id="a3d-go"${busy?' disabled':''}>
+        ${busy?'Generating…':'✦ Generate & keep'}</button>
+      <button class="btn ghost small" id="a3d-compile">📋 Show the brief</button>
+      <button class="btn ghost small" id="a3d-steer">🧠 Have a model sharpen it</button>
+      <button class="btn ghost small" id="a3d-crit">👁 Critique what is in the editor</button>
+      <span class="mini muted" id="a3d-status"></span>
+    </div>
+    <div style="height:4px;background:var(--edge);border-radius:3px;margin-top:8px;overflow:hidden">
+      <div id="a3d-bar" hidden style="height:100%;background:var(--acc);width:0%"></div></div>
+
+    <details style="margin-top:12px"><summary class="mini muted" style="cursor:pointer">
+      The brief that gets sent — edit it if you want</summary>
+      <textarea id="a3d-brief" class="mono" rows="14" style="width:100%;margin-top:8px"></textarea>
+    </details>
+
+    <h4 style="margin:18px 0 6px;font-size:12.5px">Library — generated once, reusable for good</h4>
+    <div id="a3d-lib"></div>
+
+    <h4 style="margin:18px 0 6px;font-size:12.5px">The formula these tools are built on</h4>
+    <div class="lx-kinds">${A3D_AXES.map(a=>
+      `<div class="lx-kind"><b>${esc(a.label)}</b><span>${esc(a.why)}<br><br>
+        <b style="color:var(--acc)">Do:</b> ${esc(a.apply)}</span></div>`).join('')}</div>`;
+
+  $$('[data-a3dp]').forEach(b=>b.onclick=()=>{A3D.provider=b.dataset.a3dp;saveA3D();a3dRenderPanel();});
+  $$('[data-a3dpre]').forEach(b=>b.onclick=()=>{A3D.preset=b.dataset.a3dpre;saveA3D();a3dRenderPanel();});
+  const k=$('#a3d-key');
+  if(k)k.onchange=()=>{A3D.keys=A3D.keys||{};A3D.keys[A3D.provider]=k.value.trim();saveA3D();
+    toast('Key saved for '+a3dProvider(A3D.provider).label,2400);};
+  const draft=()=>{
+    const v=id=>(($('#'+id)||{}).value||'').trim();
+    const d={provider:A3D.provider,preset:A3D.preset,subject:v('a3d-subject'),form:v('a3d-form'),
+      texture:v('a3d-texture'),size:+v('a3d-size')||1,axis:'Y',quality:A3D.quality};
+    A3D.draft=d;saveA3D();return d;
+  };
+  const cp=$('#a3d-compile');
+  if(cp)cp.onclick=()=>{
+    const b=$('#a3d-brief');if(b)b.value=a3dBrief(draft());
+    const d=b&&b.closest('details');if(d)d.open=true;
+  };
+  const go=$('#a3d-go');
+  if(go)go.onclick=()=>a3dGenerate(draft());
+  const st=$('#a3d-steer');
+  if(st)st.onclick=()=>a3dSteer(draft());
+  const cr=$('#a3d-crit');
+  if(cr)cr.onclick=()=>a3dCritique();
+  a3dRenderLib();
+}
+function a3dRenderLib(){
+  const host=$('#a3d-lib');if(!host)return;
+  const items=A3D.items||[];
+  if(!items.length){
+    host.innerHTML='<p class="help" style="margin:0">Nothing generated yet. Anything you make here '+
+      'is stored with its bytes, so it can be placed in the editor again without paying for it twice '+
+      '— and it rides along in the workspace backup.</p>';
+    return;
+  }
+  host.innerHTML='<div class="lx-lib">'+items.map(it=>{
+    const pr=a3dPreset(it.preset),P=a3dProvider(it.provider);
+    return `<div class="lx-item">
+      <button class="lx-hit" data-a3dplace="${esc(it.id)}" title="Place it in the 3D editor">
+        <span class="lx-ico">${it.thumb?`<img src="${esc(it.thumb)}" alt="" style="width:26px;height:26px;object-fit:cover;border-radius:5px">`:pr.icon}</span>
+        <span class="lx-meta"><b>${esc(it.name)}</b>
+          <span class="mini muted">${P.icon} ${esc(pr.label)} · ${esc(lxBytes(it.bytes||0))}${it.seconds?' · '+it.seconds+'s':''}</span></span>
+      </button>
+      <button class="btn ghost small" data-a3dget="${esc(it.id)}" title="Download the .glb">⬇</button>
+      <button class="btn ghost small" data-a3ddrop="${esc(it.id)}" title="Remove from the library">✕</button>
+    </div>`;}).join('')+'</div>';
+  $$('[data-a3dplace]').forEach(b=>b.onclick=()=>a3dPlace(b.dataset.a3dplace));
+  $$('[data-a3dget]').forEach(b=>b.onclick=()=>a3dDownload(b.dataset.a3dget));
+  $$('[data-a3ddrop]').forEach(b=>b.onclick=()=>a3dForget(b.dataset.a3ddrop));
+}
+
 /* ═══════════════════ 3D EDITOR ═══════════════════
    A real three.js editor, built to the same shape as the official one (editor.threejs.org):
    a menubar, an outliner, a properties inspector, transform gizmos, and a command stack that
@@ -10244,6 +10812,9 @@ function initEd3(){
     else if(d.k==='want'&&d.v==='focus')ed3Send('focus');
     else if(d.k==='err')toast('3D editor: '+d.v,5000);
     else if(d.k==='file'){
+      /* The Foundry asks for a render to critique. Without this the generic handler below would
+         helpfully download viewport.png to the user's Downloads folder instead. */
+      if(ED3._wantShot&&d.v.name==='viewport.png'&&d.v.dataUrl){ED3._wantShot(d.v.dataUrl);return;}
       if(ED3._toStudio&&d.v.name.endsWith('.html')){
         ED3._toStudio=false;
         WS.files=WS.files||{};WS.files['index.html']=d.v.text;WS.entry='index.html';
@@ -24411,6 +24982,51 @@ function gauntletCases(g){
       return /script-src[^;]*\*/.test(csp)?'wide-open':'bounded';
     },antiExpect:v=>v==='bounded'});
 
+  /* ── 3D ASSET FOUNDRY ─────────────────────────────────────────────────────
+     The central rule of the whole formula is that geometry and texture are separate passes, and
+     the way it silently breaks is surface words leaking into the geometry prompt — which does
+     not error, it just comes back looking painted-on. */
+  /* The invariant is that the TEXTURE FIELD never reaches the geometry prompt. The first version
+     of this case matched any material word at all and went red on "a BRASS diving helmet" — but
+     that word is in the SUBJECT, which is the object's identity and passes through verbatim by
+     design. Testing a proxy for the rule instead of the rule itself is how a test ends up
+     demanding a change that would make the feature worse. */
+  add({id:'a3d-geometry-pass-is-clean',sub:'foundry',uses:['a3dGeomPrompt','a3dBrief'],
+    what:'nothing from the surface brief reaches the geometry pass',
+    run:()=>{
+      const p=g.a3dGeomPrompt({subject:'a diving helmet',form:'rounded dome, three portholes',
+        texture:'flaking verdigris, scratched high points, oily sheen',preset:'gameprop'});
+      return (/verdigris|scratched|oily|sheen|flaking/i.test(p))?'leaked':'clean';
+    },expect:v=>v==='clean',
+    antiWhat:'and the surface words are not simply thrown away — the texture pass still has them',
+    anti:()=>{
+      const b=g.a3dBrief({subject:'a brass diving helmet',form:'rounded dome',
+        texture:'aged brass, green verdigris',preset:'gameprop'});
+      return /verdigris/.test(b)&&/PASS 2/.test(b)?'kept':'lost';
+    },antiExpect:v=>v==='kept'});
+
+  /* Tripo sends no CORS headers — measured, not assumed. Marking it 'direct' would produce a
+     network error the user would reasonably read as a bad API key. */
+  add({id:'a3d-transport-is-honest',sub:'foundry',uses:['A3D_PROVIDERS','a3dProvider'],
+    what:'a provider the browser cannot reach is declared as needing the bridge',
+    run:()=>{
+      const t=g.a3dProvider('tripo'),m=g.a3dProvider('meshy');
+      return t.transport+'/'+m.transport;
+    },expect:v=>v==='bridge/direct',
+    antiWhat:'and every provider states a transport at all rather than defaulting to hope',
+    anti:()=>g.A3D_PROVIDERS.filter(p=>p.transport!=='direct'&&p.transport!=='bridge').length,
+    antiExpect:v=>v===0});
+
+  /* A preset exists to answer every axis at once. One that leaves an axis undefined puts the
+     default back in charge, which is the thing the formula is against. */
+  add({id:'a3d-presets-answer-every-axis',sub:'foundry',uses:['A3D_PRESETS','a3dBrief'],
+    what:'every role preset sets polycount, topology and texture resolution',
+    run:()=>g.A3D_PRESETS.filter(p=>!(p.poly>0)||!p.topology||!p.tex).map(p=>p.id).join(','),
+    expect:v=>v==='',
+    antiWhat:'and the presets are genuinely different rather than one budget repeated',
+    anti:()=>new Set(g.A3D_PRESETS.map(p=>p.poly+'/'+p.topology+'/'+(p.pbr?1:0))).size,
+    antiExpect:v=>v>=5});
+
   /* ── PIPELINE SHAPES ──────────────────────────────────────────────────────
      The shapes are a data table and the picker is built from it, which is the bug this file
      has produced three times. And the warnings are the reason the picker exists at all: one
@@ -26562,6 +27178,9 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'a3d-geom-leaks-surface',export:'a3dGeomPrompt',
+   why:'material words leak into the geometry pass and the mesh comes back looking painted-on',
+   broken:()=>spec=>[spec.subject,spec.form,spec.texture].filter(Boolean).join(', ')},
   {id:'pipe-warns-never-fire',export:'pipeWarn',
    why:'the one measured-harmful pipeline configuration is accepted in silence',
    broken:()=>()=>[]},
@@ -46616,6 +47235,8 @@ async function persistDir(){
 /* ── What "all my work" actually is ────────────────────────────────────── */
 const PERSIST_KEYS=['ws','projects','creations','ofw','ofc','webos','brainDir','moaPresets',
   'skillCtx','connx','ui','onboarding','skills','history','traces','persist','trueforge','notes',
+  /* Generated 3D assets — the same promise: kept means kept. */
+  'foundry',
   /* The Launcher library. Keeping a project there is a promise that it survives — a promise the
      user's own backup has to carry too, or "Keep" means "until this browser clears its data". */
   'launcher'];
@@ -47963,6 +48584,9 @@ async function persistCollect(){
   for(const a of apps){
     if(a.kind==='project'){const f=await IDB.get('wosFiles:'+a.id,null);if(f)out.idb['wosFiles:'+a.id]=f;}
     else{const b=await IDB.get('wosApp:'+a.id,'');if(b)out.idb['wosApp:'+a.id]=b;}
+  }
+  for(const it of ((out.data.foundry&&out.data.foundry.items)||[])){
+    try{const d=await IDB.get('a3dAsset:'+it.id,null);if(d)out.idb['a3dAsset:'+it.id]=d;}catch(_){}
   }
   /* Launcher projects live in IndexedDB like WebOS apps do, and the localStorage entry alone is
      just a name and a file count — restoring from it without these would give back a library of
@@ -51712,7 +52336,7 @@ function go(view){
   if(view==='library')panelGuard(view,()=>renderOcrDocs());
   if(view==='study')panelGuard(view,()=>renderStudy());
   if(view==='ops')panelGuard(view,()=>renderStyleUI());
-  if(view==='three')panelGuard(view,()=>{renderAssets();renderWdream();renderEd3Assets();renderPcv();});
+  if(view==='three')panelGuard(view,()=>{a3dRenderPanel();renderAssets();renderWdream();renderEd3Assets();renderPcv();});
   if(view==='spline')panelGuard(view,()=>{renderSpline();connInit();});
   if(view==='forge'&&$('#sub-brain')&&$('#sub-brain').classList.contains('on'))panelGuard(view,()=>renderBrainMap());
   if(view==='history')panelGuard(view,()=>renderHistory());
@@ -52124,6 +52748,10 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     wosInit,wosNewApp,wosInstallFromStudio,wosInstallAI,wosBroadcast,wosPreset,wosIconPos,
     GH_RAW,ghParse,ghApi,ghScan,ghRaw,renderGhImport,
     zipBytes,APP_CSP,CONN_PENDING,connPark,actDetail,
+    A3D_AXES,A3D_PRESETS,a3dPreset,A3D_PROVIDERS,a3dProvider,a3dBrief,a3dGeomPrompt,
+    A3D_DEFAULTS,get A3D(){return A3D},set A3D(v){A3D=v},saveA3D,a3dKey,a3dCall,
+    a3dGenerate,a3dPoll,a3dKeep,a3dPlace,a3dDownload,a3dForget,a3dSteer,a3dCritique,
+    a3dSave,a3dLoad,a3dFetchBytes,a3dStatus,ed3Shot,a3dRenderPanel,a3dRenderLib,
     PIPE_MODES,pipeMode,PIPE_DEFAULTS,get PIPE(){return PIPE},set PIPE(v){PIPE=v},savePipe,
     PIPE_RANK,pipeRank,pipeFamily,pipeWarn,pipeSuggest,pipeApply,pipeBaseline,pipeModels,pipeSwapModels,
     PIPE_BARS,pipeBar,pipeRender,pipeCompare,cutTo,
