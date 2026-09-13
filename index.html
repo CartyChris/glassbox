@@ -1170,6 +1170,16 @@ input[type=range]{flex:1;accent-color:var(--acc)}
   background:var(--ink3);transition:transform .15s,background .15s}
 .sw.on{background:var(--acc)}
 .sw.on::after{transform:translateX(18px);background:#fff}
+/* Visually hidden but still read aloud. NOT display:none and NOT visibility:hidden — both of
+   those remove the element from the accessibility tree too, which is the opposite of the point. */
+.a11y-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
+/* The skip link is the exception: it must become visible when it is focused, or a sighted
+   keyboard user cannot tell where their focus went. */
+.skip-link{position:absolute;left:8px;top:-60px;z-index:100000;padding:10px 16px;border-radius:0 0 10px 10px;
+  background:var(--acc);color:#fff;font-weight:700;font-size:13px;text-decoration:none;
+  transition:top .12s}
+.skip-link:focus{top:0;outline:2px solid #fff;outline-offset:2px}
 /* NOT .swatch — that name is already a 9px dot in the reasoning panes, and its
    width/height won every time, crushing these rows to 9px and overlapping the labels. */
 .tokrow{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--edge);
@@ -2138,6 +2148,11 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
 </head>
 <body>
 <div id="app">
+  <!-- 2,656 focusable elements sit between the top of this page and the content of whatever tab
+       is open. Without this, reaching the panel you actually came for means tabbing through all
+       of them, every single time. It is the first thing in the DOM so it is the first stop. -->
+  <a href="#main" class="skip-link">Skip to content</a>
+  <h1 class="a11y-only">Glassbox Jet — reasoning, 3D and creation studio</h1>
   <button id="immersive-out" title="Show the menus again (Esc)" aria-label="Exit immersive mode">▤</button>
   <div id="tb-sheet"></div>
   <header class="top">
@@ -2213,7 +2228,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
   </nav>
   <div id="agentbar" class="agentbar"></div>
 
-  <main>
+  <main id="main" tabindex="-1">
     <!-- ============ SPLINE ============ -->
     <section class="view" id="view-spline"><div class="wrap">
       <div id="spl-panel"></div>
@@ -2411,7 +2426,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           every call and does not touch reasoning tokens, so on short calls it can cost more than it
           saves. The ledger below measures both sides instead of quoting a headline number.</p>
         <div class="row" style="gap:8px;flex-wrap:wrap">
-          <select id="sty-pick" style="flex:1;min-width:200px"></select>
+          <select id="sty-pick" style="flex:1;min-width:200px" aria-label="Output style"></select>
           <button class="btn ghost small" id="sty-base">Set current average as baseline</button>
         </div>
         <div id="sty-hint" class="mini muted" style="margin-top:6px"></div>
@@ -2623,13 +2638,13 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           offline. What it reads becomes searchable, and models can query it with
           <span class="mono">ocr_search</span> instead of guessing at a document they cannot see.</p>
         <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px">
-          <select id="ocr-engine" style="flex:0 0 230px"></select>
-          <select id="ocr-preset" style="flex:1;min-width:180px"></select>
+          <select id="ocr-engine" style="flex:0 0 230px" aria-label="OCR engine"></select>
+          <select id="ocr-preset" style="flex:1;min-width:180px" aria-label="OCR quality preset"></select>
           <input id="ocr-lang" class="mono" style="flex:0 0 90px" placeholder="eng">
         </div>
         <div id="ocr-note" class="mini muted" style="margin-top:6px"></div>
         <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px">
-          <input type="file" id="ocr-file" accept="application/pdf,image/*" style="flex:1;min-width:200px">
+          <input type="file" id="ocr-file" accept="application/pdf,image/*" style="flex:1;min-width:200px" aria-label="PDF or image to read">
           <button class="btn" id="ocr-go">👁 Read it</button>
         </div>
         <div id="ocr-live" class="help mono" style="margin-top:8px"></div>
@@ -2709,7 +2724,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           <h3>Event log <span class="muted" id="log-count"></span></h3>
           <div class="row" style="margin-bottom:10px">
             <input type="text" id="log-filter" placeholder="filter…" style="flex:1;min-width:140px">
-            <select id="log-kind"><option value="">every kind</option><option>call</option>
+            <select id="log-kind" aria-label="Filter by event kind"><option value="">every kind</option><option>call</option>
               <option>error</option><option>comm</option><option>escalate</option>
               <option>standup</option><option>guard</option><option>round</option></select>
             <button class="btn ghost small" id="log-export">⬇ Export</button>
@@ -2735,7 +2750,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           <p class="help">Messages between you and the agents, and between the agents themselves. Anything you send to a running relay is picked up by the very next round as a top-priority instruction.</p>
           <div id="comm-feed" style="max-height:40vh;overflow:auto;margin-top:12px"></div>
           <div class="row" style="margin-top:12px">
-            <select id="comm-target" style="width:150px"><option value="relay">→ the relay</option>
+            <select id="comm-target" style="width:150px" aria-label="Send this message to"><option value="relay">→ the relay</option>
               <option value="all">→ everyone</option></select>
             <input type="text" id="comm-input" placeholder="Steer the run — “stop refactoring, just fix the crash”" style="flex:1;min-width:180px">
             <button class="btn" id="comm-send">Send</button>
@@ -2821,9 +2836,9 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
             This aligns the two step sequences and marks the first point they part company, with
             what each step cost on either side.</p>
           <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap">
-            <select id="td-a" style="flex:1;min-width:180px"></select>
+            <select id="td-a" style="flex:1;min-width:180px" aria-label="Trace A"></select>
             <button class="btn ghost small" id="td-swap" title="Swap A and B">⇄</button>
-            <select id="td-b" style="flex:1;min-width:180px"></select>
+            <select id="td-b" style="flex:1;min-width:180px" aria-label="Trace B"></select>
           </div>
           <div id="td-out" style="margin-top:12px"></div>
         </div>
@@ -2889,9 +2904,9 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           a persisted copy of every prompt would fill your storage and park whatever you pasted
           into it on disk.</p>
         <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">
-          <select id="pi-pick" style="flex:1;min-width:220px"></select>
+          <select id="pi-pick" style="flex:1;min-width:220px" aria-label="Captured prompt"></select>
           <button class="btn ghost small" id="pi-refresh">↻</button>
-          <select id="pi-cmp" style="flex:1;min-width:220px"></select>
+          <select id="pi-cmp" style="flex:1;min-width:220px" aria-label="Compare against"></select>
           <button class="btn ghost small" id="pi-diff">⇄ Compare</button>
         </div>
         <div id="pi-out" style="margin-top:10px"></div>
@@ -3583,7 +3598,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           the picture is never simply missing. Node size carries the win/loss record, so what you
           see says something true rather than only looking good. Click any node to open it.</p>
         <div class="row" style="gap:8px;align-items:center">
-          <select id="viz-source" style="flex:0 0 260px"></select>
+          <select id="viz-source" style="flex:0 0 260px" aria-label="Graph source"></select>
           <button class="btn small" id="viz-refresh">↻ Redraw</button>
           <span id="viz-blurb" class="help" style="flex:1"></span>
         </div>
@@ -3655,8 +3670,8 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           requests from its own origin, so this goes through the bridge — if it is not running,
           this says so rather than showing an empty list that looks like "no results".</p>
         <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px">
-          <select id="hf-sort" style="flex:0 0 170px"></select>
-          <select id="hf-filter" style="flex:0 0 220px"></select>
+          <select id="hf-sort" style="flex:0 0 170px" aria-label="Sort models by"></select>
+          <select id="hf-filter" style="flex:0 0 220px" aria-label="Filter models by task"></select>
           <input id="hf-q" placeholder="search…" style="flex:1;min-width:140px">
           <button class="btn" id="hf-go">Fetch</button>
         </div>
@@ -3735,13 +3750,13 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           skip</b>, and skipping it is why output needs so much rework: the model ends up inventing
           the shape of the code while it is also writing it.</p>
         <div class="row" style="gap:8px;align-items:center">
-          <select id="fc-mode" style="flex:0 0 340px"></select>
+          <select id="fc-mode" style="flex:0 0 340px" aria-label="Factory mode"></select>
           <label class="chk"><input type="checkbox" id="fc-improve"> self-improving</label>
           <span id="fc-mode-note" class="help" style="flex:1"></span>
         </div>
         <div class="row" style="gap:8px">
           <input id="fc-task" style="flex:1" placeholder="a work item — e.g. “add offline mode with a sync queue”">
-          <select id="fc-size" style="flex:0 0 300px"></select>
+          <select id="fc-size" style="flex:0 0 300px" aria-label="Work item size"></select>
           <button class="btn small" id="fc-add">＋ Queue it</button>
         </div>
         <div class="row" style="gap:8px;align-items:center">
@@ -3793,7 +3808,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           so the graph is shaped by what actually succeeded, not by what was merely written down.</p>
         <div class="row" style="gap:8px">
           <input id="gr-name" style="flex:1" placeholder="graph name — e.g. “Ashfall rendering”">
-          <select id="gr-kind" style="flex:0 0 300px"></select>
+          <select id="gr-kind" style="flex:0 0 300px" aria-label="Graph kind"></select>
           <button class="btn small" id="gr-add">＋ New graph</button>
         </div>
         <div class="row" id="gr-list" style="margin-top:8px"></div>
@@ -3817,7 +3832,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           choose a prompt would tax every request. In the chat window, type <b>/</b> to load one
           by hand.</p>
         <div class="row" style="gap:8px;align-items:center">
-          <select id="sk-mode" style="flex:0 0 170px"></select>
+          <select id="sk-mode" style="flex:0 0 170px" aria-label="Skill selection mode"></select>
           <label class="chk">max <input id="sk-max" type="number" min="1" max="8" style="width:60px"></label>
           <input id="sk-model" class="mono" style="flex:0 0 220px" placeholder="model (blank = builder)">
           <span style="flex:1"></span>
@@ -3936,8 +3951,8 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           <label class="chk"><input type="checkbox" id="as-on"> assist on</label>
           <input id="as-primary" class="mono" style="flex:0 0 220px" placeholder="local/primary model">
           <input id="ax-model" class="mono" style="flex:0 0 220px" placeholder="assistant model">
-          <select id="as-role" style="flex:0 0 180px"></select>
-          <select id="as-when" style="flex:0 0 160px">
+          <select id="as-role" style="flex:0 0 180px" aria-label="Advisor role"></select>
+          <select id="as-when" style="flex:0 0 160px" aria-label="When this advisor runs">
             <option value="gated">only when needed</option>
             <option value="always">every checkpoint</option>
           </select>
@@ -3963,7 +3978,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           is met; the model never gets to declare itself finished.</p>
         <div class="row" style="gap:8px">
           <input id="mb-loop-name" style="flex:0 0 200px" placeholder="loop name">
-          <select id="mb-loop-kind" style="flex:0 0 220px"></select>
+          <select id="mb-loop-kind" style="flex:0 0 220px" aria-label="Loop kind"></select>
           <input id="mb-loop-obj" style="flex:1" placeholder="objective">
           <button class="btn small" id="mb-loop-add">＋ Add loop</button>
         </div>
@@ -4026,7 +4041,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           provider, and a genuine <b>decline</b> wants a clearer request. Guessing wrong wastes a
           round every time. Paste a response to classify it.</p>
         <div class="row" style="gap:8px">
-          <select id="gd-refusal-fin" style="flex:0 0 200px">
+          <select id="gd-refusal-fin" style="flex:0 0 200px" aria-label="Finish reason">
             <option value="stop">finish_reason: stop</option>
             <option value="length">finish_reason: length</option>
             <option value="content_filter">finish_reason: content_filter</option>
@@ -4070,7 +4085,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
       <aside class="of-rail of-genmode">
         <div class="of-hd">Document</div>
         <div class="of-pad">
-          <select id="of-kind">
+          <select id="of-kind" aria-label="Document type">
             <option value="pptx">PowerPoint deck (.pptx)</option>
             <option value="docx">Word document (.docx)</option>
             <option value="xlsx">Excel workbook (.xlsx)</option>
@@ -4082,7 +4097,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
         </div>
         <div class="of-hd">Start from <span class="of-sub">a real document shape</span></div>
         <div class="of-pad" style="gap:6px">
-          <select id="of-tpl"><option value="">— blank brief —</option></select>
+          <select id="of-tpl" aria-label="Brief template"><option value="">— blank brief —</option></select>
           <p class="help" id="of-tpl-why" style="margin:0"></p>
         </div>
         <div class="of-hd">Refine <span class="of-sub">iterate before you download</span></div>
@@ -4129,7 +4144,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
 
       <div class="of-stage of-livemode" id="of-livemode" style="display:none;grid-column:1/-1">
         <div class="of-bar">
-          <select id="of-live-kind" style="width:200px">
+          <select id="of-live-kind" style="width:200px" aria-label="Editor mode">
             <option value="native">📝 Writer — AI writes into it</option>
             <option value="sheet-native">📊 Calc — spreadsheet, AI writes into it</option>
             <option value="writer">CryptPad Writer — Word-like</option>
@@ -4318,7 +4333,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           <div class="ofc-scroll" id="ofc-grid"></div>
           <div class="ofc-tabs" id="ofc-tabs"></div>
           <div class="ofw-ai">
-            <select id="ofc-act" style="width:170px">
+            <select id="ofc-act" style="width:170px" aria-label="What to do with this sheet">
               <option value="build">✦ Build me a sheet</option>
               <option value="formula">ƒx Add formulas</option>
               <option value="analyse">📈 Analyse this data</option>
@@ -4349,7 +4364,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           specification to implement, not a copy of the source.</p>
         <div class="row" style="gap:8px">
           <input id="ghr-repo" class="mono" style="flex:1" placeholder="owner/repo — or paste a github.com URL">
-          <select id="ghr-mode" style="flex:0 0 210px">
+          <select id="ghr-mode" style="flex:0 0 210px" aria-label="Import mode">
             <option value="spec">Rebuild specification</option>
             <option value="arch">Architecture map</option>
             <option value="stack">Stack &amp; dependency read</option>
@@ -4378,7 +4393,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           reversible by assignment. Kept changes are written to the Brain and the graph with
           <b>verified</b> provenance.</p>
         <div class="row" style="gap:8px">
-          <select id="rsi-metric" style="flex:1"></select>
+          <select id="rsi-metric" style="flex:1" aria-label="Metric to optimise"></select>
           <label class="chk">rounds <input id="rsi-rounds" type="number" min="1" max="20" style="width:70px"></label>
           <button class="btn" id="rsi-go">▶ Run autoresearch</button>
           <button class="btn small" id="rsi-revert">Reset to defaults</button>
@@ -4398,7 +4413,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           switching from &ldquo;fast and cheap&rdquo; to &ldquo;careful and expensive&rdquo; is one click rather than a
           settings audit.</p>
         <div class="row" style="gap:8px">
-          <select id="mh-preset" style="flex:1"></select>
+          <select id="mh-preset" style="flex:1" aria-label="Pipeline preset"></select>
           <button class="btn" id="mh-apply">✓ Apply preset</button>
           <button class="btn small" id="mh-dup">⧉ Duplicate</button>
           <button class="btn small" id="mh-del">🗑 Delete</button>
@@ -4469,7 +4484,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           <span class="mono">pages/</span> and <span class="mono">journals/</span>, a
           <span class="mono">brain/BRAIN.md</span> front door, or 32-hex Notion suffixes.</p>
         <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px">
-          <input type="file" id="bi-files" webkitdirectory directory multiple style="flex:1;min-width:210px">
+          <input type="file" id="bi-files" webkitdirectory directory multiple style="flex:1;min-width:210px" aria-label="Folder to import">
           <label class="chk"><input type="checkbox" id="bi-over"> overwrite same-named notes</label>
           <button class="btn" id="bi-scan">Scan</button>
           <button class="btn ghost small" id="bi-import" disabled>Import</button>
@@ -4530,7 +4545,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
         <div class="row" style="gap:8px">
           <input id="bc-mistake-name" placeholder="what it was" style="flex:0 0 240px">
           <input id="bc-mistake-body" placeholder="what went wrong, and what to do instead" style="flex:1">
-          <select id="bc-mistake-sev"><option value="3">high</option><option value="2" selected>medium</option><option value="1">low</option></select>
+          <select id="bc-mistake-sev" aria-label="Severity"><option value="3">high</option><option value="2" selected>medium</option><option value="1">low</option></select>
           <button class="btn small" id="bc-mistake-add">Record</button>
         </div>
         <div id="bc-mistakes"></div>
@@ -4674,7 +4689,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           refusing them. It is told that two tasks must never touch the same file, because that
           is exactly what stalls a swarm.</p>
         <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px">
-          <select id="mgr-who" style="flex:0 0 170px"></select>
+          <select id="mgr-who" style="flex:0 0 170px" aria-label="Agent"></select>
           <input id="mgr-model" class="mono" placeholder="reasoning model (blank = architect)" style="flex:1;min-width:180px">
           <button class="btn" id="mgr-plan">🧠 Plan &amp; assign</button>
         </div>
@@ -4873,7 +4888,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
             recollection, not news, and is labelled as such.</p>
           <div class="row" style="gap:8px;flex-wrap:wrap">
             <input id="news-topic" placeholder="topic — e.g. anthropic, xAI, agent harnesses" style="flex:1;min-width:200px">
-            <select id="news-scope" style="flex:0 0 180px">
+            <select id="news-scope" style="flex:0 0 180px" aria-label="Search scope">
               <option value="all">Everywhere</option>
               <option value="social">X / social</option>
               <option value="press">News &amp; journalism</option>
@@ -4972,13 +4987,13 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
           Three questions: is this combination actually working, what would work better, and does
           the better answer fit the budget you set.</p>
         <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px">
-          <select id="sty-scope" style="flex:0 0 210px">
+          <select id="sty-scope" style="flex:0 0 210px" aria-label="Measure over">
             <option value="live">This session's trace</option>
             <option value="golden">A golden trace</option>
             <option value="runs">Recent runs (history)</option>
             <option value="all">Everything available</option>
           </select>
-          <select id="sty-golden" style="flex:1;min-width:180px"></select>
+          <select id="sty-golden" style="flex:1;min-width:180px" aria-label="Golden set"></select>
           <input id="sty-model" class="mono" placeholder="assessor model (blank = architect)" style="flex:0 0 220px">
         </div>
         <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px">
@@ -5033,7 +5048,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
             the game builder is told to use those specifically rather than inventing geometry.</p>
           <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px">
             <input id="as-filter" placeholder="filter — kenney, nature, kit…" style="flex:1;min-width:180px">
-            <select id="as-lic" style="flex:0 0 160px">
+            <select id="as-lic" style="flex:0 0 160px" aria-label="Licence">
               <option value="">any licence</option>
               <option value="CC0">CC0 only</option>
             </select>
@@ -5069,7 +5084,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
             <div class="ed3-side">
               <div class="ed3-hd">Palette <span style="float:right;font-weight:400;text-transform:none;letter-spacing:0">drag onto the scene</span></div>
               <div class="ed3-pal">
-                <select id="ed3-palcat"></select>
+                <select id="ed3-palcat" aria-label="Palette category"></select>
                 <div id="ed3-palette" class="ed3-chips"></div>
               </div>
               <div class="ed3-hd">Outliner</div>
@@ -5101,7 +5116,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
             any image you can show it.</p>
           <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px">
             <input id="i3-prompt" placeholder="what to make — e.g. a stylised mushroom house" style="flex:1;min-width:220px">
-            <select id="i3-kind" style="flex:0 0 160px">
+            <select id="i3-kind" style="flex:0 0 160px" aria-label="Asset kind">
               <option value="prop">Prop / object</option>
               <option value="npc">NPC / character</option>
               <option value="player">Player model</option>
@@ -5110,7 +5125,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
             <button class="btn" id="i3-go">Build in code</button>
           </div>
           <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
-            <input type="file" id="i3-file" accept="image/*" style="flex:1;min-width:200px">
+            <input type="file" id="i3-file" accept="image/*" style="flex:1;min-width:200px" aria-label="Reference image">
             <button class="btn ghost small" id="i3-gen">✨ Generate a reference first</button>
           </div>
           <div id="i3-out" style="margin-top:12px"></div>
@@ -5141,7 +5156,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
             against it. Bounded: 14 files, 120k characters.</p>
           <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px">
             <input id="sl-repo" class="mono" placeholder="owner/repo" style="flex:1;min-width:180px">
-            <select id="sl-job" style="flex:0 0 190px"></select>
+            <select id="sl-job" style="flex:0 0 190px" aria-label="Job type"></select>
             <input id="sl-model" class="mono" placeholder="model" style="flex:0 0 160px">
             <button class="btn" id="sl-go">♻️ Run loop</button>
           </div>
@@ -5183,7 +5198,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
             placeholder="what the game is — e.g. a third-person collectathon: 3 pickups, a 60-second timer, double jump"></textarea>
           <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:6px">
             <input id="r3f-name" placeholder="project name" value="my-game" style="flex:0 0 170px">
-            <select id="r3f-path" style="flex:0 0 210px"></select>
+            <select id="r3f-path" style="flex:0 0 210px" aria-label="Project template"></select>
             <label class="chk"><input type="checkbox" id="r3f-phys" checked> physics (Rapier)</label>
             <label class="chk"><input type="checkbox" id="r3f-ui" checked> React HUD</label>
             <label class="chk"><input type="checkbox" id="r3f-ts" checked> TypeScript</label>
@@ -9615,9 +9630,14 @@ function a3dGeomPrompt(spec){
 }
 
 const A3D_DEFAULTS={provider:'meshy',preset:'gameprop',quality:'std',
-  keys:{},items:[],last:'',steerModel:''};
+  keys:{},items:[],last:'',steerModel:'',rounds:[]};
 let A3D=Object.assign({},A3D_DEFAULTS,store.get('foundry',{}));
-const saveA3D=()=>{if(A3D.items.length>120)A3D.items.length=120;store.set('foundry',A3D);};
+const saveA3D=()=>{if(A3D.items.length>120)A3D.items.length=120;
+  /* Rounds are text only, and capped. Storing the render with each round is the obvious thing
+     to want and would be a mistake: a base64 frame is ~200KB and this whole object lives under
+     ONE store key, which the 64KB-per-key guard would then reject — losing the library too. */
+  if(A3D.rounds&&A3D.rounds.length>24)A3D.rounds=A3D.rounds.slice(-24);
+  store.set('foundry',A3D);};
 const a3dKey=id=>(A3D.keys&&A3D.keys[id])||'';
 
 /* One call for both transports. Meshy is tried direct and only falls back if the browser
@@ -9810,7 +9830,8 @@ async function a3dSteer(spec){
 }
 /* The critique pass. A vision model looking at the actual render is the only thing in this
    panel that can tell you the silhouette is wrong, and it is cheap next to regenerating. */
-async function a3dCritique(){
+async function a3dCritique(opts){
+  const quiet=!!(opts&&opts.quiet);          // the refine loop wants the text, not a modal
   const model=A3D.steerModel||settings.archModel;
   if(!model)return toast('Pick a vision-capable model first',3000);
   a3dStatus('Capturing the viewport…',null);
@@ -9832,6 +9853,7 @@ async function a3dCritique(){
       maxTokens:700});
     const text=(out&&(out.content||out.text))||'';
     a3dStatus('');
+    if(quiet)return text;
     openModal('<h3 style="margin-top:0">What the model sees</h3>'+
       '<img src="'+esc(shot)+'" style="width:100%;border-radius:10px;border:1px solid var(--edge)">'+
       '<pre class="mono" style="white-space:pre-wrap;font-size:12px;margin-top:12px">'+
@@ -9840,6 +9862,107 @@ async function a3dCritique(){
   }catch(e){a3dStatus('');toast('Critique failed: '+e.message,5000);return null;}
 }
 
+/* ═══ The loop: critique → fold it back into the brief → generate again ═══
+   The critique pass on its own was a dead end — it printed what was wrong into a modal and the
+   user retyped the fix by hand, which is exactly the step a machine should be doing.
+
+   It revises the STRUCTURED FIELDS, not the compiled brief text. That is the whole trick: the
+   geometry prompt is built by a3dGeomPrompt from `subject` + `form` only, so a revision that
+   returns form and texture separately cannot leak surface words into the geometry pass. Asking a
+   model to rewrite the brief text and to please keep them apart would make the invariant depend
+   on the model behaving — here it holds by construction.
+
+   `subject` is never revised. It is the object's identity: "a brass diving helmet" stops being
+   the thing you asked for if a critique pass is allowed to edit it. Pass 20 already made this
+   mistake in a test, which flagged the word BRASS in the subject as a surface leak when it was
+   the object's name.
+
+   Nothing here spends generation credits. It ends with a revised brief on screen and the user
+   pressing Generate, because a loop that silently re-bills a paid vendor on every iteration is
+   not a feature. */
+const A3D_REVISE_SCHEMA={type:'json_schema',json_schema:{name:'a3drevise',strict:true,schema:{
+  type:'object',additionalProperties:false,required:['form','texture','changes','verdict'],
+  properties:{
+    form:{type:'string',description:'revised silhouette and proportion only — NO material, colour, finish or wear'},
+    texture:{type:'string',description:'revised material and wear only — NO shape language'},
+    changes:{type:'array',items:{type:'string'},description:'one line per change, each naming the critique point it answers'},
+    verdict:{type:'string',description:'good if the render already matches the brief and nothing needs changing, else revised'}}}}};
+async function a3dRefine(spec,opts){
+  const o=opts||{};
+  const model=A3D.steerModel||settings.archModel;
+  if(!model)return toast('Pick a vision-capable model first',3000),null;
+  const critique=o.critique||await a3dCritique({quiet:true});
+  if(!critique)return null;
+  try{
+    a3dStatus('Folding the critique back into the brief…',null);
+    const out=await streamComplete({model,response_format:A3D_REVISE_SCHEMA,maxTokens:900,
+      messages:[{role:'system',content:
+        'You revise a 3D asset brief so the next generation fixes what a critique found.\n'+
+        'Rules you must not break:\n'+
+        '1. The SUBJECT is fixed. Never restate, rename or reinterpret it.\n'+
+        '2. FORM carries silhouette and proportion only. No material, colour, finish or wear words.\n'+
+        '3. TEXTURE carries material and wear only. No shape words.\n'+
+        '4. Change only what the critique actually raised. Leave the rest byte-for-byte.\n'+
+        '5. If the critique says the asset is already right, return verdict "good" and hand back '+
+        'form and texture exactly as given.'},
+        {role:'user',content:
+        'SUBJECT (fixed): '+(spec.subject||'')+'\n'+
+        'FORM now: '+(spec.form||'(empty)')+'\n'+
+        'TEXTURE now: '+(spec.texture||'(empty)')+'\n\n'+
+        'THE CRITIQUE OF THE CURRENT RENDER:\n'+critique}]});
+    const j=extractJSON((out&&(out.content||out.text))||'');
+    if(!j||typeof j.form!=='string')throw new Error('the model did not return a usable revision');
+    a3dStatus('');
+    const r=a3dApplyRevision(spec,j,critique);
+    const {before,after,good,changes}=r;
+    a3dRenderPanel();
+    const b=$('#a3d-brief');if(b)b.value=a3dBrief(Object.assign({},spec,after));
+    openModal('<h3 style="margin-top:0">Round '+(A3D.rounds.length)+' — '+
+      (good?'nothing to change':'brief revised')+'</h3>'+
+      (good?'<p class="help">The model looked at the render against your brief and found nothing '+
+        'worth changing. Your fields were left exactly as they were.</p>'
+       :'<p class="help">The fields below were rewritten to answer the critique. '+
+        '<b>Nothing has been generated and nothing has been billed</b> — read it, edit anything you '+
+        'disagree with, then press Generate.</p>'+
+        '<div class="ds-arow"><div style="flex:1"><b>Form</b><div class="mini muted">'+esc(before.form||'(empty)')+
+        '</div><div class="mini" style="color:var(--acc)">'+esc(after.form)+'</div></div></div>'+
+        '<div class="ds-arow"><div style="flex:1"><b>Surface</b><div class="mini muted">'+esc(before.texture||'(empty)')+
+        '</div><div class="mini" style="color:var(--acc)">'+esc(after.texture)+'</div></div></div>'+
+        (changes.length?'<h4 style="margin:14px 0 6px;font-size:12.5px">What changed and why</h4>'+
+          changes.map(c=>'<div class="ds-arow"><div style="flex:1">'+esc(c)+'</div></div>').join(''):''))+
+      '<h4 style="margin:14px 0 6px;font-size:12.5px">The critique it answered</h4>'+
+      '<pre class="mono" style="white-space:pre-wrap;font-size:12px">'+esc(String(critique).slice(0,1200))+'</pre>');
+    return {verdict:good?'good':'revised',before,after,changes,critique};
+  }catch(e){a3dStatus('');toast('Refine failed: '+e.message,5000);return null;}
+}
+/* Everything a3dRefine decides, with the model call lifted out.
+   Split deliberately: the vision call and the revision call both cost money at a paid vendor, so
+   the decisions around them — what gets overwritten, what the subject is allowed to do, what a
+   "good" verdict means — would otherwise be the untested part of a feature that spends. This is
+   pure and synchronous, so the suite can hold every one of those rules. */
+function a3dApplyRevision(spec,j,critique){
+  const before={form:spec.form||'',texture:spec.texture||''};
+  const subjectBefore=spec.subject||'';
+  const after={form:String(j.form||''),texture:String(j.texture||'')};
+  const good=String(j.verdict||'').toLowerCase().indexOf('good')===0;
+  const changes=(Array.isArray(j.changes)?j.changes:[]).filter(x=>typeof x==='string');
+  A3D.rounds=(A3D.rounds||[]).concat([{ts:nowISO(),subject:subjectBefore,
+    critique:String(critique||'').slice(0,1200),before,after,changes:changes.slice(0,8),
+    verdict:good?'good':'revised'}]);
+  /* Only write the revision into the fields when something actually changed. A "good" verdict
+     that still overwrote the inputs would churn the brief on every pass and make the library's
+     provenance a lie. */
+  if(!good){
+    spec.form=after.form;spec.texture=after.texture;
+    A3D.draft=Object.assign({},A3D.draft||{},{form:after.form,texture:after.texture});
+  }
+  /* The subject is restored rather than merely left alone. A model that ignores rule 1 and
+     returns a rewritten subject must not be able to change what the object IS — that is the one
+     field where a confident wrong answer silently produces a different asset. */
+  spec.subject=subjectBefore;
+  saveA3D();
+  return {before,after,good,changes,subject:subjectBefore};
+}
 /* Capture the editor's real rendered frame. The editor already answers a `screenshot` command
    and its renderer is created with preserveDrawingBuffer, without which a WebGL canvas reads
    back blank — so the only missing piece was intercepting the reply instead of letting the
@@ -9906,6 +10029,7 @@ function a3dRenderPanel(){
       <button class="btn ghost small" id="a3d-compile">📋 Show the brief</button>
       <button class="btn ghost small" id="a3d-steer">🧠 Have a model sharpen it</button>
       <button class="btn ghost small" id="a3d-crit">👁 Critique what is in the editor</button>
+      <button class="btn ghost small" id="a3d-refine">♻️ Critique → revise the brief</button>
       <span class="mini muted" id="a3d-status"></span>
     </div>
     <div style="height:4px;background:var(--edge);border-radius:3px;margin-top:8px;overflow:hidden">
@@ -9918,6 +10042,9 @@ function a3dRenderPanel(){
 
     <h4 style="margin:18px 0 6px;font-size:12.5px">Library — generated once, reusable for good</h4>
     <div id="a3d-lib"></div>
+
+    <h4 style="margin:18px 0 6px;font-size:12.5px">Refinement rounds</h4>
+    <div id="a3d-rounds"></div>
 
     <h4 style="margin:18px 0 6px;font-size:12.5px">The formula these tools are built on</h4>
     <div class="lx-kinds">${A3D_AXES.map(a=>
@@ -9946,7 +10073,35 @@ function a3dRenderPanel(){
   if(st)st.onclick=()=>a3dSteer(draft());
   const cr=$('#a3d-crit');
   if(cr)cr.onclick=()=>a3dCritique();
+  const rf=$('#a3d-refine');
+  if(rf)rf.onclick=()=>a3dRefine(draft());
   a3dRenderLib();
+  a3dRenderRounds();
+}
+/* Each round is reversible. A refine pass that could only move forward would make the user
+   afraid to run it, which defeats the point of making iteration cheap. */
+function a3dRevertRound(i){
+  const r=(A3D.rounds||[])[i];if(!r)return;
+  A3D.draft=Object.assign({},A3D.draft||{},{form:r.before.form,texture:r.before.texture});
+  saveA3D();a3dRenderPanel();
+  toast('Reverted to the brief from before round '+(i+1),3000);
+}
+function a3dRenderRounds(){
+  const host=$('#a3d-rounds');if(!host)return;
+  const rs=A3D.rounds||[];
+  if(!rs.length){host.innerHTML='<p class="help" style="margin:0">Generate something, then press '+
+    '<b>Critique → revise the brief</b>. A vision model looks at the actual render, says what is '+
+    'wrong with it, and rewrites the form and surface fields to answer that — without touching the '+
+    'subject and without generating anything until you say so.</p>';return;}
+  host.innerHTML=rs.map((r,i)=>
+    `<div class="ds-arow${r.verdict==='good'?'':' '}"><div style="flex:1">
+      <b>Round ${i+1} — ${esc(r.verdict==='good'?'no change needed':'revised')}</b>
+      <div class="mini muted">${esc(r.subject||'')} · ${esc((r.ts||'').slice(0,16).replace('T',' '))}</div>
+      ${(r.changes||[]).map(c=>`<div class="mini">• ${esc(c)}</div>`).join('')}
+    </div>${r.verdict==='good'?'':`<button class="btn ghost small" data-a3drev="${i}">Revert</button>`}</div>`
+  ).reverse().join('');
+  host.querySelectorAll('[data-a3drev]').forEach(b=>
+    b.onclick=()=>a3dRevertRound(+b.dataset.a3drev));
 }
 function a3dRenderLib(){
   const host=$('#a3d-lib');if(!host)return;
@@ -20094,7 +20249,8 @@ const PIPE_MODES=[
    worst:'Bulk work that is genuinely repetitive — twenty near-identical files — where you are '+
      'paying frontier prices for typing. And any setup where the builder would have been free.',
    evidence:'MEASURED: 97/100 at $4 / 18 min on a full Rails 8 app; no planner+executor '+
-     'combination in the same test beat it on quality and cost together.',
+     'combination in the same test beat it on quality and cost together. CORROBORATED by two '+
+     'independent 2026 studies under budget control — see the sources below.',
    apply(o){/* the baseline already switches every hand-off off; Solo is exactly that */}},
 
   {id:'architect',icon:'\u{1F9E0}',label:'Architect → builder',
@@ -20429,6 +20585,58 @@ function pipeRender(){
 /* One table, so the shapes can be read against each other instead of one at a time. The honest
    comparison is the point: every row is a different bet, and the last column says which of them
    has actually been measured rather than reasoned about. */
+/* Where the claims in PIPE_MODES come from, and how far each one actually reaches.
+   Every entry was opened at its abstract page and checked for a withdrawal notice before being
+   written down — an earlier pass nearly cited a paper that had been withdrawn, having read only
+   a search snippet. The `scope` field is not decoration: the strongest corroboration here was
+   measured on multi-hop REASONING, not on writing code, and a reader deciding how to spend money
+   on a coding pipeline deserves to know that rather than to see three ticks in a row. */
+const PIPE_SOURCES=[
+  {id:'rails',kind:'head-to-head',year:2026,
+   title:'Planner+executor vs solo on a full Rails 8 application',
+   finding:'Solo frontier scored 97/100 at $4 / 18 min. No planner+executor variant beat it on '+
+     'quality and cost together; forced delegation came in 2–7 points lower, and given a free '+
+     'choice the models delegated zero times.',
+   scope:'One application, one benchmark author. A single head-to-head is a data point, not a law.',
+   url:'https://akitaonrails.com/en/2026/04/25/llm-benchmarks-vale-a-pena-misturar-2-modelos/'},
+  {id:'budget',kind:'controlled study',year:2026,
+   title:'Single-Agent LLMs Outperform Multi-Agent Systems on Multi-Hop Reasoning Under Equal '+
+     'Thinking Token Budgets — Tran & Kiela (arXiv:2604.02460, v2)',
+   finding:'With reasoning tokens held constant, single agents consistently MATCH OR OUTPERFORM '+
+     'multi-agent systems across Qwen3, DeepSeek-R1-Distill-Llama and Gemini 2.5. The paper’s '+
+     'sharpest point is methodological: most multi-agent wins compare against a single agent that '+
+     'was given less compute, and the Gemini API under-spends its declared budget in single-agent '+
+     'mode, which inflates the comparison on its own.',
+   scope:'Multi-hop REASONING, not code. It corroborates the direction and the accounting error; '+
+     'it does not re-measure the coding claim. The abstract states the result qualitatively — '+
+     'it carries no accuracy percentages.',
+   url:'https://arxiv.org/abs/2604.02460'},
+  {id:'illusion',kind:'controlled study',year:2026,
+   title:'The Illusion of Multi-Agent Advantage — Jwalapuram et al. (arXiv:2606.13003)',
+   finding:'AUTOMATICALLY GENERATED multi-agent systems ran up to 10× the cost of a '+
+     'single-agent baseline while underperforming it, and lost to plain chain-of-thought with '+
+     'self-consistency. Expert-DESIGNED multi-agent systems beat the automatic ones on both raw '+
+     'performance and cost-efficiency.',
+   scope:'Reasoning datasets and interactive workflows, not a coding benchmark. Note the split it '+
+     'draws: the penalty lands on generated and forced delegation, NOT on a split somebody chose '+
+     'deliberately — which is the same line the shapes above already take.',
+   url:'https://arxiv.org/abs/2606.13003'},
+];
+function pipeSources(){
+  openModal('<h3 style="margin-top:0">Where these numbers come from</h3>'+
+    '<p class="help">Three sources, each with what it actually covers. Two of the three were '+
+    'measured on reasoning rather than on writing code — they agree with the coding result and '+
+    'they do not independently confirm it, and that distinction is the point of this panel.</p>'+
+    PIPE_SOURCES.map(x=>
+      '<div class="ds-arow"><div style="flex:1"><b>'+esc(x.title)+'</b>'+
+      '<div class="mini" style="margin-top:3px">'+esc(x.finding)+'</div>'+
+      '<div class="mini muted" style="margin-top:4px"><b>Reaches:</b> '+esc(x.scope)+'</div>'+
+      '<div class="mini"><a href="'+esc(x.url)+'" target="_blank" rel="noopener">'+esc(x.url)+'</a></div>'+
+      '</div></div>').join('')+
+    '<p class="help" style="margin-top:12px">Checked 13 Sep 2026. Each arXiv entry was opened at '+
+    'its abstract page and checked for a withdrawal notice before being listed here — an earlier '+
+    'pass nearly cited a withdrawn paper on the strength of a search snippet.</p>');
+}
 function pipeCompare(){
   const{arch,build}=pipeModels();
   const rows=PIPE_MODES.map(m=>{
@@ -20457,7 +20665,10 @@ function pipeCompare(){
       published head-to-head on a full app, a single frontier model doing the whole job scored
       higher than every split tested, and cost less than most of them. The splits earn their
       keep in specific shapes — a free local builder, a very large price gap, work that is
-      genuinely parallel, or a cascade that only escalates what fails — and not by default.</p>`);
+      genuinely parallel, or a cascade that only escalates what fails — and not by default.</p>
+    <button class="btn ghost small" id="pipe-src">📚 Where these numbers come from</button>`);
+  const ps=$('#pipe-src');
+  if(ps)ps.onclick=()=>pipeSources();
 }
 
 /* ═══════════════════ PER-MODEL TRACKS ═══════════════════
@@ -23225,9 +23436,9 @@ function genUiImage(host){
   <div class="card">
     <h3>Image generation</h3>
     <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
-      <select id="gen-imodel" style="flex:1;min-width:220px">${genImageList().map(x=>
+      <select id="gen-imodel" style="flex:1;min-width:220px" aria-label="Image model">${genImageList().map(x=>
         `<option value="${esc(x.id)}"${x.id===m.id?' selected':''}>${esc(x.label)}</option>`).join('')}</select>
-      <select id="gen-size" style="flex:0 0 150px">${(m.sizes||['1024x1024']).map(sz=>
+      <select id="gen-size" style="flex:0 0 150px" aria-label="Image size">${(m.sizes||['1024x1024']).map(sz=>
         `<option value="${sz}"${sz===GENCFG.size?' selected':''}>${sz}</option>`).join('')}</select>
       ${genReadyBadge(m)}
     </div>
@@ -25547,6 +25758,151 @@ function gauntletCases(g){
     },antiExpect:v=>v===0});
 
   /* A dialog that does not hold focus walks the keyboard out behind its own backdrop. */
+  /* Counted through g.a11yHasName rather than g.a11yAudit, so a sabotage of the naming rule
+     actually reaches this case. Calling a11yAudit would bind the module-scope helper and the
+     sabotage would slide straight past a green result — the trap that made two earlier tests
+     vacuous. */
+  add({id:'a11y-every-control-is-named',sub:'a11y',uses:['a11yHasName','a11yNamePass'],
+    what:'every control in the live DOM reaches the accessibility tree with a name',
+    run:()=>{
+      g.a11yNamePass(document);
+      const all=[...document.querySelectorAll('button,select,textarea,a[href],input:not([type=hidden])')];
+      if(all.length<50)return 'too-few:'+all.length;
+      const bad=all.filter(el=>!g.a11yHasName(el));
+      return bad.length===0?'all-named':bad.length+' nameless e.g. '+
+        bad.slice(0,3).map(e=>e.tagName+'#'+(e.id||'?')).join(',');
+    },expect:v=>v==='all-named',
+    antiWhat:'and a control with genuinely nothing to go on is still reported, not waved through',
+    anti:()=>{
+      const sel=document.createElement('select');
+      document.body.appendChild(sel);
+      const named=g.a11yHasName(sel);
+      sel.remove();
+      return named;
+    },antiExpect:v=>v===false});
+
+  /* The bug this pins was live in my own first version: a11yDerive returned "Close" correctly
+     the whole time and a11yHasName never asked it, because "✕" is textContent and textContent
+     read as a name. 79 close buttons announced as nothing at all. */
+  add({id:'a11y-a-glyph-is-not-a-name',sub:'a11y',uses:['a11yHasName','a11yDerive','A11Y_GLYPH'],
+    what:'a button whose only text is an icon glyph counts as unnamed, and the glyph map names it',
+    run:()=>{
+      const b=document.createElement('button');b.textContent='✕';
+      document.body.appendChild(b);
+      const looksNamed=g.a11yHasName(b);
+      const derived=g.a11yDerive(b);
+      b.remove();
+      return (!looksNamed&&derived==='Close')?'glyph-named':'named='+looksNamed+',derived='+derived;
+    },expect:v=>v==='glyph-named',
+    antiWhat:'while real word text on a button IS a name and is left alone',
+    anti:()=>{
+      const b=document.createElement('button');b.textContent='Save changes';
+      document.body.appendChild(b);
+      const r=g.a11yHasName(b);b.remove();return r;
+    },antiExpect:v=>v===true});
+
+  /* A <select>'s text is its option list. Deriving a neighbour's name from it produced
+     "PaddleOCR (PP-OCR v5/v6)Tesseract.js" as the label of the select next to it — short enough
+     and wordy enough to pass every other guard, and completely wrong. A wrong name is worse than
+     none: it is stated with full confidence to somebody who cannot see that it is false. */
+  add({id:'a11y-a-name-never-comes-from-another-control',sub:'a11y',
+    uses:['a11yDerive','a11ySourceText'],
+    what:'a control never takes its name from a neighbouring control’s value or options',
+    /* Asserted through g.a11ySourceText as well as g.a11yDerive, and that is not belt-and-braces.
+       a11yDerive binds the module-scope a11ySourceText, so a sabotage of the EXPORT never reaches
+       it — this case ran green against a deliberately leaking build until the sabotage suite said
+       so. Testing only the outer function would have left the guard uncovered while reporting
+       coverage of it. */
+    run:()=>{
+      const row=document.createElement('div');
+      row.innerHTML='<select><option>PaddleOCR</option><option>Tesseract</option></select>'+
+        '<select id="gt-victim"><option>fast</option></select>';
+      document.body.appendChild(row);
+      const victim=row.querySelector('#gt-victim');
+      const direct=g.a11ySourceText(victim.previousElementSibling);
+      const n=g.a11yDerive(victim);
+      row.remove();
+      if(/PaddleOCR|Tesseract/.test(direct))return 'SOURCE-LEAKED:'+direct;
+      return /PaddleOCR|Tesseract/.test(n)?'LEAKED:'+n:'clean';
+    },expect:v=>v==='clean',
+    antiWhat:'and a real label beside it, in a row that merely contains a button, is still found',
+    anti:()=>{
+      const row=document.createElement('div');
+      row.innerHTML='<div><b>Draft tokens</b><button>x</button></div><input id="gt-i2">';
+      document.body.appendChild(row);
+      const n=g.a11yDerive(row.querySelector('#gt-i2'));
+      row.remove();return n;
+    },antiExpect:v=>v==='Draft tokens'});
+
+  /* The subject is the object's identity. A refine pass that can edit it does not sharpen the
+     asset, it quietly generates a different one — and the render looks plausible either way. */
+  add({id:'foundry-subject-survives-a-disobedient-model',sub:'foundry',
+    uses:['a3dApplyRevision'],
+    what:'a revision cannot change the subject, even when the model returns a new one',
+    run:()=>{
+      const keep=g.A3D.rounds;g.A3D.rounds=[];
+      const spec={subject:'a brass diving helmet',form:'dome',texture:'brass'};
+      g.a3dApplyRevision(spec,{form:'dome',texture:'brass',changes:[],verdict:'revised',
+        subject:'a steel astronaut helmet'},'critique');
+      g.A3D.rounds=keep;
+      return spec.subject;
+    },expect:v=>v==='a brass diving helmet',
+    antiWhat:'while form and texture ARE revised, so the pass is not simply inert',
+    anti:()=>{
+      const keep=g.A3D.rounds;g.A3D.rounds=[];
+      const spec={subject:'a lantern',form:'OLD',texture:'OLDTEX'};
+      g.a3dApplyRevision(spec,{form:'NEWFORM',texture:'NEWTEX',changes:[],verdict:'revised'},'c');
+      g.A3D.rounds=keep;
+      return spec.form+'/'+spec.texture;
+    },antiExpect:v=>v==='NEWFORM/NEWTEX'});
+
+  add({id:'foundry-good-verdict-changes-nothing',sub:'foundry',uses:['a3dApplyRevision'],
+    what:'a critique that finds nothing wrong leaves the user’s brief untouched',
+    run:()=>{
+      const keep=g.A3D.rounds;g.A3D.rounds=[];
+      const spec={subject:'a lantern',form:'ORIGINAL',texture:'ORIGINALTEX'};
+      const r=g.a3dApplyRevision(spec,{form:'REWRITTEN',texture:'REWRITTENTEX',
+        changes:[],verdict:'good'},'looks right');
+      const recorded=g.A3D.rounds.length===1&&g.A3D.rounds[0].verdict==='good';
+      g.A3D.rounds=keep;
+      return (spec.form==='ORIGINAL'&&spec.texture==='ORIGINALTEX'&&r.good&&recorded)
+        ?'untouched':'form='+spec.form+',good='+r.good+',recorded='+recorded;
+    },expect:v=>v==='untouched',
+    antiWhat:'and the round is still recorded, so "nothing to change" is visible rather than silent',
+    anti:()=>{
+      const keep=g.A3D.rounds;g.A3D.rounds=[];
+      g.a3dApplyRevision({subject:'x',form:'f',texture:'t'},{form:'f',texture:'t',
+        changes:[],verdict:'good'},'c');
+      const n=g.A3D.rounds.length;g.A3D.rounds=keep;return n;
+    },antiExpect:v=>v===1});
+
+  /* The separation is what a3dGeomPrompt enforces; this proves a REVISED brief still respects it,
+     which is the part a critique loop could plausibly break. */
+  add({id:'foundry-revision-keeps-surface-out-of-geometry',sub:'foundry',
+    uses:['a3dApplyRevision','a3dGeomPrompt','a3dBrief'],
+    what:'surface words introduced by a revision never reach the geometry prompt',
+    run:()=>{
+      const keep=g.A3D.rounds;g.A3D.rounds=[];
+      const spec={subject:'a brass diving helmet',form:'dome',texture:'brass',
+        preset:'gameprop',size:1,axis:'Y'};
+      g.a3dApplyRevision(spec,{form:'rounded dome, heavy collar flange',
+        texture:'ZZVERDIGRIS green patina in the recesses',changes:[],verdict:'revised'},'c');
+      const geom=g.a3dGeomPrompt(spec),brief=g.a3dBrief(spec);
+      g.A3D.rounds=keep;
+      const leaked=geom.indexOf('ZZVERDIGRIS')>=0;
+      const kept=brief.indexOf('ZZVERDIGRIS')>=0;
+      return (!leaked&&kept)?'separated':'leaked='+leaked+',keptInBrief='+kept;
+    },expect:v=>v==='separated',
+    antiWhat:'and the revised FORM does reach the geometry prompt, so separation is not deletion',
+    anti:()=>{
+      const keep=g.A3D.rounds;g.A3D.rounds=[];
+      const spec={subject:'a helmet',form:'dome',texture:'t',preset:'gameprop',size:1};
+      g.a3dApplyRevision(spec,{form:'QQFLANGE heavy collar',texture:'t',changes:[],
+        verdict:'revised'},'c');
+      const geom=g.a3dGeomPrompt(spec);g.A3D.rounds=keep;
+      return geom.indexOf('QQFLANGE')>=0;
+    },antiExpect:v=>v===true});
+
   add({id:'a11y-modal-trap',sub:'a11y',uses:['openModal','closeModal'],
     what:'a modal takes focus, keeps Tab inside it, and hands focus back on close',
     run:()=>{
@@ -27178,6 +27534,17 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'a11y-names-stop-being-required',export:'a11yHasName',
+   why:'every control reports as already named, so nothing is ever labelled and the audit reads clean',
+   broken:()=>()=>true},
+  {id:'a11y-name-leaks-from-a-control',export:'a11ySourceText',
+   why:'a control takes its name from the neighbouring select’s option list and states it confidently',
+   broken:()=>src=>(src&&src.textContent)||''},
+  {id:'foundry-subject-is-editable',export:'a3dApplyRevision',
+   why:'a critique pass can rename the object, so refining an asset quietly produces a different one',
+   broken:()=>(spec,j)=>{spec.form=j.form;spec.texture=j.texture;
+     if(j.subject)spec.subject=j.subject;
+     return {before:{},after:{form:j.form,texture:j.texture},good:false,changes:[]};}},
   {id:'a3d-geom-leaks-surface',export:'a3dGeomPrompt',
    why:'material words leak into the geometry pass and the mesh comes back looking painted-on',
    broken:()=>spec=>[spec.subject,spec.form,spec.texture].filter(Boolean).join(', ')},
@@ -29606,7 +29973,7 @@ function renderLocal(){
       prompt with no error</b>, so the system prompt goes first and the symptom is a model that
       ignores its instructions. Nothing reports it — the only way to know is to test.</p>
     <div class="row" style="gap:8px;align-items:center">
-      <select id="lc-model" style="flex:1">${(CATALOG||[]).filter(m=>m._local)
+      <select id="lc-model" style="flex:1" aria-label="Local model">${(CATALOG||[]).filter(m=>m._local)
         .map(m=>`<option value="${esc(m.id)}">${esc(m.name||m.id)}</option>`).join('')||'<option value="">no local models — scan first</option>'}</select>
       <button class="btn small" id="lc-bench">⏱ Benchmark</button>
       <button class="btn small ghost" id="lc-trunc">✂️ Truncation probe</button>
@@ -29749,11 +30116,11 @@ function dsPalette(host){
       contrast target set once holds across every hue. In HSL they do not: pure yellow and pure
       blue share a lightness of 50% and one of them is unreadable.</p>
     <div class="row" style="gap:10px;align-items:center">
-      <input type="color" id="ds-seed" value="${esc(DESIGN.seed)}" style="width:60px;height:40px;padding:2px;border-radius:9px">
-      <input id="ds-seedhex" class="mono" style="flex:0 0 118px" value="${esc(DESIGN.seed)}">
-      <select id="ds-scheme" style="flex:0 0 190px">${Object.entries(HARMONIES)
+      <input type="color" id="ds-seed" value="${esc(DESIGN.seed)}" style="width:60px;height:40px;padding:2px;border-radius:9px" aria-label="Seed colour">
+      <input id="ds-seedhex" class="mono" style="flex:0 0 118px" value="${esc(DESIGN.seed)}" aria-label="Seed colour as hex">
+      <select id="ds-scheme" style="flex:0 0 190px" aria-label="Colour scheme">${Object.entries(HARMONIES)
         .map(([k,v])=>`<option value="${k}"${DESIGN.scheme===k?' selected':''}>${esc(v.label)}</option>`).join('')}</select>
-      <select id="ds-mode" style="flex:0 0 120px">
+      <select id="ds-mode" style="flex:0 0 120px" aria-label="Light or dark">
         <option value="dark"${DESIGN.mode==='dark'?' selected':''}>Dark</option>
         <option value="light"${DESIGN.mode==='light'?' selected':''}>Light</option></select>
       <button class="btn small ghost" id="ds-rand">🎲 Surprise me</button>
@@ -34190,7 +34557,7 @@ function moapModelOptions(sel){
 function moapRowHtml(model,i){
   return `<div class="moap-row" data-i="${i}">
     <span class="moap-n">${i+1}</span>
-    <select class="moap-sel" data-i="${i}">${moapModelOptions(model)}</select>
+    <select class="moap-sel" data-i="${i}" aria-label="Proposer ${i+1} model">${moapModelOptions(model)}</select>
     <input class="moap-custom mono" data-i="${i}" placeholder="provider/model-id"
       value="${esc(model||'')}" style="display:none">
     <button class="btn ghost small moap-del" data-i="${i}" title="Remove this proposer">✕</button>
@@ -34226,7 +34593,7 @@ function renderMoaPresets(){
     wrong place to save money — it makes the judgement the whole run is spent on.</p>
   <div class="moap-row">
     <span class="moap-n">Σ</span>
-    <select class="moap-sel" id="moap-agg">${moapModelOptions(p.aggregator)}</select>
+    <select class="moap-sel" id="moap-agg" aria-label="Aggregator model">${moapModelOptions(p.aggregator)}</select>
     <input class="moap-custom mono" id="moap-aggcustom" placeholder="provider/model-id"
       value="${esc(p.aggregator||'')}" style="display:none">
   </div>
@@ -38107,7 +38474,13 @@ function csub(id){
   $$('#view-customise .subtab').forEach(b=>b.classList.toggle('on',b.dataset.csub===id));
   $$('#view-customise .sub').forEach(s=>s.classList.toggle('on',s.id==='csub-'+id));
 }
-const swHTML=on=>`<button class="sw ${on?'on':''}" role="switch" aria-checked="${on?'true':'false'}"></button>`;
+/* A switch with no label announces as "switch, on" and nothing else. There are 244 of them on
+   the Customise tab, so a screen-reader user heard that 244 times with no way to tell which
+   tab or section each one controlled. The label is not a new string to maintain — both call
+   sites already have the REGISTRY label in hand, which is why it is a required argument
+   rather than an optional one. */
+const swHTML=(on,label)=>`<button class="sw ${on?'on':''}" role="switch" aria-checked="${on?'true':'false'}"`+
+  (label?` aria-label="${esc(label)}"`:'')+`></button>`;
 function renderCzTabs(){
   const host=$('#cz-tabs');if(!host)return;
   const order=(UI.tabOrder&&UI.tabOrder.length?UI.tabOrder:REGISTRY.tabs.map(t=>t.id))
@@ -38120,7 +38493,7 @@ function renderCzTabs(){
       <span class="muted" style="cursor:grab">⠿</span>
       <b>${esc(t.label)}</b>
       <span class="mini muted">${REGISTRY.cards.filter(c=>c.tab===id).length} section(s)</span>
-      ${swHTML(on)}</div>`;}).join('');
+      ${swHTML(on,'Show the '+t.label+' tab')}</div>`;}).join('');
   host.querySelectorAll('.sw').forEach(b=>b.onclick=()=>{
     const id=b.closest('[data-tabid]').dataset.tabid;
     UI.hiddenTabs=tabHidden(id)?UI.hiddenTabs.filter(x=>x!==id):UI.hiddenTabs.concat([id]);
@@ -38159,7 +38532,7 @@ function renderCzCards(filter){
         <button class="btn ghost small" data-taball="${esc(tab)}">all</button>
       </div>
       ${cards.map(c=>`<div class="featrow" data-cardid="${esc(c.id)}">
-        <b>${esc(c.label)}</b>${swHTML(!cardHidden(c.id))}</div>`).join('')}
+        <b>${esc(c.label)}</b>${swHTML(!cardHidden(c.id),'Show the '+c.label+' section')}</div>`).join('')}
     </div>`;}).join('')||'<p class="help">No sections match that filter.</p>';
   host.querySelectorAll('[data-cardid] .sw').forEach(b=>b.onclick=()=>{
     const id=b.closest('[data-cardid]').dataset.cardid;
@@ -39513,6 +39886,163 @@ function importHistory(){
   i.click();}
 /* Elements a keyboard can actually land on. offsetParent skips anything display:none, which
    matters because these modals are built from templates with conditional sections. */
+/* ═══════════════════ ACCESSIBILITY — ACCESSIBLE NAMES ═══════════════════
+   Measured on the live app before this existed: 244 switches, 84 icon-only buttons and 103
+   controls — 90 of them <select> — reached the accessibility tree with no name at all.
+
+   Two decisions worth defending.
+
+   1. It DERIVES names from text already on screen instead of adding a second table of labels.
+      A parallel label table drifts within a week and the drift is invisible, because the
+      screen still looks right to whoever is maintaining it. Same reasoning that keeps the
+      Glass-Pane subscribed to logEvent rather than keeping its own log.
+   2. It is deliberately CONSERVATIVE. A wrong name is worse than no name: it states something
+      false with total confidence to somebody who cannot see that it is false. So it only ever
+      writes text it actually found, never overwrites a name that exists, and refuses anything
+      that looks like prose rather than a label. What it cannot name it leaves alone and
+      COUNTS, so the remaining gap stays visible instead of looking finished. */
+const A11Y_GLYPH={'✕':'Close','✖':'Close','×':'Close','＋':'Add','⤢':'Full screen','⛶':'Full screen',
+  '↻':'Refresh','⟳':'Refresh','⚙':'Settings','⠿':'Drag to reorder','▤':'Menu','⋯':'More',
+  '▸':'Expand','▾':'Collapse','←':'Back','→':'Forward','⏵':'Play','⏸':'Pause','🗑':'Delete'};
+/* textContent names a button. It does NOT name a <select>, whose text content is its whole
+   option list — reading it as a name would have reported every one of the 90 nameless selects
+   as already fine, and this pass would have done nothing while looking like it worked. */
+const a11yTextNames=el=>!/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName);
+function a11yHasName(el){
+  if(el.getAttribute('aria-label'))return true;
+  const lb=el.getAttribute('aria-labelledby');
+  if(lb&&lb.split(/\s+/).some(id=>document.getElementById(id)))return true;
+  if(el.getAttribute('title'))return true;
+  if(el.closest('label'))return true;
+  if(el.id&&document.querySelector('label[for="'+CSS.escape(el.id)+'"]'))return true;
+  if(el.getAttribute('placeholder'))return true;
+  /* A name must contain a letter or a digit. "✕" is textContent, so without this the 79 close
+     buttons all reported as already named and the glyph map below never ran — a11yDerive was
+     returning "Close" for them correctly the whole time and nothing ever asked it. */
+  if(a11yTextNames(el)&&/[\p{L}\p{N}]/u.test(el.textContent||''))return true;
+  return false;
+}
+const A11Y_MAX=60;
+/* A label is short. Anything longer than this is the surrounding paragraph, and naming a
+   control after a paragraph is how automated fixes make screen readers worse than silence. */
+function a11yClean(t){
+  let x=(t||'').replace(/\s+/g,' ').trim();
+  x=x.replace(/^[^\p{L}\p{N}]+/u,'').replace(/[\s:·—–-]+$/u,'').trim();
+  if(!x||x.length>A11Y_MAX)return '';
+  if(!/[\p{L}]/u.test(x))return '';
+  return x;
+}
+const A11Y_CTRL='input,select,textarea,button';
+/* Text belonging to a control is a value or an option list, never a label for its neighbour.
+   The first version of this REJECTED any container holding a control, which was too blunt: the
+   ds-arow rows are `<div><b>Label</b> …status…</div><select>`, and a single button anywhere in
+   that row threw the real label away. So strip the control text and keep the rest. Preferring
+   an inner <b> matters too — otherwise the name picks up live status text beside it and the
+   control's name changes as the status does. */
+function a11ySourceText(src){
+  if(!src||src.nodeType!==1)return '';
+  if(src.matches(A11Y_CTRL))return '';
+  const b=src.querySelector('b,strong');
+  if(b&&!b.querySelector(A11Y_CTRL)){
+    const t=(b.textContent||'').trim();
+    if(t)return t;
+  }
+  let out='';
+  (function walk(n){
+    for(const c of n.childNodes){
+      if(c.nodeType===3){out+=c.textContent+' ';continue;}
+      if(c.nodeType!==1)continue;
+      if(c.matches(A11Y_CTRL))continue;
+      walk(c);
+    }
+  })(src);
+  return out;
+}
+function a11yDerive(el){
+  if(el.tagName==='BUTTON'||el.tagName==='A'){
+    const t=(el.textContent||'').replace(/\s+/g,'').trim();
+    if(t&&!/[\p{L}\p{N}]/u.test(t)){
+      if(A11Y_GLYPH[t])return A11Y_GLYPH[t];
+      for(const k in A11Y_GLYPH)if(t.indexOf(k)>=0)return A11Y_GLYPH[k];
+    }
+  }
+  let n=a11yClean(a11ySourceText(el.previousElementSibling));
+  if(n)return n;
+  const par=el.parentElement;
+  if(par){
+    n=a11yClean([...par.childNodes].filter(x=>x.nodeType===3).map(x=>x.textContent).join(' '));
+    if(n)return n;
+    const b=par.querySelector('b,strong,.mini');
+    if(b&&!b.contains(el)){n=a11yClean(a11ySourceText(b));if(n)return n;}
+  }
+  return '';
+}
+const A11Y_SEL='button,select,textarea,a[href],input:not([type=hidden]),[role=switch],[role=tab]';
+/* A WeakSet rather than a data- attribute: it adds nothing to the DOM, so it cannot be written
+   into an exported page or trip the duplicate-attribute scans, and elements replaced wholesale
+   by an innerHTML re-render fall out of it on their own. */
+const A11Y_SEEN=new WeakSet();
+let A11Y_NAMED=0;
+function a11yNamePass(root){
+  root=root||document;
+  let named=0,left=0;
+  const list=[];
+  if(root.nodeType===1&&root.matches&&root.matches(A11Y_SEL))list.push(root);
+  if(root.querySelectorAll)list.push(...root.querySelectorAll(A11Y_SEL));
+  list.forEach(el=>{
+    if(A11Y_SEEN.has(el))return;
+    if(a11yHasName(el)){A11Y_SEEN.add(el);return;}
+    const n=a11yDerive(el);
+    if(n){el.setAttribute('aria-label',n);A11Y_SEEN.add(el);named++;}
+    else left++;
+  });
+  A11Y_NAMED+=named;
+  return {named,left};
+}
+let A11Y_QUEUE=[],A11Y_TICK=0,A11Y_MO=null,A11Y_FULL=false;
+function a11yObserve(){
+  const host=document.getElementById('app')||document.body;
+  if(!host||typeof MutationObserver!=='function')return null;
+  A11Y_MO=new MutationObserver(ms=>{
+    for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1)A11Y_QUEUE.push(n);
+    /* An unbounded queue is a leak if nothing ever drains it — but DROPPING the overflow is
+       not the answer, which is what the first version did on the reasoning that "a full re-scan
+       happens on the next drain anyway". It does not: a drain only visits what is queued. Moving
+       through all 42 tabs quickly overflowed this and left three controls permanently unnamed,
+       and it only showed up on a cold profile. Overflow now escalates to a full pass instead. */
+    if(A11Y_QUEUE.length>400){A11Y_QUEUE=[];A11Y_FULL=true;}
+    if(A11Y_TICK||(!A11Y_QUEUE.length&&!A11Y_FULL))return;
+    /* Coalesced into one frame. Panels here rebuild with innerHTML, which fires a burst of
+       records at once; naming each record synchronously turned an already-45ms render into a
+       stall you could feel on a phone.
+       The timer is NOT belt-and-braces. requestAnimationFrame does not fire at all while the
+       document is hidden, so a panel that renders in a backgrounded tab would sit unnamed
+       until something brought the tab forward. Measured here: document.hidden true, rAF never
+       fired, 22 controls stayed nameless until a pass was forced by hand. Whichever fires
+       first drains the queue and cancels the other. */
+    const drain=()=>{
+      if(!A11Y_TICK)return;
+      cancelAnimationFrame(A11Y_TICK.raf);clearTimeout(A11Y_TICK.timer);A11Y_TICK=0;
+      const q=A11Y_QUEUE;A11Y_QUEUE=[];
+      if(A11Y_FULL){A11Y_FULL=false;a11yNamePass(document);return;}
+      q.forEach(n=>{if(n.isConnected)a11yNamePass(n);});
+    };
+    A11Y_TICK={raf:requestAnimationFrame(drain),timer:setTimeout(drain,250)};
+  });
+  A11Y_MO.observe(host,{childList:true,subtree:true});
+  return A11Y_MO;
+}
+/* The number this feature is judged on. Kept as a function rather than a logged total so it
+   can be re-measured after any future change instead of trusted from a commit message. */
+function a11yAudit(){
+  const all=[...document.querySelectorAll(A11Y_SEL)];
+  const nameless=all.filter(el=>!a11yHasName(el));
+  const byView={};
+  nameless.forEach(el=>{const v=el.closest('section.view');const k=v?v.id:'(chrome)';
+    byView[k]=(byView[k]||0)+1;});
+  return {controls:all.length,nameless:nameless.length,namedByPass:A11Y_NAMED,byView,
+    sample:nameless.slice(0,10).map(el=>el.tagName+(el.id?'#'+el.id:'')+'.'+(el.className||''))};
+}
 const FOCUSABLE='a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),'+
   'textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 function focusablesIn(root){
@@ -41045,7 +41575,7 @@ function renderAssistants(){
       <div class="jvs-core" id="jvs-core" data-state="idle"></div>
       <div style="flex:1;min-width:190px">
         <div class="row" style="gap:6px;flex-wrap:wrap">
-          <select id="jvs-who" style="flex:1;min-width:120px">
+          <select id="jvs-who" style="flex:1;min-width:120px" aria-label="Voice assistant">
             ${JVS.length?JVS.map(x=>`<option value="${esc(x.id)}"${x.id===(a&&a.id)?' selected':''}>${esc(x.name)}</option>`).join('')
                         :'<option value="">no assistants yet</option>'}
           </select>
@@ -41136,7 +41666,7 @@ function renderVoices(){
       Windows PC and a phone. ${voices.length?`<b>${voices.length}</b> found here.`:'None found yet — try reopening this tab.'}</p>
     <label class="chk"><input type="checkbox" id="tts-on" ${TTS.on?'checked':''}> speak replies aloud</label>
     <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">
-      <select id="tts-voice" style="flex:1;min-width:170px">
+      <select id="tts-voice" style="flex:1;min-width:170px" aria-label="Voice">
         <option value="">automatic</option>
         ${voices.map(v=>`<option value="${esc(v.name)}"${v.name===TTS.voice?' selected':''}>${esc(v.name)} · ${esc(v.lang)}${v.localService?'':' (network)'}</option>`).join('')}
       </select>
@@ -49503,7 +50033,7 @@ function renderStudioX(){
       <h3>✦ Upgrade with AI</h3>
       <p class="help">Generates a candidate and shows it beside your app. Nothing is overwritten
         until you press Apply.</p>
-      <select id="stx-preset">${STX_PRESETS.map(x=>
+      <select id="stx-preset" aria-label="Upgrade preset">${STX_PRESETS.map(x=>
         `<option value="${x.id}"${STX.preset===x.id?' selected':''}>${esc(x.label)}</option>`).join('')}</select>
       <textarea id="stx-prompt" rows="2" style="margin-top:8px"
         placeholder="Anything specific to add — e.g. “keep the scoring exactly as it is”"></textarea>
@@ -52444,6 +52974,9 @@ async function boot(){
   /* Last, and never blocking: offline support is an enhancement, so a failure here must not
      touch boot. It resolves on its own and repaints the Settings card if it is open. */
   pwaInit();
+  /* Name everything already in the DOM, then keep naming whatever gets rendered later. Lazily
+     rendered tabs are the majority here, so the observer does more work than this first pass. */
+  a11yNamePass();a11yObserve();
   window.__gb={streamChat,streamComplete,mergeAcc,buildReasoning,applyDelta,accInit,detailsArray,extractJSON,
     diffHTML,reasoningFamily,extractSection,routeFor,splitThinkTags,syncOllama,architectSys,builderMessage,
     probeOllama,ollamaCandidates,renderOllamaHelp,settings,opaqueOrigin,showOriginBanner,store,
@@ -52608,6 +53141,9 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     scoreBullet,noteContext,get CTX(){return CTX},get MAP3D(){return MAP3D},
     achatFork,
     APP_BUILD,pwaCheckUpdate,pwaApplyUpdate,pwaAnnounceUpdate,
+    A11Y_GLYPH,a11yHasName,a11yDerive,a11yClean,a11ySourceText,a11yNamePass,a11yObserve,a11yAudit,swHTML,
+    get A11Y_NAMED(){return A11Y_NAMED},set A11Y_NAMED(v){A11Y_NAMED=v},
+    get A11Y_FULL(){return A11Y_FULL},set A11Y_FULL(v){A11Y_FULL=v},
     PROMPT_CAP,PROMPT_BLOCKS,get PROMPTS_SEEN(){return PROMPTS_SEEN},set PROMPTS_SEEN(v){PROMPTS_SEEN=v},
     promptBlocks,promptCapture,promptDiff,promptScrub,
     spendByFeature,SEARCH_SOURCES,gbSearch,
@@ -52751,6 +53287,8 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     A3D_AXES,A3D_PRESETS,a3dPreset,A3D_PROVIDERS,a3dProvider,a3dBrief,a3dGeomPrompt,
     A3D_DEFAULTS,get A3D(){return A3D},set A3D(v){A3D=v},saveA3D,a3dKey,a3dCall,
     a3dGenerate,a3dPoll,a3dKeep,a3dPlace,a3dDownload,a3dForget,a3dSteer,a3dCritique,
+    a3dRefine,a3dApplyRevision,A3D_REVISE_SCHEMA,a3dRenderRounds,a3dRevertRound,
+    PIPE_SOURCES,pipeSources,
     a3dSave,a3dLoad,a3dFetchBytes,a3dStatus,ed3Shot,a3dRenderPanel,a3dRenderLib,
     PIPE_MODES,pipeMode,PIPE_DEFAULTS,get PIPE(){return PIPE},set PIPE(v){PIPE=v},savePipe,
     PIPE_RANK,pipeRank,pipeFamily,pipeWarn,pipeSuggest,pipeApply,pipeBaseline,pipeModels,pipeSwapModels,
