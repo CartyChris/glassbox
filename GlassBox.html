@@ -1176,10 +1176,14 @@ input[type=range]{flex:1;accent-color:var(--acc)}
   clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
 /* The skip link is the exception: it must become visible when it is focused, or a sighted
    keyboard user cannot tell where their focus went. */
+/* Inverted from the theme's own text/background pair rather than painted on the accent. The
+   first version was #fff on var(--acc) and measured 2.41:1 — the ONLY element in the app below
+   WCAG AA, and it was the accessibility affordance itself. Using --ink on --bg cannot drift:
+   whatever the theme does to body text, this stays its exact inverse. */
 .skip-link{position:absolute;left:8px;top:-60px;z-index:100000;padding:10px 16px;border-radius:0 0 10px 10px;
-  background:var(--acc);color:#fff;font-weight:700;font-size:13px;text-decoration:none;
-  transition:top .12s}
-.skip-link:focus{top:0;outline:2px solid #fff;outline-offset:2px}
+  background:var(--ink);color:var(--bg);font-weight:700;font-size:13px;text-decoration:none;
+  border:2px solid var(--acc);transition:top .12s}
+.skip-link:focus{top:0;outline:2px solid var(--acc);outline-offset:2px}
 /* NOT .swatch — that name is already a 9px dot in the reasoning panes, and its
    width/height won every time, crushing these rows to 9px and overlapping the labels. */
 .tokrow{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--edge);
