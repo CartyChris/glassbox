@@ -5805,7 +5805,7 @@ async function syncProviderModels(p,{quiet}={}){
       if(!rep.ok)throw new Error('upstream did not return JSON: '+r.slice(0,200));
       return rep.value;
     }
-    const r=await fetch(url,{headers});
+    const r=await fetch(url,{headers,signal:deadline(DL_API)});
     if(!r.ok)throw new Error('HTTP '+r.status);
     return r.json();
   };
@@ -6853,7 +6853,7 @@ async function hermesProbe(){
   const hit=async(path,init)=>{
     const url=base+path;
     try{
-      const r=await fetch(url,Object.assign({headers:h},init||{}));
+      const r=await fetch(url,Object.assign({headers:h,signal:deadline(DL_PROBE)},init||{}));
       return{path,status:r.status,ok:r.ok,body:r.ok?await r.json().catch(()=>null):null};
     }catch(e){
       if(!BRIDGE_INFO)return{path,status:0,ok:false,err:'unreachable ('+e.message+')'};
@@ -6904,7 +6904,7 @@ async function amCall(path,init){
   const headers=Object.assign({'Authorization':'Bearer '+AGENTMAIL.key,
     'Content-Type':'application/json'},(init&&init.headers)||{});
   try{
-    const r=await fetch(url,Object.assign({},init,{headers}));
+    const r=await fetch(url,Object.assign({},init,{headers,signal:(init&&init.signal)||deadline(DL_API)}));
     const txt=await r.text();
     if(!r.ok)throw new Error(`HTTP ${r.status}${txt?' — '+txt.slice(0,180):''}`);
     return txt?JSON.parse(txt):null;
@@ -7829,7 +7829,7 @@ async function selfSource(){
      render since load, so re-serialising it would ship a snapshot of this session's state
      rather than the app. Fall back only when fetch cannot reach it (file:// origins). */
   try{
-    const r=await fetch(location.href,{cache:'no-store'});
+    const r=await fetch(location.href,{cache:'no-store',signal:deadline(DL_API)});
     if(r.ok){const t=await r.text();if(/<\/html>\s*$/i.test(t.trim()))return{src:t,via:'fetched source'};}
   }catch(_){}
   return{src:'<!doctype html>\n'+document.documentElement.outerHTML,
@@ -9145,7 +9145,7 @@ async function unslothTry(base,key,path,init){
   const headers=Object.assign({'Content-Type':'application/json'},
     key?{Authorization:'Bearer '+key}:{},(init&&init.headers)||{});
   try{
-    const r=await fetch(url,Object.assign({},init,{headers}));
+    const r=await fetch(url,Object.assign({},init,{headers,signal:(init&&init.signal)||deadline(DL_API)}));
     const txt=await r.text();
     return{ok:r.ok,status:r.status,body:(()=>{try{return JSON.parse(txt);}catch(_){return txt.slice(0,200);}})()};
   }catch(e){
@@ -9256,7 +9256,7 @@ async function hfBrowse(sort,filter,q,limit){
     return{ok:true,items:HF_CACHE};
   };
   try{
-    const r=await fetch(url);
+    const r=await fetch(url,{signal:deadline(DL_API)});
     if(!r.ok)throw new Error('HTTP '+r.status);
     return parse(await r.json());
   }catch(e){
@@ -9661,7 +9661,7 @@ async function a3dCall(pid,path,init){
   };
   if(P.transport==='bridge')return viaBridge();
   try{
-    const r=await fetch(url,Object.assign({},init,{headers}));
+    const r=await fetch(url,Object.assign({},init,{headers,signal:(init&&init.signal)||deadline(DL_WORK)}));
     const txt=await r.text();
     if(!r.ok)throw new Error('HTTP '+r.status+(txt?' — '+txt.slice(0,200):''));
     return txt?JSON.parse(txt):null;
@@ -9689,7 +9689,7 @@ function a3dStatus(msg,pct){
    differs by vendor. The bridge is the fallback for exactly that. */
 async function a3dFetchBytes(url){
   try{
-    const r=await fetch(url);
+    const r=await fetch(url,{signal:deadline(DL_WORK)});
     if(!r.ok)throw new Error('HTTP '+r.status);
     return new Uint8Array(await r.arrayBuffer());
   }catch(e){
@@ -13202,7 +13202,7 @@ async function obCall(path,init){
   /* Direct first — it only works behind a same-origin proxy, but when it does it is faster and
      carries the browser's session cookie, which is what an authenticated deployment needs. */
   try{
-    const r=await fetch(url,Object.assign({credentials:'include'},init,{headers}));
+    const r=await fetch(url,Object.assign({credentials:'include'},init,{headers,signal:(init&&init.signal)||deadline(DL_WORK)}));
     const t=await r.text();
     if(r.ok)return{ok:true,via:'direct',status:r.status,body:parse(t)};
     return{ok:false,via:'direct',status:r.status,body:parse(t)};
@@ -13303,7 +13303,7 @@ async function obScreenshot(botId){
   const base=String(OPENBOT.base||'').replace(/\/$/,'');
   const url=`${base}/api/computers/${encodeURIComponent(botId)}/screenshot`;
   try{
-    const r=await fetch(url,{credentials:'include'});
+    const r=await fetch(url,{credentials:'include',signal:deadline(DL_WORK)});
     if(!r.ok)throw new Error('HTTP '+r.status);
     const b=await r.blob();
     return{ok:true,via:'direct',dataUrl:await new Promise(res=>{
@@ -14178,7 +14178,7 @@ async function mcpRegFetch(opts){
     if(opts.search)u.searchParams.set('search',opts.search);
     let txt='';
     try{
-      const r=await fetch(u.toString(),{headers:{'Accept':'application/json'}});
+      const r=await fetch(u.toString(),{signal:deadline(DL_PROBE),headers:{'Accept':'application/json'}});
       if(!r.ok)throw new Error('HTTP '+r.status);
       txt=await r.text();
     }catch(e){
@@ -14240,7 +14240,7 @@ async function mcpRpc(c,method,params){
       if(!rep.ok)throw new Error('upstream did not return JSON: '+r.slice(0,200));
       return rep.value;
     }
-    const res=await fetch(c.url,{method:'POST',headers,body:JSON.stringify(body)});
+    const res=await fetch(c.url,{method:'POST',headers,body:JSON.stringify(body),signal:deadline(DL_WORK)});
     if(!res.ok)throw new Error('HTTP '+res.status);
     const txt=await res.text();
     // streamable HTTP may answer as SSE; take the last data: line
@@ -14269,7 +14269,7 @@ async function connectorConnect(c){
     if(c.kind==='rest'){
       // GitHub needs no handshake; probe it instead so "connected" means something
       const r=await fetch('https://api.github.com/rate_limit',
-        {signal:deadline(10000),headers:c.token?{Authorization:'Bearer '+c.token}:{}});
+        {signal:deadline(DL_API),headers:c.token?{Authorization:'Bearer '+c.token}:{}});
       if(!r.ok)throw new Error('HTTP '+r.status);
       const j=await r.json();
       c.tools=GITHUB_TOOLS.map(t=>({name:t.name,description:t.description,inputSchema:t.schema}));
@@ -14318,7 +14318,7 @@ const GITHUB_TOOLS=[
 async function githubCall(c,tool,a){
   const h=c.token?{Authorization:'Bearer '+c.token,Accept:'application/vnd.github+json'}
                  :{Accept:'application/vnd.github+json'};
-  const get=async u=>{const r=await fetch(u,{headers:h});
+  const get=async u=>{const r=await fetch(u,{headers:h,signal:deadline(DL_API)});
     if(!r.ok)throw new Error(`GitHub ${r.status}${r.status===403?' — rate limited; add a token':r.status===404?' — not found, or private and the token cannot see it':''}`);
     return r.json();};
   const base='https://api.github.com';
@@ -15037,6 +15037,14 @@ function replayFrames(run){
    whole time, so enough of them starve the requests that would have worked.
    Deliberately NOT applied to model calls: a completion legitimately runs for minutes, and a
    deadline there would cut off real work. Probes only. */
+/* Four tiers, so a reader can tell a probe from real work without chasing the number.
+   DL_WORK is deliberately generous: the goal is to turn "hangs forever" into "fails in three
+   minutes", never to cut off something that is legitimately still running. A model completion
+   gets no deadline at all — minutes are normal there and an abort would destroy real work. */
+const DL_LOCAL=5000;      // loopback: the bridge or Ollama on this machine
+const DL_PROBE=8000;      // is this remote service there at all
+const DL_API=20000;       // a metadata read from a remote API
+const DL_WORK=180000;     // generation, proxying and large transfers
 function deadline(ms){
   if(typeof AbortSignal!=='undefined'&&AbortSignal.timeout){
     try{return AbortSignal.timeout(ms);}catch(_){}
@@ -15572,8 +15580,9 @@ async function appleNotesImport(opts){
     made.push({name,body,kind:'idea',tags:['apple-notes'],source:'Apple Notes'});
   }
   if(opts.dryRun)return{ok:true,dryRun:true,would:made.length,skipped:skipped.length,sample:made.slice(0,5).map(m=>m.name)};
-  for(const m of made){try{await brainAdd(m);}catch(_){}}
-  return{ok:true,added:made.length,skipped:skipped.length,
+  let added=0,failed=0;
+  for(const m of made){try{await brainAdd(m);added++;}catch(_){failed++;}}
+  return{ok:failed===0,added,failed,skipped:skipped.length,
     note:made.length?'Imported as kind “idea”, tagged apple-notes — so they rank as thinking, not as settled fact.':'Nothing new to import.'};
 }
 
@@ -15610,8 +15619,9 @@ async function desktopFolderImport(opts){
     made.push({name,body:f.text.trim(),kind:'reference',tags:['imported'],source:dir.name+'/'+f.path});
   });
   if(opts.dryRun)return{ok:true,dryRun:true,would:made.length,scanned:files.length,sample:made.slice(0,5).map(m=>m.name)};
-  for(const m of made){try{await brainAdd(m);}catch(_){}}
-  return{ok:true,added:made.length,scanned:files.length,folder:dir.name};
+  let added=0,failed=0;
+  for(const m of made){try{await brainAdd(m);added++;}catch(_){failed++;}}
+  return{ok:failed===0,added,failed,scanned:files.length,folder:dir.name};
 }
 
 /* Every prompt gets measured. Context bloat is invisible until you look at it, and it is the
@@ -16581,10 +16591,14 @@ async function probeBridge(silent){
       BRIDGE_PREFIXES=info.prefixes.map(p=>p+'/');
     // Pair once so the file-writing / launch endpoints will accept us.
     try{
-      const pr=await fetch(base+'/pair',{signal:deadline(4000)});
+      const pr=await fetch(base+'/pair',{signal:deadline(DL_LOCAL)});
       const pj=await pr.json();
-      if(pj&&pj.ok&&pj.token){BRIDGE_TOKEN=pj.token;store.set('bridgeToken',BRIDGE_TOKEN);}
-    }catch(_){}
+      if(pj&&pj.ok&&pj.token){
+        BRIDGE_TOKEN=pj.token;
+        if(store.set('bridgeToken',BRIDGE_TOKEN)===false&&typeof logEvent==='function')
+          logEvent('storage',{msg:'bridge token could not be saved — pairing will repeat next boot'});
+      }
+    }catch(e){if(typeof logEvent==='function')logEvent('bridge',{msg:'pairing failed: '+(e&&e.message||e)});}
     if(base!==settings.bridge){settings.bridge=base;store.set('settings',settings);
       const f=$('#set-bridge');if(f)f.value=base;}
     const list=[];
@@ -16750,7 +16764,7 @@ function zipBytes(files){
 }
 async function bridgePost(pathname,body){
   const base=(settings.bridge||'http://127.0.0.1:8791').replace(/\/$/,'');
-  const r=await fetch(base+pathname,{method:'POST',
+  const r=await fetch(base+pathname,{method:'POST',signal:deadline(DL_WORK),
     headers:{'Content-Type':'application/json','X-GlassBox-Token':BRIDGE_TOKEN},
     body:JSON.stringify(body)});
   return r.json();
@@ -16852,7 +16866,7 @@ async function catalogCache(list){
 async function loadCatalog(force){
   if(REMOTE.length&&!force)return CATALOG;
   try{
-    const r=await fetch(settings.base.replace(/\/$/,'')+'/models',{signal:deadline(12000),
+    const r=await fetch(settings.base.replace(/\/$/,'')+'/models',{signal:deadline(DL_API),
       headers:API_KEY?{'Authorization':'Bearer '+API_KEY}:{}});
     const j=await r.json();
     const list=(j.data||[]).filter(m=>m.id&&!m.id.startsWith('~'));
@@ -18477,7 +18491,7 @@ async function selfLoadSource(){
     catch(e){/* fall through */}
   }
   try{                                               // works over the launcher (http) and often file://
-    const r=await fetch(location.href,{cache:'no-store'});
+    const r=await fetch(location.href,{cache:'no-store',signal:deadline(DL_API)});
     if(r.ok){const t=await r.text();
       if(/<\/html>\s*$/i.test(t.trim())){SELF.loaded=t;SELF.origin='fetch '+location.pathname;return t;}}
   }catch(e){}
@@ -21798,8 +21812,13 @@ async function connectBridgeOneClick(){
     if(Array.isArray(found.info.prefixes)&&found.info.prefixes.length)
       BRIDGE_PREFIXES=found.info.prefixes.map(p=>p+'/');
     if(found.base!==settings.bridge){settings.bridge=found.base;store.set('settings',settings);}
-    try{const pr=await fetch(found.base+'/pair',{signal:deadline(4000)});const pj=await pr.json();
-      if(pj&&pj.ok&&pj.token){BRIDGE_TOKEN=pj.token;store.set('bridgeToken',BRIDGE_TOKEN);}}catch(_){}
+    try{const pr=await fetch(found.base+'/pair',{signal:deadline(DL_LOCAL)});const pj=await pr.json();
+      if(pj&&pj.ok&&pj.token){
+        BRIDGE_TOKEN=pj.token;
+        if(store.set('bridgeToken',BRIDGE_TOKEN)===false&&typeof logEvent==='function')
+          logEvent('storage',{msg:'bridge token could not be saved — pairing will repeat next boot'});
+      }}
+    catch(e){if(typeof logEvent==='function')logEvent('bridge',{msg:'pairing failed: '+(e&&e.message||e)});}
     return{ok:true,base:found.base,info:found.info};
   }
   return{ok:false,platform:platformGuess(),
@@ -22137,7 +22156,7 @@ let LOCAL_CTX=store.get('localctx',{});                 // "runtime/model" -> {d
 const saveLocalCtx=()=>store.set('localctx',LOCAL_CTX);
 async function ollamaDeclaredCtx(name){
   try{
-    const r=await fetch(localBase('ollama')+'/api/show',{method:'POST',signal:deadline(6000),
+    const r=await fetch(localBase('ollama')+'/api/show',{method:'POST',signal:deadline(DL_LOCAL),
       headers:{'Content-Type':'application/json'},body:JSON.stringify({model:name})});
     if(!r.ok)return null;
     const j=await r.json();
@@ -22587,8 +22606,11 @@ async function genImage(prompt,opts){
     if(!imgs.length)return{ok:false,error:'the model returned no image — it may not be image-capable '+
       'on this provider, or the prompt was refused',text:(acc.content||'').slice(0,300)};
     const saved=[];
-    for(const url of imgs)saved.push(await genSaveAsset({kind:'image',name:prompt.slice(0,60),
-      dataUrl:url,meta:{model:m.id,prompt,size:o.size||GENCFG.size}}));
+    for(const url of imgs){
+      const rec=await genSaveAsset({kind:'image',name:prompt.slice(0,60),
+        dataUrl:url,meta:{model:m.id,prompt,size:o.size||GENCFG.size}});
+      if(rec)saved.push(rec);          // refused when storage is full; it has already said so
+    }
     return{ok:true,images:saved,cost:acc.cost||0};
   }catch(e){spanEnd(span,null,e);return{ok:false,error:String(e.message||e)};}
 }
@@ -22649,7 +22671,7 @@ function genJobFail(job,err){
    how a dead endpoint reports success. */
 async function genFetch(url,init){
   const direct=async()=>{
-    const r=await fetch(url,init);
+    const r=await fetch(url,Object.assign({},init,{signal:(init&&init.signal)||deadline(DL_WORK)}));
     const txt=await r.text();
     const rep=(typeof repairJson==='function')?repairJson(txt):{ok:false};
     if(!r.ok)return{ok:false,error:`HTTP ${r.status}: ${txt.slice(0,200)}`};
@@ -22670,7 +22692,17 @@ async function genSaveAsset({kind,name,dataUrl,svg,meta}){
   const id=uid();
   const rec={id,kind:kind||'image',name:name||'generated',ts:nowISO(),
     bytes:(dataUrl||svg||'').length,meta:meta||{}};
-  try{await IDB.set('genasset.'+id,{dataUrl:dataUrl||'',svg:svg||''});}catch(e){}
+  let stored=false;
+  try{stored=(await IDB.set('genasset.'+id,{dataUrl:dataUrl||'',svg:svg||''}))!==false;}
+  catch(_){stored=false;}
+  /* The record is the pointer; the bytes are the thing. Keeping a pointer to bytes that were
+     never written gives the library an entry that renders as a broken thumbnail forever and
+     says nothing. Better to refuse the entry and say so. */
+  if(!stored){
+    toast('Could not store “'+(rec.name||'asset')+'” — browser storage is full, so it was not '+
+      'added to the library',6000);
+    return null;
+  }
   GEN_ASSETS.unshift(rec);saveGenAssets();
   return rec;
 }
@@ -22973,7 +23005,7 @@ function tuSearch(q){
 }
 async function tuRefresh(){
   try{
-    const r=await fetch('https://api.github.com/repos/'+TU_REPO+'/contents/src/package-components');
+    const r=await fetch('https://api.github.com/repos/'+TU_REPO+'/contents/src/package-components',{signal:deadline(DL_API)});
     if(!r.ok)return{ok:false,error:'GitHub returned '+r.status+
       (r.status===403?' — unauthenticated rate limit; the seeded catalogue still works':'')};
     const d=await r.json();
@@ -22994,7 +23026,7 @@ async function tuSource(name){
   ];
   for(const p of tryPaths){
     try{
-      const r=await fetch(TU_RAW+p);
+      const r=await fetch(TU_RAW+p,{signal:deadline(DL_API)});
       if(r.ok){
         const t=await r.text();
         /* package-components entries are ~150-byte re-exports. Returning one as "the source"
@@ -24202,7 +24234,7 @@ async function comfyRaw(path,{method,body,binary}={}){
   const base=(settings.bridge||'http://127.0.0.1:8791').replace(/\/$/,'');
   const url=(COMFY.url||COMFY_DEFAULTS.url).replace(/\/$/,'')+path;
   try{
-    const r=await fetch(base+'/proxy',{method:'POST',
+    const r=await fetch(base+'/proxy',{method:'POST',signal:deadline(DL_WORK),
       headers:{'Content-Type':'application/json','X-GlassBox-Token':BRIDGE_TOKEN},
       body:JSON.stringify({url,method:method||'GET',headers:body?{'Content-Type':'application/json'}:{},body:body||undefined})});
     if(binary){
@@ -25864,6 +25896,52 @@ function gauntletCases(g){
 
   /* `{signal:undefined}` is a fetch with no deadline and no error — the exact shape this helper
      exists to prevent, and it looks identical at the call site. */
+  /* Reporting a failed persist write from inside savePersist is a cycle: persistFailBanner
+     increments PERSIST.failures and calls savePersist to record it. Measured before the guard:
+     RangeError after about five frames — the page dies in exactly the situation the report exists
+     to handle. The bug was impossible before only because the failure was being swallowed, which
+     is what makes this worth a case rather than a comment. */
+  add({id:'persist-failure-is-loud-and-does-not-recurse',sub:'resilience',
+    uses:['savePersist','persistFailBanner'],
+    what:'a failed settings write raises the alarm instead of recursing or vanishing',
+    run:()=>{
+      const real=localStorage.setItem.bind(localStorage);
+      const old=document.getElementById('persist-alarm');
+      if(old)old.remove();
+      localStorage.setItem=(k,v)=>{
+        if(k==='gb.persist'){const e=new Error('quota');e.name='QuotaExceededError';throw e;}
+        return real(k,v);};
+      let outcome='ok';
+      try{g.savePersist();}catch(e){outcome=e.name;}
+      localStorage.setItem=real;
+      const el=document.getElementById('persist-alarm');
+      const raised=!!el&&/save just failed/i.test(el.textContent||'');
+      if(el)el.remove();
+      return outcome==='ok'&&raised?'reported':'outcome='+outcome+',raised='+raised;
+    },expect:v=>v==='reported',
+    antiWhat:'and a write that succeeds raises nothing at all',
+    anti:()=>{
+      const old=document.getElementById('persist-alarm');
+      if(old)old.remove();
+      g.savePersist();
+      const el=document.getElementById('persist-alarm');
+      if(el)el.remove();
+      return !!el;
+    },antiExpect:v=>v===false});
+
+  /* The tiers are the vocabulary the deadlines are written in. If one became undefined, every
+     call site reading it would silently pass `signal:deadline(undefined)`. */
+  add({id:'deadline-tiers-are-ordered',sub:'resilience',
+    uses:['DL_LOCAL','DL_PROBE','DL_API','DL_WORK'],
+    what:'the four deadline tiers are real numbers in increasing order',
+    run:()=>{
+      const t=[g.DL_LOCAL,g.DL_PROBE,g.DL_API,g.DL_WORK];
+      if(!t.every(x=>typeof x==='number'&&x>0))return 'not-all-numbers:'+JSON.stringify(t);
+      return (t[0]<t[1]&&t[1]<t[2]&&t[2]<t[3])?'ordered':'out-of-order:'+JSON.stringify(t);
+    },expect:v=>v==='ordered',
+    antiWhat:'and the work tier is generous enough that a real generation is never cut off',
+    anti:()=>g.DL_WORK>=120000,antiExpect:v=>v===true});
+
   add({id:'probe-deadline-is-a-real-signal',sub:'resilience',uses:['deadline'],
     what:'deadline() hands back a live AbortSignal, not undefined',
     run:()=>{
@@ -27648,6 +27726,9 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'persist-failures-go-quiet-again',export:'savePersist',
+   why:'a failed settings write vanishes, so the user is never told their storage is full',
+   broken:()=>()=>{ try{localStorage.setItem('gb.persist','{}');}catch(_){} }},
   {id:'probes-lose-their-deadline',export:'deadline',
    why:'every boot probe, census and update poll goes back to hanging forever with no error',
    broken:()=>()=>undefined},
@@ -28549,7 +28630,7 @@ async function connTest(conn,vars){
       if(!BRIDGE_INFO)return{ok:false,error:'CORS blocked it and the bridge is not connected — '+
         'connect the bridge and try again'};
       const base=(settings.bridge||'http://127.0.0.1:8791').replace(/\/$/,'');
-      const r=await fetch(base+'/proxy',{method:'POST',
+      const r=await fetch(base+'/proxy',{method:'POST',signal:deadline(DL_WORK),
         headers:{'Content-Type':'application/json','X-GlassBox-Token':BRIDGE_TOKEN},
         body:JSON.stringify({url:req.url,method:req.method,headers:req.headers,body:req.body})});
       const txt=await r.text();
@@ -28557,7 +28638,7 @@ async function connTest(conn,vars){
       if(j&&j.error&&Object.keys(j).length===1)return{ok:false,error:String(j.error),via:'bridge'};
       return{ok:r.ok,status:r.status,body:j==null?txt:j,via:'bridge'};
     }
-    const r=await fetch(req.url,{method:req.method,headers:req.headers,body:req.body});
+    const r=await fetch(req.url,{method:req.method,headers:req.headers,body:req.body,signal:deadline(DL_PROBE)});
     const txt=await r.text();
     let j=null;try{j=JSON.parse(txt);}catch(e){}
     return{ok:r.ok,status:r.status,body:j==null?txt:j,via:'direct'};
@@ -34285,7 +34366,7 @@ async function pclipFetch(path){
   const url=(PCLIP.base||PAPERCLIP_DEFAULTS.base).replace(/\/$/,'')+path;
   const headers=PCLIP.token?{Authorization:'Bearer '+PCLIP.token}:{};
   try{
-    const r=await fetch(url,{headers,cache:'no-store'});
+    const r=await fetch(url,{headers,cache:'no-store',signal:deadline(DL_PROBE)});
     const txt=await r.text();
     let data=null;try{data=JSON.parse(txt);}catch(_){}
     return{ok:r.ok,status:r.status,data,text:txt.slice(0,400),via:'direct',url};
@@ -34384,10 +34465,20 @@ function projectRestore(pid){
 async function projectMigrate(){
   if(store.get('projectsMigrated',false))return false;
   projectStash('default');
+  let brainOk=true;
   try{
     const legacy=await IDB.get('brain',null);
-    if(legacy&&!(await IDB.get(brainKey('default'),null)))await IDB.set(brainKey('default'),legacy);
-  }catch(e){}
+    if(legacy&&!(await IDB.get(brainKey('default'),null)))
+      brainOk=(await IDB.set(brainKey('default'),legacy))!==false;
+  }catch(e){brainOk=false;}
+  /* Do NOT mark the migration done if the Brain did not come across. The flag is one-way: set it
+     after a failed copy and the legacy Brain is stranded for good, which is the exact outcome the
+     migration exists to prevent. Leaving it unset means the next boot tries again. */
+  if(!brainOk){
+    toast('Could not copy your Brain into this project — storage is full. Nothing was lost; '+
+      'free some space and reload to finish upgrading.',8000);
+    return false;
+  }
   store.set('projectsMigrated',true);
   return true;
 }
@@ -35197,13 +35288,13 @@ async function paneLive(){
   const out={terminals:[],ollama:[],openhands:[],unreachable:[]};
   try{
     const base=(settings.bridge||'http://127.0.0.1:8791').replace(/\/$/,'');
-    const r=await fetch(base+'/whoami',{cache:'no-store',signal:deadline(4000)});
+    const r=await fetch(base+'/whoami',{cache:'no-store',signal:deadline(DL_LOCAL)});
     const j=await r.json();
     out.terminals=j.terminals||[];
     out.bridgeVersion=j.version;
   }catch(e){out.unreachable.push('bridge');}
   try{
-    const r=await fetch((settings.ollama||'http://127.0.0.1:11434').replace(/\/$/,'')+'/api/ps',{cache:'no-store',signal:deadline(4000)});
+    const r=await fetch((settings.ollama||'http://127.0.0.1:11434').replace(/\/$/,'')+'/api/ps',{cache:'no-store',signal:deadline(DL_LOCAL)});
     const j=await r.json();
     out.ollama=(j.models||[]).map(m=>({name:m.name,size:m.size_vram||m.size,until:m.expires_at}));
   }catch(e){out.unreachable.push('ollama');}
@@ -35229,7 +35320,7 @@ const saveOH=()=>store.set('openhands',OH);
 async function ohFetch(path){
   const url=(OH.base||OH_DEFAULTS.base).replace(/\/$/,'')+path;
   try{
-    const r=await fetch(url,{cache:'no-store',signal:deadline(6000)});
+    const r=await fetch(url,{cache:'no-store',signal:deadline(DL_LOCAL)});
     if(!r.ok)throw new Error('HTTP '+r.status);
     return{ok:true,data:await r.json(),via:'direct'};
   }catch(e){
@@ -39467,18 +39558,22 @@ function initForge(){
       :`<span style="color:var(--bad)">${esc(r.error)}</span>`);};
   const ni=$('#bimp-notes');
   if(ni)ni.onclick=async()=>{impOut('Importing…');const r=await appleNotesImport({});
-    impOut(r.ok?`Imported <b>${r.added}</b>, skipped ${r.skipped}. ${esc(r.note||'')}`
-      :`<span style="color:var(--bad)">${esc(r.error)}</span>`);
-    if(r.ok)try{renderBrainList&&renderBrainList();bvizMount();}catch(_){}};
+    impOut(r.error?`<span style="color:var(--bad)">${esc(r.error)}</span>`
+      :`Imported <b>${r.added}</b>, skipped ${r.skipped}.`+
+       (r.failed?` <b style="color:var(--bad)">${r.failed} could not be written — storage is full.</b>`:'')+
+       ` ${esc(r.note||'')}`);
+    if(r.added)try{renderBrainList&&renderBrainList();bvizMount();}catch(_){}};
   const fd=$('#bimp-folder-dry');
   if(fd)fd.onclick=async()=>{impOut('Pick a folder…');const r=await desktopFolderImport({dryRun:true});
     impOut(r.cancelled?'Cancelled.':r.ok?`Would import <b>${r.would}</b> of ${r.scanned} file(s). ${r.sample.length?'e.g. '+r.sample.map(esc).join(', '):''}`
       :`<span style="color:var(--bad)">${esc(r.error)}</span>`);};
   const fi=$('#bimp-folder');
   if(fi)fi.onclick=async()=>{impOut('Pick a folder…');const r=await desktopFolderImport({});
-    impOut(r.cancelled?'Cancelled.':r.ok?`Imported <b>${r.added}</b> of ${r.scanned} scanned, from ${esc(r.folder||'')}.`
-      :`<span style="color:var(--bad)">${esc(r.error)}</span>`);
-    if(r.ok)try{renderBrainList&&renderBrainList();bvizMount();}catch(_){}};
+    impOut(r.cancelled?'Cancelled.'
+      :r.error?`<span style="color:var(--bad)">${esc(r.error)}</span>`
+      :`Imported <b>${r.added}</b> of ${r.scanned} scanned, from ${esc(r.folder||'')}.`+
+       (r.failed?` <b style="color:var(--bad)">${r.failed} could not be written — storage is full.</b>`:''));
+    if(r.added)try{renderBrainList&&renderBrainList();bvizMount();}catch(_){}};
   $('#brain-maprebuild').onclick=()=>renderBrainMap(true);
   $('#brain-new').onclick=()=>openModal(`<h3 style="margin-top:0">Write a note</h3>
     <label class="field">Title<input type="text" id="nb-name" placeholder="What this note is about"></label>
@@ -39969,7 +40064,7 @@ async function testKey(){
   const s=$('#set-keystatus');s.textContent='Testing…';
   const k=$('#set-key').value.trim()||API_KEY;
   if(!k){s.textContent='⚠ no key';return;}
-  try{const r=await fetch(settings.base.replace(/\/$/,'')+'/key',{headers:{'Authorization':'Bearer '+k}});
+  try{const r=await fetch(settings.base.replace(/\/$/,'')+'/key',{signal:deadline(DL_PROBE),headers:{'Authorization':'Bearer '+k}});
     if(r.ok){const j=await r.json();const d=j.data||{};
       s.innerHTML='✅ connected'+(d.usage!=null?` · used $${(+d.usage).toFixed(2)}`:'')+(d.limit!=null?` / limit $${d.limit}`:' · no limit');}
     else s.textContent='⚠ HTTP '+r.status+(r.status===401?' — key rejected':'');
@@ -42782,7 +42877,10 @@ function connTargets(kind,fromId){
 }
 let CONNX=Object.assign({custom:[],log:[],suggested:[],dismissed:[]},store.get('connx',{}));
 /* One-time cleanup for anyone who already has payloads parked in their saved copy. */
-if(CONNX._pending){delete CONNX._pending;try{store.set('connx',CONNX);}catch(_){}}
+if(CONNX._pending){delete CONNX._pending;
+  try{if(store.set('connx',CONNX)===false&&typeof logEvent==='function')
+    logEvent('storage',{msg:'connector list could not be saved'});}
+  catch(e){if(typeof logEvent==='function')logEvent('storage',{msg:'connx write threw: '+(e&&e.message||e)});}}
 const saveConnx=()=>store.set('connx',CONNX);
 
 /* One payload shape everywhere: {kind, data, title, from}. `data` meaning depends on kind and
@@ -45350,7 +45448,7 @@ async function lxOpenGithub(input){
 }
 async function lxOpenUrl(url){
   try{
-    const r=await fetch(url);
+    const r=await fetch(url,{signal:deadline(DL_WORK)});
     if(!r.ok)throw new Error('the server returned '+r.status);
     const ct=r.headers.get('content-type')||'';
     if(/zip/.test(ct)||/\.zip(\?|$)/i.test(url)){
@@ -47813,7 +47911,24 @@ const PERSIST_INTERVALS=[
 ];
 let PERSIST=Object.assign({},PERSIST_DEFAULTS,store.get('persist',{}));
 
-const savePersist=()=>{try{localStorage.setItem('gb.persist',JSON.stringify(PERSIST));}catch(_){}};
+/* persistFailBanner increments PERSIST.failures and calls savePersist to record it. So reporting
+   a failed persist write from inside savePersist is a CYCLE — and it blows the stack in exactly
+   the situation the report exists to handle, a full disk. Measured: RangeError after ~5 frames.
+   Report from the outermost call only. Before this the cycle could not happen for one reason
+   alone: the failure was being swallowed. */
+let PERSIST_REPORTING=false;
+const savePersist=()=>{
+  try{localStorage.setItem('gb.persist',JSON.stringify(PERSIST));}
+  catch(e){
+    if(PERSIST_REPORTING)return;
+    PERSIST_REPORTING=true;
+    try{
+      if(typeof persistFailBanner==='function')
+        persistFailBanner('Could not save your backup settings. '+
+          (e&&e.name==='QuotaExceededError'?'Browser storage is full.':String(e&&e.message||e)));
+      if(typeof logEvent==='function')logEvent('storage',{msg:'persist settings write failed'});
+    }finally{PERSIST_REPORTING=false;}
+  }};
 /* MIGRATION — one-shot, for browsers already flooding.
    The shipped defaults were auto:true / 15 min with a download fallback, so any profile that
    never chose a folder has been dropping a file into ~/Downloads four times an hour. Those
@@ -48638,7 +48753,10 @@ function botToVo(botId){
   if(VO.bots.some(w=>w&&w.name===b.name))return{ok:true,existing:true};
   VO.bots.push({name:b.name,role:b.role||'Staff',model:b.model||'',
     brief:b.purpose||b.brief||'',avatar:b.avatar,fromBot:b.id});
-  try{if(typeof saveVo==='function')saveVo();else store.set('vo',VO);}catch(_){}
+  try{
+    const ok=(typeof saveVo==='function')?saveVo():store.set('vo',VO);
+    if(ok===false)toast('The virtual office could not be saved — browser storage is full',5500);
+  }catch(e){toast('The virtual office could not be saved: '+(e&&e.message||e),5500);}
   actLog('human','bot → virtual office: '+b.name,{});
   return{ok:true};
 }
@@ -48944,7 +49062,7 @@ const skillRawUrl=(repo,path,ref)=>`https://raw.githubusercontent.com/${repo}/${
    Separating retrieval from installation is what makes the review step unskippable. */
 async function skillFetch(src){
   const url=skillRawUrl(src.repo,src.path,src.ref);
-  const r=await fetch(url,{cache:'no-store'});
+  const r=await fetch(url,{cache:'no-store',signal:deadline(DL_API)});
   if(!r.ok)throw new Error('the source returned '+r.status+' — check the repo and branch');
   const text=await r.text();
   if(text.length>200000)throw new Error('that file is over 200KB, which is not a skill');
@@ -49513,7 +49631,7 @@ async function pwaCheckUpdate(opts){
        Comparing the served build stamp catches the case the worker cannot see. */
     let served='';
     try{
-      const r=await fetch('./index.html',{cache:'no-store',signal:deadline(10000)});
+      const r=await fetch('./index.html',{cache:'no-store',signal:deadline(DL_API)});
       const t=await r.text();
       const m=/const APP_BUILD='([^']+)'/.exec(t);
       served=m?m[1]:'';
@@ -49564,7 +49682,7 @@ async function pwaInit(){
   /* Probe before registering: a 404 would otherwise log a console error on every single boot of
      anyone running the single file from their own static server without sw.js next to it. */
   let ok=false;
-  try{const r=await fetch('./sw.js',{method:'GET',cache:'no-store',signal:deadline(6000)});ok=r.ok;}
+  try{const r=await fetch('./sw.js',{method:'GET',cache:'no-store',signal:deadline(DL_LOCAL)});ok=r.ok;}
   catch(_){ok=false;}
   if(!ok){PWA.state='nosw';PWA.why='No sw.js next to this page, so there is nothing to install. It ships with the deployed copy.';return;}
   try{
@@ -49820,7 +49938,7 @@ async function tfFetch(path,init){
   /* Direct first, bridge proxy as the fallback — a TrueForge on another machine will refuse
      a cross-origin browser request, and the bridge is the only way through that. */
   try{
-    const r=await fetch(tfUrl(path),o);
+    const r=await fetch(tfUrl(path),Object.assign({},o,{signal:(o&&o.signal)||deadline(DL_WORK)}));
     const t=await r.text();
     return{ok:r.ok,status:r.status,body:t?JSON.parse(t):null,via:'direct'};
   }catch(e){
@@ -50259,7 +50377,7 @@ function ghParse(input){
   return{owner:m[1],repo:m[2],ref:m[3]||'',path:m[4]||''};
 }
 async function ghApi(path){
-  const r=await fetch('https://api.github.com/'+path);
+  const r=await fetch('https://api.github.com/'+path,{signal:deadline(DL_API)});
   if(r.status===403){
     const reset=r.headers.get('x-ratelimit-remaining')==='0';
     throw new Error(reset?'GitHub rate limit reached (60/hour without a token). Try again later.'
@@ -50283,7 +50401,7 @@ async function ghScan(input){
   return{g:Object.assign({},g,{ref}),meta,html,skills,md,needsBuild,total:files.length,truncated:!!tree.truncated};
 }
 async function ghRaw(g,path){
-  const r=await fetch(GH_RAW+g.owner+'/'+g.repo+'/'+g.ref+'/'+path);
+  const r=await fetch(GH_RAW+g.owner+'/'+g.repo+'/'+g.ref+'/'+path,{signal:deadline(DL_API)});
   if(!r.ok)throw new Error('Could not fetch '+path+' ('+r.status+')');
   return r.text();
 }
@@ -53319,7 +53437,8 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     scoreBullet,noteContext,get CTX(){return CTX},get MAP3D(){return MAP3D},
     achatFork,
     APP_BUILD,pwaCheckUpdate,pwaApplyUpdate,pwaAnnounceUpdate,
-    A11Y_GLYPH,a11yHasName,a11yDerive,a11yClean,a11ySourceText,deadline,a11yNamePass,a11yObserve,a11yAudit,swHTML,
+    A11Y_GLYPH,a11yHasName,a11yDerive,a11yClean,a11ySourceText,deadline,
+    DL_LOCAL,DL_PROBE,DL_API,DL_WORK,a11yNamePass,a11yObserve,a11yAudit,swHTML,
     get A11Y_NAMED(){return A11Y_NAMED},set A11Y_NAMED(v){A11Y_NAMED=v},
     get A11Y_FULL(){return A11Y_FULL},set A11Y_FULL(v){A11Y_FULL=v},
     PROMPT_CAP,PROMPT_BLOCKS,get PROMPTS_SEEN(){return PROMPTS_SEEN},set PROMPTS_SEEN(v){PROMPTS_SEEN=v},

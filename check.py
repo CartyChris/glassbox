@@ -97,6 +97,72 @@ if m:
     gdup=[k for k,v in seen.items() if v>2]
     if gdup: print('FAIL: duplicate __gb export keys:',gdup); sys.exit(1)
 
+# Every fetch in REAL code must carry an abort signal. A hung request neither resolves nor
+# rejects; it just holds a connection slot forever, and nothing in the UI ever says so. Fetches
+# inside template literals are skipped because they belong to the sandboxed editor documents,
+# which have no deadline() of their own. `scan` already has every string and template blanked.
+def fetch_without_signal(scan_src, raw_src):
+    bad=[]
+    for m in re.finditer(r'\bfetch\s*\(', scan_src):
+        if in_sabotage(m.start()): continue
+        i=m.end(); depth=1; j=i
+        while j<len(scan_src) and depth:
+            if scan_src[j]=='(': depth+=1
+            elif scan_src[j]==')': depth-=1
+            j+=1
+        # read the ARGUMENTS from the raw source (the blanked copy has string contents removed,
+        # but `signal` is an identifier so it survives either way)
+        args=raw_src[i:j]
+        if not re.search(r'\bsignal\b', args):
+            bad.append(base_line + raw_src[:i].count('\n'))
+    return bad
+# An EMPTY catch around a persisting write. A failed delete loses nothing and a failed probe is
+# an answer, so those stay allowed — this targets only writes that can lose the user's work while
+# saying nothing. IDB.set returns false rather than throwing, so a try/catch here is doubly
+# misleading: it looks handled and cannot even fire.
+base_line = s[:start].count('\n') + 1
+# The sabotage table is deliberately-broken code by design — every detector fires on it and every
+# hit is a false positive. Compute its span once and skip anything inside it.
+_sab = scan.find('const GAUNTLET_SABOTAGE=[')
+if _sab >= 0:
+    _d = 0; _j = scan.index('[', _sab)
+    _k = _j
+    while _k < len(scan):
+        if scan[_k] == '[': _d += 1
+        elif scan[_k] == ']':
+            _d -= 1
+            if _d == 0: break
+        _k += 1
+    SAB_SPAN = (_sab, _k)
+else:
+    SAB_SPAN = (-1, -1)
+def in_sabotage(off): return SAB_SPAN[0] <= off <= SAB_SPAN[1]
+def swallowed_writes(scan_src, raw_src):
+    bad=[]
+    for m in re.finditer(r'catch\s*\([A-Za-z_$]*\)\s*\{\s*\}', scan_src):
+        if in_sabotage(m.start()): continue
+        k=m.start()-1
+        while k>0 and scan_src[k] in ' \n\t': k-=1
+        if k<=0 or scan_src[k]!='}': continue
+        depth=1; k-=1
+        while k>0 and depth:
+            if scan_src[k]=='}': depth+=1
+            elif scan_src[k]=='{': depth-=1
+            k-=1
+        blk=raw_src[k+1:m.start()]
+        if not re.search(r'(store\.set\(|IDB\.set\(|localStorage\.setItem\()', blk): continue
+        # deletes and clears are fine: nothing is lost when removing something already going away
+        if re.search(r"(removeItem|IDB\.set\([^,]+,\s*(null|''|\"\"))", blk): continue
+        bad.append(base_line + raw_src[:m.start()].count('\n'))
+    return bad
+swallowed=swallowed_writes(scan, body)
+if swallowed:
+    print('FAIL: empty catch around a persisting write at line(s):', swallowed[:8]); sys.exit(1)
+
+unbounded=fetch_without_signal(scan, body)
+if unbounded:
+    print('FAIL: fetch() with no abort signal at line(s):', unbounded[:8]); sys.exit(1)
+
 ids=[i for i in re.findall(r'\sid="([^"]+)"',s) if '${' not in i]
 idup=[k for k,v in collections.Counter(ids).items() if v>1]
 if idup: print('FAIL: duplicate DOM ids:',idup); sys.exit(1)
