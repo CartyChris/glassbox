@@ -25785,6 +25785,40 @@ function gauntletCases(g){
      values and on wosFocus's synchronous restack, never on document.activeElement, which
      wosFocusEl sets on a 30ms timer. An async case here would hand expect() a Promise and pass
      while proving nothing. The focus-landing behaviour is verified live instead. */
+  /* Sixteen exports were reassigned top-level `let`s published with a getter and no setter, so
+     `__gb.X = v` read as a successful write and changed nothing. Reads were always fine, which is
+     what makes it dangerous: the symbol looks wired, and a test that seeds state through it passes
+     while testing the untouched original. That has produced a vacuously green case here twice. */
+  add({id:'reassigned-exports-accept-writes',sub:'exports',
+    uses:['MEMORY_LAST','SESSION_SPEND','ACTIVE_TASK','GAUNTLET_LAST','OPS'],
+    what:'exports backed by a reassigned let can actually be written from outside',
+    run:()=>{
+      const names=['MEMORY_LAST','SESSION_SPEND','ACTIVE_TASK','GAUNTLET_LAST','OPS'];
+      const bad=[];
+      names.forEach(n=>{
+        const keep=g[n];
+        const token={__probe:n};
+        try{g[n]=token;}catch(e){bad.push(n+':threw');return;}
+        if(g[n]!==token)bad.push(n+':write vanished');
+        g[n]=keep;
+      });
+      return bad.length?bad.join(','):'all-writable';
+    },expect:v=>v==='all-writable',
+    antiWhat:'and this check can still SEE a getter-only property, rather than passing on anything',
+    /* The outcome differs by CALLER, which is the whole reason this bug class survived so long.
+       This file runs under 'use strict', so a getter-only write throws here. Browser automation
+       evaluates in a NON-strict world, where the identical write vanishes without a sound — and
+       that is the caller that seeds state for a test. So assert only that the write did not
+       LAND, never which mechanism stopped it; pinning the mechanism would make this case pass or
+       fail on where it was run from rather than on what it is checking. */
+    anti:()=>{
+      let backing={v:1};
+      const o={get X(){return backing;}};        // deliberately no setter
+      const token={__probe:'x'};
+      try{o.X=token;}catch(_){/* strict mode refuses loudly; non-strict refuses silently */}
+      return o.X===token?'write landed':'write did not land';
+    },antiExpect:v=>v==='write did not land'});
+
   add({id:'wos-cycle-visits-every-window',sub:'a11y',uses:['wosLive','wosCycle','WOS'],
     what:'keyboard cycling reaches every open window and wraps, in stacking order',
     run:()=>{
@@ -53155,7 +53189,7 @@ async function boot(){
     snippetAdd,snippetBlock,LOOP_KINDS,loopCreate,loopBrief,loopAdvance,
     get LOOPS(){return LOOPS},set LOOPS(v){LOOPS=v},
     resolveContradictions,memoryFor,memoryParts,memoryMessages,memoryEffect,
-    get MEMORY_LAST(){return MEMORY_LAST},
+    get MEMORY_LAST(){return MEMORY_LAST},set MEMORY_LAST(v){MEMORY_LAST=v},
     memoryPush,memoryPull,get MEM_REV(){return MEM_REV},set MEM_REV(v){MEM_REV=v},
     renderMemBus,initMemBus,
     RSI_METRICS,RSI_TUNABLE,rsiMeasure,rsiPropose,rsiLoop,rsiBetter,renderRsi,initRsi,
@@ -53165,7 +53199,7 @@ async function boot(){
     graphReinforce,graphQuery,graphBlock,graphLearn,graphFromBrain,renderGraphs,initGraphs,
     get GRAPHS(){return GRAPHS},set GRAPHS(v){GRAPHS=v},
     TRIFECTA,trifectaMark,trifectaReset,trifectaStatus,get TRI(){return TRI},set TRI(v){TRI=v},
-    get TRI_STATE(){return TRI_STATE},
+    get TRI_STATE(){return TRI_STATE},set TRI_STATE(v){TRI_STATE=v},
     PHASES,TOOL_ANNOT,toolAnnotations,toolAllowed,phaseFilterTools,setToolPhase,
     get PHASE(){return PHASE},set PHASE(v){PHASE=v},
     omniSearch,omniOpen,omniClose,initOmni,
@@ -53194,10 +53228,10 @@ async function boot(){
     NEWS_SCOPES,newsFetch,renderNews,HERMES,hermesProbe,hermesImport,AGENTMAIL,amConnect,
     amCall,amNewInbox,amThreads,amSend,amReply,renderSync,
     get STUDIES(){return STUDIES;},studyRun,studyEvidence,STUDY_SCHEMA,renderStudy,renderStudyReport,
-    ASSET_PACKS,get ASSETS_PICKED(){return ASSETS_PICKED;},assetBlock,get SCENE(){return SCENE;},
+    ASSET_PACKS,get ASSETS_PICKED(){return ASSETS_PICKED;},set ASSETS_PICKED(v){ASSETS_PICKED=v},assetBlock,get SCENE(){return SCENE;},set SCENE(v){SCENE=v},
     sceneAdd,sceneCode,SCENE_KINDS,imageToThree,i3Preview,renderAssets,renderEditor,
     initBots,initStudy,initThree,initDeploy,initUltra,deployFiles,deployKit,selfSource,renderStyleUI,
-    NET,get TASKS_N(){return TASKS_N;},get ARTIFACTS(){return ARTIFACTS;},get NETLOG(){return NETLOG;},
+    NET,get TASKS_N(){return TASKS_N;},set TASKS_N(v){TASKS_N=v},get ARTIFACTS(){return ARTIFACTS;},get NETLOG(){return NETLOG;},
     get PENDING(){return PENDING;},taskAdd,taskById,canClaim,claimTask,releaseTask,netSweep,
     artifactRead,artifactWrite,classifyAction,proposeAction,resolvePending,assignRound,netStats,
     lockedArtifacts,netLog,renderNet,initNet,DESTRUCTIVE,
@@ -53216,9 +53250,9 @@ async function boot(){
 
     ED3,ED3_MENUS,ED3_PRIMS,ED3_LIGHTS,ED3_CAMS,ed3Doc,ed3Send,ed3Tree,ed3Props,ed3Menubar,initEd3,
     UNSLOTH,unslothProbe,unslothRegister,unslothTry,UNSLOTH_PORTS,RUNTIME_MATRIX,
-    HF_SORTS,HF_FILTERS,hfBrowse,get HF_CACHE(){return HF_CACHE;},renderHf,
-    hwDetect,hwAsk,HW,get HWCHAT(){return HWCHAT;},renderUnsloth,renderMatrix,initLocalPlus,
-    VO,get VO_AGENTS(){return VO_AGENTS;},VO_ZONES,get VO_DESKS(){return VO_DESKS;},voSync,voThink,voFrame,voStart,voStop,
+    HF_SORTS,HF_FILTERS,hfBrowse,get HF_CACHE(){return HF_CACHE;},set HF_CACHE(v){HF_CACHE=v},renderHf,
+    hwDetect,hwAsk,HW,get HWCHAT(){return HWCHAT;},set HWCHAT(v){HWCHAT=v},renderUnsloth,renderMatrix,initLocalPlus,
+    VO,get VO_AGENTS(){return VO_AGENTS;},set VO_AGENTS(v){VO_AGENTS=v},VO_ZONES,get VO_DESKS(){return VO_DESKS;},set VO_DESKS(v){VO_DESKS=v},voSync,voThink,voFrame,voStart,voStop,
     voResize,initVo,renderVoRoster,voHue,voHsl,zoneById,zoneCentre,
     OCR,OCR_ENGINES,PADDLE_PRESETS,get OCR_DOCS(){return OCR_DOCS;},set OCR_DOCS(x){OCR_DOCS=x;},ocrEnsure,pdfEnsure,
     ocrImage,ocrPdf,ocrChunk,ocrSave,ocrSearch,ocrToolCall,ocrBlock,OCR_TOOLS,initOcr,renderOcrDocs,
@@ -53277,7 +53311,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     expStart,expRecord,expVerdict,get EXPERIMENTS(){return EXPERIMENTS},set EXPERIMENTS(v){EXPERIMENTS=v},
     replayFrames,sparkline,renderMonitor,renderSessions,renderComms,renderExperiments,initMission,msub,
     PROJECT_TYPES,taskStart,taskRecordRound,taskClose,cpctStats,cpctTrend,cpctByKey,typeSteer,
-    get TASKS(){return TASKS},set TASKS(v){TASKS=v},get ACTIVE_TASK(){return ACTIVE_TASK},
+    get TASKS(){return TASKS},set TASKS(v){TASKS=v},get ACTIVE_TASK(){return ACTIVE_TASK},set ACTIVE_TASK(v){ACTIVE_TASK=v},
     creationSave,creationTypeOf,get CREATIONS(){return CREATIONS},set CREATIONS(v){CREATIONS=v},
     renderMetrics,renderCreations,initMetrics,initCreations,cash,pct,
     LOOP_DEFAULTS,loopVerdict,brainGraph,layoutGraph,renderBrainMap,stopMap,brainBullets,
@@ -53293,7 +53327,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     spendByFeature,SEARCH_SOURCES,gbSearch,
     bmTokens,bm25Index,bm25Score,brainRank,BM25_K1,BM25_B,
     renderGhostty,renderHarnessHealth,
-    addSpend,get SESSION_SPEND(){return SESSION_SPEND},
+    addSpend,get SESSION_SPEND(){return SESSION_SPEND},set SESSION_SPEND(v){SESSION_SPEND=v},
     get TEMPORAL(){return TEMPORAL},set TEMPORAL(v){TEMPORAL=v},saveTemporal,
     temporalFacts,temporalBrief,fmtDur,
     ERROR_KINDS,classifyError,isRetryable,backoffDelay,parseRetryAfter,
@@ -53355,14 +53389,14 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     SOC_BELL_MAX,socRingBell,socBellDecision,socBellResolve,socQueuePush,socQueuePop,
     SOC_ROLES,SOC_CAPS,SOC_DIRECTIVES,socParseDirective,socResolve,socVoices,socNext,
     socLooping,socCapsHit,socSay,socSysFor,socStart,socStop,saveSoc,
-    get SOC(){return SOC},set SOC(v){SOC=v},get SOC_RUN(){return SOC_RUN},
+    get SOC(){return SOC},set SOC(v){SOC=v},get SOC_RUN(){return SOC_RUN},set SOC_RUN(v){SOC_RUN=v},
     SUB_BILLED,BILLING,modelBilling,billingBadge,subModelsAvailable,renderSubModels,
     botDossier,voToBot,botToVo,botPortrait,botFace,
     ttsVoices,ttsPick,ttsSpeak,ttsStop,ttsSpeaking,ttsSayAs,get TTS(){return TTS},saveTts,
     JVS_INTENTS,jvsAdd,jvsActive,jvsState,jvsCommand,jvsListen,jvsCanListen,
     get JVS(){return JVS},set JVS(v){JVS=v},saveJvs,
     get JVS_ACTIVE(){return JVS_ACTIVE},set JVS_ACTIVE(v){JVS_ACTIVE=v},
-    get JVS_STATE(){return JVS_STATE},
+    get JVS_STATE(){return JVS_STATE},set JVS_STATE(v){JVS_STATE=v},
     SKILL_SOURCES,skillRawUrl,skillFetch,skillDiff,skillProposeInstall,skillCheckUpdates,
     EVO_TARGETS,EVO_STATES,evoPropose,evoApprove,evoReject,evoMeasure,evoRevert,
     get EVO(){return EVO},set EVO(v){EVO=v},saveEvo,
@@ -53375,7 +53409,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     BOT_QUICK,BOT_EFFORTS,groupRosterHTML,wireGroupRoster,
     genImageFromCatalog,
     GODOT_MESH,GODOT_LIGHT,godotBasis,godotColor,godotProject,ed3Godot,
-    pcCanvas,get PC_CANVAS(){return PC_CANVAS},
+    pcCanvas,get PC_CANVAS(){return PC_CANVAS},set PC_CANVAS(v){PC_CANVAS=v},
     SETUP_CHECKS,setupScore,renderSetup,setupFocus,goEnsure,gauntletQuickRun,tabDropTarget,
     botRng,botSprite,botModelChain,botNorm,botAll,botAudit,botRunsFor,BOT_PALETTES,
     botFaceWarm,get BOT_FACES(){return BOT_FACES},set BOT_FACES(v){BOT_FACES=v},
@@ -53466,7 +53500,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     ofcMove,ofcGridValues,ofcExport,ofcImportCsv,ofcAI,ofcInit,
     esc,GAUNTLET_VERSION,gauntletCases,gauntletBuild,gauntletRun,gauntletFileMark,gauntletStale,
     GAUNTLET_SABOTAGE,gauntletSabotage,gauntletReport,renderGauntlet,gauntletHtml,
-    get GAUNTLET_LAST(){return GAUNTLET_LAST},
+    get GAUNTLET_LAST(){return GAUNTLET_LAST},set GAUNTLET_LAST(v){GAUNTLET_LAST=v},
     CATALOG_DEAD_FIELDS,catalogSlim,
     /* Getters, not plain references: these are reassigned wholesale by mergeCatalog/syncOllama,
        and a plain property would hand out a snapshot taken at boot — permanently empty. */
@@ -53536,7 +53570,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     providerFor,initHandoff,initProviders,renderProviders,
     get PROVIDERS(){return PROVIDERS},get BRIDGE_INFO(){return BRIDGE_INFO},set BRIDGE_INFO(x){BRIDGE_INFO=x},
     get BRIDGE_TOKEN(){return BRIDGE_TOKEN},get WS(){return WS},
-    get OPS(){return OPS},get SKILLS(){return SKILLS},set SKILLS(x){SKILLS=x},get PROMPTS(){return PROMPTS},set PROMPTS(x){PROMPTS=x},
+    get OPS(){return OPS},set OPS(v){OPS=v},get SKILLS(){return SKILLS},set SKILLS(x){SKILLS=x},get PROMPTS(){return PROMPTS},set PROMPTS(x){PROMPTS=x},
     setOPS:o=>{OPS=o},
     parseFiles,composePreview,analyzeThought,estCost,scrub,canReason,maxOut,PRESETS,
     get WS(){return WS;},get RS(){return RS;},get previewErrors(){return previewErrors;},
