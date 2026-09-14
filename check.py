@@ -110,9 +110,10 @@ def fetch_without_signal(scan_src, raw_src):
             if scan_src[j]=='(': depth+=1
             elif scan_src[j]==')': depth-=1
             j+=1
-        # read the ARGUMENTS from the raw source (the blanked copy has string contents removed,
-        # but `signal` is an identifier so it survives either way)
-        args=raw_src[i:j]
+        # Blanked copy again, and for the opposite reason: a COMMENT mentioning `signal` inside a
+        # fetch call would make an unbounded fetch pass the gate. `signal` is an identifier, so it
+        # survives blanking wherever it is real code.
+        args=scan_src[i:j]
         if not re.search(r'\bsignal\b', args):
             bad.append(base_line + raw_src[:i].count('\n'))
     return bad
@@ -149,7 +150,11 @@ def swallowed_writes(scan_src, raw_src):
             if scan_src[k]=='}': depth+=1
             elif scan_src[k]=='{': depth-=1
             k-=1
-        blk=raw_src[k+1:m.start()]
+        # Match against the BLANKED copy, not the raw source. Reading raw meant a comment that
+        # merely MENTIONED IDB.set( flagged its own enclosing block — prose tripping a code guard.
+        # store.set/IDB.set/setItem are identifiers, so they survive blanking; only their
+        # appearances inside comments and strings disappear, which is exactly what we want.
+        blk=scan_src[k+1:m.start()]
         if not re.search(r'(store\.set\(|IDB\.set\(|localStorage\.setItem\()', blk): continue
         # deletes and clears are fine: nothing is lost when removing something already going away
         if re.search(r"(removeItem|IDB\.set\([^,]+,\s*(null|''|\"\"))", blk): continue
@@ -166,6 +171,20 @@ if unbounded:
 ids=[i for i in re.findall(r'\sid="([^"]+)"',s) if '${' not in i]
 idup=[k for k,v in collections.Counter(ids).items() if v>1]
 if idup: print('FAIL: duplicate DOM ids:',idup); sys.exit(1)
+# The desktop launcher's health probe is a CROSS-FILE contract: it greps the served page for a
+# token, and it reads only the first 4000 bytes. This pairing has already broken once silently —
+# the probe keyed on the <title>, the title changed, and the .app started its server, failed its
+# own check and quit. Nothing in the web app could have noticed, so the gate has to hold it.
+# Both tokens: the current one every shipped launcher greps for, and the legacy one kept so that
+# already-installed copies of GlassBox.app keep passing their own health check.
+for _tok in ('glassbox-jet-v1', 'GlassBox \u2014 Reasoning Studio'):
+    _at = s.encode().find(_tok.encode())
+    if _at < 0:
+        print(f'FAIL: launcher health token {_tok!r} is missing from the page'); sys.exit(1)
+    if _at > 4000:
+        print(f'FAIL: launcher health token {_tok!r} at byte {_at}, outside the probe window (4000)')
+        sys.exit(1)
+
 views=set(re.findall(r'data-view="([a-z-]+)"',s))
 secs=set(re.findall(r'<section class="view[^"]*" id="view-([a-z-]+)"',s))
 missing=views-secs-{'handoff'}
@@ -183,4 +202,38 @@ used=set(re.findall(r"\$\('#([a-zA-Z][\w-]*)'\)\.(?:onclick|onchange|oninput|val
 guarded=set(re.findall(r"if\s*\(\s*\$\('#([a-zA-Z][\w-]*)'\)",body))
 orphan=sorted(u for u in used if u not in ids and u not in guarded)
 if orphan: print('FAIL: ORPHAN IDS wired at boot (would throw):',orphan[:10]); sys.exit(1)
+# ── APP_BUILD, the PWA update signal ────────────────────────────────────────────────────────
+# pwaCheckUpdate fetches the served page, regexes APP_BUILD out of it and compares against the
+# running copy. If the constant does not change, an installed PWA compares a value to itself,
+# concludes it is current, and NEVER offers the update — which is what made a phone need
+# deleting and re-adding to pick up a deploy. It stayed frozen across five shipped commits
+# because nothing bumped it and nothing checked.
+#
+# The stamp is a hash of the script body with the APP_BUILD line itself removed, so it changes
+# if and only if the code changes. `--stamp` rewrites it; `--release` fails when it is stale.
+# Neither runs by default: a hard gate on every edit would fire constantly mid-work.
+def build_stamp(src):
+    import hashlib
+    stripped = re.sub(r"const APP_BUILD='[^']*';", "", src)
+    return hashlib.sha256(stripped.encode()).hexdigest()[:16]
+
+want = build_stamp(body)
+have_m = re.search(r"const APP_BUILD='([^']*)';", body)
+have = have_m.group(1) if have_m else None
+
+if '--stamp' in sys.argv:
+    if have == want:
+        print(f'OK  APP_BUILD already current ({want})')
+    else:
+        whole = open('GlassBox.html').read()
+        whole = whole.replace(f"const APP_BUILD='{have}';", f"const APP_BUILD='{want}';", 1)
+        open('GlassBox.html','w').write(whole)
+        print(f'OK  APP_BUILD stamped {have} -> {want}')
+    sys.exit(0)
+
+if '--release' in sys.argv and have != want:
+    print(f'FAIL: APP_BUILD is stale ({have}); the code changed but the PWA update signal did not.')
+    print(f'      Run:  python3 check.py --stamp     (sets it to {want})')
+    sys.exit(1)
+
 print(f'OK  js parses | {len(views)} tabs | {len(secs)} sections | no dup decls | no dup ids')

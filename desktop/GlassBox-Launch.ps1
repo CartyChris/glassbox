@@ -7,7 +7,7 @@ if (-not $python) { Write-Host 'Python 3 is required. https://www.python.org/dow
 # Only reuse a port that is actually serving THIS app.
 function Serves($p) {
   try { (Invoke-WebRequest "http://127.0.0.1:$p/GlassBox.html" -TimeoutSec 2 -UseBasicParsing).Content `
-          -match 'GlassBox . Reasoning Studio' } catch { $false }
+          -match 'glassbox-jet-v1' } catch { $false }
 }
 $port = $null
 foreach ($p in 8765,8766,8767,8781,8790) {

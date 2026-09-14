@@ -27,7 +27,7 @@ fi
 # anything else on the port belongs to another program and must not be reused.
 serves_glassbox() {
   curl -s --max-time 2 "http://127.0.0.1:$1/GlassBox.html" 2>/dev/null \
-    | head -c 4000 | grep -q "GlassBox — Reasoning Studio"
+    | head -c 4000 | grep -q "glassbox-jet-v1"
 }
 
 PORT=""

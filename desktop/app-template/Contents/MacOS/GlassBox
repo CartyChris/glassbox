@@ -1,0 +1,31 @@
+#!/bin/bash
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../Resources" && pwd)"
+cd "$DIR" || exit 1
+PORTS=(8765 8766 8767 8781 8790)
+serves() { curl -s --max-time 2 "http://127.0.0.1:$1/GlassBox.html" 2>/dev/null \
+  | head -c 4000 | grep -q "glassbox-jet-v1"; }
+say() { osascript -e "display notification \"$1\" with title \"GlassBox\"" >/dev/null 2>&1; }
+
+PORT=""
+for p in "${PORTS[@]}"; do
+  if lsof -nP -iTCP:"$p" -sTCP:LISTEN -t >/dev/null 2>&1; then
+    if serves "$p"; then open "http://localhost:$p/GlassBox.html"; exit 0; fi
+    continue
+  fi
+  PORT="$p"; break
+done
+[ -z "$PORT" ] && { say "Every port 8765–8790 is busy."; exit 1; }
+
+[ -f glassbox-bridge.mjs ] && command -v node >/dev/null 2>&1 && {
+  curl -s --max-time 1 http://127.0.0.1:8791/whoami >/dev/null 2>&1 || \
+    node glassbox-bridge.mjs >/tmp/glassbox-bridge.log 2>&1 &
+}
+
+python3 -m http.server "$PORT" --bind 127.0.0.1 >/dev/null 2>&1 &
+SERVER=$!
+trap 'kill $SERVER 2>/dev/null' EXIT INT TERM
+for _ in $(seq 1 30); do serves "$PORT" && break; sleep 0.2; done
+serves "$PORT" || { say "Could not serve GlassBox.html."; exit 1; }
+open "http://localhost:$PORT/GlassBox.html"
+say "Running on port $PORT. Quit from Activity Monitor to stop."
+wait $SERVER

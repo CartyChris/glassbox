@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>CFBundleName</key><string>GlassBox</string>
+  <key>CFBundleDisplayName</key><string>GlassBox</string>
+  <key>CFBundleIdentifier</key><string>com.chriscarty.glassbox</string>
+  <key>CFBundleVersion</key><string>1.0</string>
+  <key>CFBundleShortVersionString</key><string>1.0</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleExecutable</key><string>GlassBox</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>LSMinimumSystemVersion</key><string>11.0</string>
+  <!-- Agent app: it runs a local server and opens the browser, so it needs no Dock tile
+       or menu bar of its own. Without this it would sit in the Dock doing nothing visible. -->
+  <key>LSUIElement</key><true/>
+  <key>NSHighResolutionCapable</key><true/>
+</dict></plist>

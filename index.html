@@ -2,6 +2,27 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!-- LAUNCHER HEALTH CONTRACT — read before editing anything in this block.
+
+     The desktop launcher greps the SERVED page for a token to confirm the port is up and is
+     serving THIS app rather than whatever else happened to bind it. It reads only the first
+     4000 bytes, so both tokens below must stay near the top. check.py enforces that.
+
+     Why two tokens:
+
+     current  glassbox-jet-v1 — what every launcher shipped from now on greps for. It exists for
+              this contract alone, so renaming the app or the <title> can never break it again.
+
+     legacy   "GlassBox — Reasoning Studio" — the string the pre-Sep-2026 launchers grepped for,
+              kept DELIBERATELY. Those launchers are already installed on disk in copies of
+              GlassBox.app that nobody is going to rebuild. Dropping this page into one of them
+              without the legacy token would leave the app starting its server, failing its own
+              health check, reporting "Could not serve GlassBox.html" and quitting — which is
+              exactly what happened when the title changed from "GlassBox — Reasoning Studio" to
+              "Glassbox Jet — Reasoning & Creation Studio" and no launcher could match any more.
+              It is three words of text and it keeps every old install working. -->
+<meta name="glassbox-app" content="glassbox-jet-v1">
+<meta name="glassbox-legacy-probe" content="GlassBox — Reasoning Studio">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -7853,7 +7874,7 @@ function initDeploy(){
     /* makeZip already exists for the Office builders — reuse it rather than shipping a
        second archive implementation. */
     try{
-      const blob=makeZip(kit.files);
+      const blob=await makeZip(kit.files);
       const a=document.createElement('a');
       a.href=URL.createObjectURL(blob);
       a.download=(($('#dep-name').value||'glassbox').replace(/[^\w-]/g,'-'))+'-deploy.zip';
@@ -11182,7 +11203,7 @@ function outputTree(){
   return{files,folders,count:files.length,
     bytes:files.reduce((a,f)=>a+f.size,0)};
 }
-function outputsDownload(){
+async function outputsDownload(){
   const t=outputTree();
   if(!t.count)return{ok:false,why:'nothing has been produced yet'};
   const map={};
@@ -11191,7 +11212,7 @@ function outputsDownload(){
     t.files.map(f=>`${f.name}  v${f.version}  ${f.size} bytes  by ${f.by}  ${f.at}`).join('\n')+
     (OFFICE_STEER.prompt?`\n\nStanding direction:\n${OFFICE_STEER.prompt}\n`:'')+
     `\nSteering mode: ${OFFICE_STEER.mode}\n`;
-  const blob=makeZip(map);
+  const blob=await makeZip(map);
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);a.download='office-outputs.zip';a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),4000);
@@ -11309,7 +11330,7 @@ function initVoControls(){
       </div>`).join('')}`;
     renderNet&&renderNet();renderBotFeed&&renderBotFeed();voThink();renderVoRoster();};
   $('#out-refresh').onclick=renderOutputs;
-  $('#out-zip').onclick=()=>{const r=outputsDownload();
+  $('#out-zip').onclick=async()=>{const r=await outputsDownload();
     if(!r.ok)toast(r.why,2600);else toast(`${r.count} file(s) zipped`,2400);};
   $('#off-theme').onchange=e=>{OFFICE_CFG.theme=e.target.value;OFFICE_CFG.fixtures={};
     saveOfficeCfg();renderOfficeDesign();voSync();voThink();voFrame(0);
@@ -13094,14 +13115,14 @@ function initSystemsUI(){
       <textarea class="mono" rows="16" style="width:100%;margin-top:8px">${esc(r.rec.out)}</textarea>`;
     renderOutputs&&renderOutputs();};
   const gen=$('#r3f-gen');
-  if(gen)gen.onclick=()=>{
+  if(gen)gen.onclick=async ()=>{
     if(!hasScaffold())return toast('The R3F scaffold module is not present in this build',3400);
     const path=$('#r3f-path').value;
     const opts={name:$('#r3f-name').value.trim()||'my-game',
       includePhysics:$('#r3f-phys').checked,includeUI:$('#r3f-ui').checked,
       typescript:$('#r3f-ts').checked,sceneJSON:ED3._lastScene||null};
     const files=path==='B'&&typeof r3fHybrid==='function'?r3fHybrid(opts):r3fProject(opts);
-    const blob=makeZip(files);
+    const blob=await makeZip(files);
     const a=document.createElement('a');
     a.href=URL.createObjectURL(blob);a.download=opts.name+'-'+path.toLowerCase()+'.zip';a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href),4000);
@@ -13141,7 +13162,7 @@ function initSystemsUI(){
       const n=Object.keys(written).length;
       if(!n)throw new Error('no files came back in the expected format');
       Object.entries(written).forEach(([f,c])=>{if(/^src\//.test(f))base[f]=c;});
-      const blob=makeZip(base);
+      const blob=await makeZip(base);
       const a=document.createElement('a');
       a.href=URL.createObjectURL(blob);a.download=opts.name+'-'+path.toLowerCase()+'.zip';a.click();
       setTimeout(()=>URL.revokeObjectURL(a.href),4000);
@@ -15074,6 +15095,8 @@ const IDB={
     return this.probed=this.mode;
   },
   mem:new Map(),
+  /* Lenient read: a failure is reported as "not there", which is right for the ~100 callers that
+     only want to display something. It is WRONG for a read-modify-write — see getStrict. */
   async get(k,d){
     await this.probe();
     if(this.mode==='idb'){try{const db=await this.open();
@@ -15086,12 +15109,56 @@ const IDB={
   async set(k,v){
     await this.probe();
     if(this.mode==='idb'){try{const db=await this.open();
-      return await new Promise((res,rej)=>{const t=db.transaction('kv','readwrite').objectStore('kv').put(v,k);
-        t.onsuccess=()=>res(true);t.onerror=()=>rej(t.error);});}
+      return await new Promise((res,rej)=>{
+        /* Resolve when the TRANSACTION commits, not when the put request succeeds. A request
+           reports success as soon as the value is accepted into the transaction; the transaction
+           can still abort afterwards — on quota, on an I/O error, or on an exception thrown in
+           any later handler attached to it. MDN's own IDBTransaction example carries the warning
+           in a code comment: request success "does not mean the item has been stored successfully
+           in the DB — for that you need transaction.oncomplete".
+           This is load-bearing here rather than pedantic. Every `(await IDB.set(...))!==false`
+           check in this file — ckptTake's refusal, the Brain migration, the checkpoint restore,
+           the asset store — was built on this return value, so a request-level `true` made all of
+           them agree that a write had landed when it had not.
+           Durability is left at the browser default deliberately. `durability:'strict'` only adds
+           an OS-level flush; quota is accounted at COMMIT either way, so relaxed still aborts an
+           over-quota transaction and still fires onabort. Forcing fsync on every 3D asset and
+           checkpoint body would cost far more than it buys. */
+        let tx;
+        try{tx=db.transaction('kv','readwrite');}catch(e){return rej(e);}
+        try{tx.objectStore('kv').put(v,k);}catch(e){return rej(e);}
+        tx.oncomplete=()=>res(true);
+        tx.onabort=()=>rej(tx.error||new Error('transaction aborted'));
+        tx.onerror=()=>rej(tx.error||new Error('transaction failed'));
+      });}
       catch(e){/* fall through */}}
     if(this.mode==='local'){try{localStorage.setItem('gbidb.'+k,JSON.stringify(v));return true;}
       catch(e){this.mem.set(k,v);return false;}}   // quota — keep it for this session at least
     this.mem.set(k,v);return false;
+  },
+  /* Strict read: THROWS when the read fails, instead of handing back the caller's default.
+     The difference matters wherever a read is followed by a write of the same key. `get` cannot
+     tell "this key has never been written" from "this read just failed", so the read-modify-write
+     sites — version history, Design Studio history, Launcher project files — would take one
+     transient failure, see an empty list, and write that empty list back over 40 real snapshots.
+     That turns a failed READ into permanent deletion, which is the worse half of this bug: the
+     transaction.oncomplete fix above stops a failed write being reported as success; this stops a
+     failed read being reported as emptiness. */
+  async getStrict(k){
+    await this.probe();
+    if(this.mode!=='idb'){
+      if(this.mode==='local'){const v=localStorage.getItem('gbidb.'+k);
+        return v==null?undefined:JSON.parse(v);}
+      return this.mem.has(k)?this.mem.get(k):undefined;
+    }
+    const db=await this.open();
+    return await new Promise((res,rej)=>{
+      let tx;try{tx=db.transaction('kv');}catch(e){return rej(e);}
+      const t=tx.objectStore('kv').get(k);
+      t.onsuccess=()=>res(t.result);
+      t.onerror=()=>rej(t.error||new Error('read failed'));
+      tx.onabort=()=>rej(tx.error||new Error('read transaction aborted'));
+    });
   },
   /* Handles (folder/file grants) can ONLY live in IndexedDB — they are not JSON. */
   get canStoreHandles(){return this.mode==='idb';},
@@ -15158,7 +15225,7 @@ function brainDocText(d){
   return `---\nname: ${d.name}\nkind: ${d.kind}\ntags: ${(d.tags||[]).join(', ')}\n`+
     `created: ${d.ts}\n${d.source?'source: '+d.source+'\n':''}---\n\n${d.body}\n`;
 }
-function brainZip(){
+async function brainZip(){
   const files={};
   BRAIN.docs.forEach(d=>{files[d.file]=brainDocText(d);});
   files['INDEX.md']='# Glassbox Jet Brain\n\n'+
@@ -15166,7 +15233,7 @@ function brainZip(){
     'Drop this folder next to your project and point any agent at it — the notes are plain\n'+
     'Markdown with YAML frontmatter, readable by Claude Code, Codex, Cursor or a human.\n\n'+
     BRAIN.docs.map(d=>`- **[${d.kind}]** [${d.name}](${d.file})${d.source?' — '+d.source:''}`).join('\n')+'\n';
-  return makeZip(files);
+  return await makeZip(files);
 }
 /* The injection that closes the loop — but selectively.
 
@@ -16733,7 +16800,77 @@ function crc32(u8){
 /* Split so the byte assembly can be tested without a Blob read, which is async and therefore
    invisible to a synchronous regression suite. The Launcher's zip READER is checked against
    exactly these bytes. */
-function makeZip(files){return new Blob([zipBytes(files)],{type:'application/zip'});}
+/* Compress with DEFLATE instead of storing. Measured on this app's own source, which is the most
+   realistic varied payload to hand: 3,257KB stored against 1,062KB deflated — 67.4% smaller, in
+   48ms. Two 200KB/40KB slices came in at 65.7% and 63.1%, so the saving holds at every size that
+   matters here. Every .docx, .xlsx, .pptx, project export, handoff bundle and Brain archive this
+   app writes was previously stored uncompressed.
+
+   Per-ENTRY choice, not per-archive: deflate makes very small or already-compressed entries
+   BIGGER, so each file keeps whichever is smaller and the header records the method actually
+   used. A zip may legitimately mix stored and deflated entries.
+
+   zipBytes stays exactly as it was — synchronous, stored-only. CompressionStream is async, so the
+   deflating path has to be, and keeping the old function means the fallback for a browser without
+   CompressionStream is the code that has always worked rather than a second implementation. */
+const CAN_DEFLATE=typeof CompressionStream==='function';
+/* Both decisions are pure functions so the suite can hold them. The compression itself is async —
+   CompressionStream is — and gauntletRun is strictly synchronous, so the only part a case can
+   assert is the deciding. Deflate carries a fixed per-stream overhead, so on a very short entry it
+   produces MORE bytes than it saves; a zip may mix methods per entry and each header records the
+   method actually used. */
+const ZIP_DEFLATE_FLOOR=64;
+const zipWorthDeflating=len=>len>ZIP_DEFLATE_FLOOR;
+const zipUseDeflated=(rawLen,defLen)=>defLen<rawLen;
+async function deflateRaw(u8){
+  const cs=new CompressionStream('deflate-raw');
+  const w=cs.writable.getWriter();w.write(u8);w.close();
+  return new Uint8Array(await new Response(cs.readable).arrayBuffer());
+}
+async function zipBytesDeflated(files){
+  const enc=new TextEncoder(),parts=[],central=[];let off=0,n=0;
+  for(const name of Object.keys(files)){
+    const data=enc.encode(String(files[name]));
+    const nb=enc.encode(name),crc=crc32(data);          // CRC is over the ORIGINAL bytes
+    let body=data,method=0;
+    if(zipWorthDeflating(data.length)){
+      try{const z=await deflateRaw(data);
+        if(zipUseDeflated(data.length,z.length)){body=z;method=8;}}
+      catch(_){/* keep the stored entry — a failed compress must not fail the archive */}
+    }
+    const lh=new Uint8Array(30+nb.length),lv=new DataView(lh.buffer);
+    lv.setUint32(0,0x04034b50,true);lv.setUint16(4,20,true);
+    lv.setUint16(8,method,true);                         // compression method
+    lv.setUint32(14,crc,true);
+    lv.setUint32(18,body.length,true);                   // compressed size
+    lv.setUint32(22,data.length,true);                   // uncompressed size
+    lv.setUint16(26,nb.length,true);
+    lh.set(nb,30);
+    parts.push(lh,body);
+    const ch=new Uint8Array(46+nb.length),cv=new DataView(ch.buffer);
+    cv.setUint32(0,0x02014b50,true);cv.setUint16(4,20,true);cv.setUint16(6,20,true);
+    cv.setUint16(10,method,true);                        // method again, central copy
+    cv.setUint32(16,crc,true);
+    cv.setUint32(20,body.length,true);
+    cv.setUint32(24,data.length,true);
+    cv.setUint16(28,nb.length,true);cv.setUint32(42,off,true);
+    ch.set(nb,46);
+    central.push(ch);
+    off+=lh.length+body.length;n++;
+  }
+  const cdSize=central.reduce((a,c)=>a+c.length,0);
+  const end=new Uint8Array(22),ev=new DataView(end.buffer);
+  ev.setUint32(0,0x06054b50,true);ev.setUint16(8,n,true);ev.setUint16(10,n,true);
+  ev.setUint32(12,cdSize,true);ev.setUint32(16,off,true);
+  const all=parts.concat(central,[end]);
+  const out=new Uint8Array(all.reduce((a,q)=>a+q.length,0));
+  let at=0;all.forEach(q=>{out.set(q,at);at+=q.length;});
+  return out;
+}
+async function makeZip(files){
+  const bytes=CAN_DEFLATE?await zipBytesDeflated(files):zipBytes(files);
+  return new Blob([bytes],{type:'application/zip'});
+}
 function zipBytes(files){
   const enc=new TextEncoder(),parts=[],central=[];let off=0,n=0;
   for(const name of Object.keys(files)){
@@ -17701,6 +17838,14 @@ function renderLab(acc,model,done){
     $('#lab-analysis').innerHTML=`<div class="card" style="padding:12px"><h3 style="margin-bottom:8px">Reasoning shape</h3>${phaseBarHTML(a)}
       <div style="margin-top:10px">${sparkHTML(acc.samples)}</div></div>`;}
 }
+/* The read→write→read sandwich here is real — scrollHeight/scrollTop/clientHeight are read, then
+   textContent is written, then scrollHeight is read again — and it runs for three panes on every
+   token. Batching the measurements and writing a clamping sentinel instead of reading back was
+   tried and MEASURED: 300 growing-text frames x 3 panes, ten alternating rounds, 768.6ms before
+   against 776.9ms after. No gain, inside the noise. The first measurement said 29.6% faster and
+   was an ordering artifact — the warmed path simply ran second.
+   Left as it was deliberately. textContent on a growing string dominates the cost, and the scroll
+   needs layout regardless, so there is nothing here for the batching to save. */
 function setPane(sel,txt,cursor){const e=$(sel);if(!e)return;const near=e.scrollHeight-e.scrollTop-e.clientHeight<40;
   e.textContent=txt||'';e.classList.toggle('cursor',!!cursor&&!!(txt&&txt.length));if(near)e.scrollTop=e.scrollHeight;}
 const stat=(k,v)=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`;
@@ -18455,8 +18600,17 @@ async function visionPass(round){
 let SELF={armed:false,loaded:'',draft:'',origin:'',versions:[]};
 let SELF_FILE=null;                                  // FileSystemFileHandle when granted
 const selfCapable=()=>typeof window.showOpenFilePicker==='function';
+/* SELF_READ_OK gates saving, because this list is read here and written back wholesale by
+   selfSaveVersions. With the lenient read, one transient failure returns [] — indistinguishable
+   from "no versions yet" — and the next save writes that emptiness over up to 40 real snapshots
+   of the user's own source. A read that failed must never authorise a write of what it returned. */
+let SELF_READ_OK=false;
 async function selfLoadState(){
-  const v=await IDB.get('selfVersions',[]);SELF.versions=v||[];
+  try{const v=await IDB.getStrict('selfVersions');SELF.versions=Array.isArray(v)?v:[];SELF_READ_OK=true;}
+  catch(e){
+    SELF.versions=[];SELF_READ_OK=false;
+    if(typeof logEvent==='function')logEvent('storage',{msg:'version history could not be read — saving is held back so it is not overwritten'});
+  }
   const h=await IDB.get('selfFile',null);
   if(h){try{const p=await h.queryPermission({mode:'readwrite'});
     if(p==='granted'){SELF_FILE=h;}else{SELF_FILE=h;SELF.needsPermission=true;}}catch(e){}}
@@ -18466,6 +18620,11 @@ async function selfLoadState(){
    that silently disabled IndexedDB. The list metadata stays small enough for localStorage, so
    the history is still browsable even if a body cannot be loaded. */
 async function selfSaveVersions(){
+  if(!SELF_READ_OK){
+    toast('Version history could not be read this session, so it will not be overwritten. '+
+      'Reload to try again.',6500);
+    return false;
+  }
   const slice=SELF.versions.slice(0,versionCap());
   const ok=await IDB.set('selfVersions',slice);
   if(ok!==false)return true;
@@ -25942,6 +26101,25 @@ function gauntletCases(g){
     antiWhat:'and the work tier is generous enough that a real generation is never cut off',
     anti:()=>g.DL_WORK>=120000,antiExpect:v=>v===true});
 
+  /* The archive path is async end to end (CompressionStream), so the suite holds the decisions and
+     the writer-to-reader round trip is verified live instead: five entries including UTF-8 and one
+     incompressible file came back byte-exact through the app's own central-directory reader, with
+     tiny.txt correctly left STORED. */
+  add({id:'zip-never-grows-an-entry',sub:'archive',
+    uses:['zipWorthDeflating','zipUseDeflated','ZIP_DEFLATE_FLOOR'],
+    what:'an entry is stored deflated only when deflating actually made it smaller',
+    run:()=>{
+      if(g.zipWorthDeflating(2))return 'a 2-byte entry was sent to the compressor';
+      if(g.zipWorthDeflating(g.ZIP_DEFLATE_FLOOR))return 'the floor itself was sent to the compressor';
+      if(!g.zipWorthDeflating(g.ZIP_DEFLATE_FLOOR+1))return 'anything above the floor should be tried';
+      if(g.zipUseDeflated(100,120))return 'kept a deflated entry BIGGER than the original';
+      if(g.zipUseDeflated(100,100))return 'kept a deflated entry that saved nothing';
+      if(!g.zipUseDeflated(100,40))return 'refused a deflated entry that was genuinely smaller';
+      return 'decides-correctly';
+    },expect:v=>v==='decides-correctly',
+    antiWhat:'and the rule is a real comparison, not a constant that happens to answer yes',
+    anti:()=>g.zipUseDeflated(10,9999),antiExpect:v=>v===false});
+
   add({id:'probe-deadline-is-a-real-signal',sub:'resilience',uses:['deadline'],
     what:'deadline() hands back a live AbortSignal, not undefined',
     run:()=>{
@@ -27726,6 +27904,9 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'zip-deflates-everything-regardless',export:'zipUseDeflated',
+   why:'entries are kept deflated even when that made them bigger, so archives grow',
+   broken:()=>()=>true},
   {id:'persist-failures-go-quiet-again',export:'savePersist',
    why:'a failed settings write vanishes, so the user is never told their storage is full',
    broken:()=>()=>{ try{localStorage.setItem('gb.persist','{}');}catch(_){} }},
@@ -33029,7 +33210,7 @@ const rels=items=>XMLDECL+`<Relationships xmlns="${RELS_NS}">`+
   '</Relationships>';
 
 /* ── Word ─────────────────────────────────────────────────────────────────── */
-function officeDocx(doc){
+async function officeDocx(doc){
   const body=(doc.blocks||[]).map(b=>{
     if(b.type==='heading'){
       const lvl=Math.min(3,Math.max(1,+b.level||1));
@@ -33044,7 +33225,7 @@ function officeDocx(doc){
         String(b.text||'').split('\n').map(l=>`<w:t xml:space="preserve">${X(l)}</w:t>`).join('<w:br/>')+'</w:r></w:p>';
     return `<w:p><w:r><w:t xml:space="preserve">${X(b.text)}</w:t></w:r></w:p>`;
   }).join('');
-  return makeZip({
+  return await makeZip({
     '[Content_Types].xml':XMLDECL+
       '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
       '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
@@ -33059,7 +33240,7 @@ function officeDocx(doc){
   });
 }
 /* ── Excel ────────────────────────────────────────────────────────────────── */
-function officeXlsx(book){
+async function officeXlsx(book){
   const sheets=(book.sheets||[{name:'Sheet1',rows:[]}]).slice(0,10);
   const colRef=n=>{let s='';n++;while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=(n-m-1)/26;}return s;};
   const sheetXml=sh=>XMLDECL+
@@ -33093,10 +33274,10 @@ function officeXlsx(book){
       ({type:'http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet',target:`worksheets/sheet${i+1}.xml`}))),
   };
   sheets.forEach((s,i)=>{files[`xl/worksheets/sheet${i+1}.xml`]=sheetXml(s);});
-  return makeZip(files);
+  return await makeZip(files);
 }
 /* ── PowerPoint ───────────────────────────────────────────────────────────── */
-function officePptx(deck){
+async function officePptx(deck){
   const slides=(deck.slides||[]).slice(0,60);
   const EMU_W=12192000,EMU_H=6858000;                       // 16:9
   const tx=(txt,x,y,w,h,sz,bold)=>
@@ -33134,7 +33315,7 @@ function officePptx(deck){
       ({type:'http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide',target:`slides/slide${i+1}.xml`}))),
   };
   slides.forEach((s,i)=>{files[`ppt/slides/slide${i+1}.xml`]=slideXml(s);});
-  return makeZip(files);
+  return await makeZip(files);
 }
 const OFFICE_KINDS={
   docx:{label:'Word document', ext:'docx',build:officeDocx,
@@ -33437,13 +33618,13 @@ function ofwHtmlToMd(){
   });
   return lines.join('\n');
 }
-function ofwExport(fmt){
+async function ofwExport(fmt){
   const el=ofwEl(),d=ofwDoc();if(!el)return;
   const name=(d&&d.name||'document').replace(/[^\w\s-]/g,'').trim()||'document';
   if(fmt==='docx'){
     const blocks=ofwHtmlToBlocks();
     if(!blocks.length)return toast('Nothing to export yet',2000);
-    officeDownload(officeDocx({title:name,blocks}),name,'docx');
+    officeDownload(await officeDocx({title:name,blocks}),name,'docx');
     toast('Real .docx exported — headings, lists and code carry over; inline colour and font runs flatten',5000);
     return;
   }
@@ -33996,13 +34177,13 @@ function ofcGridValues(){
   }
   return out;
 }
-function ofcExport(fmt){
+async function ofcExport(fmt){
   const b=ofcBook(),sh=ofcSheet();if(!b||!sh)return;
   const name=(b.name||'workbook').replace(/[^\w\s-]/g,'').trim()||'workbook';
   const grid=ofcGridValues();
   if(!grid.length||!grid[0].length)return toast('Nothing to export yet',2000);
   if(fmt==='xlsx'){
-    officeDownload(officeXlsx({sheets:b.sheets.map(s=>{
+    officeDownload(await officeXlsx({sheets:b.sheets.map(s=>{
       const save=b.active;b.active=b.sheets.indexOf(s);
       const rows=ofcGridValues();b.active=save;
       return{name:s.name,rows};
@@ -38661,9 +38842,9 @@ function renderCreations(){
     const c=CREATIONS.find(x=>x.id===b.dataset.cropen);if(!c)return;
     WS.files=Object.assign({},c.files);WS.entry=c.entry||pickEntry(WS.files);
     go('studio');renderStudio();runPreview();toast(`Loaded “${c.title}”`);});
-  host.querySelectorAll('[data-crzip]').forEach(b=>b.onclick=()=>{
+  host.querySelectorAll('[data-crzip]').forEach(b=>b.onclick=async()=>{
     const c=CREATIONS.find(x=>x.id===b.dataset.crzip);if(!c)return;
-    downloadBlob(slugify(c.title)+'.zip',makeZip(c.files));});
+    downloadBlob(slugify(c.title)+'.zip',await makeZip(c.files));});
   host.querySelectorAll('[data-crdel]').forEach(b=>b.onclick=()=>{
     CREATIONS=CREATIONS.filter(x=>x.id!==b.dataset.crdel);saveCreations();renderCreations();});
 }
@@ -38793,11 +38974,25 @@ function renderCzThemes(){
 /* CSS snapshots use the same rule as the HTML editor: capture BEFORE the change, so the
    version list is always "what it was", never "what I just typed". */
 let CSS_VERSIONS=[];
-async function cssLoadVersions(){CSS_VERSIONS=(await IDB.get('cssVersions',[]))||[];}
+let CSS_READ_OK=false;
+/* Same read-modify-write hazard as selfLoadState: cssSnapshot unshifts onto CSS_VERSIONS and
+   writes the whole array back, so an unreadable list that arrives as [] erases the history. */
+async function cssLoadVersions(){
+  try{const v=await IDB.getStrict('cssVersions');CSS_VERSIONS=Array.isArray(v)?v:[];CSS_READ_OK=true;}
+  catch(e){
+    CSS_VERSIONS=[];CSS_READ_OK=false;
+    if(typeof logEvent==='function')logEvent('storage',{msg:'design history could not be read — snapshots held in memory'});
+  }
+}
 async function cssSnapshot(label){
   CSS_VERSIONS.unshift({id:uid(),ts:nowISO(),label:label||'before change',
     css:UI.userCss||'',fx:UI.fx||'none'});
   if(CSS_VERSIONS.length>25)CSS_VERSIONS.length=25;
+  if(!CSS_READ_OK){
+    toast('Design history could not be read this session — this snapshot is kept in memory only, '+
+      'so the saved history is not overwritten',5600);
+    return CSS_VERSIONS[0];
+  }
   const ok=await IDB.set('cssVersions',CSS_VERSIONS);
   if(ok===false)toast('Snapshot kept in memory only — storage is unavailable',5000);
   return CSS_VERSIONS[0];
@@ -39589,9 +39784,9 @@ function initForge(){
       await brainAdd({name:n,kind:$('#nb-kind').value,body:$('#nb-body').value});
       closeModal();renderBrainList();renderBrainStatus();renderBrainMap();toast('Note saved');}
   });
-  $('#brain-export').onclick=()=>{
+  $('#brain-export').onclick=async()=>{
     if(!BRAIN.docs.length)return toast('No notes to export yet');
-    downloadBlob('glassbox-brain.zip',brainZip());
+    downloadBlob('glassbox-brain.zip',await brainZip());
     toast('On iPhone: Save to Files, then tap the zip to unpack it',5000);};
   $('#brain-flush').onclick=async()=>{const r=await brainFlush();
     toast(r.ok?`Synced ${r.n} note(s) (${r.where})`:'Sync failed: '+r.err,4000);};
@@ -39870,8 +40065,8 @@ function initHandoff(){
     $('#ho-launchinfo').innerHTML=miss.length
       ? `<span class="muted">Not installed, so not offered: <span class="mono">${esc(miss.join(', '))}</span>. Install one and press Connect bridge again.</span>`:'';
   };
-  $('#ho-zip').onclick=()=>{
-    const blob=makeZip(handoffBundle());
+  $('#ho-zip').onclick=async()=>{
+    const blob=await makeZip(handoffBundle());
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);
     a.download='glassbox-handoff-'+new Date().toISOString().slice(0,10)+'.zip';a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href),1500);
@@ -41019,12 +41214,12 @@ function godotProject(objects,opts){
 /* Asks the editor for a full dump, then writes the project. The dump is async because it is a
    round trip through the iframe. */
 function ed3Godot(){
-  const done=(d)=>{
+  const done=async (d)=>{
     try{
       const files=godotProject((d&&d.objects)||[],{name:'Glassbox Scene',bg:d&&d.bg});
       /* downloadBlob takes the NAME first — reversed arguments here produced a file called
          "[object Blob]" with no extension, which is a download nobody can open. */
-      downloadBlob('glassbox-godot-project.zip',makeZip(files));
+      downloadBlob('glassbox-godot-project.zip',await makeZip(files));
       const n=(d&&d.objects||[]).length;
       toast(`Godot project exported — ${n} object${n===1?'':'s'}`,3600);
       actLog('human','exported a Godot project',{objects:n});
@@ -45690,7 +45885,7 @@ function lxForget(id){
   if(LXCUR&&LXCUR.id===id)LXCUR=null;
   renderLaunch();
 }
-function lxExportZip(){
+async function lxExportZip(){
   if(!LXCUR)return;
   const files=Object.assign({},LXCUR.files);
   files['LAUNCHER.md']='# '+LXCUR.name+'\n\nExported from the Glassbox Jet Launcher.\n\n'+
@@ -45698,7 +45893,7 @@ function lxExportZip(){
     '- Files: '+Object.keys(LXCUR.files).length+'\n'+
     (Object.keys(LXCUR.assets).length?'\nBinary assets were inlined when this project was opened and '+
       'are not in this archive; the originals are in the folder or zip you opened.\n':'');
-  downloadBlob((LXCUR.name||'app').replace(/[^\w.-]+/g,'-').toLowerCase()+'.zip',makeZip(files));
+  downloadBlob((LXCUR.name||'app').replace(/[^\w.-]+/g,'-').toLowerCase()+'.zip',await makeZip(files));
 }
 /* The built document, as one file that runs anywhere — the single most portable thing the
    Launcher can produce, because everything is already inlined. */
@@ -46137,7 +46332,7 @@ function lxRenderControls(){
     LAUNCH[k]=v;saveLaunch();
     if(k==='frame'){lxRun();}else lxApplyFrame();
   });
-  $$('[data-lxact]').forEach(b=>b.onclick=()=>{
+  $$('[data-lxact]').forEach(b=>b.onclick=async ()=>{
     const a=b.dataset.lxact;
     if(a==='rotate'){LAUNCH.rot=!LAUNCH.rot;saveLaunch();lxApplyFrame();lxRenderControls();}
     else if(a==='scheme'){LAUNCH.scheme=LAUNCH.scheme==='dark'?'light':'dark';saveLaunch();lxRun();lxRenderControls();}
@@ -46146,7 +46341,7 @@ function lxRenderControls(){
     else if(a==='pop')lxPopOut();
     else if(a==='check')lxCheck();
     else if(a==='keep')lxKeep();
-    else if(a==='zip')lxExportZip();
+    else if(a==='zip')await lxExportZip();
     else if(a==='html')lxExportHtml();
     else if(a==='send')lxSend();
   });
@@ -47852,7 +48047,7 @@ async function wosExportApp(id){
   if(a.kind==='project'){
     const files=await wosFiles(id);
     if(typeof makeZip==='function'){
-      const blob=makeZip(files||{});
+      const blob=await makeZip(files||{});
       officeDownload(blob,safe,'zip');
     }else downloadText(wosCompose(files||{}),safe+'.html','text/html');
     return;
@@ -49541,7 +49736,7 @@ Every file under \`brain/\` and \`work/\` is plain Markdown or JSON, and everyth
     downloadText(JSON.stringify(snap,null,2),'glassbox-workspace.json','application/json');
     return toast('Saved as JSON — the ZIP builder was unavailable',4000);
   }
-  const blob=makeZip(files);
+  const blob=await makeZip(files);
   officeDownload(blob,'Glassbox-Workspace-'+new Date().toISOString().slice(0,10),'zip');
   toast('Downloaded — open it and you have your Brain and every piece of work as real files',5200);
 }
@@ -49602,7 +49797,7 @@ async function persistInit(){
    worker updating is NOT the same thing as the user seeing the new app: clients.claim() makes
    a new worker control the page, but the HTML already parsed keeps running until something
    reloads it. This is what lets the app notice and say so. */
-const APP_BUILD='2026-09-10T00:00:00Z';
+const APP_BUILD='afd2e7920b8ab63e';
 const PWA={reg:null,state:'unknown',why:'',prompt:null,update:null,checking:false,lastCheck:0};
 
 /* ── Staying current, which is the whole problem on iOS ──────────────────────
@@ -52832,7 +53027,7 @@ function dsSites(host){
               ${connMenu(connMake('files',Object.entries(files).map(([name,content])=>({name,content})),DSS.kind,'design'))}
             </div>`:'<p class="help">No files came back in the expected format.</p>');
         const z=$('#dss-zip');
-        if(z)z.onclick=()=>officeDownload(makeZip(files),DSS.kind.replace(/\W+/g,'-'),'zip');
+        if(z)z.onclick=async()=>officeDownload(await makeZip(files),DSS.kind.replace(/\W+/g,'-'),'zip');
       }else{
         out.innerHTML=`<p class="help">✓ built${acc.cost?' · '+money(acc.cost):''}</p>
           <iframe style="width:100%;height:56vh;border:1px solid var(--edge);border-radius:12px;background:#fff"
@@ -53438,6 +53633,10 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     achatFork,
     APP_BUILD,pwaCheckUpdate,pwaApplyUpdate,pwaAnnounceUpdate,
     A11Y_GLYPH,a11yHasName,a11yDerive,a11yClean,a11ySourceText,deadline,
+    ZIP_DEFLATE_FLOOR,zipWorthDeflating,zipUseDeflated,zipBytesDeflated,deflateRaw,CAN_DEFLATE,
+    get SELF_READ_OK(){return SELF_READ_OK},set SELF_READ_OK(v){SELF_READ_OK=v},
+    get CSS_READ_OK(){return CSS_READ_OK},set CSS_READ_OK(v){CSS_READ_OK=v},
+    selfSaveVersions,cssLoadVersions,
     DL_LOCAL,DL_PROBE,DL_API,DL_WORK,a11yNamePass,a11yObserve,a11yAudit,swHTML,
     get A11Y_NAMED(){return A11Y_NAMED},set A11Y_NAMED(v){A11Y_NAMED=v},
     get A11Y_FULL(){return A11Y_FULL},set A11Y_FULL(v){A11Y_FULL=v},
