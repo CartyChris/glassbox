@@ -1,5 +1,6 @@
 #!/bin/bash
-# Build GlassBox.app and GlassBox-macOS.dmg from the sources in this repo.
+# Build every desktop artifact — GlassBox.app, GlassBox-macOS.dmg and GlassBox-Windows.zip —
+# from the sources in this repo.
 #
 # This exists because there was no repeatable build, and the consequence was not theoretical:
 # the shipped .app carried a GlassBox.html from 21 Aug while the web app moved 23,000 lines on,
@@ -7,8 +8,8 @@
 # start its server, fail its own health check and quit. Both are the kind of thing a build script
 # checks every time and a person checks once.
 #
-#   ./build-macos.sh            build and verify
-#   ./build-macos.sh --no-dmg   assemble the .app only
+#   ./build-desktop.sh            build and verify everything
+#   ./build-desktop.sh --no-dmg   assemble the .app only, skip the images
 set -euo pipefail
 cd "$(dirname "$0")/.."                       # gb-repo
 ROOT="$(pwd)"
@@ -90,4 +91,29 @@ grep -q 'glassbox-jet-v1' "$MNT/GlassBox.app/Contents/MacOS/GlassBox" \
 say "image contains the current app, byte-for-byte"
 hdiutil detach "$MNT" >/dev/null; rmdir "$MNT" 2>/dev/null || true
 [ "$FAIL" = 0 ] || exit 1
+echo "▸ Building the Windows bundle"
+# The Windows zip had exactly the same rot as the disk image: it still carried the 21 Aug page and
+# the PowerShell launcher that probes for a title string which no longer exists. Vercel serves both
+# as public downloads, so a stale artifact here is not a private inconvenience — it is what someone
+# actually gets when they click Download.
+WINSTAGE="$STAGE/win"; mkdir -p "$WINSTAGE"
+cp "$ROOT/GlassBox.html"       "$WINSTAGE/"
+cp "$ROOT/glassbox-bridge.mjs" "$WINSTAGE/"
+cp "$OUT/GlassBox-Launch.bat"  "$WINSTAGE/"
+cp "$OUT/GlassBox-Launch.ps1"  "$WINSTAGE/"
+grep -q 'glassbox-jet-v1' "$WINSTAGE/GlassBox-Launch.ps1" \
+  || { echo "FAIL: the PowerShell launcher does not probe for the current token"; exit 1; }
+rm -f "$OUT/GlassBox-Windows.zip"
+( cd "$WINSTAGE" && zip -q -r "$OUT/GlassBox-Windows.zip" . )
+say "$(du -h "$OUT/GlassBox-Windows.zip" | cut -f1)  $OUT/GlassBox-Windows.zip"
+
+echo "▸ Verifying the Windows bundle"
+WZ="$STAGE/wcheck"; mkdir -p "$WZ"
+unzip -qo "$OUT/GlassBox-Windows.zip" -d "$WZ"
+cmp -s "$WZ/GlassBox.html" "$ROOT/GlassBox.html" \
+  || { echo "FAIL: the zipped GlassBox.html differs from the repo copy"; exit 1; }
+grep -q 'glassbox-jet-v1' "$WZ/GlassBox-Launch.ps1" \
+  || { echo "FAIL: zipped PowerShell launcher probes for the wrong token"; exit 1; }
+say "archive contains the current app, byte-for-byte"
+
 echo "▸ Done"

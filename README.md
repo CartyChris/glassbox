@@ -126,6 +126,18 @@ and you are working. Nothing installs.
 > **Windows** needs Python 3 on PATH (tick *Add python.exe to PATH* in the installer). The
 > launcher only uses it to serve the folder locally.
 
+**Rebuilding the desktop downloads.** Run `desktop/build-desktop.sh`. It assembles the `.app`
+from the sources in this repo, builds the disk image and the Windows archive, and then verifies
+each one: that the launchers' health token is present in the page and inside the first 4000 bytes
+they actually read, that the assembled app serves and passes its own probe, and that the page
+inside the image and the archive matches this repo byte-for-byte.
+
+That verification is not ceremony. Both downloads had gone stale without anyone noticing: the
+image carried a page five months behind, and both the macOS and PowerShell launchers probed for a
+window title that had since been renamed — so the app would start its server, fail its own health
+check and quit. Nothing in the web app could have detected either. Build the downloads with the
+script, never by hand.
+
 ### Why a local server instead of just opening the file
 
 Opened directly, the page's origin is `null`, and **Ollama and LM Studio both refuse a null
