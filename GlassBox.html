@@ -14269,7 +14269,7 @@ async function connectorConnect(c){
     if(c.kind==='rest'){
       // GitHub needs no handshake; probe it instead so "connected" means something
       const r=await fetch('https://api.github.com/rate_limit',
-        {headers:c.token?{Authorization:'Bearer '+c.token}:{}});
+        {signal:deadline(10000),headers:c.token?{Authorization:'Bearer '+c.token}:{}});
       if(!r.ok)throw new Error('HTTP '+r.status);
       const j=await r.json();
       c.tools=GITHUB_TOOLS.map(t=>({name:t.name,description:t.description,inputSchema:t.schema}));
@@ -15031,6 +15031,20 @@ function replayFrames(run){
    privacy settings) and every write fails. Swallowing that silently is the worst option:
    the user would believe their notes and rollback history were saved when nothing was.
    So: probe once, fall back to localStorage, and let the UI say which is in use. */
+/* A hung request neither resolves nor rejects. On a path the user started that is at least
+   VISIBLE — the button keeps spinning. On a boot probe, a census or the 30-minute update poll it
+   is invisible and permanent, and it holds a slot in the browser's per-origin connection pool the
+   whole time, so enough of them starve the requests that would have worked.
+   Deliberately NOT applied to model calls: a completion legitimately runs for minutes, and a
+   deadline there would cut off real work. Probes only. */
+function deadline(ms){
+  if(typeof AbortSignal!=='undefined'&&AbortSignal.timeout){
+    try{return AbortSignal.timeout(ms);}catch(_){}
+  }
+  const c=new AbortController();
+  setTimeout(()=>{try{c.abort();}catch(_){}} ,ms);
+  return c.signal;
+}
 const IDB={
   db:null,mode:'unknown',probed:null,
   async open(){if(this.db)return this.db;
@@ -16567,7 +16581,7 @@ async function probeBridge(silent){
       BRIDGE_PREFIXES=info.prefixes.map(p=>p+'/');
     // Pair once so the file-writing / launch endpoints will accept us.
     try{
-      const pr=await fetch(base+'/pair');
+      const pr=await fetch(base+'/pair',{signal:deadline(4000)});
       const pj=await pr.json();
       if(pj&&pj.ok&&pj.token){BRIDGE_TOKEN=pj.token;store.set('bridgeToken',BRIDGE_TOKEN);}
     }catch(_){}
@@ -16838,7 +16852,8 @@ async function catalogCache(list){
 async function loadCatalog(force){
   if(REMOTE.length&&!force)return CATALOG;
   try{
-    const r=await fetch(settings.base.replace(/\/$/,'')+'/models',{headers:API_KEY?{'Authorization':'Bearer '+API_KEY}:{}});
+    const r=await fetch(settings.base.replace(/\/$/,'')+'/models',{signal:deadline(12000),
+      headers:API_KEY?{'Authorization':'Bearer '+API_KEY}:{}});
     const j=await r.json();
     const list=(j.data||[]).filter(m=>m.id&&!m.id.startsWith('~'));
     if(list.length){REMOTE=list;catalogCache(REMOTE);mergeCatalog();
@@ -21783,7 +21798,7 @@ async function connectBridgeOneClick(){
     if(Array.isArray(found.info.prefixes)&&found.info.prefixes.length)
       BRIDGE_PREFIXES=found.info.prefixes.map(p=>p+'/');
     if(found.base!==settings.bridge){settings.bridge=found.base;store.set('settings',settings);}
-    try{const pr=await fetch(found.base+'/pair');const pj=await pr.json();
+    try{const pr=await fetch(found.base+'/pair',{signal:deadline(4000)});const pj=await pr.json();
       if(pj&&pj.ok&&pj.token){BRIDGE_TOKEN=pj.token;store.set('bridgeToken',BRIDGE_TOKEN);}}catch(_){}
     return{ok:true,base:found.base,info:found.info};
   }
@@ -22122,7 +22137,7 @@ let LOCAL_CTX=store.get('localctx',{});                 // "runtime/model" -> {d
 const saveLocalCtx=()=>store.set('localctx',LOCAL_CTX);
 async function ollamaDeclaredCtx(name){
   try{
-    const r=await fetch(localBase('ollama')+'/api/show',{method:'POST',
+    const r=await fetch(localBase('ollama')+'/api/show',{method:'POST',signal:deadline(6000),
       headers:{'Content-Type':'application/json'},body:JSON.stringify({model:name})});
     if(!r.ok)return null;
     const j=await r.json();
@@ -25766,6 +25781,67 @@ function gauntletCases(g){
      actually reaches this case. Calling a11yAudit would bind the module-scope helper and the
      sabotage would slide straight past a green result — the trap that made two earlier tests
      vacuous. */
+  /* gauntletRun is strictly synchronous — `got=c.run()`, no await — so these assert on return
+     values and on wosFocus's synchronous restack, never on document.activeElement, which
+     wosFocusEl sets on a 30ms timer. An async case here would hand expect() a Promise and pass
+     while proving nothing. The focus-landing behaviour is verified live instead. */
+  add({id:'wos-cycle-visits-every-window',sub:'a11y',uses:['wosLive','wosCycle','WOS'],
+    what:'keyboard cycling reaches every open window and wraps, in stacking order',
+    run:()=>{
+      const keep=g.WOS.wins;
+      g.WOS.wins=[{id:'wa',app:'a',z:1,closed:false,min:false},
+                  {id:'wb',app:'b',z:2,closed:false,min:false},
+                  {id:'wc',app:'c',z:3,closed:false,min:false}];
+      const seen=[g.wosCycle(1),g.wosCycle(1),g.wosCycle(1)];
+      g.WOS.wins=keep;
+      return new Set(seen).size===3?'all-three':seen.join(',');
+    },expect:v=>v==='all-three',
+    antiWhat:'and a single window has nothing to cycle to, rather than cycling to itself',
+    anti:()=>{
+      const keep=g.WOS.wins;
+      g.WOS.wins=[{id:'only',app:'a',z:1,closed:false,min:false}];
+      const r=g.wosCycle(1);
+      g.WOS.wins=keep;
+      return r;
+    },antiExpect:v=>v===null});
+
+  /* A minimised window is not on screen. Cycling onto one would move the keyboard somewhere the
+     user cannot see, which is worse than not cycling at all. */
+  add({id:'wos-cycle-skips-what-is-not-on-screen',sub:'a11y',uses:['wosLive','WOS'],
+    what:'closed and minimised windows are excluded from keyboard cycling',
+    run:()=>{
+      const keep=g.WOS.wins;
+      g.WOS.wins=[{id:'open',app:'a',z:1,closed:false,min:false},
+                  {id:'mini',app:'b',z:2,closed:false,min:true},
+                  {id:'gone',app:'c',z:3,closed:true,min:false}];
+      const ids=g.wosLive().map(x=>x.id);
+      g.WOS.wins=keep;
+      return ids.join(',');
+    },expect:v=>v==='open',
+    antiWhat:'while an ordinary open window IS included, so the filter is not simply empty',
+    anti:()=>{
+      const keep=g.WOS.wins;
+      g.WOS.wins=[{id:'one',app:'a',z:1,closed:false,min:false},
+                  {id:'two',app:'b',z:2,closed:false,min:false}];
+      const n=g.wosLive().length;
+      g.WOS.wins=keep;
+      return n;
+    },antiExpect:v=>v===2});
+
+  /* `{signal:undefined}` is a fetch with no deadline and no error — the exact shape this helper
+     exists to prevent, and it looks identical at the call site. */
+  add({id:'probe-deadline-is-a-real-signal',sub:'resilience',uses:['deadline'],
+    what:'deadline() hands back a live AbortSignal, not undefined',
+    run:()=>{
+      const sig=g.deadline(5000);
+      if(!sig)return 'undefined — every probe using it has no deadline at all';
+      return (typeof sig.addEventListener==='function'&&sig.aborted===false)
+        ?'real-signal':'shape='+typeof sig+',aborted='+sig.aborted;
+    },expect:v=>v==='real-signal',
+    antiWhat:'and a zero deadline is still a signal, not a crash or a silent null',
+    anti:()=>{const s2=g.deadline(0);return !!s2&&typeof s2.addEventListener==='function';},
+    antiExpect:v=>v===true});
+
   add({id:'a11y-every-control-is-named',sub:'a11y',uses:['a11yHasName','a11yNamePass'],
     what:'every control in the live DOM reaches the accessibility tree with a name',
     run:()=>{
@@ -27538,6 +27614,12 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'probes-lose-their-deadline',export:'deadline',
+   why:'every boot probe, census and update poll goes back to hanging forever with no error',
+   broken:()=>()=>undefined},
+  {id:'wos-cycles-onto-hidden-windows',export:'wosLive',
+   why:'keyboard cycling lands on closed and minimised windows, moving focus off screen',
+   broken:()=>()=>(window.__gb.WOS.wins||[])},
   {id:'a11y-names-stop-being-required',export:'a11yHasName',
    why:'every control reports as already named, so nothing is ever labelled and the audit reads clean',
    broken:()=>()=>true},
@@ -35081,13 +35163,13 @@ async function paneLive(){
   const out={terminals:[],ollama:[],openhands:[],unreachable:[]};
   try{
     const base=(settings.bridge||'http://127.0.0.1:8791').replace(/\/$/,'');
-    const r=await fetch(base+'/whoami',{cache:'no-store'});
+    const r=await fetch(base+'/whoami',{cache:'no-store',signal:deadline(4000)});
     const j=await r.json();
     out.terminals=j.terminals||[];
     out.bridgeVersion=j.version;
   }catch(e){out.unreachable.push('bridge');}
   try{
-    const r=await fetch((settings.ollama||'http://127.0.0.1:11434').replace(/\/$/,'')+'/api/ps',{cache:'no-store'});
+    const r=await fetch((settings.ollama||'http://127.0.0.1:11434').replace(/\/$/,'')+'/api/ps',{cache:'no-store',signal:deadline(4000)});
     const j=await r.json();
     out.ollama=(j.models||[]).map(m=>({name:m.name,size:m.size_vram||m.size,until:m.expires_at}));
   }catch(e){out.unreachable.push('ollama');}
@@ -35113,7 +35195,7 @@ const saveOH=()=>store.set('openhands',OH);
 async function ohFetch(path){
   const url=(OH.base||OH_DEFAULTS.base).replace(/\/$/,'')+path;
   try{
-    const r=await fetch(url,{cache:'no-store'});
+    const r=await fetch(url,{cache:'no-store',signal:deadline(6000)});
     if(!r.ok)throw new Error('HTTP '+r.status);
     return{ok:true,data:await r.json(),via:'direct'};
   }catch(e){
@@ -40249,9 +40331,16 @@ async function stateImport(obj,opts){
     return{ok:false,error:'that file was written by a newer version of Glassbox ('+obj.version+')'};
   /* A safety copy of what is here NOW, before anything is overwritten. Import is the one
      action in this app that can erase a lot at once. */
-  let rollback=null;
+  let rollback=null,rollbackSaved=false;
   try{rollback=await stateSnapshot();}catch(_){}
-  if(rollback){try{await IDB.set('state:rollback',rollback);}catch(_){}}
+  /* IDB.set RETURNS FALSE on a quota failure, it does not throw — so a try/catch around it
+     catches nothing and the write fails in silence. This is the same shape as the ckptTake bug
+     that was already fixed once; it survived here and in ckptRestore.
+     The result used to report `rollback:!!rollback`, which answered whether the snapshot was
+     TAKEN, not whether it was STORED. So a failed write still reported a rollback point, while
+     stateRollback() would later say there was none — two answers to the same question, with the
+     reassuring one arriving first, at the exact moment the user is overwriting everything. */
+  if(rollback)rollbackSaved=(await IDB.set('state:rollback',rollback))!==false;
 
   let wrote=0,failed=[];
   if(mode==='replace'){
@@ -40266,8 +40355,9 @@ async function stateImport(obj,opts){
     try{await IDB.set(k,obj.idb[k]);}catch(_){failed.push(k);}
   }
   return{ok:failed.length===0,wrote,failed,mode,
-    rollback:!!rollback,
-    note:'Reload to apply — the app reads this state at boot.'};
+    rollback:rollbackSaved,
+    note:'Reload to apply — the app reads this state at boot.'+
+      (rollbackSaved?'':' No rollback point could be saved, so this import cannot be undone.')};
 }
 
 /* Undo the last import. Exists because "restore the wrong file" is a real thing people do,
@@ -46321,6 +46411,46 @@ function wosClose(id){
   const w=(WOS.wins||[]).find(x=>x.id===id);if(!w)return;
   sfx('close');
   w.closed=true;saveWos();wosRender();
+  /* Hand the keyboard somewhere sensible. Measured before this existed: closing the focused
+     window left document.activeElement on <body> even with another window still open — so a
+     keyboard user was dropped at the top of a 2,600-stop document while the desktop they were
+     working in sat right there. Escape already closed the window; that was the half that worked. */
+  const rest=wosLive();
+  if(rest.length){wosFocus(rest[rest.length-1].id);wosFocusEl(rest[rest.length-1].id);return;}
+  const d=$('#wos-desk');
+  if(d){if(!d.hasAttribute('tabindex'))d.setAttribute('tabindex','-1');
+    setTimeout(()=>{try{d.focus({preventScroll:true});}catch(_){}},30);}
+}
+/* Stacking order, not creation order — cycling has to match what the user can see, and a
+   minimised window is not somewhere the keyboard should land. */
+function wosLive(){
+  return (WOS.wins||[]).filter(x=>!x.closed&&!x.min).sort((a,b)=>(a.z||0)-(b.z||0));
+}
+/* There was no keyboard way to reach a second window at all: with three open, the only route
+   was the mouse. Ctrl+` mirrors the convention people already have for cycling windows, and is
+   scoped to focus being inside the desktop so it cannot collide with the rest of the app. */
+function wosCycle(dir){
+  const live=wosLive();
+  if(live.length<2)return null;
+  const cur=document.activeElement&&document.activeElement.closest
+    ?document.activeElement.closest('.wos-win'):null;
+  const curId=cur?cur.dataset.w:live[live.length-1].id;
+  let i=live.findIndex(x=>x.id===curId);
+  if(i<0)i=live.length-1;
+  const next=live[(i+(dir<0?-1:1)+live.length)%live.length];
+  wosFocus(next.id);wosFocusEl(next.id);
+  return next.id;
+}
+let WOS_KEYS=false;
+function wosKeys(){
+  if(WOS_KEYS)return;WOS_KEYS=true;
+  document.addEventListener('keydown',e=>{
+    if(e.key!=='`'||!(e.ctrlKey||e.metaKey))return;
+    const a=document.activeElement;
+    if(!a||!a.closest||!a.closest('#wos-root'))return;   // only inside the desktop
+    e.preventDefault();
+    wosCycle(e.shiftKey?-1:1);
+  });
 }
 /* Without this the window appears but the keyboard is still wherever it was, so Escape and
    Tab act on the page behind the desktop. */
@@ -46445,6 +46575,7 @@ function wosIconPos(id,i){
 }
 function wosRender(){
   const root=$('#wos-root');if(!root)return;
+  wosKeys();                                   // idempotent; binds once, on first real render
   wosApplyTheme();
   const apps=wosAllApps();
   const sz=WOS.iconSize||84;
@@ -46593,8 +46724,8 @@ function wosStudioView(){
   return `<div class="wos-studio">
     <div class="wos-srow">
       <input class="wos-in" data-wsname placeholder="App name" value="My widget">
-      <input class="wos-in" data-wsicon value="✨" style="max-width:58px">
-      <select class="wos-in" data-wskind style="max-width:150px">
+      <input class="wos-in" data-wsicon value="✨" style="max-width:58px" aria-label="App icon">
+      <select class="wos-in" data-wskind style="max-width:150px" aria-label="App kind">
         <option value="single">Single file</option>
         <option value="project">Full-stack project</option>
       </select>
@@ -46604,7 +46735,7 @@ function wosStudioView(){
     <div class="wos-stabs" data-wstabs><button class="on" data-wsf="index.html">index.html</button>
       <button data-wsaddfile>＋</button></div>
     <div class="wos-smain">
-      <textarea class="wos-code" data-wscode spellcheck="false"></textarea>
+      <textarea class="wos-code" data-wscode spellcheck="false" aria-label="App source code"></textarea>
       <iframe class="wos-preview" data-wspreview sandbox="allow-scripts allow-forms allow-modals"></iframe>
     </div>
     <div class="wos-srow">
@@ -49075,8 +49206,17 @@ async function ckptRestore(id){
   Object.entries(body.data).forEach(([k,v])=>{
     try{if(store.set(k,v)===false)failed.push(k);}catch(_){failed.push(k);}
   });
-  if(failed.length)toast(`Restored, but ${failed.length} item(s) could not be written — storage is full`,6000);
-  if(body.brain!=null){try{await IDB.set(typeof brainKey==='function'?brainKey():'brain',body.brain);}catch(_){}}
+  /* The brain is the user's accumulated knowledge, and this write sat BELOW the report with an
+     empty catch — so the one item whose loss matters most was the one item excluded from
+     "Restored, but N could not be written". Same IDB.set-returns-false trap as above. */
+  if(body.brain!=null){
+    let bok=true;
+    try{bok=(await IDB.set(typeof brainKey==='function'?brainKey():'brain',body.brain))!==false;}
+    catch(_){bok=false;}
+    if(!bok)failed.push('brain');
+  }
+  if(failed.length)toast(`Restored, but ${failed.length} item(s) could not be written — storage is full`+
+    (failed.indexOf('brain')>=0?', including the BRAIN':''),6500);
   actLog&&actLog('human','restore',{label:meta.label,ts:meta.ts});
   return{ok:true,meta,reload:true};
 }
@@ -49339,7 +49479,7 @@ async function pwaCheckUpdate(opts){
        Comparing the served build stamp catches the case the worker cannot see. */
     let served='';
     try{
-      const r=await fetch('./index.html',{cache:'no-store'});
+      const r=await fetch('./index.html',{cache:'no-store',signal:deadline(10000)});
       const t=await r.text();
       const m=/const APP_BUILD='([^']+)'/.exec(t);
       served=m?m[1]:'';
@@ -49390,7 +49530,8 @@ async function pwaInit(){
   /* Probe before registering: a 404 would otherwise log a console error on every single boot of
      anyone running the single file from their own static server without sw.js next to it. */
   let ok=false;
-  try{const r=await fetch('./sw.js',{method:'GET',cache:'no-store'});ok=r.ok;}catch(_){ok=false;}
+  try{const r=await fetch('./sw.js',{method:'GET',cache:'no-store',signal:deadline(6000)});ok=r.ok;}
+  catch(_){ok=false;}
   if(!ok){PWA.state='nosw';PWA.why='No sw.js next to this page, so there is nothing to install. It ships with the deployed copy.';return;}
   try{
     PWA.reg=await navigator.serviceWorker.register('./sw.js',{scope:'./'});
@@ -53118,7 +53259,6 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     checkReasoning,shingles,jaccard,withFallback,FALLBACK_DEFAULTS,effortForTokens,streamCompleteOnce,
     saveGoldenTrace,compareToGolden,gradeTrace,feedbackBlock,
     get GOLDENS(){return GOLDENS},set GOLDENS(v){GOLDENS=v},
-    get FEEDBACK(){return FEEDBACK},set FEEDBACK(v){FEEDBACK=v},
     buildManifest,nextFeature,manifestDone,lhBrief,lhJudgeFeature,lhProgress,lhRestore,
     get LH(){return LH},set LH(v){LH=v},MANIFEST_RULES,
     connectorAdd,connectorConnect,connectorCall,mcpRpc,githubCall,connectorBlock,handleToolCalls,
@@ -53145,7 +53285,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     scoreBullet,noteContext,get CTX(){return CTX},get MAP3D(){return MAP3D},
     achatFork,
     APP_BUILD,pwaCheckUpdate,pwaApplyUpdate,pwaAnnounceUpdate,
-    A11Y_GLYPH,a11yHasName,a11yDerive,a11yClean,a11ySourceText,a11yNamePass,a11yObserve,a11yAudit,swHTML,
+    A11Y_GLYPH,a11yHasName,a11yDerive,a11yClean,a11ySourceText,deadline,a11yNamePass,a11yObserve,a11yAudit,swHTML,
     get A11Y_NAMED(){return A11Y_NAMED},set A11Y_NAMED(v){A11Y_NAMED=v},
     get A11Y_FULL(){return A11Y_FULL},set A11Y_FULL(v){A11Y_FULL=v},
     PROMPT_CAP,PROMPT_BLOCKS,get PROMPTS_SEEN(){return PROMPTS_SEEN},set PROMPTS_SEEN(v){PROMPTS_SEEN=v},
@@ -53242,7 +53382,6 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     get BOT_RUNS(){return BOT_RUNS},set BOT_RUNS(v){BOT_RUNS=v},saveBotRuns,
     SPL_RUNTIME,splNormalise,splLoad,splShot,splEmbedHtml,renderSpline,splStatus,
     connToCreations,creationSave,saveCreations,
-    get CREATIONS(){return CREATIONS},set CREATIONS(v){CREATIONS=v},
     get SPL(){return SPL},set SPL(v){SPL=v},
     get SPL_STATE(){return SPL_STATE},set SPL_STATE(v){SPL_STATE=v},
     TAB_GROUPS,TAB_ESSENTIALS,TAB_MODES,tabGroupOf,applyTabMode,setTabMode,openTabModeMenu,
@@ -53250,7 +53389,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     openTabMenu,closeTabMenu,initTabMenu,tabGroupToggle,tabGroupFolded,
     tabOrderedIds,tabMove,initTabDrag,tabGroupFolded,tabGroupToggle,tabGroupsAll,
     get TABMODE(){return TABMODE},set TABMODE(v){TABMODE=v},
-    openModal,closeModal,focusablesIn,FOCUSABLE,wosFocusEl,
+    openModal,closeModal,focusablesIn,FOCUSABLE,wosFocusEl,wosLive,wosCycle,wosKeys,
     get OFC_UNDO(){return OFC_UNDO},set OFC_UNDO(v){OFC_UNDO=v},
     get OFC_REDO(){return OFC_REDO},set OFC_REDO(v){OFC_REDO=v},
     WDREAM_THEMES,WDREAM_TIERS,wdreamTheme,wdreamRng,wdreamSeedOps,wdreamTier,wdreamForecast,
@@ -53278,7 +53417,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     wosInstallFromStudio,wosBroadcast,wosPreset,wosIconPos,wosStartMenu,wosPalette,wosGameSrc,
     wosBrowse,wosCalcKey,wosTermRun,wosExportApp,wosFillFolders,wosClockTick,wosQuotaMeter,
     get WOS_STUDIO(){return WOS_STUDIO},set WOS_STUDIO(v){WOS_STUDIO=v},wosStudioSync,wosStudioPreview,
-    get PERSIST(){return PERSIST},savePersist,persistFmt,persistQuota,persistRequest,persistFailBanner,
+    savePersist,persistFmt,persistQuota,persistRequest,persistFailBanner,
     persistClearAlarm,persistPickFolder,persistDir,persistCollect,persistBackupNow,persistZip,
     persistSchedule,persistBackupName,PERSIST_INTERVALS,PERSIST_DEFAULTS,
     get PERSIST(){return PERSIST},set PERSIST(v){PERSIST=v},

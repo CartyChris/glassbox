@@ -67,6 +67,36 @@ def blank(src):
 scan=blank(body)
 dups=[k for k,v in collections.Counter(re.findall(r'^(?:function|const|let|class) ([A-Za-z_$][\w$]*)',scan,re.M)).items() if v>1]
 if dups: print('FAIL: duplicate top-level decls:',dups); sys.exit(1)
+# Duplicate keys in the window.__gb literal. A repeated key is not a syntax error — the LAST
+# one silently wins — so node --check sees nothing and the export surface quietly disagrees with
+# itself. This guard existed before the Pass 17 rewrite and was lost in it; it was restored after
+# a duplicate WOS export slipped through a clean gate.
+m=re.search(r'window\.__gb\s*=\s*\{',scan)
+if m:
+    i=m.end(); depth=1; j=i
+    while j<len(scan) and depth:
+        if scan[j]=='{': depth+=1
+        elif scan[j]=='}': depth-=1
+        j+=1
+    lit=scan[i:j]
+    # top-level keys only: split on commas at depth 0
+    keys=[]; d=0; cur=''
+    for ch in lit:
+        if ch in '{[(': d+=1
+        elif ch in '}])': d-=1
+        if ch==',' and d==0: keys.append(cur); cur=''
+        else: cur+=ch
+    keys.append(cur)
+    names=[]
+    for k in keys:
+        k=k.strip()
+        mm=re.match(r'^(?:get|set)\s+([A-Za-z_$][\w$]*)\s*\(', k) or re.match(r'^([A-Za-z_$][\w$]*)\s*(?::|,|$)', k)
+        if mm: names.append(mm.group(1))
+    seen=collections.Counter(names)
+    # a get/set PAIR for the same name is correct and expected, so only 3+ is a real duplicate
+    gdup=[k for k,v in seen.items() if v>2]
+    if gdup: print('FAIL: duplicate __gb export keys:',gdup); sys.exit(1)
+
 ids=[i for i in re.findall(r'\sid="([^"]+)"',s) if '${' not in i]
 idup=[k for k,v in collections.Counter(ids).items() if v>1]
 if idup: print('FAIL: duplicate DOM ids:',idup); sys.exit(1)
