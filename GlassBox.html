@@ -14386,32 +14386,522 @@ function connectorBlock(){
 async function handleToolCalls(text,hostEl){
   const on=CONNECTORS.filter(c=>c.on&&c.tools&&c.tools.length);
   /* OCR tools are local — they need no connector, so the early return must not skip them. */
-  const ocrNames=OCR_TOOLS.map(t=>t.name);
   const obNames=(typeof OPENBOT_TOOLS!=='undefined'&&OPENBOT.ok)?OPENBOT_TOOLS.map(t=>t.name):[];
   if((!on.length&&!OCR_DOCS.length&&!obNames.length)||!text)return null;
   const re=/===USE TOOL===\s*([\s\S]*?)===END===/gi;
   const out=[];let m;
   while((m=re.exec(text))&&out.length<8){
     let req;try{req=JSON.parse(m[1].trim());}catch(e){continue;}
-    if(obNames.includes(req.tool)){
-      if(hostEl)hostEl.textContent=`asking OpenBot…`;
-      try{out.push({req,result:await openbotToolCall(req.tool,req.args||{})});}
-      catch(e){out.push({req,error:e.message});}
-      continue;
-    }
-    if(ocrNames.includes(req.tool)){
-      if(hostEl)hostEl.textContent=`reading documents…`;
-      try{out.push({req,result:await ocrToolCall(req.tool,req.args||{})});}
-      catch(e){out.push({req,error:e.message});}
-      continue;
-    }
-    const c=on.find(x=>(x.tools||[]).some(t=>t.name===req.tool));
-    if(!c){out.push({req,error:'no connector provides '+req.tool});continue;}
-    if(hostEl)hostEl.textContent=`calling ${req.tool}…`;
-    try{out.push({req,result:await connectorCall(c,req.tool,req.args||{})});}
-    catch(e){out.push({req,error:e.message});}
+    /* Routed through the one dispatcher rather than re-deciding here. Two routers drift, and the
+       drift is invisible: each one looks correct on its own. */
+    const src=toolSource(req.tool);
+    if(hostEl)hostEl.textContent=src==='ocr'?'reading documents…'
+      :src==='openbot'?'asking OpenBot…':`calling ${req.tool}…`;
+    const r=await toolInvoke(req.tool,req.args||{});
+    if(r.ok)out.push({req,result:r.result});
+    else out.push({req,error:r.error});
   }
   return out.length?out:null;
+}
+
+
+/* ═══════════════════ SWARM: DEFINITION OF DONE, AND BIDDING ═══════════════════
+
+   ALWAYS HAVE A DEFINITION OF DONE. A swarm without one does not fail loudly — it converges on
+   whatever each member privately decided "finished" meant, and the disagreement only surfaces
+   later as rework. The contract field already existed and was free text nobody had to fill in,
+   which is the same thing as not having one.
+
+   What makes a definition of done ENFORCEABLE rather than decorative is that something refuses to
+   start without it, and that each criterion is checkable by someone who was not in the room. So:
+   at least two criteria, each written as an observable outcome, and the run is blocked until they
+   exist. Blocking is the point. A warning would be ignored exactly when it mattered. */
+const DOD_MIN=2;
+/* Words that describe a feeling rather than an observation. A criterion built only from these is
+   not checkable by anyone, including its author a week later. */
+const DOD_VAGUE=['good','nice','better','clean','robust','solid','proper','polished','improved',
+  'high quality','well','fast','pretty','modern','professional'];
+function dodParse(text){
+  return String(text||'').split(/\r?\n/).map(l=>l.replace(/^\s*[-*•\d.)\]]+\s*/,'').trim())
+    .filter(l=>l.length>0);
+}
+/* Returns the reason it is NOT ready, or null. Phrased that way because the caller's job is to
+   refuse, and a boolean would make the refusal message someone else's problem. */
+function dodProblem(text){
+  const items=dodParse(text);
+  if(items.length===0)return 'No definition of done. Write what "finished" means before starting — '+
+    'at least '+DOD_MIN+' criteria, each one something a person could check without being in the room.';
+  if(items.length<DOD_MIN)return 'Only '+items.length+' criterion. A single line is a goal, not a '+
+    'definition of done — add at least '+(DOD_MIN-items.length)+' more.';
+  const short=items.filter(i=>i.length<12);
+  if(short.length)return 'These are too short to check: '+short.slice(0,3).map(x=>'"'+x+'"').join(', ');
+  const vague=items.filter(i=>{
+    const low=i.toLowerCase();
+    const hasVague=DOD_VAGUE.some(v=>new RegExp('\\b'+v+'\\b').test(low));
+    /* Vague WORDS are fine inside a criterion that also states something observable. It is the
+       criterion made of nothing else that cannot be checked. */
+    const hasConcrete=/\d|\bmust\b|\bwhen\b|\bwithout\b|\breturns?\b|\bpasses?\b|\bunder\b|\bno\b|\bnever\b|\bat least\b/.test(low);
+    return hasVague&&!hasConcrete;
+  });
+  if(vague.length)return 'Not checkable as written: '+vague.slice(0,2).map(x=>'"'+x+'"').join(', ')+
+    ' — say what would be observed, not how it should feel.';
+  return null;
+}
+const dodReady=text=>dodProblem(text)===null;
+function swarmDoDReady(){return dodReady(OPS&&OPS.swarm?OPS.swarm.contract:'');}
+
+/* ── Bidding ──
+   Members bid for a slice rather than being assigned it. Each bid carries a confidence and a cost,
+   and the cheap confident bid wins.
+
+   The scoring is the whole design. Rank on confidence alone and the most expensive model wins every
+   time, which is just "always use the best model" with extra steps. Rank on cost alone and the
+   cheapest wins every time regardless of whether it can do the work. So the score is confidence
+   PER UNIT COST, with a confidence floor beneath which a bid is not considered at all — a very
+   cheap model that is 20% sure is not a bargain, it is a rewrite.
+
+   Overconfidence is the known failure of this pattern among LLM agents, and it cannot be fixed by
+   asking more politely. It is damped instead: a member's past bids are compared against what
+   actually happened, and a member that has over-claimed before has its confidence discounted. That
+   is a calibration term, and it is the only thing here that gets better with use. */
+const BID_FLOOR=0.35;
+function bidScore(bid,calibration){
+  const conf=Math.max(0,Math.min(1,+bid.confidence||0));
+  const cost=Math.max(0.0001,+bid.cost||0.0001);
+  const cal=(calibration==null?1:Math.max(0.2,Math.min(1.5,+calibration)));
+  const adj=conf*cal;
+  if(adj<BID_FLOOR)return{score:0,adj,why:'below the confidence floor ('+BID_FLOOR+') after calibration'};
+  return{score:+(adj/cost).toFixed(4),adj,why:''};
+}
+/* How well this member's stated confidence has matched reality. 1 = honest, below 1 = over-claims.
+   Starts at 1 so a new member is neither trusted nor punished. */
+function bidCalibration(history){
+  const h=(history||[]).filter(x=>x&&typeof x.confidence==='number'&&typeof x.succeeded==='boolean');
+  if(h.length<3)return 1;
+  const claimed=h.reduce((a,x)=>a+x.confidence,0)/h.length;
+  const actual=h.filter(x=>x.succeeded).length/h.length;
+  if(claimed<=0)return 1;
+  return +Math.max(0.2,Math.min(1.5,actual/claimed)).toFixed(3);
+}
+function bidAward(bids,history){
+  const hist=history||{};
+  const scored=(bids||[]).map(b=>{
+    const cal=bidCalibration(hist[b.member]);
+    const s=bidScore(b,cal);
+    return Object.assign({},b,{calibration:cal,score:s.score,adjusted:s.adj,rejected:s.why});
+  });
+  const eligible=scored.filter(b=>b.score>0);
+  /* Ties break on the CHEAPER bid, not the first one seen. Insertion order is not a signal and
+     letting it decide would make the award depend on how the member list happened to be sorted. */
+  eligible.sort((a,b)=>b.score-a.score||a.cost-b.cost);
+  return{winner:eligible[0]||null,scored,
+    why:eligible.length?null:'no bid cleared the confidence floor'};
+}
+
+/* ═══════════════════ ReAct ═══════════════════
+   Yao et al., "ReAct: Synergizing Reasoning and Acting in Language Models" (arXiv 2210.03629).
+   The loop interleaves a Thought, an Action, and the Observation that action produced, and feeds
+   the observation back in before the next Thought. Reasoning that never acts drifts away from the
+   world; acting without reasoning cannot plan. Interleaving them is the whole idea.
+
+   WHAT THE PAPER ACTUALLY CLAIMS, because it is easy to over-apply this. Plain ReAct does NOT beat
+   chain-of-thought on knowledge tasks — on HotpotQA it scores 27.4 against CoT's 29.4 and
+   CoT-with-self-consistency's 33.4. Its win is grounding: it hallucinates less because an external
+   observation can contradict it, and the combination of the two beats either alone. So reach for
+   this loop when an answer must be checked against something outside the model, and reach for
+   plain reasoning when it must not. Two named failure modes from the paper drive the design below:
+   the model regenerating its previous thought and action verbatim, which is the signature failure
+   of the paradigm, and a non-informative observation poisoning everything after it — 23% of its
+   errors, from which the paper reports the model "has a hard time to recover".
+
+   Three modules, deliberately separable, because that is what makes a harness inspectable:
+     · the LLM module      — streamComplete, already multi-provider
+     · the tools module    — toolCatalog / toolInvoke, above
+     · the loop            — this, and it owns nothing except sequencing and limits
+
+   Actions travel as TEXT rather than through native tool-calling, deliberately. Native tool-calling
+   is better where it exists, but its wire format differs per provider — OpenAI streams fragmented
+   arguments to be reassembled by `index`, Anthropic streams tool_use blocks indexed into the whole
+   content array, and the same field name means different things on each — and this app's whole
+   premise is that any model id on any OpenAI-compatible endpoint should work, including local
+   models that expose no tool-calling at all. A text protocol costs some reliability at the parse
+   step, which is why the parser below is the part that is tested hardest.
+
+   THE PARSER IS THE FRAGILE PART, so it is pure and synchronous and the suite holds it. Every
+   real-world ReAct implementation fails in the same few places, and none of them are the model
+   being unintelligent: a malformed Action line, a tool name that was never offered, the same
+   action repeated forever, and observations growing until they crowd out the task. Each has an
+   explicit answer below, and each answer is fed back to the model as an Observation rather than
+   thrown — an exception ends the run, an observation lets it recover. */
+const REACT_MAX_STEPS=8;          // config, not code: the note is right that this must be a setting
+const REACT_OBS_CAP=1200;         // one observation may not eat the context the task needs
+const REACT_STOP='Final Answer:';
+
+/* Tolerant on the way in, strict about what it returns. Models emit "**Action:**", lowercase
+   labels, and code fences around the input; none of that is a reason to fail a run. */
+function reactParse(text){
+  const t=String(text||'');
+  const out={thought:'',action:'',input:null,inputRaw:'',final:null,error:''};
+  /* Regex LITERALS, not strings passed to RegExp. Built as strings these needed four levels of
+     backslash escaping between the generator, the JS string and the regex engine, and the first
+     version shipped `\\**` — an escaped backslash followed by "nothing to repeat" — which threw
+     on the very first parse. A literal has one level of escaping and cannot drift. */
+  const RE_THOUGHT=/^[\s>*_#-]*Thought\s*:?\s*\**\s*(.*)$/im;
+  const RE_ACTION =/^[\s>*_#-]*Action\s*:?\s*\**\s*(.*)$/im;
+  const RE_FINAL  =/^[\s>*_#-]*Final\s+Answer\s*:?\s*\**\s*([\s\S]*)$/im;
+  /* The terminator is (?![\s\S]) — absolute end of input — NOT $. Under the m flag $ matches the
+     end of every LINE, so a model that puts its arguments on the line below the label, or fences
+     them, had everything after "Action Input:" thrown away and the tool was called with {}. The
+     model said {"query":"vat"} and the tool received nothing, silently. */
+  const RE_INPUT  =/^[\s>*_#-]*Action\s+Input\s*:?\s*([\s\S]*?)(?=^[\s>*_#-]*(?:Thought|Action|Observation|Final)\b|(?![\s\S]))/im;
+  const mt=RE_THOUGHT.exec(t); if(mt)out.thought=mt[1].trim();
+  const fin=RE_FINAL.exec(t);
+  /* Checked before Action on purpose: a reply carrying both is answering, and treating it as
+     another tool call would spend a step re-deriving something already stated. */
+  if(fin){out.final=fin[1].trim();return out;}
+  const ma=RE_ACTION.exec(t);
+  if(ma)out.action=ma[1].replace(/[`*]/g,'').trim();
+  const ai=RE_INPUT.exec(t);
+  if(ai){
+    const raw=ai[1].trim().replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'').trim();
+    out.inputRaw=raw;
+    if(raw){
+      try{out.input=JSON.parse(raw);}
+      catch(_){
+        const j=(typeof extractJSON==='function')?extractJSON(raw):null;
+        if(j)out.input=j; else out.error='the Action Input was not valid JSON';
+      }
+    }else out.input={};
+  }else if(out.action)out.input={};
+  if(!out.action&&!out.final)out.error=out.error||'no Action and no Final Answer';
+  return out;
+}
+
+/* The system prompt. Kept short on purpose — the note's own advice, and it matches what this file
+   already measured: every instruction competes with the model's better defaults, and a long
+   preamble makes a frontier model arbitrate instead of act. The tool list is DERIVED from the
+   catalogue, never typed out, so a tool that is not actually reachable can never be advertised. */
+function reactPrompt(tools,opts){
+  const o=opts||{};
+  const list=(tools||[]).map(t=>'  '+t.name+' — '+(t.description||'').slice(0,110)+
+    '\n    args: '+JSON.stringify(t.schema&&t.schema.properties?t.schema.properties:{})).join('\n');
+  return 'Answer the task by alternating between thinking and using a tool.\n\n'+
+    'Reply in EXACTLY this shape, one step at a time:\n\n'+
+    'Thought: what you now know and what you still need\n'+
+    'Action: the tool name, exactly as written below\n'+
+    'Action Input: a JSON object of arguments\n\n'+
+    'Stop and wait after Action Input. An Observation will be given to you. Then continue with '+
+    'the next Thought.\n\n'+
+    'When you can answer, reply instead with:\n\n'+
+    'Thought: why you are now confident\n'+
+    REACT_STOP+' the answer\n\n'+
+    (list?('Tools you may use — these and no others:\n'+list+'\n\n'):'You have no tools available; answer from what you know.\n\n')+
+    'Rules: one Action per reply. Never invent a tool name. If an Observation says a tool failed, '+
+    'do not repeat the same call unchanged — either fix the arguments or say what you cannot do.'+
+    (o.extra?('\n\n'+o.extra):'');
+}
+
+/* A repeat is the loop's own failure, not the model's: the same action with the same arguments
+   twice running means nothing new entered the context and nothing will. Say so rather than
+   spending another call on it. */
+const reactKey=(action,input)=>action+'::'+JSON.stringify(input||{});
+
+/* Everything the loop DECIDES, with the model call and the tool call lifted out.
+
+   Split deliberately. The loop is otherwise untestable without spending money on a provider —
+   streamComplete is bound at module scope and cannot be stubbed from outside — and the decisions
+   are where ReAct actually goes wrong: a hallucinated tool name, a malformed Action, the same call
+   repeated until the step ceiling, an observation that swallows the context. Returning
+   {call:true} rather than an observation is the one case that needs the outside world; every other
+   branch is answerable here, synchronously, and is held by the suite.
+
+   Each branch answers the model with an OBSERVATION rather than an error. An exception ends a run;
+   an observation gives it a chance to correct itself, which is the entire point of the loop. */
+function reactDecide(p,toolNames,seen){
+  const names=toolNames||[];
+  if(p.final!==null&&p.final!==undefined)return{done:true,answer:p.final};
+  if(p.error&&!p.action)
+    return{call:false,observation:'That reply had no Action and no '+REACT_STOP+'. Reply with '+
+      'Thought, then Action and Action Input, or with '+REACT_STOP};
+  if(p.error)
+    return{call:false,observation:p.error+'. Action Input must be a single JSON object, '+
+      'for example {"query":"..."}.'};
+  if(names.indexOf(p.action)<0)
+    return{call:false,observation:'There is no tool called "'+p.action+'". Available: '+
+      (names.join(', ')||'(none)')+'.'};
+  if(seen&&seen.has&&seen.has(reactKey(p.action,p.input)))
+    return{call:false,observation:'You already called '+p.action+' with exactly those arguments '+
+      'and got the observation above. Change the arguments or give a '+REACT_STOP};
+  return{call:true,action:p.action,input:p.input||{}};
+}
+/* One observation may not crowd out the task it is serving. */
+function reactCap(text,cap){
+  const t=String(text==null?'':text),c=cap||REACT_OBS_CAP;
+  return t.length>c?t.slice(0,c)+' \u2026[observation truncated at '+c+' characters]':t;
+}
+
+async function reactRun(task,opts){
+  const o=opts||{};
+  const model=o.model||settings.archModel||settings.buildModel;
+  if(!model)return{ok:false,error:'no model selected'};
+  const tools=(o.tools||(typeof toolCatalog==='function'?toolCatalog():[]));
+  const maxSteps=o.maxSteps||REACT_MAX_STEPS;
+  const sys=reactPrompt(tools,o);
+  const span=(typeof spanStart==='function')?spanStart('react','loop',{task:String(task).slice(0,120)}):null;
+  /* The loop's own inputs, logged before anything else happens. */
+  logEvent('react',{phase:'start',task:String(task).slice(0,300),model,tools:tools.length,maxSteps});
+  const steps=[];
+  let transcript='Task: '+task+'\n';
+  const seen=new Set();
+  try{
+    for(let i=0;i<maxSteps;i++){
+      let acc;
+      try{
+        acc=await streamComplete({model,system:sys,maxTokens:o.maxTokens||700,
+          messages:[{role:'user',content:transcript}],
+          /* Load-bearing. Without it the model writes its own Observation and carries on
+             hallucinating a whole trajectory. The paper stops on a STEP-NUMBERED string
+             ("\nObservation 3:"); an unnumbered prefix is used here because it also catches a
+             model that drops or misnumbers the counter, which is the common failure when the
+             exemplars are short. */
+          stop:['Observation:']});
+      }catch(e){
+        logEvent('react',{phase:'llm-error',step:i,err:String(e&&e.message||e)});
+        steps.push({i,error:'the model call failed: '+String(e&&e.message||e)});
+        break;
+      }
+      const raw=(acc&&(acc.content||acc.text))||'';
+      logEvent('react',{phase:'llm',step:i,out:raw.slice(0,400)});
+      const p=reactParse(raw);
+      if(p.final!==null){
+        steps.push({i,thought:p.thought,final:p.final});
+        logEvent('react',{phase:'final',step:i,answer:p.final.slice(0,300)});
+        const r={ok:true,answer:p.final,steps,transcript:transcript+raw,model,
+          usedTools:steps.filter(x=>x.action).map(x=>x.action)};
+        if(span&&typeof spanEnd==='function')spanEnd(span,acc,null);
+        logEvent('react',{phase:'end',ok:true,steps:steps.length});
+        return r;
+      }
+      const d=reactDecide(p,tools.map(t=>t.name),seen);
+      let obs;
+      if(d.call){
+        seen.add(reactKey(d.action,d.input));
+        const r=await toolInvoke(d.action,d.input);
+        obs=r.ok?(typeof r.result==='string'?r.result:JSON.stringify(r.result))
+                :('the tool failed: '+r.error);
+      }else obs=d.observation;
+      obs=reactCap(obs);
+      steps.push({i,thought:p.thought,action:p.action,input:p.input,observation:obs});
+      transcript+=raw.trim()+'\nObservation: '+obs+'\n';
+    }
+    logEvent('react',{phase:'end',ok:false,steps:steps.length,why:'step ceiling'});
+    if(span&&typeof spanEnd==='function')spanEnd(span,null,new Error('step ceiling'));
+    return{ok:false,error:'stopped after '+steps.length+' step(s) without an answer',steps,transcript,model};
+  }catch(e){
+    if(span&&typeof spanEnd==='function')spanEnd(span,null,e);
+    logEvent('react',{phase:'end',ok:false,err:String(e&&e.message||e)});
+    return{ok:false,error:String(e&&e.message||e),steps,transcript,model};
+  }
+}
+
+/* ═══════════════════ THE HARNESS, SIX LAYERS ═══════════════════
+   "An agent is not a model. It's a controlled workflow." Each layer answers one production
+   question, and this panel answers each one by MEASURING this app rather than asserting it.
+
+   The framing worth keeping in mind while reading the numbers: a raw model is close to a Turing
+   machine — a tape of instructions in, operations out. A harness is closer to a von Neumann
+   machine, because it adds READ AND WRITE against external memory, and that is a change of
+   problem CLASS rather than a change of degree. Which is why the context layer below counts the
+   two halves separately. A system that can read a knowledge base but never write to it has not
+   crossed that line: it is still a very well-briefed Turing machine, and every run starts from
+   the same place the last one did.
+
+   The point of scoring yourself is to find the thin layer. A harness with excellent tools and no
+   control layer is not 5/6 of a harness — it is a system that will confidently do the wrong thing
+   and have no way to notice. So every probe reads live state and returns its evidence, and a layer
+   with nothing behind it reports zero rather than a polite "partial".
+
+   Deliberately NOT a score out of ten. A number that cannot be traced to a count is the kind of
+   reassurance this whole idea exists to replace. */
+const HARNESS_LAYERS=[
+  {id:'trigger',label:'Trigger',icon:'⏱',
+   asks:'Does work start from an event, rather than a person pressing a button?',
+   why:'An agent that only runs when watched is a tool. One that runs on a schedule, a file, or a '+
+       'message is a system — and needs everything below it to be true.',
+   probe(){
+     const ev=[];
+     if(typeof PQ!=='undefined'&&PQ&&PQ.every)ev.push('polling queue every '+PQ.every+'m');
+     if(typeof AUTOR!=='undefined'&&AUTOR&&AUTOR.on)ev.push('autoresearch loop armed');
+     if(typeof LH!=='undefined'&&LH&&LH.on)ev.push('long-horizon runner on');
+     if(typeof PERSIST!=='undefined'&&PERSIST&&PERSIST.auto)ev.push('backup timer every '+PERSIST.everyMin+'m');
+     if(typeof PWA!=='undefined')ev.push('update poll every 30m');
+     return{n:ev.length,evidence:ev};
+   }},
+  {id:'orchestration',label:'Orchestration',icon:'↻',
+   asks:'Are the loop, its limits and its retries configuration rather than code?',
+   why:'How far an agent may go should be a setting you can lower at 3am without a deploy.',
+   probe(){
+     const ev=[];
+     if(typeof OPS!=='undefined'&&OPS){
+       if(OPS.passes!=null)ev.push('relay passes cap = '+OPS.passes);
+       if(OPS.swarm&&OPS.swarm.cap!=null)ev.push('swarm cap = '+OPS.swarm.cap);
+     }
+     if(typeof REACT_MAX_STEPS!=='undefined')ev.push('ReAct step ceiling = '+REACT_MAX_STEPS);
+     if(typeof MODEL_POOL!=='undefined')ev.push('concurrency limiter present');
+     if(typeof DL_WORK!=='undefined')ev.push('four request deadline tiers');
+     return{n:ev.length,evidence:ev};
+   }},
+  {id:'tools',label:'Tools',icon:'\u{1F527}',
+   asks:'Does anything that must not vary run as fixed logic behind the model?',
+   why:'The model should not improvise a number you will be held to. A tool returns the same '+
+       'figure every time; a paragraph does not.',
+   probe(){
+     const cat=(typeof toolCatalog==='function')?toolCatalog():[];
+     const by={};cat.forEach(t=>{by[t.source]=(by[t.source]||0)+1;});
+     return{n:cat.length,evidence:Object.entries(by).map(([k,v])=>v+' from '+k)};
+   }},
+  {id:'context',label:'Trusted context',icon:'\u{1F4DA}',
+   asks:'Where does truth live, what may the agent read — and what may it WRITE BACK?',
+   why:'Often quoted as "~80% of agent success", and the STRONG form of that does not survive '+
+       'measurement: 2026 harness benchmarks find stronger models still win once the harness is '+
+       'held constant, and the much-repeated "80% to 100% success" figure behind it is n=5 — four '+
+       'out of five queries becoming five out of five. What is defensible is the weaker claim: no '+
+       'model recovers from bad context, so this sets a ceiling rather than a score. Capability '+
+       'belongs to a model-and-harness PAIR, never to a model alone. '+
+       'The write half is counted separately because that is the von Neumann line — read-only '+
+       'context makes a better-briefed Turing machine, not a different class of machine.',
+   probe(){
+     const ev=[];
+     if(typeof BRAIN!=='undefined'&&BRAIN&&BRAIN.docs)ev.push('READ: '+BRAIN.docs.length+' brain note(s)');
+     if(typeof SKILLS!=='undefined'&&SKILLS)ev.push('READ: '+SKILLS.filter(x=>x.on).length+' skill(s) on');
+     if(typeof OCR_DOCS!=='undefined')ev.push('READ: '+OCR_DOCS.length+' document(s) read on device');
+     /* CTX_TARGET is a {low,high} band, not a number — printing it directly produced
+        "context budget = [object Object]" in the panel. */
+     if(typeof CTX_TARGET!=='undefined'&&CTX_TARGET)
+       ev.push('READ: context budget '+Math.round(CTX_TARGET.low*100)+'-'+
+               Math.round(CTX_TARGET.high*100)+'% of the window');
+     /* The write half. Without at least one of these the loop cannot leave anything behind for
+        the next run, and every session restarts from the same standing position. */
+     if(typeof brainAdd==='function')ev.push('WRITE: notes back to the brain');
+     if(typeof brainWrite==='function')ev.push('WRITE: model-curated notes');
+     if(typeof graphLearnFromRun==='function')ev.push('WRITE: edges learned from a finished run');
+     if(typeof BRAIN!=='undefined'&&BRAIN&&BRAIN.autoWrite)ev.push('WRITE: auto-write armed');
+     return{n:ev.length,evidence:ev,
+       reads:ev.filter(x=>x.startsWith('READ')).length,
+       writes:ev.filter(x=>x.startsWith('WRITE')).length};
+   }},
+  {id:'control',label:'Control',icon:'⚖',
+   asks:'What catches a wrong answer before a person acts on it?',
+   why:'Golden sets, guardrails and approvals. The agent advises; a named person decides.',
+   probe(){
+     const ev=[];
+     if(typeof GOLDENS!=='undefined')ev.push(GOLDENS.length+' golden trace(s)');
+     if(typeof GUARD_DEFAULTS!=='undefined'&&typeof GUARD_STATE!=='undefined')
+       ev.push('cost/context spike guard'+(GUARD_STATE.tripped?' (TRIPPED)':''));
+     if(typeof GAUNTLET_LAST!=='undefined'&&GAUNTLET_LAST&&GAUNTLET_LAST.total)
+       ev.push(GAUNTLET_LAST.total+' regression case(s), last run '+(GAUNTLET_LAST.green?'green':'RED'));
+     if(typeof swarmDoDReady==='function')ev.push('swarm definition of done enforced');
+     if(typeof ACTIVATIONS!=='undefined')ev.push('tool activation ledger');
+     return{n:ev.length,evidence:ev};
+   }},
+  {id:'runtime',label:'Runtime',icon:'\u{1F4E1}',
+   asks:'After a bad outcome, can you read back exactly which step went wrong?',
+   why:'Traces are the receipts. Once they exist, swapping the model is configuration.',
+   probe(){
+     const ev=[];
+     if(typeof SPANS!=='undefined')ev.push(SPANS.length+' span(s) this session');
+     if(typeof SESSION_SPEND!=='undefined')ev.push('session spend $'+(+SESSION_SPEND).toFixed(4));
+     if(typeof actLog==='function')ev.push('action audit log');
+     if(typeof LOG_LISTENERS!=='undefined')ev.push(LOG_LISTENERS.length+' live log listener(s)');
+     return{n:ev.length,evidence:ev};
+   }},
+];
+/* The weakest layer is the answer. Reporting a total would let five strong layers hide one empty
+   one, which is the failure this is meant to surface. */
+function harnessAudit(){
+  const rows=HARNESS_LAYERS.map(L=>{
+    let r;try{r=L.probe();}catch(e){r={n:0,evidence:['probe failed: '+(e&&e.message||e)]};}
+    return{id:L.id,label:L.label,icon:L.icon,asks:L.asks,why:L.why,
+      n:r.n|0,evidence:r.evidence||[],
+      reads:r.reads,writes:r.writes};
+  });
+  const thinnest=rows.slice().sort((a,b)=>a.n-b.n)[0];
+  const ctx=rows.find(r=>r.id==='context');
+  return{rows,thinnest:thinnest?thinnest.id:null,
+    empty:rows.filter(r=>r.n===0).map(r=>r.id),
+    /* Stated separately because it is the question that decides whether this is a harness at all
+       rather than a well-briefed prompt. */
+    vonNeumann:!!(ctx&&ctx.writes>0),
+    memory:ctx?{reads:ctx.reads||0,writes:ctx.writes||0}:null};
+}
+
+/* ═══════════════════ THE TOOLS MODULE ═══════════════════
+   One catalogue and one dispatcher over every tool the model can reach.
+
+   Before this there were three registries — OCR_TOOLS, OPENBOT_TOOLS, and whatever the connectors
+   advertise (GitHub, MCP) — each with its own executor, and handleToolCalls routed between them by
+   testing name membership against each family in turn, inline. That works while there are three
+   families and stops working at four: every new tool source meant editing the dispatcher, and
+   nothing could answer "what tools does this model actually have right now?" without repeating the
+   same union by hand. The ReAct loop needs exactly that question answered, which is what forced
+   the issue.
+
+   toolSource is deliberately PURE. Routing is the part that silently goes wrong — a tool name that
+   matches nothing returns null rather than being quietly handed to the wrong executor — and a pure
+   function is the part a synchronous suite can actually hold. */
+function toolCatalog(){
+  const out=[];
+  OCR_TOOLS.forEach(t=>out.push({name:t.name,description:t.description,schema:t.schema,source:'ocr'}));
+  if(typeof OPENBOT_TOOLS!=='undefined'&&typeof OPENBOT!=='undefined'&&OPENBOT.ok)
+    OPENBOT_TOOLS.forEach(t=>out.push({name:t.name,description:t.description,schema:t.schema,source:'openbot'}));
+  (typeof CONNECTORS!=='undefined'?CONNECTORS:[]).filter(c=>c.on&&(c.tools||[]).length)
+    .forEach(c=>(c.tools||[]).forEach(t=>out.push({
+      name:t.name,description:t.description||'',
+      schema:t.inputSchema||t.schema||{type:'object',properties:{}},
+      source:'connector',connector:c.id,connectorLabel:c.label})));
+  /* First registration wins. Two sources advertising the same name is a real possibility once MCP
+     servers are in play, and silently calling whichever happened to be last would be worse than
+     picking one and saying so. */
+  const seen=new Set(),uniq=[];
+  out.forEach(t=>{if(seen.has(t.name))return;seen.add(t.name);uniq.push(t);});
+  return uniq;
+}
+const toolNames=()=>toolCatalog().map(t=>t.name);
+function toolSource(name){
+  const t=toolCatalog().find(x=>x.name===name);
+  return t?t.source:null;
+}
+function toolSpec(name){return toolCatalog().find(x=>x.name===name)||null;}
+/* One place a tool call is executed, so one place it is logged. Every invocation records its
+   inputs and its outputs — the research note is blunt about this and it is right: without the
+   tool boundary logged you cannot tell a bad answer from a bad observation. */
+async function toolInvoke(name,args){
+  const spec=toolSpec(name);
+  const t0=performance.now();
+  if(!spec){
+    const err='no tool named '+name+' is available';
+    logEvent('tool',{tool:name,ok:false,err,ms:0});
+    return{ok:false,error:err,available:toolNames().slice(0,20)};
+  }
+  try{
+    let result;
+    if(spec.source==='ocr')          result=await ocrToolCall(name,args||{});
+    else if(spec.source==='openbot') result=await openbotToolCall(name,args||{});
+    else{
+      const c=CONNECTORS.find(x=>x.id===spec.connector);
+      if(!c)throw new Error('the connector that provided '+name+' is gone');
+      result=await connectorCall(c,name,args||{});
+    }
+    const ms=Math.round(performance.now()-t0);
+    logEvent('tool',{tool:name,source:spec.source,ok:true,ms,
+      args:JSON.stringify(args||{}).slice(0,300),
+      result:(typeof result==='string'?result:JSON.stringify(result||'')).slice(0,400)});
+    return{ok:true,result,ms,source:spec.source};
+  }catch(e){
+    const ms=Math.round(performance.now()-t0);
+    logEvent('tool',{tool:name,source:spec.source,ok:false,ms,err:String(e&&e.message||e)});
+    return{ok:false,error:String(e&&e.message||e),ms,source:spec.source};
+  }
 }
 
 /* ═══════════════════ RUN TREE ═══════════════════
@@ -19096,6 +19586,14 @@ async function proposeSelfPatch(src,goal,research,model,hostEl){
 async function runSwarm(rn,baseFiles){
   const members=OPS.swarm.members.filter(m=>m.on&&m.model&&m.concern.trim());
   if(members.length<2)return null;
+  /* Refuse, do not warn. The contract was already a field; what it lacked was anything that
+     required it, so it stayed empty and each member decided privately what finished meant. */
+  const dodWhy=dodProblem(OPS.swarm.contract);
+  if(dodWhy){
+    toast('Swarm not started — '+dodWhy,8000);
+    logEvent('swarm',{blocked:true,why:dodWhy});
+    return null;
+  }
   const board={
     task:RS.baseTask||RS.task, round:rn,
     contract:OPS.swarm.contract||'',
@@ -26105,6 +26603,152 @@ function gauntletCases(g){
      the writer-to-reader round trip is verified live instead: five entries including UTF-8 and one
      incompressible file came back byte-exact through the app's own central-directory reader, with
      tiny.txt correctly left STORED. */
+  /* ── the harness itself ── */
+
+  /* The parser is where every ReAct implementation actually breaks, and the failures are never
+     the model being stupid — they are a bold label, a fenced argument block, or an argument on
+     the line below. The multiline terminator bug is pinned explicitly: RE_INPUT once ended on $,
+     which under the m flag is the end of the LINE, so fenced and next-line arguments were thrown
+     away and the tool was called with {} while the model had stated them correctly. */
+  add({id:'react-parses-what-models-actually-emit',sub:'harness',uses:['reactParse'],
+    what:'Thought/Action/Action Input survives bold labels, fences and newlines',
+    run:()=>{
+      const P=g.reactParse;
+      const fenced=P('Thought: x\nAction: ocr_search\nAction Input:\n```json\n{"query":"vat"}\n```');
+      if(!fenced.input||fenced.input.query!=='vat')return 'fenced input lost: '+JSON.stringify(fenced.input);
+      const below=P('Thought: x\nAction: ocr_search\nAction Input:\n{"query":"vat"}');
+      if(!below.input||below.input.query!=='vat')return 'next-line input lost';
+      const bold=P('**Action:** ocr_list\n**Action Input:** {}');
+      if(bold.action!=='ocr_list')return 'bold label lost: '+bold.action;
+      const stops=P('Thought: a\nAction: ocr_search\nAction Input: {"query":"x"}\nObservation: nope');
+      if(!stops.input||stops.input.query!=='x')return 'input ran past the Observation';
+      return 'parsed';
+    },expect:v=>v==='parsed',
+    antiWhat:'and a Final Answer wins over an Action in the same reply, rather than spending a step',
+    anti:()=>{
+      const r=g.reactParse('Thought: t\nAction: ocr_search\nAction Input: {}\nFinal Answer: 42');
+      return r.final;
+    },antiExpect:v=>v==='42'});
+
+  /* The signature failure of the paradigm, named as such in the paper: the model regenerates its
+     previous thought and action verbatim and the loop burns every remaining step on it. */
+  add({id:'react-refuses-to-repeat-itself',sub:'harness',uses:['reactDecide','reactKey','reactParse'],
+    what:'a repeated action, a hallucinated tool and a malformed input each answer with guidance',
+    run:()=>{
+      const names=['ocr_search','ocr_list'],seen=new Set();
+      const P=g.reactParse,D=g.reactDecide;
+      const first=D(P('Thought: t\nAction: ocr_search\nAction Input: {"query":"x"}'),names,seen);
+      if(!first.call)return 'a valid first call was refused';
+      seen.add(g.reactKey('ocr_search',{query:'x'}));
+      const again=D(P('Thought: t\nAction: ocr_search\nAction Input: {"query":"x"}'),names,seen);
+      if(again.call)return 'the identical call was allowed a second time';
+      const ghost=D(P('Thought: t\nAction: made_up_tool\nAction Input: {}'),names,seen);
+      if(ghost.call||!/no tool called/.test(ghost.observation))return 'a hallucinated tool was dispatched';
+      if(!/ocr_search/.test(ghost.observation))return 'the refusal did not say what IS available';
+      const bad=D(P('Thought: t\nAction: ocr_search\nAction Input: {oops}'),names,seen);
+      if(bad.call||!/JSON/.test(bad.observation))return 'malformed input was dispatched';
+      return 'guided';
+    },expect:v=>v==='guided',
+    antiWhat:'while the SAME tool with DIFFERENT arguments is still allowed — it is a repeat, not a ban',
+    anti:()=>{
+      const names=['ocr_search'],seen=new Set();
+      seen.add(g.reactKey('ocr_search',{query:'x'}));
+      const d=g.reactDecide(g.reactParse('Thought: t\nAction: ocr_search\nAction Input: {"query":"y"}'),names,seen);
+      return d.call===true;
+    },antiExpect:v=>v===true});
+
+  /* A tool name that matches nothing must return null rather than being handed to whichever
+     executor happens to be checked last. Routing is the part that fails silently. */
+  add({id:'tools-route-to-exactly-one-owner',sub:'harness',uses:['toolCatalog','toolSource','toolNames'],
+    what:'every catalogued tool has exactly one source, and an unknown name has none',
+    run:()=>{
+      const cat=g.toolCatalog();
+      if(!cat.length)return 'the catalogue is empty';
+      const names=cat.map(t=>t.name);
+      if(new Set(names).size!==names.length)return 'the catalogue advertises a duplicate name';
+      const unsourced=cat.filter(t=>!g.toolSource(t.name));
+      if(unsourced.length)return 'catalogued but unroutable: '+unsourced.map(t=>t.name).join(',');
+      if(g.toolSource('definitely_not_a_tool_'+cat.length)!==null)return 'an unknown name was routed somewhere';
+      return 'routed';
+    },expect:v=>v==='routed',
+    antiWhat:'and the catalogue is derived from the live registries rather than a hand-kept list',
+    anti:()=>g.toolNames().every(n=>g.toolSpec(n)!==null),antiExpect:v=>v===true});
+
+  /* A definition of done that anything can satisfy is not one. */
+  add({id:'swarm-refuses-a-vague-definition-of-done',sub:'harness',
+    uses:['dodProblem','dodReady','DOD_MIN'],
+    what:'a swarm cannot start on an empty, single or unfalsifiable definition of done',
+    /* Asserted through g.dodProblem, NOT through g.dodReady. dodReady binds the module-scope
+       dodProblem, so a sabotage of the EXPORT never reaches it and the case stays green against a
+       build that accepts anything — which is exactly what the sabotage suite caught here. This is
+       the third time this file has produced that trap; the rule is that a case must call through
+       the same export the sabotage replaces. */
+    run:()=>{
+      if(g.dodProblem('')===null)return 'an empty definition was accepted';
+      if(g.dodProblem('- it works')===null)return 'a single vague line was accepted';
+      if(g.dodProblem('- Make it nice and polished\n- Code should be clean and modern')===null)
+        return 'a definition made only of adjectives was accepted';
+      const real='- Runs at 60fps on a 2019 MacBook with no dropped frames\n'+
+                 '- No console errors during 5 minutes of play\n'+
+                 '- Restarting restores the previous score';
+      if(g.dodProblem(real)!==null)return 'a checkable definition was rejected: '+g.dodProblem(real);
+      return 'enforced';
+    },expect:v=>v==='enforced',
+    antiWhat:'and a vague WORD is fine inside a criterion that also states something observable',
+    anti:()=>g.dodProblem('- Rendering is clean with no visible tearing at 60fps\n'+
+                          '- Loading finishes in under 2 seconds')===null,
+    antiExpect:v=>v===true});
+
+  /* Rank on confidence and the dearest model always wins; rank on price and the cheapest always
+     does. Neither is a market. */
+  add({id:'bidding-buys-confidence-per-unit-cost',sub:'harness',
+    uses:['bidAward','bidScore','bidCalibration','BID_FLOOR'],
+    what:'a cheap confident bid beats an expensive one, and an unconfident bid is not a bargain',
+    run:()=>{
+      const bids=[{member:'cheap',confidence:0.62,cost:0.01},
+                  {member:'frontier',confidence:0.95,cost:0.40},
+                  {member:'unsure',confidence:0.20,cost:0.001}];
+      const a=g.bidAward(bids,{});
+      if(!a.winner||a.winner.member!=='cheap')return 'winner was '+(a.winner&&a.winner.member);
+      const u=a.scored.find(b=>b.member==='unsure');
+      if(u.score!==0)return 'a bid under the floor was still scored';
+      /* a member that has over-claimed before is discounted */
+      const over=[{confidence:0.95,succeeded:false},{confidence:0.95,succeeded:false},
+                  {confidence:0.9,succeeded:false},{confidence:0.95,succeeded:true}];
+      if(g.bidCalibration(over)>=1)return 'an over-claimer was not discounted';
+      if(g.bidCalibration([])!==1)return 'a member with no history should start neutral';
+      return 'priced';
+    },expect:v=>v==='priced',
+    antiWhat:'and raising only the PRICE of an otherwise identical bid lowers its score',
+    anti:()=>{
+      const cheap=g.bidScore({confidence:0.8,cost:0.01},1).score;
+      const dear =g.bidScore({confidence:0.8,cost:1.00},1).score;
+      return dear<cheap;
+    },antiExpect:v=>v===true});
+
+  /* The audit exists to find the THIN layer, so the one thing it must never do is report a
+     comfortable average over an empty one. */
+  add({id:'harness-audit-measures-rather-than-asserts',sub:'harness',
+    uses:['harnessAudit','HARNESS_LAYERS'],
+    what:'every layer is probed from live state and the weakest is named',
+    run:()=>{
+      const a=g.harnessAudit();
+      if(a.rows.length!==g.HARNESS_LAYERS.length)return 'a layer went unprobed';
+      if(a.rows.some(r=>typeof r.n!=='number'))return 'a layer reported no count';
+      if(!a.thinnest)return 'the thinnest layer was not named';
+      const thin=a.rows.find(r=>r.id===a.thinnest);
+      if(a.rows.some(r=>r.n<thin.n))return 'the named thinnest layer is not the smallest';
+      const ctx=a.rows.find(r=>r.id==='context');
+      if(typeof ctx.reads!=='number'||typeof ctx.writes!=='number')
+        return 'context did not separate reads from writes';
+      return 'measured';
+    },expect:v=>v==='measured',
+    antiWhat:'and the von Neumann flag tracks whether memory can be WRITTEN, not merely read',
+    anti:()=>{
+      const a=g.harnessAudit();
+      return a.vonNeumann===(a.memory.writes>0);
+    },antiExpect:v=>v===true});
+
   add({id:'zip-never-grows-an-entry',sub:'archive',
     uses:['zipWorthDeflating','zipUseDeflated','ZIP_DEFLATE_FLOOR'],
     what:'an entry is stored deflated only when deflating actually made it smaller',
@@ -27904,6 +28548,16 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'react-forgets-it-already-tried-that',export:'reactDecide',
+   why:'the loop re-issues the same action until the step ceiling, which is ReAct\u2019s signature failure',
+   broken:()=>(p,names)=>p.final!=null?{done:true,answer:p.final}
+     :{call:true,action:p.action,input:p.input||{}}},
+  {id:'dod-accepts-anything',export:'dodProblem',
+   why:'a swarm starts with no agreed definition of done and each member decides privately',
+   broken:()=>()=>null},
+  {id:'bidding-ignores-price',export:'bidScore',
+   why:'the most confident bid always wins, so the dearest model takes every slice',
+   broken:()=>b=>({score:+b.confidence||0,adj:+b.confidence||0,why:''})},
   {id:'zip-deflates-everything-regardless',export:'zipUseDeflated',
    why:'entries are kept deflated even when that made them bigger, so archives grow',
    broken:()=>()=>true},
@@ -49797,7 +50451,7 @@ async function persistInit(){
    worker updating is NOT the same thing as the user seeing the new app: clients.claim() makes
    a new worker control the page, but the HTML already parsed keeps running until something
    reloads it. This is what lets the app notice and say so. */
-const APP_BUILD='afd2e7920b8ab63e';
+const APP_BUILD='e60c91037a2a42f9';
 const PWA={reg:null,state:'unknown',why:'',prompt:null,update:null,checking:false,lastCheck:0};
 
 /* ── Staying current, which is the whole problem on iOS ──────────────────────
@@ -53633,6 +54287,12 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     achatFork,
     APP_BUILD,pwaCheckUpdate,pwaApplyUpdate,pwaAnnounceUpdate,
     A11Y_GLYPH,a11yHasName,a11yDerive,a11yClean,a11ySourceText,deadline,
+    toolCatalog,toolNames,toolSource,toolSpec,toolInvoke,
+    HARNESS_LAYERS,harnessAudit,
+    REACT_MAX_STEPS,REACT_OBS_CAP,REACT_STOP,reactParse,reactPrompt,reactKey,reactRun,
+    DOD_MIN,DOD_VAGUE,dodParse,dodProblem,dodReady,swarmDoDReady,
+    BID_FLOOR,bidScore,bidCalibration,bidAward,
+    reactDecide,reactCap,
     ZIP_DEFLATE_FLOOR,zipWorthDeflating,zipUseDeflated,zipBytesDeflated,deflateRaw,CAN_DEFLATE,
     get SELF_READ_OK(){return SELF_READ_OK},set SELF_READ_OK(v){SELF_READ_OK=v},
     get CSS_READ_OK(){return CSS_READ_OK},set CSS_READ_OK(v){CSS_READ_OK=v},
