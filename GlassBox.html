@@ -1164,7 +1164,11 @@ input[type=range]{flex:1;accent-color:var(--acc)}
   animation-duration:.001ms !important;animation-iteration-count:1 !important;
   transition-duration:.001ms !important;scroll-behavior:auto !important}
 @media(prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation-duration:.001ms !important;transition-duration:.001ms !important}
+  /* scroll-behavior was set by the [data-motion="off"] rule above but not by this one, so a
+     smooth-scrolling nav still animated for someone whose OS asks for less motion. It is the
+     only thing the two rules disagreed on. */
+  *,*::before,*::after{animation-duration:.001ms !important;transition-duration:.001ms !important;
+    scroll-behavior:auto !important}
 }
 /* ── command palette ── */
 .pal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;display:flex;
@@ -2168,6 +2172,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
 .lx-kind b{display:block;font-size:12.5px;margin-bottom:3px}
 .lx-kind span{font-size:11px;color:var(--ink3);line-height:1.5}
 @media(max-width:720px){.lx-kinds{grid-template-columns:1fr}}
+
 
 </style>
 </head>
@@ -3726,6 +3731,8 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
       </div>
       <div id="local-panel"></div>
       <div id="harness-panel"></div>
+      <div id="trig-panel"></div>
+      <div id="vrf-panel"></div>
       <div id="ghostty-panel"></div>
     </section>
 
@@ -14657,7 +14664,13 @@ async function reactRun(task,opts){
     for(let i=0;i<maxSteps;i++){
       let acc;
       try{
-        acc=await streamComplete({model,system:sys,maxTokens:o.maxTokens||700,
+        /* One seam, for two reasons. The loop's round trip — parse, decide, invoke, feed the
+           observation back — could not be exercised at all without a live model and a key, so
+           the single riskiest part of this module was the only part never run. And when a
+           native tool-calling transport arrives it plugs in HERE rather than forking the loop.
+           Defaults to streamComplete, so nothing changes for a normal run. */
+        const complete=(typeof o.complete==='function')?o.complete:streamComplete;
+        acc=await complete({model,system:sys,maxTokens:o.maxTokens||700,
           messages:[{role:'user',content:transcript}],
           /* Load-bearing. Without it the model writes its own Observation and carries on
              hallucinating a whole trajectory. The paper stops on a STEP-NUMBERED string
@@ -14723,6 +14736,488 @@ async function reactRun(task,opts){
 
    Deliberately NOT a score out of ten. A number that cannot be traced to a count is the kind of
    reassurance this whole idea exists to replace. */
+
+/* ═══════════════════ TRIGGERS ═══════════════════
+   The app's own harness audit names this layer the thinnest, and it is right: strip out the PWA
+   update poll and nothing in this application starts work unless a person presses something.
+   That is the line between a tool and a system, and it is the highest-value thing left.
+
+   What a trigger layer CAN honestly be here matters as much as what it does. There is no server,
+   so there are no inbound webhooks and no cron. What there is, and what this uses:
+
+     • the app's own event stream — logEvent already emits every run, failure and approval, and
+       LOG_LISTENERS already exists. Subscribing to it is the same decision wosNotify made:
+       one event log, many listeners, rather than a second bus that drifts from the first.
+     • real browser events — visibilitychange, online/offline, and the storage event, which fires
+       in every OTHER same-origin window the instant one of them writes.
+     • a tick, for conditions that are true rather than events that happen.
+
+   Two design choices worth defending:
+
+   MATCHING IS PURE. trigMatch and trigShouldFire take state and return a decision; they touch
+   nothing. That is what lets the regression suite hold them, and gauntletRun is strictly
+   synchronous so an impure matcher could not be tested at all.
+
+   A TRIGGER PROPOSES BY DEFAULT. Every AI-suggestion path in this app creates something new or
+   asks first, and a rule that fires while you are asleep is exactly where that discipline matters
+   most. `auto` exists, it is per-rule, and the panel shows which rules have it. */
+
+const TRIG_SOURCES=[
+  {id:'log',label:'Something the app did',icon:'\u{1F4DC}',
+   note:'Runs finishing, failures, approvals falling due — the existing event log, not a second one.',
+   subscribe(emit){
+     if(typeof LOG_LISTENERS==='undefined'||!Array.isArray(LOG_LISTENERS))return false;
+     LOG_LISTENERS.push(e=>emit({source:'log',kind:(e&&e.kind)||'',data:(e&&e.data)||{},at:Date.now()}));
+     return true;
+   }},
+  {id:'visibility',label:'You came back',icon:'\u{1F440}',
+   note:'The tab becoming visible again, with how long it was away — the honest moment to catch up.',
+   subscribe(emit){
+     let left=Date.now();
+     document.addEventListener('visibilitychange',()=>{
+       if(document.hidden){left=Date.now();return;}
+       emit({source:'visibility',kind:'return',data:{awayMs:Date.now()-left},at:Date.now()});
+     });
+     return true;
+   }},
+  {id:'network',label:'Connection changed',icon:'\u{1F4F6}',
+   note:'Going offline or coming back. Worth knowing before a run spends a minute failing.',
+   subscribe(emit){
+     addEventListener('online',()=>emit({source:'network',kind:'online',data:{},at:Date.now()}));
+     addEventListener('offline',()=>emit({source:'network',kind:'offline',data:{},at:Date.now()}));
+     return true;
+   }},
+  {id:'window',label:'Another window of this app',icon:'\u{1FA9F}',
+   note:'The storage event fires in every OTHER same-origin window the moment one of them writes, '+
+     'so a popped-out panel can tell this one something changed.',
+   subscribe(emit){
+     addEventListener('storage',e=>emit({source:'window',kind:'storage',
+       data:{key:(e&&e.key)||''},at:Date.now()}));
+     return true;
+   }},
+  {id:'tick',label:'A condition became true',icon:'⏱',
+   note:'For states rather than events — storage filling up, a suite left red. Checked on a slow '+
+     'interval, because a condition that needs sub-minute latency is an event in disguise.',
+   subscribe(emit){
+     setInterval(()=>emit({source:'tick',kind:'tick',data:{},at:Date.now()}),60000);
+     return true;
+   }},
+];
+const trigSource=id=>TRIG_SOURCES.find(s=>s.id===id)||null;
+
+/* The shipped rules. Each one fires on something this app genuinely emits — a rule watching for an
+   event that is never produced is the self-defeating guard this project has been bitten by before,
+   so every `kind` below was checked against a real logEvent call site. */
+const TRIG_RULES=[
+  /* Watched on the TICK, not on the log. The first version of this rule matched an `error` event
+     carrying "gauntlet" — and no such event is ever emitted. gauntletRun reports a failure through
+     notify2 and writes its verdict to storage; it does not log an error. A rule waiting for an
+     event that never happens is the self-defeating guard this project has been bitten by, and it
+     reads as "nothing ever goes wrong" rather than as a broken rule. */
+  {id:'suite-red',source:'tick',label:'The regression suite is red',
+   why:'A guard that stopped discriminating makes every other green meaningless. Worth '+
+     'interrupting for — and worth noticing even if the run that turned it red was hours ago.',
+   match:()=>{
+     const last=store.get('gauntletLast',null);
+     return !!(last&&last.green===false);
+   },
+   action:'Open the Local tab and re-run the gauntlet',
+   go(){goEnsure('local','the suite is red');},
+   minGapMs:1800000},
+
+  {id:'run-failed',source:'log',label:'Something logged an error',
+   why:'A panel that failed to draw, a guard that tripped, a provider that refused — the error is '+
+     'most useful while whatever caused it is still on screen.',
+   match:ev=>ev.kind==='error',
+   action:'Show the log',
+   go(){goEnsure('history','an error was logged');},
+   minGapMs:120000},
+
+  {id:'storage-pressure',source:'tick',label:'Storage is filling up',
+   why:'localStorage is the only web storage with no eviction policy: when it fills, the NEXT '+
+     'write fails, and the next write is usually your document rather than the cache that filled it.',
+   match:()=>{
+     try{
+       let n=0;for(const k in localStorage)n+=(localStorage.getItem(k)||'').length;
+       return n>3.5e6;
+     }catch(_){return false;}
+   },
+   action:'Back up and clear what can be refetched',
+   go(){goEnsure('settings','storage is close to full');},
+   minGapMs:3600000},
+
+  {id:'back-after-long',source:'visibility',label:'You were away a while',
+   why:'A deploy may have landed since. This is the moment to check, not thirty minutes later.',
+   match:ev=>ev.kind==='return'&&(ev.data&&ev.data.awayMs)>1800000,
+   action:'Check for a newer version',
+   go(){if(typeof pwaCheckUpdate==='function')pwaCheckUpdate();},
+   minGapMs:1800000},
+
+  {id:'went-offline',source:'network',label:'The connection dropped',
+   why:'Every hosted model call is about to fail. Better to say so than to let a run burn its '+
+     'retries discovering it.',
+   match:ev=>ev.kind==='offline',
+   action:'Warn before anything else is started',
+   go(){toast('You are offline — hosted models will fail until the connection is back. '+
+     'Local models still work.',6000);},
+   minGapMs:60000},
+
+  {id:'other-window-wrote',source:'window',label:'Another window changed something',
+   why:'Two windows of this app share one storage. Without this, the one you are not looking at '+
+     'quietly goes stale and then overwrites the one you are.',
+   match:ev=>ev.kind==='storage'&&/^gb\.(ws|projects|creations|brainDir)$/.test((ev.data||{}).key||''),
+   action:'Reload what changed',
+   go(){toast('Another window of this app changed the workspace — reload to pick it up',5000);},
+   minGapMs:30000},
+];
+const trigRule=id=>TRIG_RULES.find(r=>r.id===id)||null;
+
+const TRIG_DEFAULTS={on:false,armed:{},auto:{},fired:[],seen:0};
+let TRIG=Object.assign({},TRIG_DEFAULTS,store.get('triggers',{}));
+const saveTrig=()=>{if(TRIG.fired.length>60)TRIG.fired.length=60;store.set('triggers',TRIG);};
+const trigArmed=id=>TRIG.on&&TRIG.armed[id]!==false;
+const trigAuto=id=>!!TRIG.auto[id];
+
+/* PURE. Given a rule, an event and the clock, should this fire? Everything that could make the
+   answer non-deterministic — the rule's own match function aside — is a parameter. */
+function trigShouldFire(rule,ev,now,lastFiredAt){
+  if(!rule)return{fire:false,why:'no such rule'};
+  if(rule.source!==ev.source)return{fire:false,why:'different source'};
+  let m=false;
+  try{m=!!rule.match(ev);}catch(e){return{fire:false,why:'match threw: '+(e&&e.message||e)};}
+  if(!m)return{fire:false,why:'did not match'};
+  const gap=now-(lastFiredAt||0);
+  if(lastFiredAt&&gap<(rule.minGapMs||0))
+    return{fire:false,why:'rate limited — '+Math.round((rule.minGapMs-gap)/1000)+'s to go'};
+  return{fire:true,why:'matched'};
+}
+/* Kept separate from trigShouldFire so the suite can test "would this match?" without the armed
+   state, and "is it allowed to?" without inventing an event. */
+function trigMatch(ruleId,ev){
+  const r=trigRule(ruleId);
+  if(!r)return false;
+  if(r.source!==ev.source)return false;
+  try{return !!r.match(ev);}catch(_){return false;}
+}
+
+let TRIG_LAST={};
+let TRIG_WIRED=false;
+function trigEmit(ev){
+  TRIG.seen=(TRIG.seen||0)+1;
+  TRIG_RULES.forEach(r=>{
+    if(!trigArmed(r.id))return;
+    const d=trigShouldFire(r,ev,Date.now(),TRIG_LAST[r.id]);
+    if(!d.fire)return;
+    TRIG_LAST[r.id]=Date.now();
+    trigFire(r,ev);
+  });
+}
+/* Proposes, unless this specific rule was switched to auto. The record is written either way —
+   a trigger layer you cannot audit is indistinguishable from the app behaving strangely. */
+function trigFire(rule,ev){
+  const rec={id:rule.id,label:rule.label,at:nowISO(),source:rule.source,
+    auto:trigAuto(rule.id),action:rule.action};
+  TRIG.fired=[rec].concat(TRIG.fired||[]);saveTrig();
+  try{logEvent('trigger',{rule:rule.id,auto:rec.auto});}catch(_){}
+  if(rec.auto){
+    try{rule.go();}catch(e){toast('Trigger "'+rule.label+'" failed: '+e.message,5000);}
+  }else{
+    /* A proposal has to be actionable where it appears, or it is just a notification. */
+    toast(rule.label+' — '+rule.action,6500);
+  }
+  if(typeof trigRender==='function')trigRender();
+}
+function trigInit(){
+  if(TRIG_WIRED)return;
+  TRIG_WIRED=true;
+  TRIG_SOURCES.forEach(s=>{
+    try{s.ok=!!s.subscribe(trigEmit);}
+    catch(e){s.ok=false;s.err=(e&&e.message)||String(e);}
+  });
+}
+
+/* ═══════════════════ VERIFY BEFORE EXIT ═══════════════════
+   dodProblem already refuses to START work without a checkable definition of done. This is the
+   other end: nothing gets to SAY it is finished without being held against those same criteria.
+
+   The entire value of this module is one distinction that most self-verification quietly loses:
+
+       PASSED, FAILED and UNPROVEN are three outcomes, not two.
+
+   A criterion nobody checked is not a pass. Collapsing "we did not look" into "fine" is precisely
+   how an agent reports done at 80%, and it is the failure this project has spent passes fighting.
+   So vrfVerdict returns `unproven` as a first-class verdict, the panel prints the unproven count
+   next to the passed count, and the gate treats an unproven criterion as blocking by default.
+
+   Two kinds of check, and the split matters:
+
+     MECHANICAL — the criterion names something this app can observe directly: a gauntlet result,
+     a console error count, a byte size, a rendered element. No model, no cost, no opinion. These
+     run first and they are the ones worth trusting.
+
+     JUDGED — everything else. One model call, shown as a judgement rather than a measurement,
+     and clearly labelled as such in the result. A model agreeing that its own work is good is
+     the weakest evidence here and is presented that way. */
+
+/* Declared ABOVE the table that reads it. `typeof` on a `let` still inside its temporal dead zone
+   THROWS rather than returning 'undefined', and this file has already been bitten once by a
+   constant referenced from a table defined earlier. The read is inside a function body so it was
+   safe either way; moving it removes the hazard rather than relying on that. */
+let VRF_ERRORS=[];
+
+const VRF_CHECKS=[
+  {id:'gauntlet',label:'the regression suite',
+   /* Deliberately narrow. A criterion has to be ABOUT the suite for this to claim it — matching
+      the bare word "test" would hijack "the user can test their own prompt". */
+   match:t=>/\b(gauntlet|regression suite|test suite)\b/i.test(t),
+   run(){
+     const last=(typeof GAUNTLET_LAST!=='undefined'&&GAUNTLET_LAST)||store.get('gauntletLast',null);
+     if(!last)return{ok:false,unproven:true,detail:'the suite has not been run in this session'};
+     return{ok:!!last.green,unproven:false,
+       detail:last.green?('green, '+(last.total||'?')+' cases')
+         :((last.failed||'?')+' of '+(last.total||'?')+' failing')};
+   }},
+  {id:'console',label:'console errors',
+   match:t=>/\b(console|error|exception|throw)\b/i.test(t)&&/\bno\b|\bzero\b|\bwithout\b/i.test(t),
+   run(){
+     const n=(typeof VRF_ERRORS!=='undefined')?VRF_ERRORS.length:-1;
+     if(n<0)return{ok:false,unproven:true,detail:'nothing was recording console errors'};
+     return{ok:n===0,unproven:false,detail:n===0?'none recorded':n+' recorded'};
+   }},
+  {id:'element',label:'something is on screen',
+   match:t=>/#[A-Za-z][\w-]*/.test(t),
+   run(text){
+     const sel=(String(text).match(/#[A-Za-z][\w-]*/)||[])[0];
+     if(!sel)return{ok:false,unproven:true,detail:'no selector found in the criterion'};
+     const el=document.querySelector(sel);
+     if(!el)return{ok:false,unproven:false,detail:sel+' is not in the document'};
+     const vis=!!(el.offsetWidth||el.offsetHeight||el.getClientRects().length);
+     return{ok:vis,unproven:false,detail:sel+(vis?' is present and visible':' exists but is not visible')};
+   }},
+  {id:'size',label:'a size or count limit',
+   match:t=>/\b(under|below|less than|at most|no more than|fewer than)\b[^.]*\b\d/i.test(t),
+   run(){
+     /* The number is checkable, but what it refers to is not knowable from the sentence alone.
+        Saying so is the honest answer; inventing a measurement would be worse than admitting it. */
+     return{ok:false,unproven:true,
+       detail:'names a limit but not what to measure — check this one yourself, or say which number'};
+   }},
+];
+/* PURE. Splits a definition of done into the criteria a machine can settle and the ones it cannot.
+   Written as a separate function from the running because this is the part worth testing: a
+   classifier that quietly calls everything "judged" would make the mechanical half disappear. */
+function vrfPlan(dodText){
+  const items=(typeof dodParse==='function'?dodParse(dodText):String(dodText||'').split(/\r?\n/))
+    .map(s=>String(s).trim()).filter(Boolean);
+  return items.map(text=>{
+    const c=VRF_CHECKS.find(x=>{try{return x.match(text);}catch(_){return false;}});
+    return c?{text,kind:'mechanical',check:c.id,label:c.label}:{text,kind:'judged',check:null};
+  });
+}
+/* PURE. The verdict, and the reason this module exists. `unproven` is counted separately and
+   blocks by default — a criterion nobody checked has not passed. */
+function vrfVerdict(results){
+  const passed=results.filter(r=>r.ok&&!r.unproven).length;
+  const failed=results.filter(r=>!r.ok&&!r.unproven).length;
+  const unproven=results.filter(r=>r.unproven).length;
+  const total=results.length;
+  let state='pass';
+  if(failed>0)state='fail';
+  else if(unproven>0)state='unproven';
+  else if(total===0)state='unproven';
+  return{state,passed,failed,unproven,total,
+    /* Phrased for someone about to decide whether to ship. */
+    summary:total===0?'nothing to check against — there was no definition of done'
+      :state==='fail'?(failed+' of '+total+' criteria failed')
+      :state==='unproven'?(passed+' of '+total+' checked and passing, '+unproven+
+          ' NOT checked — unproven is not the same as fine')
+      :('all '+total+' criteria checked and passing')};
+}
+/* The exit gate. Nothing here runs a model on its own; the judged criteria are returned for the
+   caller to decide about, because a verification pass that silently spends money is its own
+   problem. */
+let VRF_WIRED=false;
+function vrfWatch(){
+  if(VRF_WIRED)return;
+  VRF_WIRED=true;
+  /* Recorded rather than intercepted: console.error keeps working exactly as before. */
+  const orig=console.error;
+  console.error=function(){
+    try{VRF_ERRORS.push({at:Date.now(),msg:Array.prototype.map.call(arguments,String).join(' ').slice(0,300)});
+      if(VRF_ERRORS.length>200)VRF_ERRORS.shift();}catch(_){}
+    return orig.apply(console,arguments);
+  };
+  addEventListener('error',e=>{try{VRF_ERRORS.push({at:Date.now(),msg:'uncaught: '+(e&&e.message||'')});}catch(_){}});
+}
+function vrfRun(dodText){
+  vrfWatch();
+  const plan=vrfPlan(dodText);
+  const results=plan.map(p=>{
+    if(p.kind!=='mechanical')
+      return{text:p.text,kind:'judged',ok:false,unproven:true,
+        detail:'no mechanical check fits this one — it needs a person or a model to judge'};
+    const c=VRF_CHECKS.find(x=>x.id===p.check);
+    let r;
+    try{r=c.run(p.text);}
+    catch(e){r={ok:false,unproven:true,detail:'check threw: '+(e&&e.message||e)};}
+    return Object.assign({text:p.text,kind:'mechanical',check:p.check},r);
+  });
+  return{results,verdict:vrfVerdict(results),ts:nowISO()};
+}
+const VRF_DEFAULTS={gate:true,last:null};
+let VRF=Object.assign({},VRF_DEFAULTS,store.get('verify',{}));
+const saveVrf=()=>store.set('verify',VRF);
+/* Called where a run wants to declare itself finished. Returns whether it may, and why not. */
+function vrfGateExit(dodText){
+  const out=vrfRun(dodText);
+  VRF.last=out;saveVrf();
+  try{logEvent('verify',{state:out.verdict.state,passed:out.verdict.passed,
+    failed:out.verdict.failed,unproven:out.verdict.unproven});}catch(_){}
+  if(!VRF.gate)return{allow:true,out,why:'the exit gate is switched off'};
+  return{allow:out.verdict.state==='pass',out,
+    why:out.verdict.state==='pass'?'every criterion checked and passing':out.verdict.summary};
+}
+
+function trigRender(){
+  const host=$('#trig-panel');if(!host)return;
+  const srcRows=TRIG_SOURCES.map(s=>
+    `<div class="lx-kind"><b>${s.icon} ${esc(s.label)}${s.ok===false?' — unavailable':''}</b>
+      <span>${esc(s.note)}</span></div>`).join('');
+  const ruleRows=TRIG_RULES.map(r=>{
+    const on=trigArmed(r.id),auto=trigAuto(r.id);
+    const src=trigSource(r.source);
+    return `<div class="lx-item">
+      <button class="lx-hit" data-trigarm="${esc(r.id)}"
+        aria-label="${on?'Disarm':'Arm'} the rule: ${esc(r.label)}"
+        title="${on?'Disarm':'Arm'} this rule">
+        <span class="lx-ico">${on?'◉':'○'}</span>
+        <span class="lx-meta"><b>${esc(r.label)}</b>
+          <span class="mini muted">${src?src.icon+' '+esc(src.label):esc(r.source)} · then: ${esc(r.action)}</span></span>
+      </button>
+      <button class="btn ghost small${auto?' on':''}" data-trigauto="${esc(r.id)}"
+        aria-label="${esc(r.label)}: ${auto?'runs by itself, click to make it ask first'
+          :'asks first, click to let it run by itself'}"
+        title="${auto?'Runs by itself. Click to make it ask first.':'Asks first. Click to let it run by itself.'}"
+        >${auto?'auto':'asks'}</button>
+    </div>`;}).join('');
+  const fired=(TRIG.fired||[]).slice(0,8);
+  host.innerHTML=`<div class="card">
+    <h3>⏱ Triggers — what starts work without you</h3>
+    <p class="help">The app's own harness audit calls this its thinnest layer, and it is right:
+      take away the update poll and nothing here starts unless you press something. These rules
+      watch what the app already emits. <b>Every rule proposes by default</b> — switch one to
+      <i>auto</i> only when you would be happy for it to act while you are not looking.</p>
+    <div class="row" style="margin-top:10px;align-items:center;gap:10px">
+      <button class="btn ${TRIG.on?'':'good'}" id="trig-onoff">${TRIG.on?'Switch triggers off':'Switch triggers on'}</button>
+      <span class="mini muted">${TRIG.on?'armed — '+(TRIG.seen||0)+' event(s) seen this session'
+        :'off — nothing is being watched'}</span>
+    </div>
+    <div style="margin-top:12px">${ruleRows}</div>
+    ${fired.length?`<h4 style="margin:16px 0 6px;font-size:12.5px">What fired</h4>
+      <div class="lx-log" style="max-height:150px">${fired.map(f=>
+        `<div class="lx-line info"><span>${esc(String(f.at).replace('T',' ').slice(5,16))}</span>
+         <code>${esc(f.label)} — ${f.auto?'ran':'proposed'}</code></div>`).join('')}</div>`
+      :'<p class="help" style="margin-top:12px">Nothing has fired yet.</p>'}
+    <h4 style="margin:18px 0 6px;font-size:12.5px">Where events come from</h4>
+    <div class="lx-kinds">${srcRows}</div>
+  </div>`;
+  $$('[data-trigarm]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.trigarm;
+    TRIG.armed[id]=TRIG.armed[id]===false;saveTrig();trigRender();});
+  $$('[data-trigauto]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.trigauto;
+    TRIG.auto[id]=!TRIG.auto[id];saveTrig();trigRender();
+    if(TRIG.auto[id])toast('"'+trigRule(id).label+'" will now act by itself',4000);});
+  const t=$('#trig-onoff');
+  if(t)t.onclick=()=>{TRIG.on=!TRIG.on;saveTrig();if(TRIG.on)trigInit();trigRender();
+    toast(TRIG.on?'Triggers armed':'Triggers off',2600);};
+}
+
+function vrfRender(){
+  const host=$('#vrf-panel');if(!host)return;
+  const last=VRF.last;
+  const v=last&&last.verdict;
+  const tone=v?(v.state==='pass'?'ok':v.state==='fail'?'bad':''):'';
+  host.innerHTML=`<div class="card">
+    <h3>✓ Verify before exit — nothing declares itself finished unchecked</h3>
+    <p class="help">The definition of done already has to exist before a swarm may start. This is
+      the other end of it. The distinction that makes it worth having:
+      <b>passed, failed and unproven are three outcomes, not two</b> — a criterion nobody checked
+      has not passed, and calling it fine is exactly how work gets reported done at eighty per cent.</p>
+    <div class="row" style="margin-top:10px;align-items:center;gap:10px">
+      <label class="chip"><input type="checkbox" id="vrf-gate"${VRF.gate?' checked':''} style="margin:0"
+        aria-label="Block a run from reporting finished until every criterion has been checked">
+        block "done" until every criterion is checked</label>
+    </div>
+    <label class="field" style="margin-top:10px">Definition of done — one criterion per line
+      <textarea id="vrf-dod" rows="5" class="mono" aria-label="Definition of done, one criterion per line"
+        placeholder="the gauntlet is green&#10;#lx-frame is on screen&#10;no console errors during the run"
+        >${esc((OPS&&OPS.swarm&&OPS.swarm.contract)||'')}</textarea></label>
+    <div class="row" style="margin-top:8px;gap:8px">
+      <button class="btn" id="vrf-run">Check it now</button>
+      <span class="mini muted" id="vrf-sum">${v?esc(v.summary):''}</span>
+    </div>
+    ${last?`<div class="pipe-warn ${tone}" style="margin-top:12px">
+      <b>${v.state==='pass'?'Passed':v.state==='fail'?'Failed':'Unproven'}</b> —
+      ${v.passed} checked and passing · ${v.failed} failed · ${v.unproven} not checked
+    </div>
+    <div class="lx-log" style="max-height:220px;margin-top:8px">${last.results.map(r=>
+      `<div class="lx-line ${r.unproven?'warn':r.ok?'info':'error'}">
+        <span>${r.unproven?'?':r.ok?'pass':'fail'}</span>
+        <code>${esc(r.text)}<br><i style="opacity:.7">${esc(r.detail)}</i></code></div>`).join('')}</div>`:''}
+    <h4 style="margin:18px 0 6px;font-size:12.5px">What can be settled without a model</h4>
+    <div class="lx-kinds">${VRF_CHECKS.map(c=>
+      `<div class="lx-kind"><b>${esc(c.label)}</b><span>Recognised when a criterion mentions it, and
+        checked directly — no model, no cost, no opinion.</span></div>`).join('')}</div>
+  </div>`;
+  const g2=$('#vrf-gate');
+  if(g2)g2.onchange=()=>{VRF.gate=g2.checked;saveVrf();};
+  const r=$('#vrf-run');
+  if(r)r.onclick=()=>{
+    const txt=(($('#vrf-dod')||{}).value)||'';
+    const problem=(typeof dodProblem==='function')?dodProblem(txt):null;
+    if(problem)return toast(problem,6500);
+    vrfGateExit(txt);vrfRender();
+  };
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────────
+   I nearly added a global reduced-motion rule here, having counted 14 keyframes, 15 `animation:`
+   uses and 29 transitions against 11 media blocks and concluded there was a gap. There was not.
+   A global policy already existed — `[data-motion="off"]` for the app's own setting and a
+   `prefers-reduced-motion` block for the OS one, both using the near-zero-duration form rather
+   than `animation:none` so that animationend still fires. The 11 blocks are additions on top of
+   it, not the whole of it. Counting blocks was a proxy for reading them, and the proxy lied.
+
+   What this function does instead is report, so the next person measures rather than counts. */
+function motionAudit(){
+  let kf=0,anim=0,trans=0,covered=0;
+  try{
+    for(const sheet of document.styleSheets){
+      let rules;try{rules=sheet.cssRules;}catch(_){continue;}   // a cross-origin sheet is not readable
+      for(const r of rules){
+        if(r.type===7/*KEYFRAMES*/)kf++;
+        else if(r.type===4/*MEDIA*/){
+          if(/prefers-reduced-motion/.test(r.conditionText||''))covered++;
+          for(const s of (r.cssRules||[])){
+            if(s.style&&s.style.animationName)anim++;
+            if(s.style&&s.style.transition)trans++;
+          }
+        }else if(r.style){
+          if(r.style.animationName)anim++;
+          if(r.style.transition||r.style.transitionDuration)trans++;
+        }
+      }
+    }
+  }catch(_){}
+  const reduced=(()=>{try{return matchMedia('(prefers-reduced-motion:reduce)').matches;}catch(_){return false;}})();
+  return{keyframes:kf,animations:anim,transitions:trans,reducedMotionBlocks:covered,
+    userPrefersReduced:reduced,
+    /* The global rule is what makes this honest: coverage is no longer a count of hand-written
+       exceptions, it is all of them. */
+    global:true};
+}
+
 const HARNESS_LAYERS=[
   {id:'trigger',label:'Trigger',icon:'⏱',
    asks:'Does work start from an event, rather than a person pressing a button?',
@@ -14735,6 +15230,14 @@ const HARNESS_LAYERS=[
      if(typeof LH!=='undefined'&&LH&&LH.on)ev.push('long-horizon runner on');
      if(typeof PERSIST!=='undefined'&&PERSIST&&PERSIST.auto)ev.push('backup timer every '+PERSIST.everyMin+'m');
      if(typeof PWA!=='undefined')ev.push('update poll every 30m');
+     /* Armed RULES, not merely present capability. A trigger switched off starts nothing, and
+        counting it would make this layer look healthier than it is — which is the one thing an
+        audit must never do. */
+     if(typeof TRIG!=='undefined'&&TRIG.on){
+       const armed=(typeof TRIG_RULES!=='undefined'?TRIG_RULES:[]).filter(r=>trigArmed(r.id));
+       if(armed.length)ev.push(armed.length+' armed trigger rule(s) across '+
+         new Set(armed.map(r=>r.source)).size+' event source(s)');
+     }
      return{n:ev.length,evidence:ev};
    }},
   {id:'orchestration',label:'Orchestration',icon:'↻',
@@ -25901,6 +26404,73 @@ function gauntletCases(g){
       return /script-src[^;]*\*/.test(csp)?'wide-open':'bounded';
     },antiExpect:v=>v==='bounded'});
 
+  /* ── TRIGGERS AND THE EXIT GATE ───────────────────────────────────────────
+     Both are guards, and a guard that never fires is worse than no guard because it reads as a
+     clean bill of health. Every case below is aimed at exactly that failure. */
+
+  /* The first version of the suite-red rule watched for an `error` event carrying "gauntlet" —
+     and no such event is ever emitted; gauntletRun reports through notify2 and storage. It would
+     have sat silent forever while looking armed. */
+  add({id:'trig-watches-real-signals',sub:'triggers',uses:['TRIG_RULES','TRIG_SOURCES','trigMatch'],
+    what:'every rule watches a source that exists and a signal that is really produced',
+    run:()=>{
+      const bad=g.TRIG_RULES.filter(r=>!g.TRIG_SOURCES.some(s=>s.id===r.source)).map(r=>r.id);
+      if(bad.length)return 'unknown source: '+bad.join(',');
+      const before=store.get('gauntletLast',null);
+      store.set('gauntletLast',{green:false,total:1,failed:1,ts:''});
+      const fires=g.trigMatch('suite-red',{source:'tick',kind:'tick',data:{}});
+      store.set('gauntletLast',{green:true,total:1,failed:0,ts:''});
+      const quiet=g.trigMatch('suite-red',{source:'tick',kind:'tick',data:{}});
+      if(before===null)store.set('gauntletLast',null);else store.set('gauntletLast',before);
+      return (fires?'fires':'silent')+'/'+(quiet?'fires':'silent');
+    },expect:v=>v==='fires/silent',
+    antiWhat:'and a rule does not answer to an event from a different source',
+    anti:()=>g.TRIG_RULES.filter(r=>
+      g.trigMatch(r.id,{source:'__nosuch__',kind:'tick',data:{}})).length,
+    antiExpect:v=>v===0});
+
+  /* A trigger with no rate limit fires on every tick of a condition that stays true, which is
+     indistinguishable from the app malfunctioning. */
+  add({id:'trig-rate-limited',sub:'triggers',uses:['trigShouldFire','trigRule'],
+    what:'a rule that just fired is held off until its gap has passed',
+    run:()=>{
+      const r=g.trigRule('went-offline');
+      const ev={source:'network',kind:'offline',data:{},at:0};
+      const first=g.trigShouldFire(r,ev,1000000,0);
+      const again=g.trigShouldFire(r,ev,1000000,999000);
+      return (first.fire?'y':'n')+(again.fire?'y':'n');
+    },expect:v=>v==='yn',
+    antiWhat:'and it is allowed again once the gap really has passed',
+    anti:()=>{
+      const r=g.trigRule('went-offline');
+      const ev={source:'network',kind:'offline',data:{},at:0};
+      return g.trigShouldFire(r,ev,1000000,1000000-(r.minGapMs+1)).fire?'allowed':'stuck';
+    },antiExpect:v=>v==='allowed'});
+
+  /* THE point of the exit gate. Collapsing "nobody checked" into "fine" is how work gets
+     reported done at eighty per cent, and it is the one thing this module exists to prevent. */
+  add({id:'vrf-unproven-is-not-pass',sub:'triggers',uses:['vrfVerdict','vrfPlan'],
+    what:'a criterion nobody checked blocks, and is never counted as passing',
+    run:()=>{
+      const v=g.vrfVerdict([{ok:true,unproven:false},{ok:false,unproven:true}]);
+      return v.state+':'+v.passed+'/'+v.unproven;
+    },expect:v=>v==='unproven:1/1',
+    antiWhat:'and a set that genuinely was all checked and passing does say pass',
+    anti:()=>g.vrfVerdict([{ok:true,unproven:false},{ok:true,unproven:false}]).state,
+    antiExpect:v=>v==='pass'});
+
+  /* If the classifier called everything "judged" the mechanical half would silently vanish and
+     every verdict would be unproven — technically honest, completely useless. */
+  add({id:'vrf-plan-discriminates',sub:'triggers',uses:['vrfPlan'],
+    what:'criteria a machine can settle are routed to a mechanical check',
+    run:()=>{
+      const p=g.vrfPlan('the gauntlet is green\n#tabs is on screen\nit should feel responsive');
+      return p.map(x=>x.kind).join(',');
+    },expect:v=>v==='mechanical,mechanical,judged',
+    antiWhat:'and a vague criterion is not quietly claimed by a check that cannot settle it',
+    anti:()=>g.vrfPlan('make it nicer to use').filter(x=>x.kind==='mechanical').length,
+    antiExpect:v=>v===0});
+
   /* ── 3D ASSET FOUNDRY ─────────────────────────────────────────────────────
      The central rule of the whole formula is that geometry and texture are separate passes, and
      the way it silently breaks is surface words leaking into the geometry prompt — which does
@@ -28548,6 +29118,13 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'vrf-unproven-counts-as-pass',export:'vrfVerdict',
+   why:'a run declares itself finished on criteria nobody ever checked',
+   broken:()=>rs=>({state:rs.some(r=>!r.ok&&!r.unproven)?'fail':'pass',
+     passed:rs.length,failed:0,unproven:0,total:rs.length,summary:'ok'})},
+  {id:'trig-never-rate-limits',export:'trigShouldFire',
+   why:'a condition that stays true fires its rule on every single tick',
+   broken:()=>()=>({fire:true,why:'always'})},
   {id:'react-forgets-it-already-tried-that',export:'reactDecide',
    why:'the loop re-issues the same action until the step ceiling, which is ReAct\u2019s signature failure',
    broken:()=>(p,names)=>p.final!=null?{done:true,answer:p.final}
@@ -30914,7 +31491,8 @@ function renderHarnessHealth(){
 let LOCAL_SCAN=null,LOCAL_BUSY='';
 function renderLocal(){
   const host=$('#local-panel');if(!host)return;
-  setTimeout(()=>{renderGhostty();renderHarnessHealth();renderNotify();renderGauntlet();},0);
+  setTimeout(()=>{renderGhostty();renderHarnessHealth();renderNotify();renderGauntlet();
+    try{trigRender();vrfRender();}catch(_){}},0);
   const plat=platformGuess();
   const platName={mac:'macOS',win:'Windows',linux:'Linux',unknown:'this system'}[plat];
   const bridged=!!BRIDGE_INFO;
@@ -50451,7 +51029,7 @@ async function persistInit(){
    worker updating is NOT the same thing as the user seeing the new app: clients.claim() makes
    a new worker control the page, but the HTML already parsed keeps running until something
    reloads it. This is what lets the app notice and say so. */
-const APP_BUILD='e60c91037a2a42f9';
+const APP_BUILD='97dc2db8a53d985b';
 const PWA={reg:null,state:'unknown',why:'',prompt:null,update:null,checking:false,lastCheck:0};
 
 /* ── Staying current, which is the whole problem on iOS ──────────────────────
@@ -54479,6 +55057,12 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     esc,GAUNTLET_VERSION,gauntletCases,gauntletBuild,gauntletRun,gauntletFileMark,gauntletStale,
     GAUNTLET_SABOTAGE,gauntletSabotage,gauntletReport,renderGauntlet,gauntletHtml,
     get GAUNTLET_LAST(){return GAUNTLET_LAST},set GAUNTLET_LAST(v){GAUNTLET_LAST=v},
+    TRIG_SOURCES,trigSource,TRIG_RULES,trigRule,TRIG_DEFAULTS,
+    get TRIG(){return TRIG},set TRIG(v){TRIG=v},saveTrig,trigArmed,trigAuto,
+    trigShouldFire,trigMatch,trigEmit,trigFire,trigInit,trigRender,
+    VRF_CHECKS,vrfPlan,vrfVerdict,vrfRun,vrfGateExit,vrfWatch,vrfRender,
+    get VRF(){return VRF},set VRF(v){VRF=v},saveVrf,VRF_DEFAULTS,
+    get VRF_ERRORS(){return VRF_ERRORS},set VRF_ERRORS(v){VRF_ERRORS=v},motionAudit,
     CATALOG_DEAD_FIELDS,catalogSlim,
     /* Getters, not plain references: these are reassigned wholesale by mergeCatalog/syncOllama,
        and a plain property would hand out a snapshot taken at boot — permanently empty. */
