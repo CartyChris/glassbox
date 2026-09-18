@@ -2172,7 +2172,27 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
 .lx-kind b{display:block;font-size:12.5px;margin-bottom:3px}
 .lx-kind span{font-size:11px;color:var(--ink3);line-height:1.5}
 @media(max-width:720px){.lx-kinds{grid-template-columns:1fr}}
-
+/* goTo's landing flash: an outline, not a layout change, so nothing shifts under the cursor. */
+.goto-flash{outline:2px solid var(--acc);outline-offset:3px;border-radius:var(--radius);
+  animation:gotoFlash 1.8s ease-out}
+@keyframes gotoFlash{0%{box-shadow:0 0 0 6px color-mix(in oklab,var(--acc) 35%,transparent)}
+  100%{box-shadow:0 0 0 0 transparent}}
+#navpills{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:95;
+  display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.navpill{pointer-events:auto;display:inline-flex;align-items:center;gap:10px;border-radius:999px;
+  padding:9px 12px 9px 14px;background:var(--panel);border:1px solid var(--acc);color:var(--ink);
+  box-shadow:0 10px 30px rgba(0,0,0,.35);font-weight:600;font-size:12.5px;
+  transition:opacity .25s,transform .25s}
+.navpill:hover{background:var(--panel2)}
+.navpill.out{opacity:0;transform:translateY(8px)}
+.navpill .np-go{color:var(--acc);white-space:nowrap}
+.wtb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:7px}
+.wtb-item{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:9px;
+  border:1px solid var(--edge);background:var(--bg);text-decoration:none;color:var(--ink)}
+.wtb-item:hover{border-color:var(--acc)}
+.wtb-item span{font-size:11px;color:var(--ink3)}
+.cu-run{border:1px solid var(--edge);border-radius:9px;padding:6px 10px;margin-top:6px}
+.cu-run summary{cursor:pointer;font-size:12px}
 
 </style>
 </head>
@@ -2250,6 +2270,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
     <button class="tab" data-view="models">📚 Catalog</button>
     <button class="tab" data-view="history">🗄️ History</button>
     <button class="tab" data-view="awards">🏆 Awards</button>
+    <button class="tab" data-view="jev">⚡ Jev</button>
     <button class="tab" data-view="launch">📲 Launcher</button>
     <button class="tab" data-view="webos">🪟 WebOS</button>
     <button class="tab" data-view="connect">🔗 Connections</button>
@@ -5292,6 +5313,9 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
     <section class="view" id="view-awards"><div class="wrap">
       <div id="aw-panel"></div>
     </div></section>
+
+    <!-- ============ JEV DASHBOARD ============ -->
+    <section class="view" id="view-jev"><div class="wrap"><div id="jev-panel"></div></div></section>
 
     <!-- ============ LAUNCHER ============ -->
     <section class="view" id="view-launch"><div class="wrap">
@@ -9812,7 +9836,7 @@ async function a3dPlace(id){
     toast('That asset’s bytes are gone from storage — removing the entry',4200);
     A3D.items=(A3D.items||[]).filter(x=>x.id!==id);saveA3D();a3dRenderPanel();return;
   }
-  goEnsure('three','it is where the asset gets placed');
+  goTo('three','#ed3-frame','it is where the asset gets placed');
   const nm=((it&&it.name)||'asset').replace(/[^\w -]+/g,'')+'.glb';
   if(typeof ed3Send==='function'){
     ed3Send('import',{name:nm,dataUrl:d.glb});
@@ -14737,6 +14761,955 @@ async function reactRun(task,opts){
    Deliberately NOT a score out of ten. A number that cannot be traced to a count is the kind of
    reassurance this whole idea exists to replace. */
 
+
+/* ═══════════════════ NATIVE TOOL-CALLING ═══════════════════
+   An opt-in path alongside the text protocol, not a replacement for it.
+
+   Everything in this app has called tools by TEXT — `===USE TOOL===` blocks and ReAct's
+   `Action:` lines — because the wire format differs per provider and local models often expose
+   none. That was a choice, and it stays the default. What this adds is the other half: for a
+   model that genuinely supports it, send `tools` and read `tool_calls` back instead of hoping
+   the model reproduces a format from a system prompt.
+
+   Checked against OpenRouter's own documentation, not recalled:
+     request   tools:[{type:'function',function:{name,description,parameters}}], tool_choice
+     response  choices[0].message.tool_calls[] = {id, type:'function',
+               function:{name, arguments}} — and `arguments` is a JSON STRING, not an object
+     result    {role:'tool', tool_call_id, content}
+     and OpenRouter normalises Anthropic models to this same shape, so one parser covers the
+     providers this app routes through it.
+
+   Three decisions worth defending:
+
+   1. NON-STREAMING FOR TOOL TURNS. Streamed tool arguments arrive as fragments that must be
+      reassembled by position, and the position field does not mean the same thing on every
+      wire. A tool turn is short and its value is the complete call, so asking for the whole
+      message removes that entire class of bug instead of handling it carefully.
+
+   2. DISPATCH ON THE PRESENCE OF tool_calls, NEVER ON finish_reason. Providers disagree about
+      what finish_reason says when a message carries calls; the calls themselves do not lie.
+
+   3. UNKNOWN MODELS GET THE TEXT PROTOCOL. The existing `supports()` answers true for a model
+      it has never heard of, which is the right default for temperature and the wrong one here:
+      a hand-typed model id sent a `tools` field can refuse the request or ignore the field
+      silently, and silent is the dangerous case. */
+
+const NT_DEFAULTS={on:false,choice:'auto',parallel:false};
+let NT=Object.assign({},NT_DEFAULTS,store.get('nativetools',{}));
+const saveNT=()=>store.set('nativetools',NT);
+
+/* Stricter than supports(): only a model the catalogue KNOWS advertises tools. */
+function ntCapable(model){
+  const m=(typeof CATMAP!=='undefined'&&CATMAP.get)?CATMAP.get(model):null;
+  if(!m)return false;
+  return (m.supported_parameters||[]).includes('tools');
+}
+
+/* OpenAI-shaped function names must match ^[a-zA-Z0-9_-]{1,64}$. MCP servers routinely advertise
+   names with dots and slashes, so the sanitised name is paired with the original and every call
+   is mapped back before dispatch — sending `github.search` as-is would be rejected outright. */
+const ntSafeName=n=>String(n||'tool').replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,64)||'tool';
+function ntSchema(tools){
+  const map={},out=[],used=new Set();
+  (tools||[]).forEach(t=>{
+    let safe=ntSafeName(t.name),k=2;
+    while(used.has(safe))safe=ntSafeName(t.name).slice(0,60)+'_'+(k++);
+    used.add(safe);map[safe]=t.name;
+    const params=(t.schema&&typeof t.schema==='object'&&t.schema.type)?t.schema
+      :{type:'object',properties:{}};
+    out.push({type:'function',function:{name:safe,
+      description:String(t.description||'').slice(0,1024),parameters:params}});
+  });
+  return{tools:out,map};
+}
+/* PURE. Reads calls out of an assistant message. `arguments` is a STRING on this wire, and a
+   model that emits malformed JSON must produce a reported error, not a thrown one — a throw here
+   would end the whole loop over one bad call. */
+function ntParseCalls(message,map){
+  const calls=(message&&Array.isArray(message.tool_calls))?message.tool_calls:[];
+  return calls.map(c=>{
+    const fn=(c&&c.function)||{};
+    const safe=String(fn.name||'');
+    let args={},argError='';
+    const raw=fn.arguments;
+    if(raw&&typeof raw==='object')args=raw;                  // some local servers send an object
+    else if(typeof raw==='string'&&raw.trim()){
+      try{args=JSON.parse(raw);}catch(e){argError='arguments were not valid JSON: '+e.message;}
+    }
+    return{id:String((c&&c.id)||''),name:(map&&map[safe])||safe,safe,args,argError};
+  });
+}
+async function ntComplete(req){
+  const r=routeFor(req.model);
+  const body={model:r.model,messages:req.messages,stream:false,
+    max_tokens:req.maxTokens||900};
+  if(req.tools&&req.tools.length){
+    body.tools=req.tools;
+    body.tool_choice=req.choice||NT.choice||'auto';
+    if(NT.parallel===false)body.parallel_tool_calls=false;
+  }
+  const ctl=new AbortController();
+  /* DL_WORK, the existing long-work tier, rather than a number invented here. */
+  const timer=setTimeout(()=>ctl.abort(),typeof DL_WORK!=='undefined'?DL_WORK:180000);
+  try{
+    const res=await fetch(r.url,{method:'POST',headers:r.headers,body:JSON.stringify(body),
+      signal:req.signal||ctl.signal});
+    const txt=await res.text();
+    if(!res.ok)throw new Error('HTTP '+res.status+(txt?' — '+txt.slice(0,240):''));
+    const j=JSON.parse(txt);
+    const ch=(j.choices&&j.choices[0])||{};
+    return{message:ch.message||{},finish:ch.finish_reason||'',usage:j.usage||null};
+  }finally{clearTimeout(timer);}
+}
+/* The native loop. Same contract as reactRun — task in, {ok, answer, steps} out — so a caller
+   can switch transport without changing anything else. */
+async function reactRunNative(task,opts){
+  const o=opts||{};
+  const model=o.model||settings.archModel||settings.buildModel;
+  if(!model)return{ok:false,error:'no model selected'};
+  if(!o.force&&!ntCapable(model))
+    return{ok:false,error:model+' does not advertise native tool-calling in the catalogue — '+
+      'use the text protocol (reactRun), or pass {force:true} if you know it supports tools'};
+  const cat=o.tools||(typeof toolCatalog==='function'?toolCatalog():[]);
+  const{tools,map}=ntSchema(cat);
+  const maxSteps=o.maxSteps||(typeof REACT_MAX_STEPS!=='undefined'?REACT_MAX_STEPS:8);
+  const complete=(typeof o.complete==='function')?o.complete:ntComplete;
+  const messages=[{role:'system',content:o.system||
+      'Use the provided tools when they help. When you have the answer, reply with it plainly.'},
+    {role:'user',content:String(task)}];
+  const steps=[];
+  logEvent('react',{phase:'start',transport:'native',task:String(task).slice(0,300),model,tools:tools.length});
+  for(let i=0;i<maxSteps;i++){
+    let out;
+    try{out=await complete({model,messages,tools,maxTokens:o.maxTokens,signal:o.signal});}
+    catch(e){steps.push({i,error:'the model call failed: '+(e&&e.message||e)});
+      return{ok:false,steps,error:steps[steps.length-1].error,transport:'native'};}
+    const msg=out.message||{};
+    const calls=ntParseCalls(msg,map);
+    /* Presence of calls decides, not finish_reason — see the header. */
+    if(!calls.length){
+      const answer=String(msg.content||'').trim();
+      steps.push({i,final:true,finish:out.finish});
+      logEvent('react',{phase:'final',transport:'native',steps:steps.length});
+      return{ok:!!answer,answer,steps,transport:'native',
+        error:answer?'':'the model stopped without an answer or a tool call'};
+    }
+    /* The assistant turn has to go back VERBATIM, calls included — the provider matches every
+       tool result to a call id it issued, and a result with no matching call is rejected. */
+    messages.push({role:'assistant',content:msg.content||null,tool_calls:msg.tool_calls});
+    for(const c of calls){
+      let result;
+      if(c.argError)result={ok:false,error:c.argError};
+      else{try{result=await toolInvoke(c.name,c.args);}catch(e){result={ok:false,error:String(e&&e.message||e)};}}
+      const content=result&&result.ok
+        ?String(typeof result.result==='string'?result.result:JSON.stringify(result.result)).slice(0,
+          typeof REACT_OBS_CAP!=='undefined'?REACT_OBS_CAP:1200)
+        :'ERROR: '+((result&&result.error)||'the tool failed');
+      messages.push({role:'tool',tool_call_id:c.id,content});
+      steps.push({i,action:c.name,args:c.args,ok:!!(result&&result.ok),observation:content.slice(0,300)});
+      logEvent('tool-call',{transport:'native',tool:c.name,ok:!!(result&&result.ok)});
+    }
+  }
+  return{ok:false,steps,transport:'native',error:'hit the step ceiling ('+maxSteps+') without an answer'};
+}
+/* One entry point that picks the transport, so callers never have to know which is in use. */
+function reactAuto(task,opts){
+  const o=opts||{};
+  const model=o.model||settings.archModel||settings.buildModel;
+  return (NT.on&&ntCapable(model))?reactRunNative(task,o):reactRun(task,o);
+}
+
+/* ═══════════════════ JEV — TYPED DECISIONS ═══════════════════
+   Jev (TypeSafe) is a "System One" model: it does not write text. You hand it your program's state
+   and a TYPED question, and it returns a typed answer with a probability attached — in a few hundred
+   milliseconds, at $0.042 per million input tokens with output free.
+
+   Verified against the system that owns it, not against coverage of it:
+     • endpoint   POST https://openrouter.ai/api/alpha/decisions — answers 401, not 404, and its
+                  preflight returns access-control-allow-origin: *, so it runs straight from
+                  this page with the OpenRouter key already configured.
+     • NOT on the chat-completions endpoint, and NOT in OpenRouter's public /models catalogue
+       (0 of 445 when checked) — which is why nothing in this app's model picker could ever reach
+       it, and why it needs its own adapter rather than a model id.
+     • types, from OpenRouter's API reference: `choice` (criteria is an OBJECT of option →
+       guidance), `score` (criteria is an ordered ARRAY), and `noul` for yes/no — whose criteria
+       MUST carry both a `true` and a `false` key.
+   Two secondary write-ups disagreed on that last name — one says `null`, one says `noul`. Only the
+   API reference settles it, and `null` would have failed every yes/no call.
+
+   THE FAILURE MODE THIS WHOLE MODULE IS SHAPED AROUND. Tested independently: when the right answer
+   is not among the options, Jev does not abstain — it picks a wrong option WITH CONFIDENCE. It
+   cannot return something off-schema, which is true and useful, but that is not the same as being
+   right, and coverage calling it a model that "never hallucinates" blurs exactly that line. So:
+     1. every `choice` question gets an explicit escape option unless the caller proves the list
+        is exhaustive, and
+     2. an answer is only ACTED on above a confidence floor — below it, the decision defers to a
+        frontier model. That is the confidence-gated router pattern, and it is the difference
+        between a cheap decision and a cheap mistake. */
+
+const JEV_URL='https://openrouter.ai/api/alpha/decisions';
+const JEV_MODEL='~typesafe/jev-latest';
+const JEV_ESCAPE='none_of_these';
+const JEV_DEFAULTS={on:false,floor:0.72,log:[],spent:0,calls:0};
+let JEV=Object.assign({},JEV_DEFAULTS,store.get('jev',{}));
+const saveJev=()=>{if(JEV.log.length>200)JEV.log.length=200;store.set('jev',JEV);};
+
+/* PURE. Validates one question against the published schema and normalises it. Returns
+   {ok, q} or {ok:false, error} — a malformed question is caught here, where the message can say
+   which rule it broke, rather than coming back from the API as an opaque 400. */
+function jevQuestion(q,opts){
+  const o=opts||{};
+  if(!q||typeof q!=='object')return{ok:false,error:'a question must be an object'};
+  const type=q.type;
+  if(['choice','score','noul'].indexOf(type)<0)
+    return{ok:false,error:'type must be choice, score or noul — got '+JSON.stringify(type)};
+  const out={type,instructions:q.instructions||''};
+  if(!out.instructions)return{ok:false,error:'every question needs instructions'};
+  if(type==='noul'){
+    const c=q.criteria||{};
+    if(!c['true']||!c['false'])
+      return{ok:false,error:'a noul (yes/no) question needs BOTH criteria.true and criteria.false'};
+    out.criteria={'true':c['true'],'false':c['false']};
+  }else if(type==='score'){
+    if(!Array.isArray(q.criteria)||!q.criteria.length)
+      return{ok:false,error:'a score question needs criteria as an ordered, non-empty array of levels'};
+    out.criteria=q.criteria.slice();
+  }else{
+    const c=Object.assign({},q.criteria||{});
+    const keys=Object.keys(c);
+    if(keys.length<1)return{ok:false,error:'a choice question needs at least one option'};
+    if(keys.length>254)return{ok:false,error:'a choice question takes at most 255 options'};
+    /* The escape hatch. Without it, "none of the above" is not an answerable question, and the
+       model will answer something else instead. */
+    if(!o.exhaustive&&!(JEV_ESCAPE in c))
+      c[JEV_ESCAPE]='None of the other options genuinely fits. Choose this rather than the '+
+        'closest wrong one.';
+    out.criteria=c;
+  }
+  return{ok:true,q:out};
+}
+function jevBody(state,questions,opts){
+  const o=opts||{},qs={},errors=[];
+  Object.keys(questions||{}).forEach(name=>{
+    const v=jevQuestion(questions[name],o);
+    if(v.ok)qs[name]=v.q;else errors.push(name+': '+v.error);
+  });
+  if(errors.length)return{ok:false,error:errors.join('; ')};
+  if(!Object.keys(qs).length)return{ok:false,error:'no questions to ask'};
+  const body={model:o.model||JEV_MODEL,state:state==null?{}:state,questions:qs};
+  if(o.session)body.session_id=String(o.session).slice(0,256);
+  return{ok:true,body};
+}
+/* PURE. One shape out regardless of question type, so callers never branch on it. */
+function jevParse(json){
+  const ans=(json&&json.answers)||{},out={};
+  Object.keys(ans).forEach(name=>{
+    const a=ans[name]||{};
+    const type=a.type||(a.choice!=null?'choice':a.noul!=null?'noul':a.score!=null?'score':'');
+    const value=type==='choice'?a.choice:type==='noul'?a.noul:a.score;
+    /* For a yes/no answer the probability IS the confidence in whichever side it leans. */
+    const conf=a.confidence!=null?+a.confidence
+      :type==='noul'&&typeof a.noul==='number'?Math.max(a.noul,1-a.noul):null;
+    out[name]={type,value,confidence:conf,probabilities:a.probabilities||null,legend:a.legend||null};
+  });
+  const u=(json&&json.usage)||{};
+  return{answers:out,usage:{input:u.input_tokens||0,output:u.output_tokens||0,cost:u.cost||0}};
+}
+/* PURE. The gate. `act` only when the answer is above the floor AND is not the escape option. */
+function jevGate(answer,floor){
+  const f=floor==null?JEV.floor:floor;
+  if(!answer)return{act:false,why:'no answer'};
+  if(answer.type==='choice'&&answer.value===JEV_ESCAPE)
+    return{act:false,defer:true,why:'none of the options fitted — hand this to a model that can reason about it'};
+  const c=answer.confidence;
+  if(c==null)return{act:false,defer:true,why:'no confidence was returned, so there is nothing to gate on'};
+  if(c<f)return{act:false,defer:true,why:'confidence '+c.toFixed(2)+' is under the '+f.toFixed(2)+' floor'};
+  return{act:true,why:'confidence '+c.toFixed(2)};
+}
+async function jevDecide(state,questions,opts){
+  const o=opts||{};
+  const b=jevBody(state,questions,o);
+  if(!b.ok)return{ok:false,error:b.error};
+  const key=(typeof API_KEY!=='undefined'&&API_KEY)||'';
+  if(!key&&!o.transport)return{ok:false,error:'Jev runs through OpenRouter — add an OpenRouter key in Settings first'};
+  const t0=performance.now();
+  const call=o.transport||(async body=>{
+    const ctl=new AbortController();
+    const timer=setTimeout(()=>ctl.abort(),typeof DL_API!=='undefined'?DL_API:20000);
+    try{
+      const r=await fetch(JEV_URL,{method:'POST',signal:o.signal||ctl.signal,
+        headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json',
+          'X-Title':(settings&&settings.title)||'Glassbox Jet'},body:JSON.stringify(body)});
+      const txt=await r.text();
+      if(!r.ok)throw new Error('HTTP '+r.status+(txt?' — '+txt.slice(0,240):''));
+      return JSON.parse(txt);
+    }finally{clearTimeout(timer);}
+  });
+  let json;
+  try{json=await call(b.body);}
+  catch(e){jevRecord({purpose:o.purpose||'decision',error:e.message,questions:Object.keys(questions)});
+    return{ok:false,error:e.message};}
+  const p=jevParse(json);
+  const ms=Math.round(performance.now()-t0);
+  jevRecord({purpose:o.purpose||'decision',ms,answers:p.answers,usage:p.usage,questions:Object.keys(questions)});
+  return{ok:true,ms,answers:p.answers,usage:p.usage};
+}
+function jevRecord(r){
+  const rec=Object.assign({at:nowISO()},r);
+  JEV.log=[rec].concat(JEV.log||[]);JEV.calls=(JEV.calls||0)+1;
+  if(r.usage&&r.usage.cost)JEV.spent=(JEV.spent||0)+r.usage.cost;
+  saveJev();
+  try{logEvent('jev',{purpose:rec.purpose,ms:rec.ms||0,ok:!r.error});}catch(_){}
+  if(typeof jevRenderLog==='function')try{jevRenderLog();}catch(_){}
+}
+
+/* ── The four uses elvis (@omarsar0) names, built as primitives ──────────────
+   He reports the first three as the high-ROI ones. Each is a thin, typed wrapper over jevDecide,
+   and each GATES — none of them acts on a low-confidence answer. */
+
+/* 1. LLM-as-a-judge, RULER-shaped. OpenPipe's RULER (Avi Chawla's post) scores complete agent
+   trajectories against plain-English criteria by RANKING several side by side, rather than
+   scoring each against hand-written rules that must anticipate every behaviour. The criteria stay
+   in English, so they can be revised when the judge is found to miss something. */
+async function jevJudge(trajectories,criteria,opts){
+  const list=(trajectories||[]).slice(0,254);
+  if(list.length<1)return{ok:false,error:'nothing to judge'};
+  const q={best:{type:'choice',instructions:'Which attempt best satisfies these criteria? '+
+      String(criteria||'').slice(0,4000),
+    criteria:Object.fromEntries(list.map((t,i)=>['attempt_'+(i+1),
+      String(t.summary||t.label||('attempt '+(i+1))).slice(0,300)]))}};
+  list.forEach((t,i)=>{q['score_'+(i+1)]={type:'score',
+    instructions:'How well does attempt '+(i+1)+' satisfy: '+String(criteria||'').slice(0,1500),
+    criteria:['fails the criteria','partly meets them','meets them','meets them fully and cleanly']};});
+  const state={attempts:list.map((t,i)=>({id:'attempt_'+(i+1),content:String(t.content||t.text||'').slice(0,6000)}))};
+  const r=await jevDecide(state,q,Object.assign({purpose:'judge'},opts||{}));
+  if(!r.ok)return r;
+  const ranking=list.map((t,i)=>{const s=r.answers['score_'+(i+1)]||{};
+    return{i,label:t.label||('attempt '+(i+1)),score:s.value,confidence:s.confidence};})
+    .sort((a,b)=>(b.score||0)-(a.score||0));
+  return{ok:true,best:r.answers.best,gate:jevGate(r.answers.best,opts&&opts.floor),ranking,ms:r.ms};
+}
+/* 2. Routing for a harness: pick the model — or the pipeline shape — for this task. Low confidence
+   or no fit falls through to whatever the caller would have done anyway. */
+async function jevRoute(task,options,opts){
+  const r=await jevDecide({task:String(task||'').slice(0,8000)},
+    {route:{type:'choice',instructions:'Which of these should handle the task below? Choose the '+
+      'cheapest option that can genuinely do it well.',criteria:options}},
+    Object.assign({purpose:'route'},opts||{}));
+  if(!r.ok)return r;
+  return{ok:true,choice:r.answers.route,gate:jevGate(r.answers.route,opts&&opts.floor),ms:r.ms};
+}
+/* 3. Smarter subagent creation: classify a task before deciding whether to spawn for it at all. */
+async function jevClassify(task,kinds,opts){
+  const r=await jevDecide({task:String(task||'').slice(0,8000)},
+    {kind:{type:'choice',instructions:'What kind of task is this?',criteria:kinds},
+     spawn:{type:'noul',instructions:'Would this task genuinely benefit from being split across '+
+       'several independent agents working in parallel?',
+       criteria:{'true':'Yes — it has parts that do not need to see each other half-finished.',
+                 'false':'No — it is one line of work; splitting it would only add coordination.'}}},
+    Object.assign({purpose:'classify'},opts||{}));
+  if(!r.ok)return r;
+  return{ok:true,kind:r.answers.kind,spawn:r.answers.spawn,
+    gate:jevGate(r.answers.kind,opts&&opts.floor),ms:r.ms};
+}
+/* 4. Structured harness decisions: pick a pipeline shape from the table this app already has,
+   so the answer is a real configuration rather than prose that has to be parsed. */
+async function jevPickShape(task,opts){
+  if(typeof PIPE_MODES==='undefined')return{ok:false,error:'pipeline shapes are not loaded'};
+  const opts2=Object.fromEntries(PIPE_MODES.map(m=>[m.id,m.label+' — '+m.best]));
+  const r=await jevRoute(task,opts2,Object.assign({purpose:'shape'},opts||{}));
+  return r;
+}
+
+/* ── Running a command through the bridge ────────────────────────────────────
+   /exec streams Server-Sent Events — `data: {"type":"out",...}` frames ending in `data: [DONE]` —
+   and bridgePost calls .json() on whatever comes back, which throws on the first byte of
+   "data:". So every bridgePost('/exec') in this file could only ever fail. This reads the stream
+   properly and hands back the one shape a caller actually wants. */
+/* PURE. Turns the /exec event stream into the result. Separate so the suite can hold it against
+   the exact frames the bridge was seen to send: start, out, err, exit, then [DONE]. */
+function execSummary(raw){
+  let out='',err='',code=null;
+  String(raw||'').split('\n\n').forEach(frame=>{
+    const line=frame.split('\n').find(l=>l.startsWith('data: '));
+    if(!line)return;
+    const data=line.slice(6);
+    if(data==='[DONE]')return;
+    let ev;try{ev=JSON.parse(data);}catch(_){return;}
+    if(ev.type==='out')out+=ev.data||'';
+    else if(ev.type==='err')err+=ev.data||'';
+    else if(ev.type==='exit')code=ev.code;
+  });
+  return{ok:code===0,code,out,err,error:code===0?'':(code==null?'the command never reported an exit':'exited with code '+code)};
+}
+async function bridgeExec(cmd,opts){
+  const o=opts||{};
+  if(typeof BRIDGE_INFO==='undefined'||!BRIDGE_INFO)
+    return{ok:false,code:-1,out:'',err:'',error:'the local bridge is not connected'};
+  const base=(settings.bridge||'http://127.0.0.1:8791').replace(/\/$/,'');
+  const ctl=new AbortController();
+  const timer=setTimeout(()=>ctl.abort(),o.timeout||(typeof DL_WORK!=='undefined'?DL_WORK:180000));
+  let raw='';
+  try{
+    const r=await fetch(base+'/exec',{method:'POST',signal:o.signal||ctl.signal,
+      headers:{'Content-Type':'application/json','X-GlassBox-Token':BRIDGE_TOKEN},
+      body:JSON.stringify({cmd,cwd:o.cwd})});
+    if(!r.ok){const t=await r.text().catch(()=>'');
+      return{ok:false,code:-1,out:'',err:'',error:'HTTP '+r.status+(t?' — '+t.slice(0,200):'')};}
+    raw=await r.text();
+  }catch(e){const p=execSummary(raw);
+    return{ok:false,code:-1,out:p.out,err:p.err,error:String(e&&e.message||e)};}
+  finally{clearTimeout(timer);}
+  return execSummary(raw);
+}
+/* POSIX single-quoting. The bridge runs its input through `$SHELL -lc`, so every argument that
+   came from a model, a web page or a user is quoted here — a fill value of `"; rm -rf ~` must
+   arrive as a string, never as a second command. */
+const shq=s=>"'"+String(s==null?'':s).replace(/'/g,"'\\''")+"'";
+
+/* ═══════════════════ COMPUTER USE ═══════════════════
+   The cheap version, and it is cheap because of what it refuses to do. The pattern comes from
+   typesafe-computer-use (awlevin), measured at about $0.0002 a step against $0.032 for a frontier
+   model looking at the same screenshot — 155x cheaper, 14x to 40x faster:
+
+     1. PERCEIVE deterministically — read the controls on screen, never ship a screenshot.
+     2. DECIDE with a typed choice over those controls (Jev takes up to 255 options), plus a
+        yes/no on whether the goal is already met.
+     3. ACT only above the confidence floor. Below it, or on the escape option, stop and hand
+        over rather than guess.
+
+   Their own honest caveat carries over unchanged: every piece of reasoning a frontier model does
+   for free from pixels has to be rebuilt here as deterministic state. This will not read a date
+   off a picture. It picks the right button from a list of real buttons, fast.
+
+   One loop, two backends. The WEBOS backend drives this page's own desktop — icons, the start
+   menu, window controls. It cannot reach inside an app's window, because those run in sandboxed
+   frames on purpose. The BROWSERSKILL backend drives a separate, visible Agent Window in your
+   real browser through Tencent's BrowserSkill, and needs it installed plus the bridge running. */
+
+const CU_BACKENDS={
+  webos:{label:'This app’s WebOS desktop',icon:'\u{1FA9F}',
+    needs:'nothing — runs in this page',
+    async start(){
+      if(typeof go==='function'&&currentView()!=='webos')go('webos');
+      if(typeof wosInit==='function')wosInit();
+      await new Promise(r=>setTimeout(r,250));
+      return{ok:!!document.getElementById('wos-root')};
+    },
+    /* Visible, actionable controls on the desktop, each given a short ref for the decision. The
+       refs map back to live elements for this observation only. */
+    async observe(){
+      const root=document.getElementById('wos-root');
+      if(!root)return{ok:false,error:'the WebOS is not on screen'};
+      const els=[...root.querySelectorAll('button,[data-wopen],[data-wicon],a[href],[role="button"],input,select')]
+        .filter(el=>{
+          if(el.closest('iframe'))return false;
+          const r=el.getBoundingClientRect();
+          return r.width>0&&r.height>0&&!el.disabled&&getComputedStyle(el).visibility!=='hidden';
+        }).slice(0,254);
+      CU_REFS=new Map();
+      const cands=els.map((el,i)=>{
+        const ref='w'+(i+1);CU_REFS.set(ref,el);
+        const label=(el.getAttribute('aria-label')||el.getAttribute('title')||el.textContent||
+          el.getAttribute('placeholder')||el.tagName).replace(/\s+/g,' ').trim().slice(0,120);
+        return{ref,label,role:el.tagName.toLowerCase()};
+      });
+      return{ok:true,cands,page:'WebOS desktop, '+((WOS&&WOS.wins||[]).filter(w=>!w.closed).length)+' window(s) open'};
+    },
+    async act(a){
+      const el=CU_REFS.get(a.ref);
+      if(!el)return{ok:false,error:'that control is gone — observe again'};
+      if(a.kind==='fill'){el.focus();el.value=String(a.value||'');
+        el.dispatchEvent(new Event('input',{bubbles:true}));return{ok:true};}
+      el.click();return{ok:true};
+    },
+    async stop(){return{ok:true};}},
+
+  browserskill:{label:'Your real browser (BrowserSkill)',icon:'\u{1F310}',
+    needs:'Tencent BrowserSkill installed (bsk CLI + extension) and the local bridge running',
+    async start(o){
+      const st=await bridgeExec('bsk status --json',{timeout:15000});
+      if(!st.ok)return{ok:false,error:'BrowserSkill is not reachable: '+(st.error||st.err).slice(0,200)+
+        ' — install it from github.com/Tencent/BrowserSkill and run `bsk status`.'};
+      let s;try{s=JSON.parse(st.out);}catch(_){s=null;}
+      if(s&&Array.isArray(s.browsers)&&!s.browsers.length)
+        return{ok:false,error:'BrowserSkill is running but no browser extension is connected yet.'};
+      const r=await bridgeExec('bsk session start --json'+(o&&o.background?' --no-focus':''),{timeout:30000});
+      let j;try{j=JSON.parse(r.out);}catch(_){j=null;}
+      const id=j&&(j.session_id||j.id);
+      if(!id)return{ok:false,error:'could not start a BrowserSkill session: '+(r.err||r.error).slice(0,200)};
+      /* Validated before it is ever interpolated into a command line. */
+      if(!/^[A-Za-z0-9_-]{1,80}$/.test(String(id)))return{ok:false,error:'unexpected session id format'};
+      CU_BSK_SESSION=String(id);
+      if(o&&o.url){
+        if(!/^https?:\/\//i.test(o.url))return{ok:false,error:'only http(s) URLs can be opened'};
+        await bridgeExec('bsk navigate '+shq(o.url)+' --session '+CU_BSK_SESSION,{timeout:60000});
+      }
+      return{ok:true,session:CU_BSK_SESSION};
+    },
+    async observe(){
+      if(!CU_BSK_SESSION)return{ok:false,error:'no BrowserSkill session'};
+      const r=await bridgeExec('bsk observe --json --session '+CU_BSK_SESSION,{timeout:60000});
+      let j;try{j=JSON.parse(r.out);}catch(_){j=null;}
+      if(!j||typeof j.text!=='string')return{ok:false,error:'observe returned nothing usable: '+(r.err||r.error).slice(0,200)};
+      return{ok:true,cands:cuParseObserve(j.text),page:'browser tab '+(j.tab_id||'?')};
+    },
+    async act(a){
+      if(!/^@e\d{1,6}$/.test(String(a.ref)))return{ok:false,error:'refusing a malformed ref: '+a.ref};
+      const cmd=a.kind==='fill'
+        ?'bsk fill '+a.ref+' --value '+shq(a.value)+' --session '+CU_BSK_SESSION
+        :'bsk click '+a.ref+' --session '+CU_BSK_SESSION;
+      const r=await bridgeExec(cmd,{timeout:60000});
+      return{ok:r.ok,error:r.ok?'':(r.err||r.error).slice(0,200)};
+    },
+    /* Always — success or failure — because stopping is what returns any borrowed tab. */
+    async stop(){
+      if(!CU_BSK_SESSION)return{ok:true};
+      const id=CU_BSK_SESSION;CU_BSK_SESSION='';
+      await bridgeExec('bsk session stop '+id,{timeout:30000});
+      return{ok:true};
+    }},
+};
+let CU_REFS=new Map();
+let CU_BSK_SESSION='';
+/* PURE. BrowserSkill renders its observation as text with refs written `@e<N>`. Each line that
+   carries one becomes a candidate labelled by the rest of the line. */
+function cuParseObserve(text){
+  const out=[],seen=new Set();
+  String(text||'').split(/\r?\n/).forEach(line=>{
+    const m=line.match(/@e\d+/);
+    if(!m||seen.has(m[0]))return;
+    seen.add(m[0]);
+    const label=line.replace(/@e\d+/g,'').replace(/[\[\]]/g,' ').replace(/\s+/g,' ').trim().slice(0,120);
+    out.push({ref:m[0],label:label||m[0],role:''});
+  });
+  return out.slice(0,254);
+}
+/* PURE. The decision request for one step. Kept apart from the loop so the suite can hold it. */
+function cuQuestions(goal,cands){
+  const criteria={};
+  cands.forEach(c=>{criteria[c.ref]=(c.role?c.role+': ':'')+c.label;});
+  return{
+    next:{type:'choice',instructions:'The goal is: '+String(goal).slice(0,1200)+
+      '\nWhich ONE control should be activated next to make progress toward it?',criteria},
+    done:{type:'noul',instructions:'Given the controls currently on screen, has this goal ALREADY '+
+      'been achieved? Goal: '+String(goal).slice(0,1200),
+      criteria:{'true':'Yes — what the goal asked for is already on screen or complete.',
+                'false':'No — more steps are still needed.'}}};
+}
+const CU_DEFAULTS={backend:'webos',maxSteps:12,floor:0.72,runs:[]};
+let CU=Object.assign({},CU_DEFAULTS,store.get('computeruse',{}));
+const saveCU=()=>{if(CU.runs.length>40)CU.runs.length=40;store.set('computeruse',CU);};
+let CU_RUNNING=null;
+
+async function cuRun(goal,opts){
+  const o=opts||{};
+  const B=CU_BACKENDS[o.backend||CU.backend];
+  if(!B)return{ok:false,error:'unknown backend'};
+  if(CU_RUNNING)return{ok:false,error:'a computer-use run is already going'};
+  const run={id:uid(),goal:String(goal||''),backend:o.backend||CU.backend,started:nowISO(),
+    steps:[],state:'running'};
+  CU_RUNNING=run;
+  const decide=o.decide||((state,qs)=>jevDecide(state,qs,{purpose:'computer-use'}));
+  const floor=o.floor==null?CU.floor:o.floor;
+  const finish=(state,why)=>{run.state=state;run.why=why;run.ended=nowISO();
+    CU.runs=[run].concat(CU.runs||[]);saveCU();CU_RUNNING=null;
+    try{logEvent('computer-use',{state,steps:run.steps.length,backend:run.backend});}catch(_){}
+    if(typeof jevRender==='function')try{jevRender();}catch(_){}
+    return Object.assign({ok:state==='done'},run);};
+  try{
+    const st=await B.start(o);
+    if(!st.ok)return finish('failed',st.error||'could not start');
+    for(let i=0;i<(o.maxSteps||CU.maxSteps);i++){
+      if(o.signal&&o.signal.aborted)return finish('stopped','stopped by you');
+      const ob=await B.observe();
+      if(!ob.ok)return finish('failed',ob.error);
+      if(!ob.cands.length)return finish('stuck','there are no controls on screen to act on');
+      const d=await decide({goal:run.goal,page:ob.page,step:i+1},cuQuestions(run.goal,ob.cands));
+      if(!d.ok)return finish('failed',d.error);
+      const done=d.answers.done;
+      if(done&&typeof done.value==='number'&&done.value>=floor){
+        run.steps.push({i,done:true,p:done.value});
+        return finish('done','the goal reads as achieved ('+done.value.toFixed(2)+')');
+      }
+      const g=jevGate(d.answers.next,floor);
+      const pick=d.answers.next&&d.answers.next.value;
+      const cand=ob.cands.find(c=>c.ref===pick);
+      run.steps.push({i,pick,label:cand?cand.label:'',confidence:d.answers.next&&d.answers.next.confidence,
+        acted:g.act,why:g.why});
+      if(!g.act)return finish('handed-over',g.why);
+      const r=await B.act({ref:pick,kind:'click'});
+      if(!r.ok)return finish('failed','acting failed: '+r.error);
+      await new Promise(res=>setTimeout(res,o.settleMs||600));
+    }
+    return finish('limit','hit the '+(o.maxSteps||CU.maxSteps)+'-step ceiling');
+  }catch(e){return finish('failed',String(e&&e.message||e));}
+  finally{try{await B.stop();}catch(_){}}
+}
+
+/* ═══════════════════ GO TO THE THING, NOT THE TAB ═══════════════════
+   Sixty-seven call sites in this file navigate somewhere, and every one of them landed at the TOP
+   of a tab. "No API key — Open settings" put a new user at the head of a long settings page and
+   left them to find the key box themselves; the "No key" pill in the header, the first thing a
+   new user sees, did nothing at all when clicked.
+
+   goTo lands ON the element. It opens any collapsed <details> around it, switches to the sub-tab
+   that holds it, scrolls it to the middle of the screen, focuses it when it is an input, and
+   flashes the card so the eye finds it. Panels here render lazily and some render asynchronously,
+   so it waits for the element to exist — on setTimeout, never requestAnimationFrame, because rAF
+   does not fire at all in a hidden page. If the element never appears it still lands on the tab
+   and says so in the console, rather than failing silently. */
+function goTo(view,sel,why){
+  if(typeof goEnsure==='function')goEnsure(view,why);else go(view);
+  if(!sel)return;
+  const until=Date.now()+2500;
+  const attempt=()=>{
+    const el=document.querySelector(sel);
+    if(!el){
+      if(Date.now()<until)return setTimeout(attempt,90);
+      console.warn('[goTo] '+sel+' never appeared on '+view+' — landed on the tab instead');
+      return;
+    }
+    for(let p=el.parentElement;p;p=p.parentElement)if(p.tagName==='DETAILS'&&!p.open)p.open=true;
+    /* A sub-panel is `<prefix>-<key>`, driven by a button carrying data-<prefix>="<key>" — the
+       convention initSubnav already relies on, so this follows it rather than guessing. */
+    const sub=el.closest('.sub');
+    if(sub&&!sub.classList.contains('on')&&sub.id&&sub.id.indexOf('-')>0){
+      const i=sub.id.indexOf('-'),pre=sub.id.slice(0,i),key=sub.id.slice(i+1);
+      const btn=document.querySelector('[data-'+pre+'="'+key+'"]');
+      if(btn)btn.click();
+    }
+    /* Instant when the page is hidden, not only when motion is reduced. A smooth scroll is driven
+       by animation frames, and a background tab gets none — measured: focus landed on the target
+       while the scroll never moved, leaving it 3,743px down. A trigger that calls goTo while you
+       are on another tab must have you already there when you come back. */
+    const reduce=(()=>{try{return document.hidden||matchMedia('(prefers-reduced-motion:reduce)').matches||
+      document.documentElement.getAttribute('data-motion')==='off';}catch(_){return false;}})();
+    setTimeout(()=>{
+      el.scrollIntoView({behavior:reduce?'auto':'smooth',block:'center'});
+      const f=el.matches('input,textarea,select,button,[tabindex]')?el
+        :el.querySelector('input,textarea,select');
+      if(f)try{f.focus({preventScroll:true});}catch(_){}
+      const card=el.closest('.card')||el;
+      card.classList.remove('goto-flash');void card.offsetWidth;card.classList.add('goto-flash');
+      setTimeout(()=>card.classList.remove('goto-flash'),1900);
+    },sub?120:0);
+  };
+  setTimeout(attempt,60);
+}
+
+/* ── "It was made — here it is" ───────────────────────────────────────────────
+   Creating an app used to leave no trace of WHERE it went. A pill appears under the action,
+   names the place, and one click lands on the thing itself. Suppressed when you are already
+   looking at the destination, where it would only be noise. */
+function navPill(o){
+  const host=document.getElementById('navpills')||(()=>{
+    const d=document.createElement('div');d.id='navpills';d.setAttribute('role','status');
+    d.setAttribute('aria-live','polite');document.body.appendChild(d);return d;})();
+  const b=document.createElement('button');
+  b.className='navpill';b.type='button';
+  b.innerHTML='<span class="np-ic">'+esc(o.icon||'✨')+'</span><span class="np-t">'+esc(o.text)+
+    '</span><span class="np-go">'+esc(o.cta||'Open')+' ›</span>';
+  b.setAttribute('aria-label',o.text+' — '+(o.cta||'open it'));
+  const gone=()=>{b.classList.add('out');setTimeout(()=>b.remove(),300);};
+  b.onclick=()=>{gone();try{o.go();}catch(e){toast('Could not open it: '+e.message,3000);}};
+  host.appendChild(b);
+  while(host.children.length>3)host.firstChild.remove();
+  setTimeout(gone,o.ms||10000);
+  return b;
+}
+/* Open one WebOS app from anywhere in the app. The desktop may never have been opened this
+   session, so it is initialised first rather than assumed. */
+function wosOpenApp(id){
+  go('webos');
+  setTimeout(()=>{
+    try{if(typeof wosInit==='function')wosInit();wosRender();wosOpen(id);}
+    catch(e){toast('Could not open that app: '+e.message,3200);}
+  },80);
+}
+
+/* ═══════════════════ ANY FEATURE, INSIDE THE WEBOS ═══════════════════
+   A desktop "extra" used to be a card whose button LEFT the desktop for the real tab. Now any
+   section of the app can open as a window on the desktop.
+
+   It is the real section, not a copy: the window hosts this app at its own `#pop=<tab>` route —
+   the same route the ↗ pop-out has always used, so the panel runs exactly as it does in its tab,
+   against the same storage. The honest cost: each such window is a second instance of the app, so
+   a handful is fine and forty is not. Saved state stays in step through the storage event; a
+   response still streaming in one window arrives in the other when it is saved, not token by
+   token. */
+function wosFeatureUrl(tab){
+  return location.pathname+location.search+'#pop='+encodeURIComponent(tab);
+}
+function wosFeatureBody(tab,label){
+  /* A desktop inside a desktop inside a desktop is not a feature. */
+  if(tab==='webos')return '<div class="wos-empty">The WebOS is already where you are.</div>';
+  return `<iframe class="wos-frame" title="${esc(label||tab)}" src="${esc(wosFeatureUrl(tab))}"
+    style="width:100%;height:100%;border:0;background:var(--bg)"></iframe>`;
+}
+/* Built from the live tab registry, so a tab added tomorrow is on the desktop tomorrow. */
+function wosFeatureApps(){
+  const tabs=(typeof REGISTRY!=='undefined'&&REGISTRY.tabs)||[];
+  return tabs.filter(t=>t.id&&t.id!=='webos').map(t=>({id:'feat-'+t.id,name:t.text||t.id,
+    icon:t.icon||'▣',kind:'feature',tab:t.id,desc:'The real '+(t.text||t.id)+' section, in a window'}));
+}
+
+/* ═══════════════════ WEB TOOLBOX ═══════════════════
+   Fifty free sites from @nikola_mr64990's list, filed by what they are for. Each opens in a NEW
+   BROWSER TAB rather than a desktop window, deliberately: nearly all of them refuse to be framed
+   (X-Frame-Options / frame-ancestors), and a window showing a refusal page reads as the desktop
+   being broken. Opened with noopener, so none of them gets a handle back to this app. */
+const WEB_TOOLBOX=[
+  {cat:'Read & research',items:[
+    ['unpaywall.org','Free versions of research papers'],['openlibrary.org','Borrow books online'],
+    ['doaj.org','Open-access academic journals'],['gutenberg.org','70K+ free books'],
+    ['openstax.org','Free textbooks'],['openculture.com','Free courses'],
+    ['archive.org','The Internet Archive'],['elicit.org','Research assistant'],
+    ['consensus.app','Research-backed answers'],['connectedpapers.com','Map related papers'],
+    ['semanticscholar.org','Academic search'],['scispace.com','Understand a paper'],
+    ['wolframalpha.com','Compute and solve']]},
+  {cat:'Images & design',items:[
+    ['photopea.com','Photoshop in the browser'],['squoosh.app','Compress images'],
+    ['remove.bg','Remove backgrounds'],['cleanup.pictures','Remove objects'],
+    ['unscreen.com','Remove video backgrounds'],['shots.so','Product mockups'],
+    ['smartmockups.com','Create mockups'],['tineye.com','Reverse image search']]},
+  {cat:'Code & dev',items:[
+    ['carbon.now.sh','Code as an image'],['ray.so','Code screenshots'],
+    ['regex101.com','Test a regex'],['codebeautify.org','Format code'],
+    ['jsonformatter.org','Format JSON'],['explainshell.com','Explain a shell command'],
+    ['phind.com','Search for developers']]},
+  {cat:'Privacy & safety',items:[
+    ['haveibeenpwned.com','Check for data breaches'],['virustotal.com','Scan a file or URL'],
+    ['privnote.com','Self-destructing notes'],['temp-mail.org','Temporary email'],
+    ['10minutemail.com','Temporary email'],['file.io','Temporary file sharing']]},
+  {cat:'Web & utilities',items:[
+    ['archive.ph','Snapshot a web page'],['alternativeto.net','Find app alternatives'],
+    ['similarsites.com','Find similar sites'],['justwatch.com','Where to stream something'],
+    ['downdetector.com','Is it down for everyone?'],['fast.com','Internet speed'],
+    ['raindrop.io','Bookmark manager'],['summarize.tech','Summarise a YouTube video'],
+    ['smallpdf.com','PDF tools'],['ilovepdf.com','Merge or split PDFs']]},
+  {cat:'Sound & focus',items:[
+    ['radio.garden','Radio from anywhere on the globe'],['everynoise.com','Map of music genres'],
+    ['tunefind.com','Songs from TV and film'],['musicforprogramming.net','Focus music'],
+    ['mynoise.net','Custom background sound'],['coffitivity.com','Café ambience']]},
+];
+function webToolboxHtml(){
+  const n=WEB_TOOLBOX.reduce((a,c)=>a+c.items.length,0);
+  return `<div class="wos-pad"><h3 style="margin-top:0">\u{1F9F0} Web Toolbox</h3>
+    <p class="wos-desc">${n} free sites, filed by what they are for. Each opens in a new browser
+      tab — almost all of them refuse to be shown inside another page, so a desktop window would
+      only show you a refusal.</p>
+    ${WEB_TOOLBOX.map(c=>`<h4 style="margin:14px 0 6px">${esc(c.cat)}</h4>
+      <div class="wtb-grid">${c.items.map(([host,what])=>
+        `<a class="wtb-item" href="https://${esc(host)}" target="_blank" rel="noopener noreferrer"
+          aria-label="${esc(host)}: ${esc(what)} (opens a new tab)"><b>${esc(host)}</b><span>${esc(what)}</span></a>`).join('')}
+      </div>`).join('')}</div>`;
+}
+
+/* ═══════════════════ JEV DASHBOARD ═══════════════════
+   (jevFeedInit is called at BOOT, not when this tab first opens. The first version subscribed
+   inside jevRender, so everything the AI did before you happened to open the dashboard was never
+   recorded — a tracker of all AI actions that missed every action before you looked.)
+
+   One place to see what the AI in this app is DOING — every action as it happens, what is
+   running right now, every typed decision Jev made and what it cost — and to drive the cheap
+   computer-use loop on the WebOS or in your real browser.
+
+   The action feed subscribes to the existing event log rather than keeping its own. It is held in
+   memory only: a feed of everything the app does is exactly the kind of thing that fills
+   localStorage, and the storage guard in this file exists because that has happened before. */
+let JEV_FEED=[];
+let JEV_FEED_WIRED=false;
+function jevFeedInit(){
+  if(JEV_FEED_WIRED||typeof LOG_LISTENERS==='undefined')return;
+  JEV_FEED_WIRED=true;
+  LOG_LISTENERS.push(e=>{
+    JEV_FEED.unshift({at:(e&&e.t)||Date.now(),kind:(e&&e.kind)||'',data:logPayload(e)});
+    if(JEV_FEED.length>120)JEV_FEED.length=120;
+    if(currentView()==='jev')jevRenderFeed();
+  });
+}
+/* What is actually running. Each line is read from live state — none of them is a counter that
+   something else is supposed to keep in sync. */
+function jevRunning(){
+  const out=[];
+  if(CU_RUNNING)out.push({icon:'\u{1F5B1}',label:'Computer use: '+CU_RUNNING.goal.slice(0,60),
+    detail:CU_RUNNING.steps.length+' step(s) on '+CU_BACKENDS[CU_RUNNING.backend].label});
+  if(typeof RS!=='undefined'&&RS&&!RS.done&&RS.rounds)
+    out.push({icon:'\u{1F501}',label:'Relay',detail:'round '+(RS.rounds.length+1)});
+  if(typeof LH!=='undefined'&&LH&&LH.on)out.push({icon:'⏳',label:'Long-horizon runner',detail:'on'});
+  if(typeof TRIG!=='undefined'&&TRIG.on){
+    const n=(TRIG_RULES||[]).filter(r=>trigArmed(r.id)).length;
+    out.push({icon:'⏱',label:'Triggers',detail:n+' rule(s) armed, '+(TRIG.seen||0)+' event(s) seen'});
+  }
+  return out;
+}
+function jevRender(){
+  const host=$('#jev-panel');if(!host)return;
+  jevFeedInit();
+  const key=(typeof API_KEY!=='undefined'&&API_KEY);
+  const run=jevRunning();
+  host.innerHTML=`
+  <div class="card">
+    <h3>⚡ Jev — typed decisions in a few hundred milliseconds</h3>
+    <p class="help"><b>Jev</b> (TypeSafe) is a <i>System One</i> model: it does not write text. You
+      give it your app's state and a typed question — pick one of these, score this, is this true —
+      and it returns a typed answer with a probability, at $0.042 per million input tokens with
+      output free. That makes it the right tool for the thousands of small decisions inside an agent,
+      and the wrong one for anything that needs reasoning written out.</p>
+    <p class="help"><b>What to trust it with.</b> It cannot return an answer outside the options you
+      define. It CAN pick the wrong one confidently — tested independently, when the right answer
+      is missing it chooses the nearest wrong option rather than abstaining. So every choice here
+      carries an explicit <i>none of these</i> option, and nothing is acted on below the confidence
+      floor; below it, the decision is handed to a model that can reason.</p>
+    <div class="row" style="margin-top:10px;align-items:center;gap:10px">
+      <span class="chip">${key?'✓ OpenRouter key set':'✕ no OpenRouter key'}</span>
+      <label class="field" style="min-width:230px">Act only above this confidence
+        <input type="range" id="jev-floor" min="0.5" max="0.99" step="0.01" value="${JEV.floor}"
+          aria-label="Confidence floor for acting on a Jev decision"></label>
+      <b class="mono" id="jev-floorv">${(+JEV.floor).toFixed(2)}</b>
+      <span style="flex:1"></span>
+      <span class="mini muted">${JEV.calls||0} decision(s) · $${(JEV.spent||0).toFixed(5)} so far</span>
+    </div>
+    ${key?'':`<p class="help" style="margin-top:8px">Jev runs through OpenRouter with the key you
+      already use. <button class="btn ghost small" id="jev-addkey">Add an OpenRouter key ›</button></p>`}
+  </div>
+
+  <div class="card">
+    <h3>\u{1F4E1} Running now</h3>
+    <div id="jev-running" tabindex="-1">${run.length?run.map(r=>
+      `<div class="lx-line info"><span>${r.icon}</span><code><b>${esc(r.label)}</b> — ${esc(r.detail)}</code></div>`).join('')
+      :'<p class="help" style="margin:0">Nothing is running. Anything that starts — a relay, a computer-use run, an armed trigger — appears here.</p>'}</div>
+    <h4 style="margin:14px 0 6px;font-size:12.5px">Every action, as it happens</h4>
+    <div class="lx-log" id="jev-feed" style="max-height:220px"></div>
+    <p class="help" style="margin-top:8px">To make things start without you, arm rules in
+      <button class="btn ghost small" id="jev-totrig">Triggers ›</button></p>
+  </div>
+
+  <div class="card">
+    <h3>\u{1F5B1} Computer use — the cheap way</h3>
+    <p class="help">Read the controls on screen, let Jev pick the next one from that list, act only
+      when it is confident, hand over when it is not. Measured by the project this follows at about
+      <b>$0.0002 a step against $0.032</b> for a frontier model looking at a screenshot. It picks
+      the right button from real buttons; it will not read a date off a picture.</p>
+    <div class="row" style="margin-top:10px;gap:8px">
+      ${Object.entries(CU_BACKENDS).map(([id,b])=>
+        `<button class="pipe-chip${CU.backend===id?' on':''}" data-cubk="${esc(id)}"
+          title="Needs: ${esc(b.needs)}">${b.icon} ${esc(b.label)}</button>`).join('')}
+    </div>
+    <p class="help" style="margin-top:6px">Needs: ${esc(CU_BACKENDS[CU.backend].needs)}.${
+      CU.backend==='webos'?' Drives the desktop — icons, menus, windows. It cannot reach inside an '+
+        'app’s window, because those run sandboxed on purpose.':
+      ' Works in a separate, visible Agent Window so your own browsing is untouched. BrowserSkill '+
+        'itself was checked: MIT-licensed, no analytics or telemetry in its source; its only '+
+        'outbound call is a version check against its GitHub releases. Keep its opt-in remote-server '+
+        'mode off.'}</p>
+    <label class="field" style="margin-top:10px">Goal
+      <input type="text" id="cu-goal" placeholder="open the Notes app"
+        aria-label="What the computer-use agent should do"></label>
+    ${CU.backend==='browserskill'?`<label class="field" style="margin-top:8px">Start at (optional)
+      <input type="url" id="cu-url" placeholder="https://example.com" aria-label="Page to start on"></label>`:''}
+    <div class="row" style="margin-top:10px;gap:8px">
+      <button class="btn" id="cu-go"${CU_RUNNING?' disabled':''}>${CU_RUNNING?'Running…':'▶ Run it'}</button>
+      <button class="btn ghost small" id="cu-stop"${CU_RUNNING?'':' disabled'}>Stop</button>
+    </div>
+    <div id="cu-runs" style="margin-top:12px"></div>
+  </div>
+
+  <div class="card">
+    <h3>\u{1F9EA} The four uses worth trying first</h3>
+    <p class="help">From @omarsar0, who reports the first three as the high-return ones. Each one
+      here gates on confidence and falls through to what you would have done anyway.</p>
+    <div class="lx-kinds">
+      <div class="lx-kind"><b>1 · LLM-as-a-judge</b><span>Rank several complete attempts against
+        plain-English criteria — the RULER approach from OpenPipe ART, which judges whole trajectories
+        side by side instead of scoring each against rules someone had to anticipate.
+        <code>jevJudge(attempts, criteria)</code></span></div>
+      <div class="lx-kind"><b>2 · Routing a harness</b><span>Choose the model — or the pipeline
+        shape — for a task, cheapest first. <code>jevRoute(task, options)</code>,
+        <code>jevPickShape(task)</code></span></div>
+      <div class="lx-kind"><b>3 · Smarter subagents</b><span>Classify a task, and ask separately
+        whether splitting it across agents would genuinely help. <code>jevClassify(task, kinds)</code></span></div>
+      <div class="lx-kind"><b>4 · Structured harness decisions</b><span>Pick from a real
+        configuration table instead of parsing prose — here, the ten pipeline shapes.</span></div>
+    </div>
+    <label class="field" style="margin-top:12px">Try routing a task to a pipeline shape
+      <input type="text" id="jev-try" placeholder="port this Python module to TypeScript, keep the tests passing"
+        aria-label="A task to route to a pipeline shape"></label>
+    <div class="row" style="margin-top:8px;gap:8px">
+      <button class="btn ghost small" id="jev-try-go">Ask Jev which shape</button>
+      <span class="mini muted" id="jev-try-out"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>\u{1F4DC} Decisions made</h3>
+    <div class="lx-log" id="jev-log" style="max-height:220px"></div>
+  </div>`;
+
+  const f=$('#jev-floor');
+  if(f)f.oninput=()=>{JEV.floor=+f.value;CU.floor=+f.value;saveJev();saveCU();
+    const v=$('#jev-floorv');if(v)v.textContent=(+f.value).toFixed(2);};
+  const ak=$('#jev-addkey');if(ak)ak.onclick=()=>goTo('settings','#set-key','Jev needs an OpenRouter key');
+  const tt=$('#jev-totrig');if(tt)tt.onclick=()=>goTo('local','#trig-panel','it is where triggers are armed');
+  $$('[data-cubk]').forEach(b=>b.onclick=()=>{CU.backend=b.dataset.cubk;saveCU();jevRender();});
+  const g=$('#cu-go');
+  if(g)g.onclick=async()=>{
+    const goal=(($('#cu-goal')||{}).value||'').trim();
+    if(!goal)return toast('Say what it should do first',2600);
+    CU_ABORT=new AbortController();
+    jevRender();
+    const r=await cuRun(goal,{backend:CU.backend,url:(($('#cu-url')||{}).value||'').trim()||undefined,
+      signal:CU_ABORT.signal});
+    toast('Computer use: '+r.state+(r.why?' — '+r.why:''),5200);
+    jevRender();
+  };
+  const s=$('#cu-stop');if(s)s.onclick=()=>{if(CU_ABORT)CU_ABORT.abort();};
+  const tg=$('#jev-try-go');
+  if(tg)tg.onclick=async()=>{
+    const t=(($('#jev-try')||{}).value||'').trim();
+    const out=$('#jev-try-out');
+    if(!t)return toast('Type a task first',2400);
+    if(out)out.textContent='asking…';
+    const r=await jevPickShape(t);
+    if(!out)return;
+    if(!r.ok){out.textContent=r.error;return;}
+    const m=r.choice.value===JEV_ESCAPE?null:pipeMode(r.choice.value);
+    out.textContent=(m?m.label:'no shape fitted')+' · confidence '+
+      (r.choice.confidence==null?'?':r.choice.confidence.toFixed(2))+' · '+
+      (r.gate.act?'would act':'would hand over: '+r.gate.why)+' · '+r.ms+'ms';
+  };
+  jevRenderFeed();jevRenderLog();cuRenderRuns();
+}
+let CU_ABORT=null;
+function jevRenderFeed(){
+  const h=$('#jev-feed');if(!h)return;
+  h.innerHTML=JEV_FEED.length?JEV_FEED.slice(0,80).map(e=>
+    `<div class="lx-line info"><span>${esc(new Date(e.at).toLocaleTimeString().slice(0,8))}</span>
+      <code><b>${esc(e.kind)}</b> ${esc(JSON.stringify(e.data).slice(0,180))}</code></div>`).join('')
+    :'<p class="help" style="margin:0">Nothing yet this session. Every run, tool call, decision and error the app logs will stream in here.</p>';
+}
+function jevRenderLog(){
+  const h=$('#jev-log');if(!h)return;
+  const L=(JEV.log||[]).slice(0,60);
+  h.innerHTML=L.length?L.map(r=>`<div class="lx-line ${r.error?'error':'info'}">
+      <span>${esc(r.purpose||'')}</span><code>${r.error?esc(r.error)
+      :esc(Object.entries(r.answers||{}).map(([k,a])=>k+'='+String(a.value)+
+        (a.confidence!=null?' ('+a.confidence.toFixed(2)+')':'')).join(', '))+
+        (r.ms?' · '+r.ms+'ms':'')}</code></div>`).join('')
+    :'<p class="help" style="margin:0">No decisions yet.</p>';
+}
+function cuRenderRuns(){
+  const h=$('#cu-runs');if(!h)return;
+  const R=(CU.runs||[]).slice(0,6);
+  h.innerHTML=R.map(r=>`<details class="cu-run"><summary><b>${esc(r.state)}</b> — ${esc(r.goal.slice(0,70))}
+      <span class="mini muted">${r.steps.length} step(s) · ${esc(r.why||'')}</span></summary>
+      <div class="lx-log" style="margin-top:6px">${r.steps.map(s=>
+        `<div class="lx-line ${s.done?'info':s.acted?'info':'warn'}"><span>${s.i+1}</span>
+          <code>${s.done?'goal met ('+(+s.p).toFixed(2)+')':esc(s.label||s.pick||'')+' · '+esc(s.why||'')}</code></div>`).join('')}</div>
+    </details>`).join('');
+}
+
 /* ═══════════════════ TRIGGERS ═══════════════════
    The app's own harness audit names this layer the thinnest, and it is right: strip out the PWA
    update poll and nothing in this application starts work unless a person presses something.
@@ -14762,12 +15735,22 @@ async function reactRun(task,opts){
    asks first, and a rule that fires while you are asleep is exactly where that discipline matters
    most. `auto` exists, it is per-rule, and the panel shows which rules have it. */
 
+/* logEvent SPREADS its payload into the event — {seq, t, kind, ...data} — there is no `.data`.
+   Both listeners here first read `e.data`, so every event arrived with an empty payload; the
+   trigger rules still fired because they match on `kind`, which hid it. This is the one place the
+   shape is taken apart, so it cannot drift between the two. */
+function logPayload(e){
+  if(!e||typeof e!=='object')return{};
+  const out={};
+  Object.keys(e).forEach(k=>{if(k!=='seq'&&k!=='t'&&k!=='kind')out[k]=e[k];});
+  return out;
+}
 const TRIG_SOURCES=[
   {id:'log',label:'Something the app did',icon:'\u{1F4DC}',
    note:'Runs finishing, failures, approvals falling due — the existing event log, not a second one.',
    subscribe(emit){
      if(typeof LOG_LISTENERS==='undefined'||!Array.isArray(LOG_LISTENERS))return false;
-     LOG_LISTENERS.push(e=>emit({source:'log',kind:(e&&e.kind)||'',data:(e&&e.data)||{},at:Date.now()}));
+     LOG_LISTENERS.push(e=>emit({source:'log',kind:(e&&e.kind)||'',data:logPayload(e),at:Date.now()}));
      return true;
    }},
   {id:'visibility',label:'You came back',icon:'\u{1F440}',
@@ -14822,7 +15805,7 @@ const TRIG_RULES=[
      return !!(last&&last.green===false);
    },
    action:'Open the Local tab and re-run the gauntlet',
-   go(){goEnsure('local','the suite is red');},
+   go(){goTo('local','#gauntlet-panel','the suite is red');},
    minGapMs:1800000},
 
   {id:'run-failed',source:'log',label:'Something logged an error',
@@ -14830,7 +15813,7 @@ const TRIG_RULES=[
      'most useful while whatever caused it is still on screen.',
    match:ev=>ev.kind==='error',
    action:'Show the log',
-   go(){goEnsure('history','an error was logged');},
+   go(){goTo('history','#hist-list','an error was logged');},
    minGapMs:120000},
 
   {id:'storage-pressure',source:'tick',label:'Storage is filling up',
@@ -14843,7 +15826,7 @@ const TRIG_RULES=[
      }catch(_){return false;}
    },
    action:'Back up and clear what can be refetched',
-   go(){goEnsure('settings','storage is close to full');},
+   go(){goTo('settings','#persist-panel','storage is close to full');},
    minGapMs:3600000},
 
   {id:'back-after-long',source:'visibility',label:'You were away a while',
@@ -16625,8 +17608,11 @@ async function appleNotesImport(opts){
   if(!BRIDGE_INFO)return{ok:false,error:'Apple Notes needs the local bridge — start it from Handoff. Nothing else can read the Notes database.'};
   let raw='';
   try{
-    const r=await bridgePost('/exec',{cmd:APPLE_NOTES_SCRIPT,timeout:120000});
-    raw=String((r&&(r.out||r.stdout))||'');
+    /* bridgePost('/exec') called .json() on a Server-Sent-Events stream and threw on the first
+       byte, so this import could never have succeeded with the bridge running. */
+    const r=await bridgeExec(APPLE_NOTES_SCRIPT,{timeout:120000});
+    if(!r.ok&&!r.out)throw new Error(r.error||r.err||'the command failed');
+    raw=String(r.out||'');
   }catch(e){return{ok:false,error:'the bridge could not read Notes ('+e.message+') — macOS asks for Notes permission the first time'};}
   if(!raw.trim())return{ok:false,error:'Notes returned nothing — check the permission prompt, or that Notes has any notes'};
   const parts=raw.split('===NOTE===').map(x=>x.trim()).filter(Boolean);
@@ -22454,12 +23440,21 @@ function renderActiveBar(){
     `<span class="act-pill" title="${esc(a.kind)}"><i class="act-dot"></i>${esc(a.label)}${
       a.count>1?` <b>×${a.count}</b>`:''}</span>`).join(''):'';
   el.classList.toggle('on',list.length>0);
+  /* It showed that something was running and went nowhere when clicked. */
+  if(!el._wired){el._wired=true;el.style.cursor='pointer';el.setAttribute('role','button');
+    el.tabIndex=0;el.setAttribute('aria-label','What is running now — open the list');
+    const open=()=>goTo('jev','#jev-running','it lists what is running');
+    el.addEventListener('click',open);
+    el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});}
 }
 /* One subscription, and it maps pane events onto the light. Nothing else has to remember to
    report that it is busy — if it emits an event, it lights up. */
 function activeInit(){
   LOG_LISTENERS.push(e=>{
-    const m={call:'model',error:'model','tool-call':'tool',fallback:'model'};
+    /* Jev decisions, computer-use steps and ReAct loops are AI work too, and until now they never
+       lit the bar — so the one indicator of "something is running" missed the newest of it. */
+    const m={call:'model',error:'model','tool-call':'tool',fallback:'model',
+      jev:'decide','computer-use':'agent',react:'agent',trigger:'agent'};
     if(m[e.kind])activeMark(m[e.kind],String(e.model||e.connector||e.label||e.kind).split('/').pop());
   });
   everyMs('activeBar',renderActiveBar,2500);
@@ -23143,12 +24138,12 @@ function agentSuggestions(){
   const measured=Object.keys(LOCAL_BENCH||{}).length;
   if(localModels.length&&!measured)
     push('local','info',`${localModels.length} local model(s) connected but never benchmarked — routing is guessing.`,
-      'Benchmark them',()=>goEnsure('local','it holds the benchmark'));
+      'Benchmark them',()=>goTo('local','#lc-bench','it holds the benchmark'));
   // ollama connected, truncation never probed: the silent one
   const ollamaModels=localModels.filter(m=>String(m.id).startsWith('ollama/'));
   if(ollamaModels.length&&!Object.keys(LOCAL_CTX||{}).length)
     push('local','warn','Ollama truncates long prompts silently and none of yours have been measured.',
-      'Run the truncation probe',()=>goEnsure('local','it holds the probe'));
+      'Run the truncation probe',()=>goTo('local','#lc-trunc','it holds the probe'));
   // spend
   if(SESSION_SPEND>2)
     push('cost','warn',`This session has spent ${money(SESSION_SPEND)}.`,'Open metrics',()=>goEnsure('metrics'));
@@ -23177,7 +24172,7 @@ function agentSuggestions(){
   }catch(e){}
   // no key and no local models: the app cannot do anything at all
   if(!API_KEY&&!localModels.length)
-    push('next','warn','No API key and no local models — nothing can run yet.','Open settings',()=>goEnsure('settings'));
+    push('next','warn','No API key and no local models — nothing can run yet.','Add a key',()=>goTo('settings','#set-key'));
   return out.slice(0,Math.max(1,SUGGEST.maxAtOnce));
 }
 /* The activity strip. Reads the same ACTIVE map the header pills use, so there is exactly one
@@ -26404,6 +27399,199 @@ function gauntletCases(g){
       return /script-src[^;]*\*/.test(csp)?'wide-open':'bounded';
     },antiExpect:v=>v==='bounded'});
 
+
+  /* ── JEV, NATIVE TOOLS, COMPUTER USE, AND GETTING PEOPLE TO THE THING ─────────
+     Every case here targets a failure that is silent in production: a question the API would
+     reject, a decision acted on when it should have been handed over, a shell command built from
+     a web page, a transport that never worked. */
+
+  /* The schema is the API reference's, not a blog's. `noul` needs BOTH criteria, and two
+     write-ups disagreed on the type name itself — `null` would have failed every call. */
+  add({id:'jev-schema-is-the-apis',sub:'jev',uses:['jevQuestion'],
+    what:'questions are held to the published schema before they are sent',
+    run:()=>{
+      const bad=[
+        g.jevQuestion({type:'null',instructions:'x',criteria:{'true':'a','false':'b'}}).ok,
+        g.jevQuestion({type:'noul',instructions:'x',criteria:{'true':'only one side'}}).ok,
+        g.jevQuestion({type:'score',instructions:'x',criteria:{low:'a'}}).ok,
+        g.jevQuestion({type:'choice',instructions:'',criteria:{a:'1'}}).ok];
+      return bad.filter(Boolean).length+' accepted of '+bad.length+' malformed';
+    },expect:v=>v==='0 accepted of 4 malformed',
+    antiWhat:'and a question that IS valid gets through intact',
+    anti:()=>{
+      const r=g.jevQuestion({type:'noul',instructions:'is it urgent?',
+        criteria:{'true':'yes','false':'no'}});
+      return r.ok&&r.q.criteria['true']==='yes'&&r.q.criteria['false']==='no'?'accepted':'refused';
+    },antiExpect:v=>v==='accepted'});
+
+  /* Tested independently: with the right answer missing, Jev picks the nearest WRONG option with
+     confidence rather than abstaining. The escape option is what makes "none of these" answerable. */
+  add({id:'jev-choice-has-an-exit',sub:'jev',uses:['jevQuestion','JEV_ESCAPE'],
+    what:'every choice question can answer "none of these"',
+    run:()=>{
+      const r=g.jevQuestion({type:'choice',instructions:'which team?',criteria:{sales:'s',support:'t'}});
+      return r.ok&&(g.JEV_ESCAPE in r.q.criteria)?'has-exit':'no-exit';
+    },expect:v=>v==='has-exit',
+    antiWhat:'and a caller who declares the list exhaustive does not get one forced on them',
+    anti:()=>{
+      const r=g.jevQuestion({type:'choice',instructions:'heads or tails?',criteria:{heads:'h',tails:'t'}},
+        {exhaustive:true});
+      return r.ok&&!(g.JEV_ESCAPE in r.q.criteria)?'respected':'forced';
+    },antiExpect:v=>v==='respected'});
+
+  /* The gate is the difference between a cheap decision and a cheap mistake. */
+  add({id:'jev-gate-hands-over',sub:'jev',uses:['jevGate','JEV_ESCAPE'],
+    what:'a low-confidence answer or the escape option is handed over, not acted on',
+    run:()=>{
+      const low=g.jevGate({type:'choice',value:'support',confidence:0.41},0.72);
+      const esc=g.jevGate({type:'choice',value:g.JEV_ESCAPE,confidence:0.99},0.72);
+      const none=g.jevGate({type:'choice',value:'support',confidence:null},0.72);
+      return [low.act,esc.act,none.act].map(x=>x?'act':'defer').join(',');
+    },expect:v=>v==='defer,defer,defer',
+    antiWhat:'and a confident answer on a real option IS acted on',
+    anti:()=>g.jevGate({type:'choice',value:'support',confidence:0.93},0.72).act?'acts':'stuck',
+    antiExpect:v=>v==='acts'});
+
+  /* One shape out for all three types. For yes/no the probability IS the confidence in whichever
+     side it leans, so 0.1 is a confident NO, not a weak answer. */
+  add({id:'jev-parse-all-types',sub:'jev',uses:['jevParse'],
+    what:'choice, score and yes/no answers all come back in one shape',
+    run:()=>{
+      const p=g.jevParse({answers:{
+        a:{type:'choice',choice:'x',confidence:0.8,probabilities:{x:0.8,y:0.2}},
+        b:{type:'score',score:1.3,confidence:0.6},
+        c:{type:'noul',noul:0.1}},usage:{input_tokens:40,output_tokens:0,cost:0.000002}});
+      return [p.answers.a.value,p.answers.b.value,p.answers.c.value,p.answers.c.confidence.toFixed(1),
+        p.usage.input].join('|');
+    },expect:v=>v==='x|1.3|0.1|0.9|40',
+    antiWhat:'and a malformed reply degrades to empty rather than throwing',
+    anti:()=>{try{const p=g.jevParse({nonsense:true});return Object.keys(p.answers).length+':'+p.usage.input;}
+      catch(e){return 'threw';}},
+    antiExpect:v=>v==='0:0'});
+
+  /* OpenAI-shaped names must match ^[a-zA-Z0-9_-]{1,64}$. MCP tools routinely carry dots and
+     slashes, and sending one as-is is rejected outright. */
+  add({id:'nt-names-round-trip',sub:'native tools',uses:['ntSchema','ntParseCalls'],
+    what:'a tool name the wire forbids is sanitised on the way out and mapped back on the way in',
+    run:()=>{
+      const{tools,map}=g.ntSchema([{name:'github.search/code',description:'d',
+        schema:{type:'object',properties:{q:{type:'string'}}}}]);
+      const safe=tools[0].function.name;
+      const calls=g.ntParseCalls({tool_calls:[{id:'c1',type:'function',
+        function:{name:safe,arguments:'{"q":"hello"}'}}]},map);
+      return (/^[a-zA-Z0-9_-]{1,64}$/.test(safe)?'safe':'unsafe')+'/'+calls[0].name+'/'+calls[0].args.q;
+    },expect:v=>v==='safe/github.search/code/hello',
+    antiWhat:'and malformed arguments become a reported error rather than ending the loop',
+    anti:()=>{
+      try{const c=g.ntParseCalls({tool_calls:[{id:'c1',function:{name:'x',arguments:'{not json'}}]},{});
+        return c[0].argError?'reported':'silent';}catch(e){return 'threw';}
+    },antiExpect:v=>v==='reported'});
+
+  /* supports() answers true for a model it has never heard of — right for temperature, wrong here,
+     where an unknown model sent `tools` can refuse or silently ignore the field. */
+  add({id:'nt-unknown-model-gets-text',sub:'native tools',uses:['ntCapable'],
+    what:'native tool-calling is only used for a model the catalogue says supports it',
+    run:()=>g.ntCapable('nobody/hand-typed-model-that-does-not-exist')?'native':'text',
+    expect:v=>v==='text',
+    antiWhat:'and a catalogue model that advertises tools IS eligible',
+    anti:()=>{
+      const id='__probe/tools-model';
+      g.CATMAP.set(id,{id,supported_parameters:['tools','temperature']});
+      const r=g.ntCapable(id);g.CATMAP.delete(id);
+      return r?'native':'text';
+    },antiExpect:v=>v==='native'});
+
+  /* The exact frames the live bridge was seen to send. bridgePost called .json() on this stream
+     and threw on the first byte, so every /exec in the app failed whenever the bridge ran. */
+  add({id:'bridge-exec-reads-the-stream',sub:'native tools',uses:['execSummary'],
+    what:'a command run through the bridge returns its real output and exit code',
+    run:()=>{
+      const raw='data: {"type":"start","id":"x1","cwd":"/","cmd":"echo hi","pty":false}\n\n'+
+        'data: {"type":"out","data":"hello-from-bridge\\n"}\n\n'+
+        'data: {"type":"exit","code":0,"ms":20,"bytes":18}\n\n'+'data: [DONE]\n\n';
+      const r=g.execSummary(raw);
+      return r.ok+'|'+r.code+'|'+r.out.trim();
+    },expect:v=>v==='true|0|hello-from-bridge',
+    antiWhat:'and a failing command reports failure with its stderr, not success',
+    anti:()=>{
+      const r=g.execSummary('data: {"type":"err","data":"nope\\n"}\n\n'+
+        'data: {"type":"exit","code":127}\n\ndata: [DONE]\n\n');
+      return r.ok+'|'+r.code+'|'+r.err.trim();
+    },antiExpect:v=>v==='false|127|nope'});
+
+  /* The bridge runs its input through `$SHELL -lc`. A fill value lifted from a web page must arrive
+     as a string, never as a second command. */
+  add({id:'cu-shell-args-quoted',sub:'computer use',uses:['shq'],
+    what:'a hostile argument cannot escape into a second shell command',
+    run:()=>{
+      const q=g.shq('x\'; rm -rf ~; echo \'');
+      /* Walk it the way a POSIX shell does. Outside quotes a backslash escapes the next character,
+         so the `\'` in `'\''` is a literal quote, NOT a toggle — a walker that toggled on it
+         would report correct quoting as an injection. Inside '...' nothing is special. */
+      let inQ=false,escaped=0;
+      for(let i=0;i<q.length;i++){const ch=q[i];
+        if(!inQ&&ch==='\\'){i++;continue;}
+        if(ch==="'")inQ=!inQ;else if(ch===';'&&!inQ)escaped++;}
+      return escaped+' unquoted separators';
+    },expect:v=>v==='0 unquoted separators',
+    antiWhat:'and an ordinary value is still delivered exactly',
+    anti:()=>g.shq('hello world'),antiExpect:v=>v==="'hello world'"});
+
+  /* BrowserSkill renders refs as `@e<N>` inside its observation text. */
+  add({id:'cu-reads-browserskill-refs',sub:'computer use',uses:['cuParseObserve'],
+    what:'every control in a BrowserSkill observation becomes a candidate, once',
+    run:()=>{
+      const c=g.cuParseObserve('page: Checkout\n  button "Buy now" @e3\n  link "Terms" @e7\n'+
+        '  button "Buy now" @e3\n  heading "Your cart"');
+      return c.map(x=>x.ref).join(',');
+    },expect:v=>v==='@e3,@e7',
+    antiWhat:'and a line with no control is not invented into one',
+    anti:()=>g.cuParseObserve('heading "Your cart"\nparagraph "Nothing here"').length,
+    antiExpect:v=>v===0});
+
+  /* The loop's own question must pass the schema check — otherwise every step would 400. */
+  add({id:'cu-questions-are-valid',sub:'computer use',uses:['cuQuestions','jevBody'],
+    what:'the per-step decision the loop builds is one the API will accept',
+    run:()=>{
+      const qs=g.cuQuestions('open notes',[{ref:'w1',label:'Notes',role:'button'},
+        {ref:'w2',label:'Clock',role:'button'}]);
+      const b=g.jevBody({goal:'open notes'},qs);
+      return b.ok?('ok:'+Object.keys(b.body.questions).join('+')):('refused: '+b.error);
+    },expect:v=>v==='ok:next+done',
+    antiWhat:'and the choice it builds carries the escape option, so "no control fits" is answerable',
+    anti:()=>{
+      const b=g.jevBody({},g.cuQuestions('x',[{ref:'w1',label:'A',role:''}]));
+      return b.ok&&(g.JEV_ESCAPE in b.body.questions.next.criteria)?'has-exit':'no-exit';
+    },antiExpect:v=>v==='has-exit'});
+
+  /* The WebOS is where every other section can be opened from, so it is core from first run. */
+  add({id:'webos-is-core',sub:'rendering',uses:['ONB_ALWAYS','onbTabsFor'],
+    what:'the WebOS is present whatever a new user picks',
+    run:()=>[[],['write'],['research'],['agents']].map(p=>g.onbTabsFor(p,'focused').includes('webos')?1:0).join(''),
+    expect:v=>v==='1111',
+    antiWhat:'and making it core did not collapse the levels back into one',
+    anti:()=>{const a=g.onbTabsFor(['write'],'focused').length,b=g.onbTabsFor(['write'],'balanced').length;
+      return a<b?'scales':'flat';},antiExpect:v=>v==='scales'});
+
+  /* Feature windows must resolve, but must not become forty-one desktop icons. */
+  add({id:'wos-features-resolve-not-flood',sub:'rendering',uses:['wosApp','wosAllApps','wosFeatureApps'],
+    what:'any section can open as a desktop window',
+    run:()=>{const a=g.wosApp('feat-studio');return a&&a.kind==='feature'&&a.tab==='studio'?'resolves':'missing';},
+    expect:v=>v==='resolves',
+    antiWhat:'and those windows are not drawn as desktop icons',
+    anti:()=>g.wosAllApps().filter(a=>a.kind==='feature').length,antiExpect:v=>v===0});
+
+  /* logEvent spreads its payload into the event. Two listeners read a `.data` that does not exist
+     and received every event empty — silently, because the rules they fed matched on `kind`. Held
+     against logEvent's REAL return value, since the bug was a mismatch with that exact shape. */
+  add({id:'log-payload-survives',sub:'triggers',uses:['logPayload','logEvent'],
+    what:'what an event carries reaches the listeners that read it',
+    run:()=>{const p=g.logPayload(g.logEvent('gauntlet-probe',{marker:42,tool:'x'}));
+      return p.marker+'|'+p.tool;},expect:v=>v==='42|x',
+    antiWhat:'and the log bookkeeping is not mistaken for part of the payload',
+    anti:()=>{const p=g.logPayload(g.logEvent('gauntlet-probe',{marker:1}));
+      return ['seq','t','kind'].filter(k=>k in p).length;},antiExpect:v=>v===0});
+
   /* ── TRIGGERS AND THE EXIT GATE ───────────────────────────────────────────
      Both are guards, and a guard that never fires is worse than no guard because it reads as a
      clean bill of health. Every case below is aimed at exactly that failure. */
@@ -28842,8 +30030,13 @@ function gauntletCases(g){
       g.renderAgentBar();const first=bar.innerHTML;
       g.renderAgentBar();g.renderAgentBar();
       return bar.innerHTML===first;},expect:v=>v===true,
-    antiWhat:'it still reports idle honestly rather than pretending to be busy',
-    anti:()=>g.agentState().busy,antiExpect:v=>v===false});
+    /* The invariant is "busy exactly when something is really active", not "idle right now".
+       The first form read ambient state, so running the suite within seconds of ANY model call —
+       and, once Jev decisions and computer-use steps started lighting the bar, of those too —
+       turned it red with nothing wrong. It now reports on honesty in both directions and on
+       nothing else. */
+    antiWhat:'it reports busy exactly when something is really active — never pretending either way',
+    anti:()=>g.agentState().busy===(g.activeList().length>0),antiExpect:v=>v===true});
 
   /* ── FACTORY LOOP ──
      Also declared uncovered. The factory is a state machine, and the failure that matters is not
@@ -29118,6 +30311,25 @@ function gauntletStale(){
    break the guard by making it TOO PERMISSIVE or TOO EAGER rather than by making it throw —
    a thrown error is easy to notice, and is not the bug class this exists to catch. */
 const GAUNTLET_SABOTAGE=[
+  {id:'log-payload-reads-data',export:'logPayload',
+   why:'every event reaches the trigger rules and the action feed with nothing in it',
+   broken:()=>e=>(e&&e.data)||{}},
+  {id:'jev-no-escape-option',export:'jevQuestion',
+   why:'a choice with no right answer among its options gets a confident wrong one instead',
+   broken:()=>q=>q&&['choice','score','noul'].indexOf(q.type)>=0&&q.instructions
+     ?{ok:true,q:{type:q.type,instructions:q.instructions,criteria:q.criteria}}:{ok:false,error:'x'}},
+  {id:'jev-gate-always-acts',export:'jevGate',
+   why:'a low-confidence decision is acted on as if it were certain',
+   broken:()=>()=>({act:true,why:'always'})},
+  {id:'shq-does-not-quote',export:'shq',
+   why:'text from a web page is handed to the shell unquoted and can run as a command',
+   broken:()=>s=>String(s)},
+  {id:'bsk-refs-unread',export:'cuParseObserve',
+   why:'computer use in the real browser sees no controls and does nothing',
+   broken:()=>()=>[]},
+  {id:'exec-stream-unread',export:'execSummary',
+   why:'every command run through the bridge reports failure whatever it did',
+   broken:()=>()=>({ok:false,code:null,out:'',err:'',error:'x'})},
   {id:'vrf-unproven-counts-as-pass',export:'vrfVerdict',
    why:'a run declares itself finished on criteria nobody ever checked',
    broken:()=>rs=>({state:rs.some(r=>!r.ok&&!r.unproven)?'fail':'pass',
@@ -41418,7 +42630,13 @@ function initSettings(){
   $('#set-ollama').onchange=()=>{settings.ollama=$('#set-ollama').value.trim();store.set('settings',settings);syncOllama();};
   $('#set-ollamaauto').onchange=()=>{settings.ollamaAuto=$('#set-ollamaauto').checked;store.set('settings',settings);};
   $('#set-ollamascan').onclick=()=>syncOllama(false);
-  $('#ollamapill').onclick=()=>{go('settings');syncOllama(false);};
+  $('#ollamapill').onclick=()=>{goTo('settings','#set-ollama','it is where Ollama is set up');syncOllama(false);};
+  /* The "No key" pill was the first thing a new user saw and it did nothing when clicked. */
+  const kp=$('#keypill');
+  if(kp){kp.style.cursor='pointer';kp.title='Set your API key';kp.setAttribute('role','button');
+    kp.tabIndex=0;kp.setAttribute('aria-label','API key status — open the key setting');
+    const openKey=()=>goTo('settings','#set-key','it is where your key goes');
+    kp.onclick=openKey;kp.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openKey();}};}
   $('#set-bridge').value=settings.bridge;
   $('#set-bridgeauto').checked=settings.bridgeAuto!==false;
   $('#set-bridge').onchange=()=>{settings.bridge=$('#set-bridge').value.trim();store.set('settings',settings);probeBridge();};
@@ -43781,7 +44999,7 @@ const TAB_GROUPS=[
   {id:'models',label:'Models & cost',    icon:'🎚',
    views:['modelhub','models','local','metrics','graphs','viz']},
   {id:'agents',label:'Agents & teams',   icon:'🤖',
-   views:['vo','bots','mission','awards','study']},
+   views:['vo','bots','mission','awards','study','jev']},
   {id:'know',  label:'Knowledge & ops',  icon:'🧠',
    views:['brain','terminal','ops','guards','reverse','devices']},
   {id:'setup', label:'Setup',            icon:'⚙️',
@@ -44258,37 +45476,37 @@ const CONN_KINDS={
 /* Each port says what it takes and what it does with it. `run` is the only thing that
    actually moves data — everything else is description used to build the menu. */
 const CONN_PORTS=[
-  {id:'studio',    tab:'studio',  icon:'🛠', label:'Studio',        takes:['html','files'],
+  {id:'studio',lands:'#st-filelist',    tab:'studio',  icon:'🛠', label:'Studio',        takes:['html','files'],
    why:'edit and run it live', run:p=>connToStudio(p)},
-  {id:'launch',    tab:'launch',  icon:'📲', label:'Launcher',      takes:['html','files'],
+  {id:'launch',lands:'#lx-stagewrap',    tab:'launch',  icon:'📲', label:'Launcher',      takes:['html','files'],
    why:'run it — in a device frame, full screen, or its own tab', run:p=>connToLaunch(p)},
-  {id:'webos',     tab:'webos',   icon:'🪟', label:'WebOS',         takes:['html'],
+  {id:'webos',lands:'#wos-root',     tab:'webos',   icon:'🪟', label:'WebOS',         takes:['html'],
    why:'install it as a real app on the desktop', run:p=>connToWebos(p)},
   {id:'writer',    tab:'office',  icon:'📝', label:'Office Writer', takes:['text','doc'],
    why:'edit it as a document', run:p=>connToWriter(p)},
-  {id:'calc',      tab:'office',  icon:'📊', label:'Office Calc',   takes:['table'],
+  {id:'calc',lands:'#ofc-grid',      tab:'office',  icon:'📊', label:'Office Calc',   takes:['table'],
    why:'work on it as a spreadsheet', run:p=>connToCalc(p)},
-  {id:'officegen', tab:'office',  icon:'🗂', label:'Office Generate',takes:['text','doc','table'],
+  {id:'officegen',lands:'#of-brief', tab:'office',  icon:'🗂', label:'Office Generate',takes:['text','doc','table'],
    why:'build a real .docx / .xlsx / .pptx from it', run:p=>connToOfficeGen(p)},
-  {id:'gen',       tab:'gen',     icon:'🎬', label:'Create Studio', takes:['prompt','image','video'],
+  {id:'gen',lands:'#gen-prompt',       tab:'gen',     icon:'🎬', label:'Create Studio', takes:['prompt','image','video'],
    why:'generate or refine media from it', run:p=>connToGen(p)},
-  {id:'design',    tab:'design',  icon:'🎨', label:'Design Studio', takes:['palette','html','image'],
+  {id:'design',lands:'#ds-nav',    tab:'design',  icon:'🎨', label:'Design Studio', takes:['palette','html','image'],
    why:'design against it', run:p=>connToDesign(p)},
-  {id:'three',     tab:'three',   icon:'🧊', label:'3D Editor',     takes:['model3d','image','prompt'],
+  {id:'three',lands:'#ed3-frame',     tab:'three',   icon:'🧊', label:'3D Editor',     takes:['model3d','image','prompt'],
    why:'build or place it in a 3D scene', run:p=>connTo3D(p)},
-  {id:'relay',     tab:'relay',   icon:'🔁', label:'Relay',         takes:['prompt','text','files'],
+  {id:'relay',lands:'#relay-task',     tab:'relay',   icon:'🔁', label:'Relay',         takes:['prompt','text','files'],
    why:'have the architect/builder loop implement it', run:p=>connToRelay(p)},
-  {id:'lab',       tab:'lab',     icon:'🔬', label:'Reason Lab',    takes:['prompt','text'],
+  {id:'lab',lands:'#lab-prompt',       tab:'lab',     icon:'🔬', label:'Reason Lab',    takes:['prompt','text'],
    why:'watch a model actually think about it', run:p=>connToLab(p)},
-  {id:'assistant', tab:'assistant',icon:'💬',label:'Assistant',     takes:['prompt','text','trace'],
+  {id:'assistant',lands:'#asst-input', tab:'assistant',icon:'💬',label:'Assistant',     takes:['prompt','text','trace'],
    why:'talk it through', run:p=>connToAsst(p)},
-  {id:'brain',     tab:'brain',   icon:'🧠', label:'Brain',         takes:['note','text','trace'],
+  {id:'brain',lands:'#bc-docs',     tab:'brain',   icon:'🧠', label:'Brain',         takes:['note','text','trace'],
    why:'remember it across sessions', run:p=>connToBrain(p)},
-  {id:'reverse',   tab:'reverse', icon:'🔩', label:'Reverse',       takes:['repo'],
+  {id:'reverse',lands:'#ghr-repo',   tab:'reverse', icon:'🔩', label:'Reverse',       takes:['repo'],
    why:'read the real tree and rebuild the spec', run:p=>connToReverse(p)},
-  {id:'transplant',tab:'transplant',icon:'🧬',label:'Transplant',   takes:['trace'],
+  {id:'transplant',lands:'#tr-source',tab:'transplant',icon:'🧬',label:'Transplant',   takes:['trace'],
    why:'hand this thinking to a cheaper model', run:p=>connToTransplant(p)},
-  {id:'creations', tab:'creations',icon:'📦',label:'Creations',     takes:['html','files','image','video','doc','model3d'],
+  {id:'creations',lands:'#cr-list', tab:'creations',icon:'📦',label:'Creations',     takes:['html','files','image','video','doc','model3d'],
    why:'keep it', run:p=>connToCreations(p)},
 ];
 const connPort=id=>CONN_PORTS.find(p=>p.id===id);
@@ -44322,6 +45540,8 @@ async function connRun(portId,payload){
   if(tabHidden(p.tab))goEnsure(p.tab,'it is the destination you picked');
   try{
     await p.run(payload);
+    /* Land ON what received it, not at the top of the tab it lives in. */
+    if(p.lands)goTo(p.tab,p.lands);
     CONNX.log=[{from:payload.from||'',to:portId,kind:payload.kind,title:payload.title,ts:nowISO()}]
       .concat(CONNX.log||[]).slice(0,200);
     saveConnx();
@@ -44734,7 +45954,9 @@ const ONB_INTERESTS=[
    once they have used the app for an hour. */
 const ONB_COMMON=['creations','history','metrics','modelhub','webos'];
 /* Always present regardless of answers — without these the app has no front door. */
-const ONB_ALWAYS=['assistant','settings','help'];
+/* The WebOS is here because it is where everything else can be opened FROM — every section of
+   the app runs as a window on it — so hiding it hides the one place that reaches all the rest. */
+const ONB_ALWAYS=['assistant','webos','settings','help'];
 const ONB_DEFAULTS={done:false,step:0,picks:[],level:'',name:''};
 let ONB=Object.assign({},ONB_DEFAULTS,store.get('onboarding',{}));
 const saveOnb=()=>store.set('onboarding',ONB);
@@ -47694,7 +48916,7 @@ function lxInit(){
 /* Anything elsewhere in the app can hand work here: Studio's current build, a Relay result, a
    creation, a file tree from Reverse. */
 function connToLaunch(p){
-  goEnsure('launch','it is where a build actually runs');
+  goTo('launch','#lx-stagewrap','it is where a build actually runs');
   if(p.kind==='files'&&p.data&&typeof p.data==='object')
     lxAccept({name:p.title||'From '+(p.from||'elsewhere'),files:p.data,assets:{}},'connect');
   else lxOpenText(String(p.data||''),p.title||('From '+(p.from||'elsewhere')));
@@ -47798,6 +49020,8 @@ const WOS_BUILTIN=[
   {id:'arcade',  name:'Arcade',     icon:'🕹', kind:'builtin', desc:'Games that run inside this window'},
   {id:'pet',     name:'Companion',  icon:'🍄', kind:'builtin', desc:'A desktop pet wired to what the app is really doing'},
   {id:'settings',name:'Customise',  icon:'✦',  kind:'builtin', desc:'Themes, icons, wallpaper and extra features'},
+  {id:'glassbox',name:'All of GlassBox',icon:'▣',kind:'builtin', desc:'Open any section of the app as a window on this desktop'},
+  {id:'toolbox', name:'Web Toolbox', icon:'🧰',kind:'builtin', desc:'Fifty free web tools, filed by what they are for'},
 ];
 /* Aurora's remaining apps. Every one of these is a window onto a system GlassBox ALREADY has,
    which is why they are off by default rather than duplicated: switching one on opens the real
@@ -47890,6 +49114,10 @@ function wosInstall(o){
     ?'It has a folder on the desktop with all '+app.fileCount+' files.'
     :'It is on the desktop now.','good');
   if($('#wos-root'))wosRender();
+  /* It used to say nothing about WHERE it went. Not shown while you are already on the desktop. */
+  if(typeof navPill==='function'&&currentView()!=='webos')
+    navPill({icon:app.icon||'🪟',text:'Created “'+app.name+'” on your WebOS desktop',
+      cta:'Open it',go:()=>wosOpenApp(app.id)});
   return app;
 }
 function wosUninstall(id){
@@ -47905,7 +49133,13 @@ function wosAllApps(){
     .concat(wosVisibleExtras().map(e=>Object.assign({},e,{kind:'extra'})))
     .concat(WOS.apps||[]);
 }
-function wosApp(id){return wosAllApps().find(a=>a.id===id);}
+/* Feature windows resolve here but are deliberately NOT in wosAllApps — that list draws desktop
+   icons, and forty-one of them would bury the desktop. They are reached from "All of GlassBox". */
+function wosApp(id){
+  return wosAllApps().find(a=>a.id===id)||
+    (String(id).indexOf('feat-')===0&&typeof wosFeatureApps==='function'
+      ?wosFeatureApps().find(a=>a.id===id):undefined);
+}
 
 /* ── Notifications ─────────────────────────────────────────────────────────
    The desktop subscribes to the app's existing event log rather than keeping a second one, so
@@ -48252,10 +49486,12 @@ function wosWinBody(app,w){
       <p class="wos-desc">${esc(app.desc)}</p>
       <p class="wos-note">This is a real GlassBox system, not a copy of one. Opening it takes you to
         the tab where it lives, so there is never a second set of your data to fall out of sync.</p>
-      <button class="wos-btn primary" data-wjump="${esc(app.tab)}">Open ${esc(app.name)}</button>
+      <button class="wos-btn primary" data-wfeature="${esc(app.tab)}">Open ${esc(app.name)} here</button>
+      <button class="wos-btn" data-wjump="${esc(app.tab)}">Go to its tab</button>
       <button class="wos-btn" data-wextraoff="${esc(app.id)}">Remove from desktop</button>
     </div>`;
   }
+  if(app.kind==='feature')return wosFeatureBody(app.tab,app.name);
   if(app.kind==='project')return wosFolderView(app);
   if(app.kind==='single'||app.kind==='link')
     return `<iframe class="wos-frame" data-wapp="${esc(app.id)}"
@@ -48265,7 +49501,19 @@ function wosWinBody(app,w){
     studio:wosStudioView, store:wosStoreView, files:wosFilesView, browser:wosBrowserView,
     notes:wosNotesView, term:wosTermView, calc:wosCalcView, clock:wosClockView,
     music:wosMusicView, arcade:wosArcadeView, pet:wosPetView, settings:wosSettingsView,
+    glassbox:wosGlassboxView, toolbox:()=>webToolboxHtml(),
   }[app.id]||(()=>'<div class="wos-empty">Not built yet.</div>'))(w);
+}
+/* Every section of the app, built from the live tab registry so nothing has to be kept in step. */
+function wosGlassboxView(){
+  const apps=wosFeatureApps();
+  return `<div class="wos-pad"><h3 style="margin-top:0">▣ All of GlassBox</h3>
+    <p class="wos-desc">Every section of the app, as a window on this desktop. Each is the real
+      section — same data, same storage — not a copy of one.</p>
+    <div class="wtb-grid" style="margin-top:12px">${apps.map(a=>
+      `<button class="wtb-item" data-wfeature="${esc(a.tab)}" style="text-align:left;cursor:pointer"
+        aria-label="Open ${esc(a.name)} in a window"><b>${esc(a.icon)} ${esc(a.name)}</b>
+        <span>open in a window</span></button>`).join('')}</div></div>`;
 }
 function wosFolderView(app){
   return `<div class="wos-pad wos-folder" data-wfolder="${esc(app.id)}">
@@ -48934,6 +50182,7 @@ function wosInit(){
     if((el=g('data-wmaxb'))){wosMax(el.dataset.wmaxb);return;}
     if((el=g('data-wsnapl'))){wosSnap(el.dataset.wsnapl,'left');return;}
     if((el=g('data-wsnapr'))){wosSnap(el.dataset.wsnapr,'right');return;}
+    if((el=g('data-wfeature'))){wosOpen('feat-'+el.dataset.wfeature,{w:1040,h:680});return;}
     if((el=g('data-wjump'))){go(el.dataset.wjump);return;}
     if((el=g('data-wopen'))){wosOpen(el.dataset.wopen);return;}
     if(g('data-wstart')){wosStartMenu();return;}
@@ -49267,8 +50516,8 @@ async function wosTermRun(inp){
   if(cmd==='backup'){await persistBackupNow();return say('Backup written.');}
   if(cmd==='zip'){await persistZip();return say('ZIP building — check your downloads.');}
   if(typeof BRIDGE_INFO!=='undefined'&&BRIDGE_INFO&&BRIDGE_INFO.ok){
-    try{const r=await bridgePost('/exec',{cmd:raw});
-      return say((r&&(r.out||r.err||r.error))||'(no output)');}
+    try{const r=await bridgeExec(raw);
+      return say((r.out||r.err||r.error)||'(no output)');}
     catch(e){return say('bridge error: '+e.message);}
   }
   say('Command not found, and the bridge is not connected. Type help.');
@@ -51029,7 +52278,7 @@ async function persistInit(){
    worker updating is NOT the same thing as the user seeing the new app: clients.claim() makes
    a new worker control the page, but the HTML already parsed keeps running until something
    reloads it. This is what lets the app notice and say so. */
-const APP_BUILD='97dc2db8a53d985b';
+const APP_BUILD='5dbf13cdb8b19869';
 const PWA={reg:null,state:'unknown',why:'',prompt:null,update:null,checking:false,lastCheck:0};
 
 /* ── Staying current, which is the whole problem on iOS ──────────────────────
@@ -54604,6 +55853,7 @@ function go(view){
     renderCrossDevice();renderPersist();renderPwa();renderSfx();renderWhy();});
   if(view==='help')panelGuard(view,()=>renderHelp());
   if(view==='launch')panelGuard(view,()=>{lxInit();renderLaunch();});
+  if(view==='jev')panelGuard(view,()=>jevRender());
   if(view==='webos')panelGuard(view,()=>{wosInit();wosRender();wosFillFolders();wosClockTick();});
 }
 async function boot(){
@@ -54665,7 +55915,7 @@ async function boot(){
   initProjects();initTraces();initOffice();initPclip();initMoa();initTabBar();initRunDiff();
   initBots();initStudy();initThree();initDeploy();initUltra();initNet();initOcr();initVo();initLocalPlus();initEd3();initVoControls();initSystemsUI();initOpenbot();initBrainImport();
   if('speechSynthesis' in window)speechSynthesis.onvoiceschanged=()=>{loadVoices();fillVoices();};
-  initGraphs();initGuards();initOmni();initRsi();initGhRev();initMemBus();initAssistUI();initRpi2();initSkillSel();initFactory();initViz();activeInit();initDesign();skinBoot();initLocal();
+  initGraphs();initGuards();initOmni();initRsi();initGhRev();initMemBus();initAssistUI();initRpi2();initSkillSel();initFactory();initViz();activeInit();jevFeedInit();initDesign();skinBoot();initLocal();
   if($('#gh-refresh'))$('#gh-refresh').onclick=renderGraphHealth;
   // ⌘K / Ctrl-K opens omnisearch from anywhere, including inside a text field.
   document.addEventListener('keydown',e=>{
@@ -55057,7 +56307,16 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     esc,GAUNTLET_VERSION,gauntletCases,gauntletBuild,gauntletRun,gauntletFileMark,gauntletStale,
     GAUNTLET_SABOTAGE,gauntletSabotage,gauntletReport,renderGauntlet,gauntletHtml,
     get GAUNTLET_LAST(){return GAUNTLET_LAST},set GAUNTLET_LAST(v){GAUNTLET_LAST=v},
-    TRIG_SOURCES,trigSource,TRIG_RULES,trigRule,TRIG_DEFAULTS,
+    logPayload,TRIG_SOURCES,trigSource,TRIG_RULES,trigRule,TRIG_DEFAULTS,
+    NT_DEFAULTS,get NT(){return NT},set NT(v){NT=v},saveNT,ntCapable,ntSafeName,ntSchema,
+    ntParseCalls,ntComplete,reactRunNative,reactAuto,
+    JEV_URL,JEV_MODEL,JEV_ESCAPE,JEV_DEFAULTS,get JEV(){return JEV},set JEV(v){JEV=v},saveJev,
+    jevQuestion,jevBody,jevParse,jevGate,jevDecide,jevRecord,jevJudge,jevRoute,jevClassify,jevPickShape,
+    bridgeExec,execSummary,shq,CU_BACKENDS,cuParseObserve,cuQuestions,CU_DEFAULTS,
+    get CU(){return CU},set CU(v){CU=v},saveCU,cuRun,get CU_RUNNING(){return CU_RUNNING},
+    goTo,navPill,wosOpenApp,wosFeatureUrl,wosFeatureBody,wosFeatureApps,wosGlassboxView,
+    WEB_TOOLBOX,webToolboxHtml,jevFeedInit,jevRunning,jevRender,jevRenderFeed,jevRenderLog,cuRenderRuns,
+    get JEV_FEED(){return JEV_FEED},set JEV_FEED(v){JEV_FEED=v},
     get TRIG(){return TRIG},set TRIG(v){TRIG=v},saveTrig,trigArmed,trigAuto,
     trigShouldFire,trigMatch,trigEmit,trigFire,trigInit,trigRender,
     VRF_CHECKS,vrfPlan,vrfVerdict,vrfRun,vrfGateExit,vrfWatch,vrfRender,
