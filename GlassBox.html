@@ -19195,10 +19195,15 @@ function toolArgsCheck(schema,args){
 function toolObservation(r,name,cap){
   if(!r||!r.ok)return (r&&r.blocked?'BLOCKED by guard: ':'the tool failed: ')+((r&&r.error)||'unknown error');
   const text=toolText(r.result);
-  const c=cap||(typeof REACT_OBS_CAP!=='undefined'?REACT_OBS_CAP:1200);
+  /* A skill is the app's own instructions, asked for by name — it arrives whole (up to 12k, which
+     covers all but the largest seeded skill), not cut to the 1,200-character web-page cap with its
+     middle behind a second recall step. */
+  const c=cap||(r.source==='skill'?12000:(typeof REACT_OBS_CAP!=='undefined'?REACT_OBS_CAP:1200));
   let body=text;
   if(text.length>c){
-    const head=Math.min(TOOL_OBS_HEAD,Math.floor(c*0.75)),tail=Math.min(TOOL_OBS_TAIL,Math.floor(c*0.25));
+    /* Proportional to the cap (900 + 300 at the default 1,200). Fixed sizes cut a 9k skill to 1.2k
+       even when the caller allowed 12k. */
+    const head=Math.floor(c*TOOL_OBS_HEAD/(TOOL_OBS_HEAD+TOOL_OBS_TAIL)),tail=c-head;
     const h=offloadPut(text,name);
     body=text.slice(0,head)+'\n…['+(text.length-head-tail)+' characters offloaded — call recall with {"handle":"'+h+'"} to read the whole result]…\n'+text.slice(-tail);
   }
@@ -30899,9 +30904,10 @@ function gauntletCases(g){
       const o=g.toolObservation({ok:true,result:big},'web_fetch',1200);
       return [/⟦tool-output web_fetch⟧/.test(o),/recall/.test(o),o.includes('HEAD'),o.includes('TAIL'),o.length<1500].join(',');},
     expect:v=>v==='true,true,true,true,true',
-    antiWhat:'and a result flagged by the injection scan leads with a warning',
-    anti:()=>/^⚠/.test(g.toolObservation({ok:true,result:'hi',injection:{clean:false,hits:[{what:'override attempt'}]}},'x')),
-    antiExpect:v=>v===true});
+    antiWhat:'while a result flagged by the injection scan leads with a warning, and a 3k skill arrives whole',
+    anti:()=>/^⚠/.test(g.toolObservation({ok:true,result:'hi',injection:{clean:false,hits:[{what:'override attempt'}]}},'x'))+'/'+
+      /recall/.test(g.toolObservation({ok:true,source:'skill',result:'s'.repeat(9600)},'load_skill')),
+    antiExpect:v=>v==='true/false'});
   add({id:'store-shape-guard',sub:'storage',uses:['storeShapeOk'],
     what:'a stored value of the wrong shape is rejected against the reader’s default or named shape',
     run:()=>[g.storeShapeOk({},[]),g.storeShapeOk([],{}),g.storeShapeOk('x',null,'array'),g.storeShapeOk(5,'grouped','string')].join(','),
@@ -57356,7 +57362,7 @@ async function persistInit(){
    worker updating is NOT the same thing as the user seeing the new app: clients.claim() makes
    a new worker control the page, but the HTML already parsed keeps running until something
    reloads it. This is what lets the app notice and say so. */
-const APP_BUILD='fe233a3109249cae';
+const APP_BUILD='95c1a2b3cdf2fa93';
 const PWA={reg:null,state:'unknown',why:'',prompt:null,update:null,checking:false,lastCheck:0};
 
 /* ── Staying current, which is the whole problem on iOS ──────────────────────
