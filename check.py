@@ -1,4 +1,4 @@
-import sys, subprocess, re, collections
+import sys, subprocess, re, collections, os
 s = open('GlassBox.html').read()
 start = s.index('\n<script>') + len('\n<script>')
 end   = s.index('</' + 'script>', start)
@@ -90,11 +90,17 @@ if m:
     names=[]
     for k in keys:
         k=k.strip()
-        mm=re.match(r'^(?:get|set)\s+([A-Za-z_$][\w$]*)\s*\(', k) or re.match(r'^([A-Za-z_$][\w$]*)\s*(?::|,|$)', k)
-        if mm: names.append(mm.group(1))
+        mg=re.match(r'^(get|set)\s+([A-Za-z_$][\w$]*)\s*\(', k)
+        mm=re.match(r'^([A-Za-z_$][\w$]*)\s*(?::|,|$)', k)
+        if mg: names.append(mg.group(1)+' '+mg.group(2))
+        elif mm: names.append('value '+mm.group(1))
     seen=collections.Counter(names)
-    # a get/set PAIR for the same name is correct and expected, so only 3+ is a real duplicate
-    gdup=[k for k,v in seen.items() if v>2]
+    # Counted per KIND. The old gate allowed any name twice "for a get/set pair", which let 37
+    # plain duplicates through (pass 29). A get and a set of one name are two different keys;
+    # a value key alongside a getter of the same name is a duplicate.
+    gdup=[k for k,v in seen.items() if v>1]
+    vals={k[6:] for k in seen if k.startswith('value ')}
+    gdup+=[k for k in seen if k.startswith('get ') and k[4:] in vals]
     if gdup: print('FAIL: duplicate __gb export keys:',gdup); sys.exit(1)
 
 # Every fetch in REAL code must carry an abort signal. A hung request neither resolves nor
@@ -236,4 +242,11 @@ if '--release' in sys.argv and have != want:
     print(f'      Run:  python3 check.py --stamp     (sets it to {want})')
     sys.exit(1)
 
+# The parser-backed gate (gb-lint.mjs): undeclared names, duplicate keys, TDZ reads. Skipped with a
+# loud note when ESLint is not installed, so a fresh machine can still run the rest.
+_lint=os.path.join(os.path.dirname(os.path.abspath(__file__)),'gb-lint.mjs')
+if os.path.exists(_lint):
+    lr=subprocess.run(['node',_lint,'GlassBox.html'],capture_output=True,text=True)
+    if lr.returncode==1: print(lr.stdout[:3000]); sys.exit(1)
+    print(lr.stdout.strip())
 print(f'OK  js parses | {len(views)} tabs | {len(secs)} sections | no dup decls | no dup ids')
