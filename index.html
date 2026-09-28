@@ -34774,7 +34774,13 @@ function eeTextToCda(text,name){
     meta:{format:'text'},blocks}};
 }
 async function eePdfToCda(file,onProgress){
-  const pdfjs=await pdfEnsure();
+  let pdfjs;
+  try{pdfjs=await pdfEnsure();}
+  catch(e){
+    /* pdf.js is a CDN dynamic import. With no network there is no PDF text layer —
+       say so honestly rather than hanging or pretending the document was read. */
+    return{ok:false,error:'PDF support could not load (the pdf.js library is fetched from a CDN and this session appears to be offline). OCR and image-only pages are likewise unavailable. Import .md/.txt/.html/.docx instead, or connect once to cache pdf.js.'};
+  }
   const buf=await file.arrayBuffer();
   const doc=await pdfjs.getDocument({data:buf}).promise;
   const n=Math.min(doc.numPages,120);
@@ -60304,7 +60310,7 @@ async function persistInit(){
    worker updating is NOT the same thing as the user seeing the new app: clients.claim() makes
    a new worker control the page, but the HTML already parsed keeps running until something
    reloads it. This is what lets the app notice and say so. */
-const APP_BUILD='26e052a54898d373';
+const APP_BUILD='5f62f55b21b2375c';
 const PWA={reg:null,state:'unknown',why:'',prompt:null,update:null,checking:false,lastCheck:0};
 
 /* ── Staying current, which is the whole problem on iOS ──────────────────────
