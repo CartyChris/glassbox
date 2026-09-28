@@ -13,7 +13,7 @@
    cross-origin POSTs to the user's provider, so neither prompts, completions, nor API keys ever
    reach this cache. That is a property of the two guards below, not a promise. */
 
-const CACHE = 'glassbox-shell-v1';
+const CACHE = 'glassbox-shell-v2';
 const SHELL = ['./', './index.html', './manifest.webmanifest'];
 
 self.addEventListener('install', e => {
@@ -41,8 +41,15 @@ self.addEventListener('fetch', e => {
   try { url = new URL(req.url); } catch (_) { return; }
   if (url.origin !== self.location.origin) return;           // provider traffic is not ours
 
+  /* The PAGE always revalidates. Network-first was not enough on its own: fetch() inside a worker
+     still consults the HTTP cache, and a host that sends no freshness headers (python http.server,
+     which is what the desktop app serves from) gets heuristic caching — so after an update the
+     worker fetched "from the network" and was handed yesterday's page. Found in pass 30 when a
+     local tab ran a build two versions old. `no-cache` is a conditional request: a 304 when
+     nothing changed, so it costs nothing. */
+  const isPage = req.mode === 'navigate' || /(\.html?|\/)$/.test(url.pathname);
   e.respondWith(
-    fetch(req)
+    (isPage ? fetch(req, { cache: 'no-cache' }) : fetch(req))
       .then(res => {
         /* Opaque and error responses are not worth storing; caching a 500 would serve that 500
            back while offline and look like the app itself is broken. */
