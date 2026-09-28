@@ -45,7 +45,7 @@ where node >nul 2>&1 && if exist "glassbox-bridge.mjs" (
 )
 
 echo Serving this folder on port !PORT! ...
-start "GlassBox server" /min cmd /c "python -m http.server !PORT! --bind 127.0.0.1"
+if exist glassbox-serve.py (start "GlassBox server" /min cmd /c "python glassbox-serve.py !PORT!") else (start "GlassBox server" /min cmd /c "python -m http.server !PORT! --bind 127.0.0.1")
 timeout /t 2 /nobreak >nul
 start "" "http://localhost:!PORT!/GlassBox.html"
 

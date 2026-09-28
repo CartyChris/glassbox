@@ -93,7 +93,8 @@ if [ -f glassbox-bridge.mjs ] && command -v node >/dev/null 2>&1; then
 fi
 
 echo "• Serving this folder on port $PORT…"
-python3 -m http.server "$PORT" --bind 127.0.0.1 >/dev/null 2>&1 &
+if [ -f glassbox-serve.py ]; then python3 glassbox-serve.py "$PORT" >/dev/null 2>&1 &
+else python3 -m http.server "$PORT" --bind 127.0.0.1 >/dev/null 2>&1 & fi
 SERVER_PID=$!
 trap 'kill $SERVER_PID $BRIDGE_PID 2>/dev/null' EXIT INT TERM
 

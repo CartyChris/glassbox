@@ -20,7 +20,7 @@ if (-not $port) { Write-Host 'Every candidate port is busy.'; pause; exit 1 }
 if ((Get-Command node -ErrorAction SilentlyContinue) -and (Test-Path 'glassbox-bridge.mjs')) {
   Start-Process node -ArgumentList 'glassbox-bridge.mjs' -WindowStyle Minimized
 }
-Start-Process python -ArgumentList "-m","http.server","$port","--bind","127.0.0.1" -WindowStyle Minimized
+if (Test-Path "glassbox-serve.py") { Start-Process python -ArgumentList "glassbox-serve.py","$port" -WindowStyle Minimized } else { Start-Process python -ArgumentList "-m","http.server","$port","--bind","127.0.0.1" -WindowStyle Minimized }
 Start-Sleep -Seconds 2
 Start-Process "http://localhost:$port/GlassBox.html"
 Write-Host "GlassBox is open at http://localhost:$port/GlassBox.html"

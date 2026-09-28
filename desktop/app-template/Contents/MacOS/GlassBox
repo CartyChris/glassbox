@@ -21,7 +21,8 @@ done
     node glassbox-bridge.mjs >/tmp/glassbox-bridge.log 2>&1 &
 }
 
-python3 -m http.server "$PORT" --bind 127.0.0.1 >/dev/null 2>&1 &
+if [ -f glassbox-serve.py ]; then python3 glassbox-serve.py "$PORT" >/dev/null 2>&1 &
+else python3 -m http.server "$PORT" --bind 127.0.0.1 >/dev/null 2>&1 & fi
 SERVER=$!
 trap 'kill $SERVER 2>/dev/null' EXIT INT TERM
 for _ in $(seq 1 30); do serves "$PORT" && break; sleep 0.2; done
