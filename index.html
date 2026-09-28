@@ -35518,6 +35518,7 @@ function eeXrayHtml(){
       <b style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">What would change our mind</b>
       <div class="help" style="margin-top:3px">${c.falsification.testable?c.falsification.falsifiers.map(f=>'⊘ '+esc(f)).join('<br>'):'Currently untestable as worded'+(c.falsification.unresolved?' — '+esc(c.falsification.unresolved):'')}</div>
     </div>`:''}
+    ${c.kind==='claim'?eeXrayDeepHtml(c):''}
     <div class="help" style="margin-top:8px">provenance: ${esc(prov.method||'unknown')} · run ${esc(prov.run||'—')} · ${esc(prov.at||'—')}</div>
   </div>`;
 }
@@ -35578,7 +35579,7 @@ function renderEE(){
     <b>${esc(inv.name)}</b>
     <span class="muted">${inv.documents.length} doc(s) · ${inv.nodes.filter(n=>n.kind==='claim').length} claims · ${inv.nodes.filter(n=>n.kind==='evidence').length} evidence · ${inv.nodes.filter(n=>n.kind==='warrant').length} warrants · ${inv.attacks.length} attacks</span>
     <span class="spacer"></span>
-    ${['graph','docs','report'].map(v=>`<button class="btn ${EE.sel.view===v?'':'ghost'} small" data-ee="view" data-v="${v}">${v==='graph'?'🕸 Graph':v==='docs'?'📄 Documents':'📋 Report'}</button>`).join('')}
+    ${['graph','docs','report','citations','synthesis'].map(v=>`<button class="btn ${EE.sel.view===v?'':'ghost'} small" data-ee="view" data-v="${v}">${v==='graph'?'🕸 Graph':v==='docs'?'📄 Documents':v==='report'?'📋 Report':v==='citations'?'🧾 Citations':'🧬 Synthesis'}</button>`).join('')}
   </div></div>`;
   h+='<div class="card" id="ee-graphcard" style="margin-top:10px;display:'+(EE.sel.view==='graph'?'block':'none')+'"><div id="ee-canvas" style="min-height:280px"></div>'
     +'<div class="row" style="gap:12px;flex-wrap:wrap;padding:4px 2px"><span class="help">●</span>'
@@ -35587,6 +35588,8 @@ function renderEE(){
     +'<div id="ee-xray-host" style="margin-top:8px"></div></div>';
   h+='<div id="ee-docshost" style="display:'+(EE.sel.view==='docs'?'block':'none')+';margin-top:10px">'+inv.documents.map(eeDocHtml).join('')+'</div>';
   h+='<div id="ee-reporthost" style="display:'+(EE.sel.view==='report'?'block':'none')+'">'+eeReportHtml()+'</div>';
+  h+='<div id="ee-citehost" style="display:'+(EE.sel.view==='citations'?'block':'none')+';margin-top:10px"><div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:6px"><h3 style="margin:0">🧾 Citation forensics</h3><button class="btn ghost small" data-ee="cite-audit">▶ Run on all documents</button></div>'+eeCitationsHtml()+eeLineageHtml()+'</div></div>';
+  h+='<div id="ee-synhost" style="display:'+(EE.sel.view==='synthesis'?'block':'none')+';margin-top:10px">'+eeMutationHtml()+eeContradictionsHtml()+eeSensitivityHtml()+(eeMutationReport().length||eeContradictions().length||(eeSensitivity()||[]).length?'':'<div class="card"><p class="help">Import two or more documents (or a document with dependent claims) to see claim mutation, contradictions and premise-failure sensitivity.</p></div>')+'</div>';
   h+=`<div class="card" style="margin-top:10px"><h3 style="margin-top:0">🧾 Runs</h3>
     <div class="help">${(inv.runs||[]).slice(-8).reverse().map(r=>`<div>· ${esc(r.kind)} — ${esc(r.method)}${r.model?' · '+esc(r.model):''} · ${esc(r.at.slice(11,19))} · ${r.passages!=null?r.passages+' passages, ':''}${r.claims!=null?r.claims+' claims, ':''}${r.attacks!=null?r.attacks+' attacks, ':''}${r.ms}ms</div>`).join('')||'No runs yet.'}</div></div>`;
   host.innerHTML=h;
@@ -35608,6 +35611,7 @@ function eeBind(host){
       else if(a==='new-inv'){eeNewInv();renderEE();}
       else if(a==='attack-doc'){eeAttackPass(el.dataset.doc);renderEE();toast('Attack pass complete');}
       else if(a==='del-doc'){eeRemoveDoc(el.dataset.doc);}
+      else if(a==='cite-audit'){if(EE.inv){EE.inv.documents.forEach(d=>eeCitationAudit(d.id));EE.sel.view='citations';renderEE();toast('🧾 Citation forensics complete');}}
       ev.stopPropagation();
     });
   });
@@ -35946,7 +35950,550 @@ function eeCases(g){
     antiWhat:'there is no numeric truth field anywhere on the status object',
     anti:()=>Object.values(g.eeDefaultStatus('claim','X causes Y.')).some(v=>typeof v==='number'),
     antiExpect:v=>v===false});
+  add({id:'ee-cite-resolve',sub:'evidence engine',uses:['eeParseReferences','eeResolveCitation'],
+    what:'“Smith et al. (2019)” resolves uniquely to the Smith 2019 bibliography entry',
+    run:()=>{const refs=g.eeParseReferences('## References\n\n[1] Smith, J. et al. (2019). "Attention sparsity revisited." NeurIPS.\n[2] Jones, A. (2020). Other work. arXiv:2001.1.');
+      const r=g.eeResolveCitation({key:'Smith 2019',kind:'narrative'},refs);
+      return r.status==='resolved'&&r.ref.firstAuthor==='Smith';},
+    expect:v=>v===true,
+    antiWhat:'a citation with no matching entry is honestly unresolved, never guessed',
+    anti:()=>{const refs=g.eeParseReferences('## References\n\n[1] Smith, J. (2019). Some title here.');
+      return g.eeResolveCitation({key:'Nobody 2033',kind:'author-year'},refs).status;},
+    antiExpect:v=>v==='no-matching-entry'});
+  add({id:'ee-cite-no-invent',sub:'evidence engine',uses:['eeResolveCitation'],
+    what:'with no bibliography the status is no-bibliography, never a fabricated match',
+    run:()=>g.eeResolveCitation({key:'Smith 2019',kind:'author-year'},[]).status,
+    expect:v=>v==='no-bibliography',
+    antiWhat:'a real numeric citation against a real list does resolve',
+    anti:()=>{const refs=g.eeParseReferences('## References\n\n[3] Doe, J. (2021). A study of things and stuff.');
+      return g.eeResolveCitation({key:'ref 3',kind:'numeric'},refs).status;},
+    antiExpect:v=>v==='resolved'});
+  add({id:'ee-mutation-drift',sub:'evidence engine',uses:['eeClaimStrength'],
+    what:'“X causes Y in all cases” scores stronger than “X may be associated with Y”',
+    run:()=>g.eeClaimStrength('X causes Y in all cases.').score>g.eeClaimStrength('X may be associated with Y.').score,
+    expect:v=>v===true,
+    antiWhat:'the hedged form does not out-score the causal form',
+    anti:()=>g.eeClaimStrength('X may be associated with Y.').score>g.eeClaimStrength('X causes Y.').score,
+    antiExpect:v=>v===false});
+  add({id:'ee-firstprinciples-contradiction',sub:'evidence engine',uses:['eeFirstPrinciples'],
+    what:'a bounded quantity at 140% is a first-principles contradiction',
+    run:()=>g.eeFirstPrinciples('The bounded proportion rose to 140% in all cases.').status,
+    expect:v=>v==='contradiction',
+    antiWhat:'a sane percentage is not ruled out (not declared true — just not contradicted)',
+    anti:()=>g.eeFirstPrinciples('The proportion was 40% in this sample.').status,
+    antiExpect:v=>v==='not-ruled-out'});
+  add({id:'ee-alternatives-causal',sub:'evidence engine',uses:['eeAlternatives'],
+    what:'a causal claim generates a reverse-causation alternative with a discriminating test',
+    run:()=>g.eeAlternatives('Smoking causes early death.').some(a=>/reverse causation/i.test(a.hypothesis)&&/temporal order/i.test(a.test)),
+    expect:v=>v===true,
+    antiWhat:'alternatives are never empty even for an underdetermined claim',
+    anti:()=>g.eeAlternatives('The recipe uses flour.').length===0,
+    antiExpect:v=>v===false});
+  add({id:'ee-sensitivity-structural',sub:'evidence engine',uses:['eeSupportPaths'],
+    what:'disabling the only evidence kills support for its conclusion',
+    run:()=>{ /* build a minimal in-memory graph */
+      const prev=g.EE.inv;
+      g.EE.inv={nodes:[{id:'e1',kind:'evidence'},{id:'c1',kind:'claim'}],
+        edges:[{from:'e1',to:'c1',rel:'supports'}],attacks:[],documents:[]};
+      const withIt=g.eeSupportPaths('c1',[]),without=g.eeSupportPaths('c1',['e1']);
+      g.EE.inv=prev;
+      return withIt.supported===true&&without.supported===false;},
+    expect:v=>v===true,
+    antiWhat:'with the evidence intact, support survives',
+    anti:()=>{const prev=g.EE.inv;
+      g.EE.inv={nodes:[{id:'e1',kind:'evidence'},{id:'c1',kind:'claim'}],
+        edges:[{from:'e1',to:'c1',rel:'supports'}],attacks:[],documents:[]};
+      const r=g.eeSupportPaths('c1',[]);g.EE.inv=prev;return r.supported;},
+    antiExpect:v=>v===true});
   return C;
+}
+
+/* ════════════ VS3 — CITATION FORENSICS & SOURCE LINEAGE ════════════
+   A citation after a sentence does not prove the sentence. This layer resolves
+   in-text citations to bibliography entries where possible, assigns an honest
+   support status (never inventing metadata), traces source-of-the-source lineage,
+   and detects claim mutation as wording moves between documents. */
+
+/* In-text citation anchors, in order of appearance. */
+function eeCitationsIn(text){
+  const out=[];const seen=new Set();
+  const push=(raw,key,kind,at)=>{const k=key.toLowerCase().trim();
+    if(seen.has(k+at))return;seen.add(k+at);out.push({raw,key:key.trim(),kind,at});};
+  let m;
+  const numeric=/\[(\d+(?:\s*[,\-–]\s*\d+)*)\]/g;
+  while((m=numeric.exec(text)))push(m[0],'ref '+m[1].replace(/\s/g,''),'numeric',m.index);
+  const authorYear=/\(([A-Z][A-Za-zÀ-ÿ'\-]+(?:\s+(?:et\s+al\.?|and\s+[A-Z][A-Za-zÀ-ÿ'\-]+|&\s+[A-Z][A-Za-zÀ-ÿ'\-]+))?),?\s+((?:19|20)\d{2}[a-z]?)\)/g;
+  while((m=authorYear.exec(text)))push(m[0],m[1]+' '+m[2],'author-year',m.index);
+  const narrative=/\b([A-Z][A-Za-zÀ-ÿ'\-]+) et al\.?,? \(((?:19|20)\d{2}[a-z]?)\)/g;
+  while((m=narrative.exec(text)))push(m[0],m[1]+' '+m[2],'narrative',m.index);
+  return out.sort((a,b)=>a.at-b.at);
+}
+/* Parse a references/bibliography section into source objects. */
+function eeParseReferences(text){
+  const refs=[];
+  const m=/^#{0,4}\s*(references|bibliography|works cited)\s*$/gim.exec(text);
+  if(!m)return refs;
+  const body=text.slice(m.index+m[0].length);
+  const lines=body.split(/\n+/).map(l=>l.trim()).filter(Boolean);
+  let cur='',idx=0;
+  const flush=()=>{const t=cur.trim();cur='';
+    if(t.length<12)return;
+    const num=/^\[?(\d{1,3})\]?\s*[.):]?\s+/.exec(t);
+    const yr=/\b((?:19|20)\d{2})[a-z]?\b/.exec(t);
+    /* first author surname: strip the [n] marker, then the leading token before any
+       comma/initial — 'Smith, J. et al.' → Smith */
+    const stripped=t.replace(/^\[?\d{1,3}\]?\s*[.):]?\s+/,'');
+    const auth=/^([A-Z][A-Za-zÀ-ÿ'\-]+)/.exec(stripped);
+    refs.push({id:'src'+uid(),n:num?num[1]:String(++idx),raw:t,
+      firstAuthor:auth?auth[1]:'',year:yr?yr[1]:'',
+      title:eeRefTitle(t),verified:'metadata-unverified',prov:eeProv({method:'heuristic'})});};
+  for(const l of lines){
+    if(/^\[?\d{1,3}\]?\s*[.):]?\s+\S/.test(l)&&cur)flush();
+    cur+=(cur?' ':'')+l;
+  }
+  flush();
+  return refs;
+}
+function eeRefTitle(ref){
+  /* best-effort: quoted title, else the longest segment that is not the author block,
+     a bare year, or a venue/identifier token. Honest empty string beats a wrong title. */
+  const q=/"([^"]{8,160})"|“([^”]{8,160})”/.exec(ref);
+  if(q)return(q[1]||q[2]).trim();
+  const parts=ref.split(/\.\s+/).map(p=>p.trim()).filter(Boolean);
+  const cands=parts.filter(p=>p.length>10
+    &&!/^[\[\]\d.): ]*[A-Z][A-Za-zÀ-ÿ'\-]+(,|\s+(et\s+al|and|&)|[A-Z]\.)/.test(p)   // author-shaped
+    &&!/^(arXiv|doi|https?|www\.|vol\.?|pp\.?|no\.?)/i.test(p)                      // venue/id
+    &&!/^\(?((?:19|20)\d{2}[a-z]?)\)?$/.test(p));                                    // bare year
+  if(cands.length)return cands.sort((a,b)=>b.length-a.length)[0].slice(0,160);
+  return'';
+}
+/* Resolve one in-text citation to a bibliography entry (unique match or honest failure). */
+function eeResolveCitation(cit,refs){
+  if(cit.kind==='numeric'){
+    const n=cit.key.replace('ref ','');
+    const hit=refs.filter(r=>r.n===n||('['+r.n+']')===n);
+    if(hit.length===1)return{ref:hit[0],status:'resolved'};
+    return{ref:null,status:refs.length?'no-matching-entry':'no-bibliography'};
+  }
+  const year=(cit.key.match(/(?:19|20)\d{2}/)||[''])[0];
+  const namePart=cit.key.replace(/\s+et\s+al\.?/i,'').split(/\s+(?:and|&)\s+/)[0]
+    .replace(/,?\s*(?:19|20)\d{2}[a-z]?\s*$/,'').replace(/,$/,'').trim();
+  const last=(namePart.split(/[\s,]+/).filter(Boolean)[0]||'').toLowerCase();
+  const hits=refs.filter(r=>r.firstAuthor.toLowerCase()===last&&(!year||r.year===year));
+  if(hits.length===1)return{ref:hits[0],status:'resolved'};
+  if(hits.length>1)return{ref:null,status:'ambiguous',candidates:hits.length};
+  return{ref:null,status:refs.length?'no-matching-entry':'no-bibliography'};
+}
+/* The forensics pass over one document. Never invents anything. */
+function eeCitationAudit(docId){
+  const inv=EE.inv;if(!inv)return null;
+  const doc=eeDocById(docId);if(!doc)return null;
+  const runId=uid();const t0=performance.now();
+  doc.refs=eeParseReferences(doc.text);
+  /* Sources are graph nodes so lineage edges can point at them. */
+  inv.nodes=inv.nodes.filter(n=>!(n.kind==='source'&&n.docId===doc.id));
+  for(const r of doc.refs){
+    inv.nodes.push({id:r.id,kind:'source',cls:'source',text:r.raw.slice(0,220),
+      title:r.title,firstAuthor:r.firstAuthor,year:r.year,docId:doc.id,
+      span:{start:doc.text.indexOf(r.raw)>=0?doc.text.indexOf(r.raw):0,
+            end:doc.text.indexOf(r.raw)>=0?doc.text.indexOf(r.raw)+r.raw.length:0},
+      status:{empirical:'unavailable'},prov:eeProv({method:'heuristic',run:runId})});
+  }
+  const mappings=[];let resolved=0,unresolved=0;
+  const claims=inv.nodes.filter(n=>n.docId===doc.id&&(n.kind==='claim'||n.kind==='evidence'));
+  for(const c of claims){
+    const cits=eeCitationsIn(c.text);
+    for(const cit of cits){
+      const r=eeResolveCitation(cit,doc.refs);
+      const support=r.status==='resolved'?'source-located-content-unverified':'unresolved';
+      mappings.push({id:'cm'+uid(),claimId:c.id,citation:cit.raw,key:cit.key,
+        refId:r.ref?r.ref.id:null,status:r.status,support,
+        candidates:r.candidates||0,
+        prov:eeProv({method:'heuristic',run:runId})});
+      if(r.status==='resolved'){resolved++;
+        inv.edges.push({id:'e'+uid(),from:c.id,to:r.ref.id,rel:'cites',
+          prov:eeProv({method:'heuristic',run:runId})});
+      }else unresolved++;
+    }
+  }
+  doc.citationAudit={at:nowISO(),refs:doc.refs.length,resolved,unresolved,mappings};
+  /* ledger keeps unresolved citation count honest */
+  if(doc.ledger)doc.ledger.unresolvedCitations=unresolved;
+  inv.runs.push({id:runId,kind:'citation-audit',doc:doc.name,at:nowISO(),method:'heuristic',
+    ms:Math.round(performance.now()-t0),refs:doc.refs.length,resolved,unresolved});
+  EE.runs.push(inv.runs[inv.runs.length-1]);
+  eeSaveInv();
+  return doc.citationAudit;
+}
+
+/* ── source-of-the-source lineage ──
+   claim → cites → source (in-doc bibliography). Cross-document roots: sources whose
+   raw text appears in another imported document's bibliography collapse onto ONE
+   root, so N papers citing the same work count as N citations of 1 root, not N
+   independent confirmations. */
+function eeSourceRoots(){
+  const inv=EE.inv;if(!inv)return{roots:[],citationEdges:0,independentRoots:0};
+  const roots=new Map(); // normKey -> {sources:[], citedBy:[]}
+  const norm=s=>((s.title||'')+'|'+(s.firstAuthor||'')+'|'+(s.year||'')).toLowerCase().replace(/\s+/g,' ');
+  const sources=inv.nodes.filter(n=>n.kind==='source');
+  for(const s of sources){
+    const k=norm(s);
+    if(!roots.has(k))roots.set(k,{key:k,sources:[],citedBy:[]});
+    roots.get(k).sources.push(s.id);
+  }
+  const citeEdges=inv.edges.filter(e=>e.rel==='cites');
+  for(const e of citeEdges){
+    const src=eeNodeById(e.to);if(!src)continue;
+    const k=norm(src);const root=roots.get(k);
+    if(root&&!root.citedBy.includes(e.from))root.citedBy.push(e.from);
+  }
+  const list=[...roots.values()];
+  return{roots:list,citationEdges:citeEdges.length,
+    independentRoots:list.filter(r=>r.citedBy.length>0).length,
+    sharedRoots:list.filter(r=>r.sources.length>1||new Set(r.citedBy.map(id=>(eeNodeById(id)||{}).docId)).size>1)};
+}
+
+/* ── claim mutation / citation laundering ──
+   Same-topic claims across documents are clustered by token overlap, then scored on
+   the hedging→certainty axis. A rising score along the citation order is qualifier
+   loss / causal strengthening made visible. */
+const EE_STRENGTH={may:1,might:1,could:1,possibly:1,suggests:1.4,suggesting:1.4,
+  'associated with':2,correlat:2,linked:2,predicts:2.6,indicates:2.4,
+  contributes:3.2,leads:3.4,produces:3.4,improves:3.4,reduces:3.4,increases:3.4,
+  causes:4,caused:4,determines:4.2,proves:4.6,proven:4.6,establishes:4.4,confirms:4.2};
+function eeClaimStrength(t){
+  const s=String(t||'').toLowerCase();let score=0,hits=[];
+  for(const[k,v]of Object.entries(EE_STRENGTH))
+    if(s.includes(k)){score=Math.max(score,v);hits.push(k);}
+  if(/\b(all|every|always|never)\b/.test(s))score+=0.4;
+  if(EE_RX.hedge.test(s))score=Math.max(0.8,score-0.4);
+  return{score:Math.round(score*10)/10,hits};
+}
+function eeClaimFingerprint(t){
+  return new Set(String(t||'').toLowerCase().replace(/[^a-z0-9\s]/g,'').split(/\s+/)
+    .filter(w=>w.length>4&&!/^(about|their|there|which|would|could|should|these|those|between|within|after|before|under|study|paper|results?)$/.test(w)));
+}
+function eeClaimClusters(){
+  const inv=EE.inv;if(!inv)return[];
+  const claims=inv.nodes.filter(n=>n.kind==='claim');
+  const fps=claims.map(c=>({c,fp:eeClaimFingerprint(c.text),str:eeClaimStrength(c.text)}));
+  const clusters=[];const used=new Set();
+  for(let i=0;i<fps.length;i++){
+    if(used.has(i))continue;
+    const members=[fps[i]];used.add(i);
+    for(let j=i+1;j<fps.length;j++){
+      if(used.has(j))continue;
+      const a=fps[i].fp,b=fps[j].fp;if(!a.size||!b.size)continue;
+      const inter=[...a].filter(x=>b.has(x)).length;
+      const sim=inter/Math.min(a.size,b.size);
+      if(sim>=0.45){members.push(fps[j]);used.add(j);}
+    }
+    if(members.length>1)clusters.push(members);
+  }
+  return clusters;
+}
+function eeMutationReport(){
+  const clusters=eeClaimClusters();
+  const out=[];
+  for(const members of clusters){
+    const ordered=members.slice().sort((a,b)=>{
+      const ya=+((eeDocById(a.c.docId)||{}).importedAt||'').replace(/\D/g,'').slice(0,8)||0;
+      return 0; /* chronological data is per-import, honest ordering below uses import time */
+    });
+    /* honest chronology: order by document import time, then passage position */
+    members.sort((a,b)=>{
+      const da=(eeDocById(a.c.docId)||{}).importedAt||'',db=(eeDocById(b.c.docId)||{}).importedAt||'';
+      if(da!==db)return da<db?-1:1;
+      return(a.c.span?a.c.span.start:0)-(b.c.span?b.c.span.start:0);});
+    const series=members.map(m=>({id:m.c.id,doc:(eeDocById(m.c.docId)||{name:'?'}).name,
+      text:m.c.text.slice(0,120),strength:m.str.score,hits:m.str.hits,
+      prov:m.c.prov}));
+    const drift=series.length>1?series[series.length-1].strength-series[0].strength:0;
+    if(Math.abs(drift)>=0.8||new Set(series.map(s=>s.doc)).size>1)
+      out.push({series,drift:Math.round(drift*10)/10,
+        laundering:drift>=1.2,
+        note:drift>=1.2?'claim strengthened as it moved between documents — qualifier loss / causal strengthening':
+             drift<=-1.2?'claim weakened across documents':'parallel claims across documents'});
+  }
+  return out.sort((a,b)=>Math.abs(b.drift)-Math.abs(a.drift));
+}
+
+/* ── contradiction map (multi-document) ──
+   Two claims on the same topic with opposite polarity markers, or one document's
+   "X" vs another's "not X". Never averages disagreement away — lists both sides. */
+function eeContradictions(){
+  const clusters=eeClaimClusters();const out=[];
+  const NEG=/\b(no|not|never|none|fails? to|did not|does not|cannot|without|absence of|no significant|non-?significant)\b/i;
+  const POS=/\b(significant(?:ly)?|show\w*|demonstrat\w*|increas\w+|decreas\w+|improv\w+|reduc\w+|effect)\b/i;
+  for(const members of clusters){
+    for(let i=0;i<members.length;i++)for(let j=i+1;j<members.length;j++){
+      const A=members[i],B=members[j];
+      if(A.c.docId===B.c.docId)continue;
+      const na=NEG.test(A.c.text),nb=NEG.test(B.c.text);
+      const pa=POS.test(A.c.text),pb=POS.test(B.c.text);
+      if((na!==nb)&&pa&&pb)
+        out.push({a:{id:A.c.id,text:A.c.text.slice(0,120),doc:(eeDocById(A.c.docId)||{name:'?'}).name},
+                  b:{id:B.c.id,text:B.c.text.slice(0,120),doc:(eeDocById(B.c.docId)||{name:'?'}).name},
+                  kind:'polarity-conflict',
+                  note:'Same topic, opposite findings. Do not average — inspect population, method and context differences.'});
+    }
+  }
+  return out;
+}
+
+/* ════════════ VS5 — SENSITIVITY / PREMISE-FAILURE ANALYSIS ════════════
+   Disable a premise/assumption/warrant/evidence node and recompute which conclusions
+   still have a support path. This is STRUCTURAL CRITICALITY, never a probability. */
+function eeSupportPaths(targetId,disabled){
+  const inv=EE.inv;if(!inv)return{supported:false,paths:0};
+  const off=new Set(disabled||[]);
+  if(off.has(targetId))return{supported:false,paths:0,note:'node itself disabled'};
+  /* support flows: evidence/observation --supports--> claim; claim --dependsOn--> premise.
+     A conclusion keeps support if at least one chain bottoms out at an evidence node
+     (or an undisabled assumption explicitly marked as an axiom) without crossing a
+     disabled node. */
+  const edges=inv.edges;
+  const supportsInto=id=>edges.filter(e=>e.rel==='supports'&&e.to===id&&!off.has(e.from)).map(e=>e.from);
+  const assumesInto=id=>edges.filter(e=>(e.rel==='assumes'||e.rel==='dependsOn')&&e.to===id&&!off.has(e.from)).map(e=>e.from);
+  const visit=(id,seen)=>{
+    if(off.has(id)||seen.has(id))return 0;
+    seen.add(id);
+    const n=eeNodeById(id);if(!n)return 0;
+    if(n.kind==='evidence'||n.kind==='observation')return 1;
+    if(n.kind==='warrant'||n.kind==='assumption')return off.has(id)?0:0.5; // assumption: half a leg, not evidence
+    const sup=supportsInto(id),dep=assumesInto(id);
+    let paths=0;
+    for(const s of sup)paths+=visit(s,seen);
+    if(paths>0&&dep.length){ /* every hard dependency must also hold */
+      for(const d of dep)if(visit(d,new Set(seen))===0&&eeNodeById(d)&&eeNodeById(d).kind==='evidence')return 0;
+    }
+    return paths;
+  };
+  const paths=visit(targetId,new Set());
+  return{supported:paths>=1,paths:Math.floor(paths),partial:paths>0&&paths<1};
+}
+function eeSensitivity(){
+  const inv=EE.inv;if(!inv)return null;
+  const conclusions=inv.nodes.filter(n=>n.kind==='claim');
+  const premises=inv.nodes.filter(n=>['evidence','warrant','assumption'].includes(n.kind));
+  const rows=[];
+  for(const p of premises){
+    const breaks=[];
+    for(const c of conclusions){
+      const withIt=eeSupportPaths(c.id,[]);
+      const without=eeSupportPaths(c.id,[p.id]);
+      if(withIt.supported&&!without.supported)breaks.push(c.id);
+    }
+    if(breaks.length)rows.push({premise:p,breaks,
+      criticality:breaks.length, /* structural: how many conclusions lose ALL support */
+      text:p.text.slice(0,110)});
+  }
+  return rows.sort((a,b)=>b.criticality-a.criticality);
+}
+/* Minimum cut: smallest set of premises whose failure kills the conclusion's support.
+   Greedy exact for small graphs — support graphs here are small. */
+function eeMinCut(conclusionId){
+  const inv=EE.inv;if(!inv)return null;
+  const premises=inv.nodes.filter(n=>['evidence','warrant','assumption'].includes(n.kind));
+  const base=eeSupportPaths(conclusionId,[]);
+  if(!base.supported)return{cut:[],note:'conclusion already unsupported — cut is empty'};
+  /* try singles */
+  for(const p of premises)
+    if(!eeSupportPaths(conclusionId,[p.id]).supported)return{cut:[p],size:1,note:'single point of epistemic failure'};
+  /* pairs */
+  for(let i=0;i<premises.length;i++)for(let j=i+1;j<premises.length;j++)
+    if(!eeSupportPaths(conclusionId,[premises[i].id,premises[j].id]).supported)
+      return{cut:[premises[i],premises[j]],size:2};
+  /* triples (bounded) */
+  const P=premises.slice(0,24);
+  for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++)for(let k=j+1;k<P.length;k++)
+    if(!eeSupportPaths(conclusionId,[P[i].id,P[j].id,P[k].id]).supported)
+      return{cut:[P[i],P[j],P[k]],size:3};
+  return{cut:[],size:null,note:'no cut of size ≤3 disables support — support is redundant (robust)'};
+}
+
+/* ════════════ VS4 remainder — ALTERNATIVES + FIRST PRINCIPLES + STEELMAN ════════════ */
+/* Serious competing explanations for a claim, derived from its own wording (never
+   strawmen: each alternative names a distinguishing observation). */
+function eeAlternatives(text){
+  const t=String(text||'');const out=[];
+  const causal=/\b([A-Za-z][^.]{2,40}?)\s+(cause[sd]?|leads? to|results? in|produces?|improves?|reduces?|increases?|decreases?)\s+([^.]{2,50})/i.exec(t);
+  if(causal){
+    const X=causal[1].trim(),Y=causal[3].trim();
+    out.push({hypothesis:`Reverse causation: ${Y} (or its precursors) lead to more ${X}, not the other way round.`,
+      test:`Establish temporal order — does ${X} precede ${Y} in every case?`});
+    out.push({hypothesis:`Confounding: an unmeasured third variable produces both ${X} and ${Y}.`,
+      test:`Adjust for plausible confounders; if the association collapses, the causal claim fails.`});
+    out.push({hypothesis:`Selection: units high in ${X} were already predisposed to ${Y}.`,
+      test:`Compare within-unit change over time, or a randomised assignment of ${X}.`});
+  }
+  if(EE_RX.association.test(t)&&!causal){
+    out.push({hypothesis:'The association is real but driven by a latent subgroup (Simpson’s paradox).',
+      test:'Disaggregate by plausible subgroups and check the sign holds within each.'});
+  }
+  if(EE_RX.resultNum.test(t)){
+    out.push({hypothesis:'The reported effect is a multiple-comparisons or selective-reporting artefact.',
+      test:'Check whether the metric was pre-registered and whether the correction for multiplicity is stated.'});
+  }
+  if(!out.length)out.push({hypothesis:'No serious alternative is derivable from the wording — the claim may be underdetermined.',
+    test:'Specify the claim until a rival explanation and a discriminating observation exist.'});
+  return out;
+}
+/* First-principles decomposition: axioms, constraints, boundary checks. Statuses from
+   the first-principles axis only — never turns "not ruled out" into "true". */
+function eeFirstPrinciples(text){
+  const t=String(text||'');
+  const out={status:'not-ruled-out',checks:[],assumptions:[]};
+  const push=(name,result,note)=>out.checks.push({name,result,note});
+  if(/\b\d+(?:\.\d+)?\s?%/.test(t)){
+    const pct=parseFloat((t.match(/\b(\d+(?:\.\d+)?)\s?%/)||[])[1]);
+    if(pct>100){out.status='contradiction';push('boundary','fail','A percentage over 100% for a bounded quantity contradicts arithmetic.');}
+    else push('boundary','pass','Percentage is within [0,100] — not ruled out arithmetically.');
+  }
+  if(/\b(infinite|infinitely|unbounded|limitless)\b/i.test(t)){
+    out.status='contradiction';push('conservation','fail','An unbounded physical quantity contradicts conservation constraints.');
+  }
+  if(/\b(all|every|always|never)\b/i.test(t)&&!/\b(in (?:this|our|the) (?:sample|dataset|study))\b/i.test(t)){
+    out.assumptions.push('The universal quantifier is taken over a defined, finite population.');
+    push('quantifier','review','Universal claim requires the domain to be named; otherwise untestable as stated.');
+  }
+  if(EE_RX.causal.test(t)){
+    out.assumptions.push('A mechanism or identification strategy links cause to effect (currently: '+
+      (/\b(because|via|through|mechanism|mediat\w+)\b/i.test(t)?'stated':'unstated')+').');
+  }
+  if(!out.checks.length&&!out.assumptions.length)
+    push('structure','review','No axioms, constraints or boundary conditions are derivable from the wording — the claim is underdetermined for first-principles analysis.');
+  if(out.status==='not-ruled-out'&&out.assumptions.length)out.status='depends-on-disputed-assumption';
+  return out;
+}
+/* Steelman: best-faith reconstruction BEFORE attack. If the steelman survives where the
+   literal wording fails, say so explicitly. */
+function eeSteelman(claim){
+  const j=eeJustified(claim.text||'');
+  const literalAttacks=eeAttackClaim(claim.text||'',{text:claim.text||''});
+  const steelText=j.changed?j.text:claim.text;
+  const steelAttacks=eeAttackClaim(steelText,{text:steelText});
+  const literalConfirmed=literalAttacks.filter(a=>a.sev==='confirmed').length;
+  const steelConfirmed=steelAttacks.filter(a=>a.sev==='confirmed').length;
+  return{original:claim.text,steelmanned:steelText,changed:j.changed,
+    literalConfirmed,steelConfirmed,
+    verdict:j.changed&&steelConfirmed<literalConfirmed
+      ?'The best-faith reconstruction SURVIVES attacks the literal wording fails — the idea is stronger than its phrasing.'
+      :j.changed?'The reconstruction still carries confirmed issues.'
+      :'Literal wording and reconstruction coincide.'};
+}
+
+/* ════════════ VS3/VS4/VS5 — UI panels ════════════ */
+function eeCitationsHtml(){
+  const inv=EE.inv;if(!inv)return'';
+  const docs=inv.documents.filter(d=>d.citationAudit);
+  if(!docs.length)return'<p class="help">Run <b>🧾 Citation forensics</b> on a document to resolve in-text citations against its bibliography. Nothing is verified against the outside world — only located, honestly.</p>';
+  return docs.map(d=>{
+    const a=d.citationAudit;
+    return`<div class="card" style="background:var(--bg2);margin:8px 0;padding:10px 12px">
+      <b>${esc(d.name)}</b> — ${a.refs} bibliography entr${a.refs===1?'y':'ies'} ·
+      <span style="color:#3fb27f">${a.resolved} resolved</span> ·
+      <span style="color:${EE_STATUS.unknown}">${a.unresolved} unresolved</span>
+      <div class="help" style="margin:4px 0 8px">Resolved = uniquely located in this document’s reference list. The source’s <i>content</i> remains UNVERIFIED unless independently inspected — a resolved citation is not a supported claim.</div>
+      ${(a.mappings||[]).map(m=>{
+        const c=eeNodeById(m.claimId);
+        const src=m.refId?eeNodeById(m.refId):null;
+        return`<div style="border-left:3px solid ${m.refId?'#3fb27f':'#8b949e'};padding:4px 8px;margin:4px 0;background:var(--bg);border-radius:0 6px 6px 0;font-size:12px">
+          <span class="tag" style="font-size:9px">${esc(m.citation)}</span> →
+          ${src?`<b>${esc(src.firstAuthor||'?')} ${esc(src.year||'')}</b> — ${esc(src.title||'(title not parsed)')}`:`<span style="color:#8b949e">${m.status.replace(/-/g,' ')}</span>`}
+          <div class="help">for: “${esc((c?c.text:'').slice(0,120))}”</div>
+          <div class="help" style="color:${EE_STATUS.unknown}">support: ${m.support.replace(/-/g,' ')}</div>
+        </div>`;}).join('')||'<p class="help">No citation-bearing claims.</p>'}
+    </div>`;}).join('');
+}
+function eeLineageHtml(){
+  const inv=EE.inv;if(!inv)return'';
+  const r=eeSourceRoots();
+  if(!r.roots.length)return'';
+  return`<div class="card" style="margin-top:10px"><h3 style="margin-top:0">🌳 Source roots</h3>
+    <p class="help">${r.citationEdges} citation link(s) collapse onto <b>${r.independentRoots}</b> independent evidence root(s). Ten papers citing one dataset are not ten confirmations.</p>
+    ${r.roots.filter(x=>x.citedBy.length).map(root=>{
+      const src=eeNodeById(root.sources[0]);
+      const shared=root.sources.length>1;
+      return`<div style="padding:5px 8px;margin:4px 0;background:var(--bg2);border-radius:8px;font-size:12px">
+        <b>${esc(src?(src.firstAuthor+' '+(src.year||'')):root.key)}</b> ${esc(src?src.title||'':'')}
+        — cited by ${root.citedBy.length} claim(s)${shared?` <span class="tag" style="color:${EE_SEV.possible};border-color:${EE_SEV.possible}">SHARED ANCESTRY ×${root.sources.length}</span>`:''}
+      </div>`;}).join('')}
+  </div>`;
+}
+function eeMutationHtml(){
+  const muts=eeMutationReport();
+  if(!muts.length)return'';
+  return`<div class="card" style="margin-top:10px"><h3 style="margin-top:0">🧬 Claim mutation / citation laundering</h3>
+    <p class="help">The same claim tracked as it moves between documents. A rising bar is qualifier loss or causal strengthening — the “may be associated” → “causes” drift made visible.</p>
+    ${muts.slice(0,6).map(m=>`<div style="margin:8px 0;padding:8px 10px;background:var(--bg2);border-radius:8px">
+      <div class="row" style="justify-content:space-between"><b style="font-size:12px">drift ${m.drift>0?'+':''}${m.drift}</b>
+      ${m.laundering?`<span class="tag" style="color:${EE_SEV.confirmed};border-color:${EE_SEV.confirmed}">STRENGTHENED IN TRANSIT</span>`:''}</div>
+      ${m.series.map(s=>{
+        const w=Math.min(100,Math.round(s.strength/5*100));
+        const col=s.strength>=3.4?'#e5534b':s.strength>=2.4?'#d4a72c':'#3fb27f';
+        return`<div style="margin:5px 0">
+          <div class="help">“${esc(s.text)}” <span class="muted">— ${esc(s.doc)}</span></div>
+          <div style="height:5px;background:var(--bg);border-radius:3px;overflow:hidden"><div style="height:100%;width:${w}%;background:${col};transition:width .5s"></div></div>
+        </div>`;}).join('')}
+      <div class="help" style="margin-top:3px">${esc(m.note)}</div>
+    </div>`).join('')}</div>`;
+}
+function eeContradictionsHtml(){
+  const cons=eeContradictions();
+  if(!cons.length)return'';
+  return`<div class="card" style="margin-top:10px"><h3 style="margin-top:0">⚡ Contradictions across documents</h3>
+    ${cons.slice(0,8).map(c=>`<div style="margin:6px 0;padding:8px 10px;background:var(--bg2);border-radius:8px;font-size:12px">
+      <div>🅰 “${esc(c.a.text)}” <span class="muted">— ${esc(c.a.doc)}</span></div>
+      <div style="margin-top:3px">🅱 “${esc(c.b.text)}” <span class="muted">— ${esc(c.b.doc)}</span></div>
+      <div class="help" style="margin-top:3px">${esc(c.note)}</div>
+    </div>`).join('')||''}</div>`;
+}
+function eeSensitivityHtml(){
+  const rows=eeSensitivity();
+  if(!rows||!rows.length)return'';
+  return`<div class="card" style="margin-top:10px"><h3 style="margin-top:0">🎚 Sensitivity — premise failure</h3>
+    <p class="help">Structural criticality: how many conclusions lose <i>all</i> support if this premise fails. Not a probability.</p>
+    ${rows.slice(0,8).map(r=>`<div style="margin:5px 0;padding:6px 8px;background:var(--bg2);border-radius:8px;font-size:12px">
+      <b style="color:${r.criticality>1?EE_SEV.confirmed:EE_SEV.possible}">✂ ${r.criticality} conclusion(s)</b> depend on “${esc(r.text)}”
+      ${r.premise.kind==='warrant'?'<span class="tag" style="font-size:9px">hidden warrant</span>':''}
+    </div>`).join('')}</div>`;
+}
+
+/* deeper analysis panels inside the Claim X-Ray */
+function eeXrayDeepHtml(c){
+  const alts=eeAlternatives(c.text);
+  const fp=eeFirstPrinciples(c.text);
+  const steel=eeSteelman(c);
+  const cut=eeMinCut(c.id);
+  const sens=EE.inv?eeSupportPaths(c.id,[]):null;
+  return`<div style="margin-top:10px;border-top:1px solid var(--edge);padding-top:8px">
+    <div class="grid2">
+      <div>
+        <b style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Alternative hypotheses</b>
+        ${alts.map(a=>`<div style="margin:4px 0;padding:5px 8px;background:var(--bg2);border-radius:6px;font-size:12px">
+          <b>⑂</b> ${esc(a.hypothesis)}<div class="help" style="margin-top:1px">distinguishing test: ${esc(a.test)}</div></div>`).join('')}
+      </div>
+      <div>
+        <b style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">First principles</b>
+        <div style="margin:4px 0;font-size:12px">status: <b style="color:${fp.status==='contradiction'?EE_STATUS.bad:fp.status==='not-ruled-out'?EE_STATUS.unknown:EE_SEV.possible}">${fp.status.replace(/-/g,' ')}</b></div>
+        ${fp.checks.map(ch=>`<div class="help" style="margin:2px 0">· ${esc(ch.name)}: <b>${ch.result}</b> — ${esc(ch.note)}</div>`).join('')}
+        ${fp.assumptions.map(a=>`<div class="help" style="margin:2px 0;color:#c9b3f5">⚠ assumes: ${esc(a)}</div>`).join('')}
+      </div>
+    </div>
+    <div class="grid2" style="margin-top:6px">
+      <div>
+        <b style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Steelman (best-faith reconstruction)</b>
+        <div class="help" style="margin:3px 0">${steel.changed?`“${esc(steel.steelmanned)}”`:'Reconstruction matches the literal wording.'}</div>
+        <div style="font-size:12px;color:${steel.steelConfirmed<steel.literalConfirmed?'#7ee2a8':'var(--ink2)'}">${esc(steel.verdict)}</div>
+      </div>
+      <div>
+        <b style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Minimum cut</b>
+        <div class="help" style="margin:3px 0">${cut?(cut.cut.length?`Failing <b>${cut.cut.length}</b> premise(s) removes all support:<br>`+cut.cut.map(p=>'· “'+esc(p.text.slice(0,80))+'”').join('<br>'):esc(cut.note||'')):'—'}</div>
+        ${sens?`<div class="help">support path(s) currently open: <b>${sens.paths}</b>${sens.partial?' (partial — rests on an assumption, not evidence)':''}</div>`:''}
+      </div>
+    </div>
+  </div>`;
 }
 
 let GAUNTLET_LAST=null;
@@ -59757,7 +60304,7 @@ async function persistInit(){
    worker updating is NOT the same thing as the user seeing the new app: clients.claim() makes
    a new worker control the page, but the HTML already parsed keeps running until something
    reloads it. This is what lets the app notice and say so. */
-const APP_BUILD='b28728c8344c9c7f';
+const APP_BUILD='26e052a54898d373';
 const PWA={reg:null,state:'unknown',why:'',prompt:null,update:null,checking:false,lastCheck:0};
 
 /* ── Staying current, which is the whole problem on iOS ──────────────────────
@@ -63466,6 +64013,8 @@ async function boot(){
     eeExportInv,eeImportInv,eeImportFiles,eeDecompose,eeJustified,eeAttackClaim,eeWarrantsFor,eeFalsify,
     eeClassifyPassage,eeDefaultStatus,eeTextToCda,eeHtmlToCda,eeDocxToCda,eePdfToCda,eePassagesFromCda,
     eePassagesOf,eeCases,EE_AI_ROLES,EE_AI_SCHEMA,renderEE,initEE,eeJumpSource,eeNodeById,eeDocById,eeXrayHtml,eeReportHtml,
+    eeCitationsIn,eeParseReferences,eeResolveCitation,eeCitationAudit,eeSourceRoots,eeClaimStrength,eeMutationReport,
+    eeContradictions,eeClaimClusters,eeSupportPaths,eeSensitivity,eeMinCut,eeAlternatives,eeFirstPrinciples,eeSteelman,
     streamChat,streamComplete,mergeAcc,buildReasoning,applyDelta,accInit,detailsArray,extractJSON,
     diffHTML,reasoningFamily,extractSection,routeFor,splitThinkTags,syncOllama,architectSys,builderMessage,
     probeOllama,ollamaCandidates,renderOllamaHelp,settings,opaqueOrigin,showOriginBanner,store,
