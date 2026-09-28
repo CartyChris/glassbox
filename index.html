@@ -5577,6 +5577,9 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
             <input type="number" id="free-maxb" min="0" max="200" step="1" style="width:80px"></label>
         </div>
         <div id="free-status" class="help" style="margin-top:8px"></div>
+        <p class="help" style="margin-top:6px">Free with a free sign-up key — paste it under <b>Providers</b> below and switch it on:
+          Groq, Cerebras, Mistral, Google AI Studio. Free models on OpenRouter (ids ending <span class="mono">:free</span>) need an
+          OpenRouter key but no credit, at about 20 requests a minute.</p>
       </div>
       <div class="card">
         <h3>🔑 Providers <button class="btn ghost small" id="prov-add" style="float:right">+ Add provider</button></h3>
@@ -5809,6 +5812,22 @@ const DEFAULT_PROVIDERS=[
 
      Checked the same day: Pollinations, widely listed as key-free, now answers
      401 UNAUTHORIZED "A valid API key is required" — so it is deliberately not shipped here. */
+  /* Free WITH a free sign-up key. Each was checked on 27 Sep 2026 to answer a browser's CORS preflight
+     (so no bridge is needed); the limits are the vendors' own published free-tier numbers and move over
+     time. Shipped OFF with no key — pasting one is the whole setup. (GitHub Models, often listed, was
+     retired on 30 Jul 2026; Cloudflare Workers AI refuses browser preflights.) */
+  {id:'groq',label:'Groq — free key (≈30 req/min)',base:'https://api.groq.com/openai/v1',key:'',on:false,viaBridge:false,freeTier:true,rpm:30,
+   models:['llama-3.3-70b-versatile','openai/gpt-oss-20b','openai/gpt-oss-120b'],
+   hint:'Free key at console.groq.com/keys — about 30 requests a minute and 1,000 a day on the free tier. Very fast.'},
+  {id:'cerebras',label:'Cerebras — free key (≈30 req/min)',base:'https://api.cerebras.ai/v1',key:'',on:false,viaBridge:false,freeTier:true,rpm:30,
+   models:['gpt-oss-120b','llama-3.3-70b','qwen-3-32b'],
+   hint:'Free key at cloud.cerebras.ai — about 30 requests a minute and roughly a million tokens a day.'},
+  {id:'mistral',label:'Mistral — free key',base:'https://api.mistral.ai/v1',key:'',on:false,viaBridge:false,freeTier:true,rpm:2,
+   models:['mistral-small-latest','mistral-medium-latest','codestral-latest'],
+   hint:'Free "Experiment" key at console.mistral.ai — low request rate, generous tokens; the free tier requires opting in to data use for training.'},
+  {id:'gemini',label:'Google AI Studio — free key',base:'https://generativelanguage.googleapis.com/v1beta/openai',key:'',on:false,viaBridge:false,freeTier:true,rpm:10,
+   models:['gemini-flash-latest','gemini-flash-lite-latest'],
+   hint:'Free key at aistudio.google.com — Flash and Flash-Lite only on the free tier; limits are per project and shown in AI Studio.'},
   {id:'ovh',label:'OVHcloud — free, no key (2 req/min)',
    base:'https://oai.endpoints.kepler.ai.cloud.ovh.net/v1',
    key:'',on:true,viaBridge:false,anonymous:true,rpm:2,
@@ -5816,6 +5835,18 @@ const DEFAULT_PROVIDERS=[
    hint:'Works with no account at all — the anonymous tier is rate limited to about 2 requests '+
      'per minute per IP, so it is good for a single question and will not sustain a group chat '+
      'or a stream. Add a key from any provider above for real throughput.'},
+  /* Second no-key tier, measured 27 Sep 2026: gen.pollinations.ai answers WITHOUT a key for `openai`
+     (gpt-5.4-nano), `openai-fast` and `openai/gpt-oss-20b`, non-streaming only (streaming, and every
+     other model, needs a key). CORS allows any origin. Its anonymous allowance is per network and SMALL:
+     about a dozen calls from this machine used it up for the hour, after which every model answers 401. So
+     it sits BEHIND OVH in the free order, and the free route falls through to the next candidate when it
+     refuses. Two details that cost an hour to find: the request must not carry a `stream` field at all,
+     and a 401 here means "allowance spent", not "bad key". */
+  {id:'pollinations',label:'Pollinations — free, no key (a few requests an hour)',
+   base:'https://gen.pollinations.ai/v1',key:'',on:true,viaBridge:false,anonymous:true,noStream:true,rpm:6,
+   models:['openai','openai-fast','openai/gpt-oss-20b'],
+   hint:'No key needed for these three models (answers arrive whole, not streamed). A free key from '+
+        'enter.pollinations.ai unlocks streaming and the rest of their catalogue.'},
   {id:'moonshot',label:'Moonshot — Kimi',base:'https://api.moonshot.ai/v1',
    key:'',on:false,viaBridge:true,models:['kimi-k2-0905-preview','kimi-k2-turbo-preview','moonshot-v1-128k'],
    hint:'Use api.moonshot.cn instead if your account is on the mainland endpoint.'},
@@ -16921,8 +16952,8 @@ const S1_ENVS={order:{icon:'📦',label:'Order desk (built in)',needs:'nothing �
 const S1_DECIDERS={jev:{label:'Jev',blurb:'TypeSafe\'s decision model through OpenRouter. The default for deciding what to do.'},
   cuas1:{label:'Cua-S1 (local)',blurb:'A GUI specialist on your own machine: Qwen/Qwen3.5-4B with a Cua-S1 adapter, served '+
     'by any OpenAI-compatible server that returns logprobs. 4B — inside the no-models-over-9B rule.'},
-  llm:{label:'Any chat model',blurb:'Any OpenRouter model, asked the same one-letter question. Logprobs when the model '+
-    'gives them; otherwise five samples and the vote share, and the trace says so.'},
+  llm:{label:'Any chat model',blurb:'Any model that can run — OpenRouter, your providers, a local model, or with no key a free one — '+
+    'asked the same one-letter question. Logprobs when the model gives them; otherwise samples and the vote share, and the trace says so.'},
   replay:{label:'Replay (no model)',blurb:'Plays the known-correct moves for the order desk, so the loop, the gate and the '+
     'trace can be seen working with no key at all. It proves the machinery, not a model.'}};
 /* The known-correct moves for each order-desk scenario — upstream's own goal_met, as a plan. */
@@ -16953,11 +16984,17 @@ function s1DeciderFor(kind,envKind,scenario){
   if(kind==='cuas1')return{decide:s1LetterDecider({endpoint:c.cuaEndpoint,model:c.cuaModel,family:c.family,
     app:(S1_ENVS[envKind]||{}).label}),label:'cua-s1 ('+c.cuaModel+')'};
   if(kind==='llm'){
-    const key=(typeof API_KEY!=='undefined'&&API_KEY)||'';
-    if(!key)return{error:'Any-chat-model runs through OpenRouter — add a key in Settings first.'};
-    const model=c.llmModel||settings.archModel;
-    return{decide:s1LetterDecider({endpoint:'https://openrouter.ai/api/v1',key,model,family:'general_decision',
-      app:(S1_ENVS[envKind]||{}).label}),label:model};
+    /* Any model that can RUN — its own provider's endpoint, a local model, or (with no key) the free
+       route. It used to be OpenRouter-only and refused outright without a key. A slow free tier gets
+       one vote instead of five, so a step is not five rate-limited calls. */
+    let model=c.llmModel||settings.archModel,free=false;
+    if(!modelRunnable(model)){const f=freeModelFor(model);if(!f)return{error:'That model cannot run (no key) and no free model is available — see Settings → Free models.'};model=f;free=true;}
+    const r=routeFor(model);
+    if(r.viaBridge)return{error:model+' is reached through the local bridge, which the one-letter decider does not use — pick another model.'};
+    const pv=providerFor(model);
+    return{decide:s1LetterDecider({endpoint:r.url.replace(/\/chat\/completions$/,''),
+      key:String((r.headers&&r.headers.Authorization)||'').replace(/^Bearer\s+/,''),model:r.model,family:'general_decision',
+      votes:(pv&&pv.rpm&&pv.rpm<10)?1:5,app:(S1_ENVS[envKind]||{}).label}),label:model+(free?' (free)':'')};
   }
   return{decide:null,label:'jev'};
 }
@@ -17896,6 +17933,55 @@ function beaconIngest(text,source){
     shapes:[...new Set(evs.map(e=>e.shape))],
     harnesses:[...new Set(evs.map(e=>e.harness))].slice(0,12)};
 }
+/* ── The WRITE half ──
+   Beacon's point is one memory across every harness, and this app is a harness too. Its own activity
+   — model calls, tool calls with their outcome, harness runs, and the Assistant conversations where a
+   human pushed back — is written out in the same OpenTelemetry-shaped records agent-beacon uses
+   (gen_ai.*, session.id, event.id, status), so it can be (1) learned from HERE, through exactly the
+   same normalise → lessons → review queue as an imported file, and (2) handed to agent-beacon or any
+   other harness as a runtime.jsonl. Nothing new is trusted: a lesson from this app still waits for a
+   human to press Keep. */
+const BEACON_SESSION='gb-'+Date.now().toString(36);
+/* PURE. App log events and chat turns → Beacon/OTel JSONL lines. */
+function beaconExportLines(log,chats){
+  const out=[];
+  (log||[]).forEach(e=>{
+    if(!e||!/^(call|error|tool|tool-call|harness|react|fallback|guard|free-route)$/.test(e.kind))return;
+    const failed=e.kind==='error'||e.ok===false||!!e.err;
+    const rec={timeUnixNano:String((e.t||0)*1e6),'event.name':e.kind==='tool-call'?'tool':e.kind,
+      'service.name':'glassbox-jet','gen_ai.system':'glassbox-jet','session.id':BEACON_SESSION,
+      'event.id':BEACON_SESSION+'-'+(e.seq||0),status:failed?'error':'ok'};
+    if(e.tool)rec['gen_ai.tool.name']=String(e.tool);
+    if(e.model)rec['gen_ai.request.model']=String(e.model);
+    const tok=(+e.in||0)+(+e.out||0);if(tok)rec['gen_ai.usage.total_tokens']=tok;
+    if(e.cost)rec['gen_ai.usage.cost_usd']=+e.cost;
+    const body=e.err||e.why||e.answer||e.out||e.result||e.note||e.name||'';
+    if(body)rec.body=String(body).slice(0,1500);
+    if(failed&&e.err)rec.error=String(e.err).slice(0,400);
+    out.push(JSON.stringify(rec));
+  });
+  (chats||[]).forEach(c=>(c.msgs||[]).forEach((m,i)=>{
+    if(!m||!(m.content||'').trim()||(m.role!=='user'&&m.role!=='assistant'))return;
+    out.push(JSON.stringify({timeUnixNano:String((Date.parse(m.ts)||0)*1e6),'event.name':'message',
+      'service.name':'glassbox-jet','gen_ai.system':'glassbox-jet','session.id':'chat-'+(c.id||'x'),
+      'event.id':'chat-'+(c.id||'x')+'-'+i,'gen_ai.message.role':m.role,status:m.error?'error':'ok',
+      body:String(m.content).slice(0,1500)}));
+  }));
+  return out;
+}
+function beaconSelfLearn(){
+  const lines=beaconExportLines(LOG,(typeof ACHATS!=='undefined'?ACHATS:[]).slice(0,20));
+  const r=beaconIngest(lines.join('\n'),'this app (GlassBox Jet)');
+  return Object.assign({lines:lines.length},r);
+}
+function beaconExportFile(){
+  const lines=beaconExportLines(LOG,(typeof ACHATS!=='undefined'?ACHATS:[]).slice(0,40));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([lines.join('\n')+'\n'],{type:'application/x-ndjson'}));
+  a.download='glassbox-beacon-runtime.jsonl';document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},400);
+  return{ok:true,lines:lines.length};
+}
 async function beaconFromBridge(path){
   if(typeof bridgeExec!=='function')return{ok:false,error:'the local bridge is not available'};
   const p=path||BEACON_PATH;
@@ -17974,6 +18060,7 @@ function beaconForget(id){
    And the rule the whole thing exists for: a finding with no experiment behind it is an opinion.
    trexVerdict drops it rather than reporting it with a confident tone. */
 const TREX_SANDBOX='allow-scripts';
+const TREX_PARALLEL=4;
 /* The one place the attribute is written. Anything that builds a TREX frame asks here, so
    "does a review sandbox share this origin" has exactly one answer to audit. */
 function trexSandboxAttrs(){return TREX_SANDBOX;}
@@ -18079,13 +18166,15 @@ async function trexRun(experiments,opts){
   const list=(experiments||[]).slice(0,12);
   if(!list.length)return{ok:false,error:'no experiments to run'};
   const span=(typeof spanStart==='function')?spanStart('trex','tool',{experiments:list.length}):null;
-  const findings=[];
-  for(const e of list){
+  /* In parallel, as Greptile runs one agent per issue at once — each experiment still gets its OWN
+     throwaway frame, so parallel runs cannot see each other. Capped at TREX_PARALLEL so a 12-experiment
+     review does not open twelve frames on a phone. Results keep the order they were proposed in. */
+  const findings=new Array(list.length);let next=0;
+  const worker=async()=>{for(;;){const i=next++;if(i>=list.length)return;const e=list[i];
     const ev=await trexExperiment(e,opts);
-    findings.push({name:e.name,claim:e.claim||'',evidence:ev,
-      matched:!!(e.expect&&new RegExp(e.expect,'i').test(
-        [ev.value,(ev.logs||[]).join('\n'),ev.error||''].join('\n')))});
-  }
+    let matched=false;try{matched=!!(e.expect&&new RegExp(e.expect,'i').test([ev.value,(ev.logs||[]).join('\n'),ev.error||''].join('\n')));}catch(_){}
+    findings[i]={name:e.name,claim:e.claim||'',evidence:ev,matched};}};
+  await Promise.all(Array.from({length:Math.min(TREX_PARALLEL,list.length)},worker));
   const v=trexVerdict(findings);
   TREX.runs=(TREX.runs||[]).concat([{at:Date.now(),n:list.length,
     proven:v.proven,dropped:v.dropped,state:v.state}]).slice(-40);
@@ -18346,6 +18435,8 @@ function beaconRender(){
       <label class="btn ghost small" style="margin:0">Import a runtime.jsonl
         <input type="file" id="bc-file" accept=".jsonl,.json,.log,.txt" style="display:none"></label>
       <button class="btn ghost small" id="bc-review" ${pend.length?'':'disabled'}>Ask Jev which to keep</button>
+      <button class="btn ghost small" id="bc-self" title="Read this app's own calls, tool results and chats for lessons">Learn from this app's own runs</button>
+      <button class="btn ghost small" id="bc-export" title="Download this app's activity as a Beacon runtime.jsonl">Export as Beacon JSONL</button>
     </div>
     <p class="help" id="bc-note" style="margin-bottom:0">${esc(BEACON.source?('last read from '+BEACON.source):
       'The bridge button needs the local bridge running; the file button needs nothing.')}</p>
@@ -18393,6 +18484,10 @@ function beaconRender(){
     toast(`${r.events} events read (${r.shapes.join(', ')||'no shape matched'}), ${r.queued} new candidate(s)`,5200);
     beaconRender();autoReview(r.queued);
   };
+  const bself=$('#bc-self');if(bself)bself.onclick=()=>{const r=beaconSelfLearn();
+    $('#bc-note').textContent='Read '+r.events+' event(s) from this app — '+r.queued+' new lesson(s) waiting for your review'+(r.candidates>r.queued?' ('+(r.candidates-r.queued)+' already known)':'')+'.';
+    if(r.queued)beaconRender();};
+  const bexp=$('#bc-export');if(bexp)bexp.onclick=()=>{const r=beaconExportFile();toast('Exported '+r.lines+' event(s) as Beacon JSONL',3000);};
   $('#bc-review').onclick=async()=>{
     const b=$('#bc-review');b.disabled=true;b.textContent='Asking Jev…';
     const r=await beaconReview(BEACON.pending);
@@ -19262,6 +19357,10 @@ async function toolInvoke(name,args){
       '. Expected schema: '+JSON.stringify(spec.schema).slice(0,300),ms:0,source:spec.source};
   }
   args=chk.args;
+  /* A span per tool call, not only per model call: a trace that shows only model calls hides the case
+     where the model is fine and a connector is the thing timing out. */
+  const tspan=(typeof spanStart==='function')?spanStart('tool:'+name,'tool',{tool:name,source:spec.source}):null;
+  const tend=(r,e)=>{try{if(tspan&&typeof spanEnd==='function')spanEnd(tspan,r?{content:toolText(r).slice(0,400),usage:{}}:null,e);}catch(_){}};
   if(gate.legs.private)trifectaMark('private','called '+name);
   if(gate.legs.exfil)trifectaMark('exfil','called '+name);
   try{
@@ -19298,8 +19397,10 @@ async function toolInvoke(name,args){
       else toolGateNote(name,'allowed',(Object.keys(gate.legs).filter(k=>gate.legs[k]).map(k=>'acquires '+k).join(', '))||'no trifecta legs');
       if(gate.legs.untrusted||injection)trifectaMark('untrusted',(injection?'instruction-shaped text in ':'read ')+name);
     }
+    tend(result,null);
     return{ok:true,result,ms,source:spec.source,injection};
   }catch(e){
+    tend(null,e);
     const ms=Math.round(performance.now()-t0);
     logEvent('tool',{tool:name,source:spec.source,ok:false,ms,err:String(e&&e.message||e)});
     return{ok:false,error:String(e&&e.message||e),ms,source:spec.source};
@@ -22376,7 +22477,14 @@ async function streamChat({model,messages,system,stop,reasoning,maxTokens,temper
      for an anonymous tier, needs none), so demanding the OpenRouter key here refused every direct
      provider for anyone who had not ALSO set one. */
   if(!route.local&&!route.provider&&!API_KEY)throw new Error('No API key set — open Settings');
+  /* A no-key tier that only answers whole (Pollinations streams only with a key — measured: the same
+     request returns 200 without `stream` and 401 with it). One JSON reply, read below. */
+  const _prov=route.provider?providerById(route.provider):null;
+  const noStream=!!(_prov&&_prov.noStream&&!_prov.key);
   const body={model:route.model,messages,stream:true};
+  /* Omitted, not false: measured, Pollinations refuses an anonymous request that carries a `stream`
+     field AT ALL — "stream":false gets the same 401 as "stream":true. */
+  if(noStream)delete body.stream;
   if(stop&&(Array.isArray(stop)?stop.length:true))body.stop=(Array.isArray(stop)?stop:[stop]).map(String).slice(0,4);
   /* Three request shapes, not two. `usage.include`, the unified `reasoning` object and the web
      `plugins` are OpenRouter's extensions — a direct provider speaking plain OpenAI-compatible
@@ -22429,7 +22537,7 @@ async function streamChat({model,messages,system,stop,reasoning,maxTokens,temper
   if(!res.ok){let t='';try{t=await res.text();}catch(e){}
     let msg=t;try{const j=JSON.parse(t);msg=(j.error&&(j.error.message||j.error.metadata&&JSON.stringify(j.error.metadata)))||t;}catch(e){}
     throw new Error('HTTP '+res.status+': '+String(msg).slice(0,260));}
-  const reader=res.body.getReader();const dec=new TextDecoder();let buf='';
+  const reader=noStream?null:res.body.getReader();const dec=new TextDecoder();let buf='';
   // Paint at most ~20fps instead of once per token — the DOM is the bottleneck, not the net.
   // `finished` guards against a deferred paint landing AFTER the final done=true render
   // and clobbering it back to the in-progress view.
@@ -22473,6 +22581,16 @@ async function streamChat({model,messages,system,stop,reasoning,maxTokens,temper
      unhandled rejection each time, for the life of the page.
      finally runs on all three paths, and finish() nulls the handle, so the
      clear here is idempotent rather than a double-clear. */
+  if(noStream){
+    const j=await res.json();
+    if(j&&j.error)throw new Error(String(j.error.message||JSON.stringify(j.error)).slice(0,260));
+    const ch=(j&&j.choices&&j.choices[0])||{},m=ch.message||{};
+    firstAt=performance.now();
+    acc.content=String(m.content||'');
+    if(m.reasoning_content||m.reasoning)acc.reasoning=String(m.reasoning_content||m.reasoning);
+    acc.usage=j.usage||null;acc.finishReason=ch.finish_reason||'stop';acc.model=j.model||model;
+    return finish();
+  }
   try{
   while(true){
     const {value,done}=await reader.read();if(done)break;
@@ -22611,7 +22729,7 @@ function modelParamsB(name,reported){
 let FREE=Object.assign({},FREE_DEFAULTS,store.get('freeroute',{}));
 const saveFree=()=>store.set('freeroute',FREE);
 let FREE_LOG=[];
-const FREE_PREFER=['gpt-oss-20b','Qwen3.6-27B','Mistral-Nemo-Instruct-2407','Mistral-7B-Instruct-v0.3'];
+const FREE_PREFER=['openai','gpt-oss-20b','openai/gpt-oss-20b','Qwen3.6-27B','openai-fast','Mistral-Nemo-Instruct-2407','Mistral-7B-Instruct-v0.3'];
 const FREE_NOT_CHAT=/embed|embedding|nomic|bge-|minilm|rerank|whisper|tts|clip/i;
 /* PURE given `st` ({apiKey, providers}). Could a call to this model be answered right now? */
 function modelRunnable(model,st){
@@ -22633,12 +22751,19 @@ function freeCandidates(st){
       const b=m._paramsB!=null?m._paramsB:modelParamsB(m.id);return b!=null&&b<=maxB;})
     .sort((a,b)=>(b._paramsB||modelParamsB(b.id)||0)-(a._paramsB||modelParamsB(a.id)||0))
     .forEach(m=>out.push(m.id));
+  /* A free-tier provider the user has put a key into beats a no-key tier: same price (nothing), far
+     higher limits. */
+  (S.providers||[]).filter(p=>p&&p.on&&p.freeTier&&p.key).forEach(p=>(p.models||[]).forEach(m=>out.push(p.id+'/'+m)));
   (S.providers||[]).filter(p=>p&&p.on&&p.anonymous&&!p.key).forEach(p=>{
     const ms=p.models||[];
     [...FREE_PREFER.filter(x=>ms.includes(x)),...ms].forEach(m=>out.push(p.id+'/'+m));});
   return [...new Set(out)].filter(m=>modelRunnable(m,S));
 }
-function freeModelFor(model,st){return freeCandidates(st)[0]||null;}
+/* A free provider that refused (401 allowance spent, 429 rate limit, 402, 503) is skipped for a while
+   instead of being tried first on every call. */
+const FREE_COOL={};
+const freeCooling=m=>{const id=String(m||''),h=id.split('/')[0],now=Date.now();return (FREE_COOL[h]>now)||(FREE_COOL[id]>now);};
+function freeModelFor(model,st){return freeCandidates(st).find(m=>!freeCooling(m))||null;}
 /* Returns the options to use, or null to leave the call alone. */
 function freeRoute(opts){
   if(!FREE.on||!opts)return null;
@@ -22661,7 +22786,7 @@ function freeSlotWait(times,rpm,now){
 const FREE_CALLS={};
 async function freeSlot(model,signal){
   const p=providerFor(model);
-  if(!p||!p.anonymous||p.key||!p.rpm)return 0;
+  if(!p||!p.rpm||!((p.anonymous&&!p.key)||p.freeTier))return 0;
   const ts=FREE_CALLS[p.id]=FREE_CALLS[p.id]||[];
   const wait=freeSlotWait(ts,p.rpm,Date.now());
   if(wait>0){
@@ -22689,11 +22814,28 @@ function initFree(){
 }
 async function streamComplete(opts,onUpdate,signal,label){
   /* The free route first (a model that cannot run is swapped for one that can), then the fallback. */
-  const fr=freeRoute(opts),o=fr||opts;
+  const fr=freeRoute(opts);let o=fr||opts;
   const cfg=Object.assign({},FALLBACK_DEFAULTS,(typeof OPS!=='undefined'&&OPS.fallback)||{});
-  const acc=cfg.on?await withFallback((o&&o.model)||settings.buildModel,o,onUpdate,signal,label)
-    :await streamCompleteOnce(o,onUpdate,signal,label);
-  if(fr&&acc)acc.freeFrom=fr._freeFrom;
+  const once=x=>cfg.on?withFallback((x&&x.model)||settings.buildModel,x,onUpdate,signal,label):streamCompleteOnce(x,onUpdate,signal,label);
+  let acc,tries=0;
+  for(;;){
+    try{acc=await once(o);break;}
+    catch(e){
+      /* Free tiers refuse for allowance, not for the request. Try the next free model (up to three),
+         and let the refusing provider cool off so the next call does not start with it. */
+      const msg=String(e&&e.message||e);
+      if(!fr||tries>=3||(signal&&signal.aborted)||!/HTTP (401|402|429|503)\b/.test(msg))throw e;
+      /* 429 is per MODEL on OVH (2/min per model per network), so only that model cools; 401/402 mean the
+         provider's allowance or account is spent, so the whole provider cools. */
+      const key=/HTTP 429\b/.test(msg)?String(o.model):String(o.model).split('/')[0];
+      FREE_COOL[key]=Date.now()+(/HTTP 429\b/.test(msg)?90*1000:10*60*1000);
+      const next=freeModelFor(fr._freeFrom);
+      if(!next||next===o.model)throw e;
+      logEvent('free-route',{from:o.model,to:next,why:msg.slice(0,80)});
+      o=Object.assign({},o,{model:next});tries++;
+    }
+  }
+  if(fr&&acc){acc.freeFrom=fr._freeFrom;acc.freeModel=o.model;}
   return acc;
 }
 async function streamCompleteOnce(opts,onUpdate,signal,label){
@@ -31231,6 +31373,17 @@ function gauntletCases(g){
     antiWhat:'while the off-task mutant is still refused outside answer mode',
     anti:()=>g.hjPreGate({text:'Here is a recipe for banana bread with walnuts and cinnamon, baked for fifty minutes.',criteria:'returns the correct product of the two numbers given'}).ok,
     antiExpect:v=>v===false});
+  add({id:'beacon-self-roundtrip',sub:'beacon',uses:['beaconExportLines'],
+    what:'this app’s own activity, written as Beacon JSONL, is read back into a fix and a correction lesson',
+    run:()=>{const lines=g.beaconExportLines([{seq:1,t:1,kind:'tool',tool:'bash',ok:false,err:'npm ERR peer dependency'},
+        {seq:2,t:2,kind:'tool',tool:'bash',ok:true,result:'installed with pnpm'}],
+        [{id:'c1',msgs:[{role:'user',content:'no, use tabs not spaces',ts:''},{role:'assistant',content:'Switched to tabs.',ts:''}]}]);
+      const evs=lines.map(g.beaconNormalize).filter(e=>e&&e.parsed);
+      return evs.length+':'+g.beaconLessons(evs).map(l=>l.kind).sort().join(',')+':'+(evs[0].harness);},
+    expect:v=>v==='4:fix,gotcha:glassbox-jet',
+    antiWhat:'while a log where everything worked teaches nothing',
+    anti:()=>g.beaconLessons(g.beaconExportLines([{seq:1,t:1,kind:'tool',tool:'bash',ok:true,result:'ok'}],[]).map(g.beaconNormalize)).length,
+    antiExpect:v=>v===0});
   add({id:'boot-steps-isolated',sub:'boot',uses:['bootRun'],
     what:'a start-up step that throws is recorded and the next step still runs',
     run:()=>{let ran=false;const sink=[];g.bootRun([function bad(){throw new Error('x');},()=>{ran=true;}],sink);
@@ -34524,6 +34677,8 @@ const GAUNTLET_SABOTAGE=[
   {id:'hl-pick-first-always',export:'hlPick',why:'pick ignores its rule',broken:()=>t=>(t||[])[0]||''},
   {id:'hl-modes-all',export:'hlModes',why:'every harness appears as a mode, applied or not',
    broken:()=>specs=>(specs||[]).map(s=>['hl:'+s.id,{label:s.name}])},
+  {id:'beacon-writes-nothing',export:'beaconExportLines',why:'this app never contributes to the shared memory',
+   broken:()=>()=>[]},
   {id:'boot-one-throw-kills-all',export:'bootRun',why:'one failing init takes the rest of start-up with it',
    broken:()=>(fns,sink)=>{fns.forEach(f=>f());return sink;}},
   {id:'setops-missing',export:'setOPS',why:'Autoresearch cannot write the config it tuned',
@@ -52090,6 +52245,38 @@ const HELP_TOPICS=[
         computed facts only, and any number it states that the facts do not contain is highlighted as
         unsupported.</p>`},
    ]},
+  {id:'hlab',icon:'🧪',title:'Harness Lab, free models everywhere, and a model menu',
+   blurb:'Build and test your own agent harness; every tab works without a key.',
+   arts:[
+    {q:'What is the Harness Lab?',
+     a:`<p>A harness is the process around a model: plan, then answer, then check, retry if the check fails, and so on. In the
+        <b>🧪 Harness Lab</b> tab you build one from eight kinds of step (a model call, several samples and a consensus, verify and
+        retry, critique and revise, an agent with tools, a typed decision, sandboxed code, and a free pick-by-rule), start from a
+        template, or describe what you want and have it designed. It is data, not code, and it is checked before it runs: a step
+        can only use the input and earlier steps, and the call and dollar ceilings stop it before it overspends.</p>`},
+    {q:'How do I know my harness is better?',
+     a:`<p>Give it a few test cases, one per line as <span class="mono">question ||| what a good answer does</span>, and run the
+        bench. The same cases run through your harness and through a single plain model call, a judge from a different model
+        family scores both, and they are compared on pass rate and <b>cost per completed task</b> — every cent spent, divided by the
+        cases that actually passed. Only a clear win (five points, or 15% cheaper per passing case) counts. Every run is kept in
+        the ledger, including the losers.</p>`},
+    {q:'How do I use a harness?',
+     a:`<p>Under <b>Apply it</b>: as an Assistant mode (it appears next to Chat and Cascade), as a button on Reason Lab, Relay,
+        Compare or Council that runs it on that tab's input, or as an app card at the top of the Lab. Each is one switch.</p>`},
+    {q:'Can I really use the app without a key?',
+     a:`<p>Yes. When a feature asks for a model that cannot run, the call goes to a free one that can — the free model you pick in
+        Settings, else a small model on this computer (only ones known to be ≤9B, so nothing large runs by surprise), else a
+        no-key provider (OVHcloud, then Pollinations). If a free tier refuses, the next one is tried. Free tiers are slow and
+        rate-limited; calls are paced to the limit. Groq, Cerebras, Mistral and Google AI Studio give a free key and far higher
+        limits — paste it under Providers.</p>`},
+    {q:'Where do I choose a model?',
+     a:`<p>Every model field now has a ▾ that opens one menu, with filters for Free, Local, Runs now and Reasoning, a price on each
+        model, and a note on any model that cannot run without a key. You can still type an id.</p>`},
+    {q:'What changed in Beacon and TREX?',
+     a:`<p><b>Beacon</b> now learns from this app too: "Learn from this app's own runs" reads its calls, tool results and your
+        corrections into the same review queue as an imported agent-beacon log, and "Export as Beacon JSONL" hands its activity to
+        other harnesses. <b>TREX</b> runs its experiments four at a time, each in its own sealed sandbox.</p>`},
+   ]},
   {id:'toolgate',icon:'🛡',title:'Tool safety, skills on demand, and a sturdier app',
    blurb:'Every tool call now passes one enforced gate; skills load when they are relevant.',
    arts:[
@@ -58184,7 +58371,7 @@ async function persistInit(){
    worker updating is NOT the same thing as the user seeing the new app: clients.claim() makes
    a new worker control the page, but the HTML already parsed keeps running until something
    reloads it. This is what lets the app notice and say so. */
-const APP_BUILD='ba5beff487415c54';
+const APP_BUILD='b263832ba16a2bd4';
 const PWA={reg:null,state:'unknown',why:'',prompt:null,update:null,checking:false,lastCheck:0};
 
 /* ── Staying current, which is the whole problem on iOS ──────────────────────
@@ -62066,6 +62253,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     skillsPick,storeShapeOk,officeSteerLoad,saveVo,chatWithSystem,suggestSort,evoVerdict,bootRun,BOOT_FAILS,TOOL_GATE_LOG,
     modelBadge,modelMenu,isModelField,modelFieldEnhance,MODEL_FIELD_RX,
     modelRunnable,freeCandidates,modelParamsB,
+    beaconExportLines,beaconSelfLearn,BEACON_SESSION,
     HL_KINDS,HL_TEMPLATES,HL_TARGETS,hlRefs,hlTemplate,hlValidate,hlOverBudget,hlPick,hlParseSpec,hlRun,hlScore,hlBaseline,hlBench,hlDesign,hlModes,hlApplyHooks,hlRender,get HL(){return HL},set HL(v){HL=v},asstModeEntries,freeModelFor,freeRoute,freeSlotWait,get FREE(){return FREE},set FREE(v){FREE=v},get FREE_LOG(){return FREE_LOG},
     HARNESS_LAYERS,harnessAudit,
     REACT_MAX_STEPS,REACT_OBS_CAP,REACT_STOP,reactParse,reactPrompt,reactKey,reactRun,
