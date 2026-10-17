@@ -1928,7 +1928,12 @@ select:focus-visible,textarea:focus-visible{border-radius:10px}
   .ab-chip{border-radius:12px;width:100%;padding:8px 12px;line-height:1.4;
     display:flex;flex-wrap:wrap;gap:4px}
   .ab-chip b{white-space:normal}
+  /* Pass 32: still 351px of 812 with three suggestions stacked. One shows; the rest are one tap away. */
+  .ab-sug:not(.all) .ab-chip:nth-of-type(n+2){display:none}
+  .ab-more{display:inline-flex}
 }
+.ab-more{display:none;align-self:flex-start;background:transparent;border:1px solid var(--edge);border-radius:999px;
+  padding:4px 11px;color:var(--ink2);font-size:12px;cursor:pointer;min-height:32px;align-items:center}
 
 /* --- Touch targets -------------------------------------------------------- */
 
@@ -2177,6 +2182,16 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
   pointer-events:none;z-index:3}
 .lx-box.lx-round{border-radius:44px}
 .lx-box.lx-round::after{display:none}
+.lr-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-top:10px}
+.lr-stats>div{background:var(--bg2);border:1px solid var(--edge);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column}
+.lr-stats b{font-size:1.25em}.lr-stats span{font-size:.8em;color:var(--muted)}
+.lr-t{width:100%;border-collapse:collapse;margin-top:8px;font-size:.88em}.lr-t th,.lr-t td{text-align:left;padding:5px 6px;border-bottom:1px solid var(--edge);vertical-align:top}
+.lr-t td.mono{word-break:break-all}.lr-scroll{overflow-x:auto}
+.lr-bar{display:inline-block;width:64px;height:7px;border-radius:4px;background:var(--bg2);border:1px solid var(--edge);vertical-align:middle;overflow:hidden}
+.lr-bar i{display:block;height:100%;background:var(--accent)}
+.lr-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.lr-run,.lr-inst{background:var(--bg2);border:1px solid var(--edge);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;min-width:0;overflow-wrap:anywhere}
+.lr-inst.off{opacity:.55}.chip.lr-pass{color:var(--good)}.chip.lr-fail{color:var(--bad)}.chip.lr-unverified{color:var(--muted)}
 .lx-log{max-height:230px;overflow:auto;background:var(--bg);border:1px solid var(--edge);
   border-radius:10px;padding:8px;font-family:var(--mono);font-size:11.5px}
 .lx-line{display:flex;gap:8px;padding:2px 0;border-bottom:1px solid color-mix(in oklab,var(--edge) 55%,transparent)}
@@ -2308,6 +2323,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
     <button class="tab" data-view="evolve">📈 Prompt Evolution</button>
     <button class="tab" data-view="hlab">🧪 Harness Lab</button>
     <button class="tab" data-view="playbooks">🧭 Playbooks</button>
+    <button class="tab" data-view="learn">🧠 Learning</button>
     <button class="tab" data-view="evidence">⚗ Evidence</button>
     <button class="tab" data-view="launch">📲 Launcher</button>
     <button class="tab" data-view="webos">🪟 WebOS</button>
@@ -5359,6 +5375,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 9%,var(--panel2))}
     <section class="view" id="view-evolve"><div class="wrap"><div id="pevo-panel"></div></div></section>
     <section class="view" id="view-hlab"><div class="wrap"><div id="hlab-panel"></div></div></section>
     <section class="view" id="view-playbooks"><div class="wrap"><div id="pb-panel"></div></div></section>
+    <section class="view" id="view-learn"><div class="wrap"><div id="learn-panel"></div></div></section>
 
     <!-- ============ EVIDENCE ENGINE ============ -->
     <section class="view" id="view-evidence"><div class="wrap">
@@ -14234,12 +14251,19 @@ async function runStandup(members,context,hostEl){
 const PROJECT_TYPES={
   threejs_game:{label:'Three.js game',icon:'🎮',entry:'index.html',
     hint:'Single-file WebGL game — 60fps budget, pointer + touch controls.',
-    gates:['fps','overflow','console'],
+    gates:['fps','overflow','console','playable'],
     steer:'Target 60fps on a mid-range phone. Use a fixed-timestep update with an accumulator and '+
       'interpolated rendering — never tie physics to frame rate. Dispose geometries, materials and '+
       'textures you stop using; a leak here shows up as a slow death after two minutes. Support '+
       'touch AND mouse from the first version. Keep draw calls low by reusing materials and using '+
-      'InstancedMesh for repeated geometry.'},
+      'InstancedMesh for repeated geometry. '+
+      'Start the file with a 6-line DESIGN BRIEF comment: player promise, primary verb, objective, pressure, '+
+      'reward, fail/retry. Build a playable loop, not a scene: real input → state → feedback → HUD, with a restart '+
+      'that works without reloading. Expose window.gameState = {state, score, lives, player:{x,y,z}} and keep it '+
+      'current every frame — the harness presses arrow keys, WASD, space and clicks, and fails the build if it does '+
+      'not change. Tune feel: acceleration rather than instant velocity, a damped follow camera that shows the next '+
+      'decision, 40–80 ms hit-stop with a small shake and flash on impacts, cooldowns that read on screen, and '+
+      'difficulty that escalates over the first two minutes with recovery beats. No pointer lock unless the genre needs it.'},
   html_webapp:{label:'HTML web app',icon:'🌐',entry:'index.html',
     hint:'Self-contained web app that opens straight from a file.',
     gates:['overflow','tap-targets','console','viewport-meta'],
@@ -14285,6 +14309,9 @@ function taskClose(t,satisfied,notes){
   t.satisfied=!!satisfied;t.closedAt=nowISO();t.notes=notes||'';
   t.files=Object.keys(WS.files||{});
   saveTasks();
+  try{ledgerRecord({id:'task_'+t.id,request:t.title,model:(t.models||[])[t.models.length-1]||'unknown',surface:'build',cluster:'build-app',
+    userVerdict:t.satisfied?'up':'down',tokensIn:t.tokensIn,tokensOut:t.tokensOut,cost:t.spend,
+    ms:(Date.parse(t.closedAt)-Date.parse(t.createdAt))||0});}catch(_){}
 }
 /* The headline numbers. Only satisfied tasks count as completed — an abandoned task still
    consumed money, and hiding that would flatter the metric into uselessness. */
@@ -14951,7 +14978,10 @@ function reactCap(text,cap){
    could in principle be called before it — a hard reference would throw on a path this helper
    exists to make optional. */
 function harnessNotes(task,budget){
-  try{return (typeof beaconBlock==='function')?beaconBlock(budget||1400,task):'';}catch(_){return'';}
+  let b='',i='';
+  try{b=(typeof beaconBlock==='function')?beaconBlock(budget||1400,task):'';}catch(_){b='';}
+  try{i=instinctBlock(task);}catch(_){i='';}
+  return [b,i].filter(Boolean).join('\n\n');
 }
 /* Two, so an answer the first check sent back is itself checked once corrected. */
 const REACT_VERIFY_MAX=2;
@@ -15209,6 +15239,8 @@ async function reactRunNative(task,opts){
       TOOL_SPOTLIGHT_RULE,harnessNotes(task)].filter(Boolean).join('\n\n')},
     {role:'user',content:String(task)}];
   const steps=[];
+  /* S1 Harness's loop guard: the third identical call is answered with a refusal the model can act on. */
+  const guard=toolLoopGuard(o.loopLimit||3);
   logEvent('react',{phase:'start',transport:'native',task:String(task).slice(0,300),model,tools:tools.length});
   for(let i=0;i<maxSteps;i++){
     let out;
@@ -15230,7 +15262,9 @@ async function reactRunNative(task,opts){
     messages.push({role:'assistant',content:msg.content||null,tool_calls:msg.tool_calls});
     for(const c of calls){
       let result;
+      const lg=c.argError?null:guard.check(c.name,c.args);
       if(c.argError)result={ok:false,error:c.argError};
+      else if(lg&&lg.block)result={ok:false,error:lg.message};
       else{try{result=await toolInvoke(c.name,c.args);}catch(e){result={ok:false,error:String(e&&e.message||e)};}}
       const content=result&&result.ok?toolObservation(result,c.name)
         :'ERROR: '+((result&&result.error)||'the tool failed');
@@ -15248,9 +15282,17 @@ async function reactRunNative(task,opts){
 }
 /* One entry point that picks the transport, so callers never have to know which is in use. */
 function reactAuto(task,opts){
-  const o=opts||{};
+  const o=Object.assign({},opts||{});
+  /* A model you pinned is never overridden; otherwise, with learned routing on, the ledger picks. */
+  let routed=null;
+  if(!o.model&&LEARN.route.on){try{const p=routerChoose(task,routerCandidates(),o.stickyKey||'agent');
+    if(p.model){o.model=p.model;routed={model:p.model,why:p.why,explored:!!p.explored};}}catch(_){}}
   const model=o.model||settings.archModel||settings.buildModel;
-  return (NT.on&&ntCapable(model))?reactRunNative(task,o):reactRun(task,o);
+  const t0=Date.now();
+  return Promise.resolve((NT.on&&ntCapable(model))?reactRunNative(task,o):reactRun(task,o)).then(r=>{
+    if(o.record!==false)ledgerFromReact(task,model,r,t0,routed);
+    if(r&&routed)r.routed=routed;
+    return r;});
 }
 
 /* ═══════════════════ JEV — TYPED DECISIONS ═══════════════════
@@ -15528,29 +15570,39 @@ const CU_BACKENDS={
     needs:'nothing — runs in this page',
     async start(){return{ok:true};},
     async observe(){
-      const view=document.querySelector('section.view.active');
-      const tabs=[...document.querySelectorAll('#tabs .tab')].filter(t=>t.offsetParent);
+      /* A dialog that is not the Automate panel covers the page: only its own controls can be operated. */
+      const dlg=[...document.querySelectorAll('.overlay .modal')].find(m=>!m.querySelector('#automate-modal'));
+      const view=dlg||document.querySelector('section.view.active');
+      const tabs=dlg?[]:[...document.querySelectorAll('#tabs .tab')].filter(t=>t.offsetParent);
+      const hs=view?s1Headings(view):[];
       const els=[...(view?view.querySelectorAll('button,a[href],[role="button"],input,select,textarea'):[])].concat(tabs)
-        .filter(el=>{if(el.closest('#automate-modal,.modal,iframe'))return false;
+        .filter(el=>{if(el.closest('#automate-modal,iframe')||(!dlg&&el.closest('.modal')))return false;
           const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&!el.disabled&&getComputedStyle(el).visibility!=='hidden';})
         .slice(0,254);
       CU_REFS=new Map();
       const cands=els.map((el,i)=>{
         const ref='g'+(i+1);CU_REFS.set(ref,el);
         const isTab=el.classList.contains('tab')&&el.closest('#tabs');
-        const label=(isTab?'tab: ':'')+(el.getAttribute('aria-label')||el.getAttribute('title')||el.textContent||el.getAttribute('placeholder')||el.getAttribute('name')||el.tagName)
-          .replace(/\s+/g,' ').trim().slice(0,120);
         const tag=el.tagName.toLowerCase(),type=(el.getAttribute('type')||'').toLowerCase();
+        /* A field's own <label> before anything else; a dropdown's text is every option run together, never a name. */
+        const own=el.labels&&el.labels[0]?s1PlainText(el.labels[0])||s1Txt(el.labels[0]):'';
+        /* The accessible-name order: aria-label, the field's label, its visible text, and only then a tooltip. */
+        const label=(isTab?'tab: ':'')+(el.getAttribute('aria-label')||own||
+          (tag==='select'||tag==='input'||tag==='textarea'?'':el.textContent.replace(/\s+/g,' ').trim())||el.getAttribute('title')||el.getAttribute('placeholder')||el.getAttribute('name')||tag)
+          .replace(/\s+/g,' ').trim().slice(0,120);
         const kind=tag==='select'?'select':tag==='textarea'?'text':tag==='input'?(['checkbox','radio'].indexOf(type)>=0?'check'
           :['button','submit','reset','image','file','range','color','hidden'].indexOf(type)>=0?'click':'text'):'click';
         const c={ref,label,role:isTab?'tab':tag,kind,type};
+        if(!isTab){const cx=s1ControlContext(el,hs);if(cx.section)c.section=cx.section;if(cx.near&&cx.near!==label)c.near=cx.near;}
         if(kind==='text'||kind==='select')c.value=String(el.value||'');
         if(kind==='check')c.checked=!!el.checked;
         if(kind==='select')c.options=[...el.options].slice(0,60).map(o=>({value:o.value,text:(o.textContent||'').trim().slice(0,60)}));
         return c;
       });
-      const title=view?((view.querySelector('h2,h3')||{}).textContent||view.id.replace('view-','')):'?';
-      return{ok:true,cands,page:'GlassBox — '+String(title).trim().slice(0,60)+' tab'};
+      const title=view?((view.querySelector('h2,h3')||{}).textContent||(view.id||'').replace('view-','')):'?';
+      const outline=hs.slice(0,10).map(h=>s1Txt(h).slice(0,40)).filter(Boolean);
+      return{ok:true,cands,dialog:dlg?String(title).trim().slice(0,60):'',
+        page:'GlassBox — '+(dlg?'dialog: ':'')+String(title).trim().slice(0,60)+(dlg?'':' tab')+(outline.length?'\nSections: '+outline.join(' · '):'')};
     },
     async act(a){return CU_BACKENDS.webos.act(a);},
     async stop(){return{ok:true};}},
@@ -16075,6 +16127,8 @@ async function s1Run(goal,opts){
   const run={goal:String(goal||''),status:'running',reason:'',steps:[],artifacts:[],started:Date.now(),
     usage:{input:0,output:0,cost:0},decider:o.deciderLabel||'jev'};
   const end=(status,reason)=>{run.status=status;run.reason=reason;run.ended=Date.now();
+    if(status==='completed'&&(run.confirmed||reason==='environment_terminal')&&env.onFinish)try{env.onFinish('success');}catch(_){}
+    if(o.record)try{ledgerFromS1(run);}catch(_){}
     if((reason==='no_confident_action'||reason==='escalation_requested')&&run.steps.length){
       const last=run.steps[run.steps.length-1],a=space.actions[last.action];
       run.handoff={reason,state:last.state,questions:last.questions,answers:last.answers,
@@ -16098,16 +16152,46 @@ async function s1Run(goal,opts){
       catch(e){run.error=String(e&&e.message||e);return end('failed','provider_error');}
       if(!dec||!dec.ok){run.error=(dec&&dec.error)||'the decider returned nothing';return end('failed','provider_error');}
       const u=dec.usage||{};run.usage.input+=u.input||0;run.usage.output+=u.output||0;run.usage.cost+=u.cost||0;
-      const v=s1Judge(dec.answers,comp,space);
+      let v=s1Judge(dec.answers,comp,space),s1Before=null;
+      /* Dual system: S1 unsure or asking for help → S2 answers the same typed question. */
+      if((v.kind==='refused'||v.kind==='escalate')&&o.escalate&&!(o.signal&&o.signal.aborted)){
+        try{const d2=await o.escalate(enc.state,comp.questions);
+          if(d2&&d2.ok){const u2=d2.usage||{};run.usage.input+=u2.input||0;run.usage.output+=u2.output||0;run.usage.cost+=u2.cost||0;
+            const v2=s1Judge(d2.answers,comp,space);
+            if(v2.kind==='run'){s1Before={action:v.action,confidence:v.confidence,kind:v.kind};v=v2;run.escalations=(run.escalations||0)+1;}}}
+        catch(_){}
+      }
       const notes=enc.truncations.slice();
+      if(s1Before)notes.push('S1 was unsure ('+s1Before.kind+' on '+s1Before.action+'); S2 answered');
       if(Object.keys(comp.omitted).length)notes.push('not offered: '+Object.entries(comp.omitted).map(([k,w])=>k+' ('+w+')').join(', '));
       const step={index:run.steps.length,state:enc.state,questions:comp.questions,answers:dec.answers,
         action:v.action,params:v.params,confidence:v.confidence,weakest:v.weakest,threshold:v.threshold,
         verdict:v.kind,result:null,ms:dec.ms||0,note:notes.join('; ')};
+      if(s1Before){step.source='s2';step.s1Before=s1Before;}
       const goalP=s1Num(((dec.answers||{})[S1_GOAL]||{}).value);
       const sig=v.action+'|'+JSON.stringify(v.params)+'|'+JSON.stringify({t:obs.text,f:obs.fields});
       const nx=s1After(mem,v,goalP,space.gate,sig,streak);
       if(nx.note)step.note=[step.note,nx.note].filter(Boolean).join('; ');
+      /* The finish gate (S1 Harness): a single optimistic reading never ends a run. Look again, ask again, and
+         require the goal on the fresh look — and the success rule, when there is one. */
+      if(nx.end&&nx.end[0]==='completed'&&(o.confirmGoal||1)>1){
+        let ok=true,why='';
+        try{
+          const obs2=await env.observe();
+          const comp2=s1Compile(space,obs2.candidates,o.disabled);
+          const enc2=s1Encode(run.goal,obs2,run.steps.concat([step]),o.memory,space.instructions,o.instructions);
+          const d2=await decide(enc2.state,comp2.questions);
+          if(d2&&d2.usage){run.usage.input+=d2.usage.input||0;run.usage.output+=d2.usage.output||0;run.usage.cost+=d2.usage.cost||0;}
+          const g2=s1Num((((d2&&d2.answers)||{})[S1_GOAL]||{}).value);
+          const v2=d2&&d2.ok?s1Judge(d2.answers,comp2,space):null;
+          const bar=space.gate&&space.gate.finish!=null?space.gate.finish:0.5;
+          if(!(d2&&d2.ok)||!(g2>=bar||(v2&&v2.kind==='finish'))){ok=false;why='a fresh look did not confirm the goal';}
+          else if(o.success&&!s1SuccessHolds(o.success,{text:obs2.text||'',page:String(obs2.text||'').split('\n')[0]})){ok=false;why='the success rule does not hold yet';}
+        }catch(e){ok=false;why='could not look again ('+String(e&&e.message||e).slice(0,80)+')';}
+        if(!ok){step.note=[step.note,'finish gate: '+why+'; carrying on'].filter(Boolean).join('; ');mem.finishInsist=0;record(step);continue;}
+        step.note=[step.note,'finish gate: confirmed on a fresh look'+(o.success?' and the success rule holds':'')].filter(Boolean).join('; ');
+        run.confirmed=true;
+      }
       if(nx.end){record(step);return end(nx.end[0],nx.end[1]);}
       if(nx.next){record(step);continue;}
       let res;
@@ -16163,15 +16247,19 @@ const S1_COMPUTER_SPACE={
 const S1_TEXTISH=/\b(textbox|searchbox|combobox|input|textarea|text field|search field|edit)\b/i;
 /* PURE. One backend observation becomes System One's observation: the text the model reads and the
    candidates each parameter chooses from. */
-function s1CuObserve(cands,values,page){
+function s1CuObserve(cands,values,page,marks){
   const elements={},consequential={},text_fields={},options={},lines=[],set=[];
+  const mk=marks||{};
+  /* Where a control sits, and what happened to it before (S1 Harness App Operator). */
+  const ctx=c=>(c.section?` in "${String(c.section).slice(0,40)}"`:'')+(c.near&&c.near!==c.label?` near "${String(c.near).slice(0,50)}"`:'')+
+    (mk.noEffect&&mk.noEffect.has(s1CandKey(c))?' (last time: nothing changed)':'')+(mk.worked&&mk.worked.has(s1CandKey(c))?' (worked before)':'');
   const vnames=Object.keys(values||{});
   (cands||[]).forEach(c=>{
     const kind=c.kind||(S1_TEXTISH.test(String(c.role||'')+' '+String(c.label||''))?'text':'click');
     const role=String(c.role||kind),label=String(c.label||c.ref);
     let state='';
     if(kind==='text'){state=c.value?` (holds "${String(c.value).slice(0,60)}")`:' (empty)';
-      text_fields[c.ref]=`${role} "${label}"${state}`;if(c.value)set.push(`${label}: "${String(c.value).slice(0,60)}"`);}
+      text_fields[c.ref]=`${role} "${label}"${state}${ctx(c)}`;if(c.value)set.push(`${label}: "${String(c.value).slice(0,60)}"`);}
     else if(kind==='select'){
       const cur=(c.options||[]).find(o=>o.value===c.value);
       state=` (set to "${cur?cur.text:c.value||'nothing'}")`;
@@ -16179,10 +16267,10 @@ function s1CuObserve(cands,values,page){
       (c.options||[]).forEach(o=>{if(o.value!==c.value)options[c.ref+'::'+o.value]=`"${label}" → ${o.text||o.value}`;});
     }else{
       if(kind==='check'){state=c.checked?' (checked)':' (unchecked)';if(c.checked)set.push(`${label}: checked`);}
-      const desc=`${role} "${label}"${state}`;
+      const desc=`${role} "${label}"${state}${ctx(c)}`;
       if(S1_CONSEQUENTIAL.test(label))consequential[c.ref]=desc;else elements[c.ref]=desc;
     }
-    lines.push(`[${c.ref}] ${role} "${label}"${state}`);
+    lines.push(`[${c.ref}] ${role} "${label}"${state}${ctx(c)}`);
   });
   const text=(page?page+'\n':'')+'Controls, in page order:\n'+(lines.join('\n')||'(none)')+
     '\nSet so far: '+(set.length?set.join('; '):'nothing')+'.'+
@@ -16204,7 +16292,24 @@ function s1CuEnv(backendId,opts){
   if(!o.allowConsequential)disabled.add('click_consequential');
   if(backendId!=='webos'&&backendId!=='app')disabled.add('select_option');
   const wrap=(r,text)=>r&&r.ok?{ok:true,text}:{ok:false,text:(r&&r.error)||'the action failed'};
+  /* Effect observation and learned paths, where looking again is cheap (this page). */
+  const cheap=backendId==='app'||backendId==='webos';
+  const noEffect=new Map(),trail=[],pkey=s1PathKey(o.goal||'',backendId),learned=Object.assign({},S1PATHS[pkey]||{});
+  let lastRaw=null,sig='';
+  const effect=async(ref,kind,res)=>{
+    if(!cheap||!res.ok||!lastRaw)return res;
+    const c=(lastRaw.cands||[]).find(x=>x.ref===ref),key=c?s1CandKey(c):'';
+    if(key)trail.push({sig,key});if(trail.length>200)trail.shift();
+    let after=null;try{await new Promise(r=>setTimeout(r,180));after=await B.observe();}catch(_){after=null;}
+    if(!after||!after.ok)return res;
+    const ch=s1Diff(lastRaw,after);
+    if(key&&kind==='click'){if(ch)noEffect.delete(key);else noEffect.set(key,(noEffect.get(key)||0)+1);}
+    return{ok:true,text:res.text+' → '+(ch||'nothing visible changed')};
+  };
   const env={backend:backendId,disabled,
+    onFinish(outcome){
+      if(outcome!=='success'||!trail.length)return;
+      S1PATHS[pkey]=Object.assign({},S1PATHS[pkey]||{},Object.fromEntries(trail.map(t=>[t.sig,t.key])));saveS1Paths();},
     async reset(){
       if(!B)throw new Error('unknown computer-use backend: '+backendId);
       const st=await B.start(o);
@@ -16214,17 +16319,18 @@ function s1CuEnv(backendId,opts){
     async observe(){
       const ob=await B.observe();
       if(!ob.ok)throw new Error(ob.error||'could not observe');
-      return s1CuObserve(ob.cands,values,ob.page);},
+      lastRaw=ob;sig=s1PathSig(ob.page,ob.cands);
+      return s1CuObserve(ob.cands,values,ob.page,{noEffect:new Set(noEffect.keys()),worked:learned[sig]?new Set([learned[sig]]):new Set()});},
     async execute(action,p){
       if(action==='click'||action==='click_consequential')
-        return wrap(await B.act({ref:p.element,kind:'click'}),'Clicked '+p.element+'.');
+        return effect(p.element,'click',wrap(await B.act({ref:p.element,kind:'click'}),'Clicked '+p.element+'.'));
       if(action==='type_text'){
         if(!(p.value in values))return{ok:false,text:'no supplied value is named '+p.value};
-        return wrap(await B.act({ref:p.field,kind:'fill',value:values[p.value]}),
-          `Typed the value named "${p.value}" into ${p.field}.`);}
+        return effect(p.field,'fill',wrap(await B.act({ref:p.field,kind:'fill',value:values[p.value]}),
+          `Typed the value named "${p.value}" into ${p.field}.`));}
       if(action==='select_option'){const k=String(p.option||''),i=k.lastIndexOf('::');
         if(i<0)return{ok:false,text:'malformed option'};
-        return wrap(await B.act({ref:k.slice(0,i),kind:'select',value:k.slice(i+2)}),'Chose '+k.slice(i+2)+'.');}
+        return effect(k.slice(0,i),'select',wrap(await B.act({ref:k.slice(0,i),kind:'select',value:k.slice(i+2)}),'Chose '+k.slice(i+2)+'.'));}
       if(action==='wait'){await new Promise(r=>setTimeout(r,1000));return{ok:true,text:'Waited a second.'};}
       return{ok:false,text:'unknown action '+action};},
     async stop(){try{await B.stop();}catch(_){}}};
@@ -17108,7 +17214,8 @@ async function daCaptureFromScreen(backendId,opts){
    computer-use environment — so a fix to how a click is gated reaches every tab at once. */
 const S1_DEFAULTS={env:'order',scenario:'ship_cheapest',decider:'jev',cuaEndpoint:'http://127.0.0.1:8000/v1',
   cuaModel:'cua-s1',family:'multi_step_submit',llmModel:'',gate:{read:0.5,write:0.7,destructive:0.9,finish:0.5},
-  allowConsequential:false,maxSteps:30,goal:'',values:'',window:'',url:'',runs:[]};
+  allowConsequential:false,maxSteps:30,goal:'',values:'',window:'',url:'',runs:[],
+  soPreset:'ollama-nimble',soUrl:'',soModel:'',soKey:'',escalate:false,escalateModel:'',confirmGoal:2,success:''};
 let S1CFG=Object.assign({},S1_DEFAULTS,store.get('systemone',{}));
 S1CFG.gate=Object.assign({},S1_DEFAULTS.gate,S1CFG.gate||{});
 const saveS1=()=>{S1CFG.runs=(S1CFG.runs||[]).slice(0,30);store.set('systemone',S1CFG);};
@@ -17123,6 +17230,9 @@ const S1_DECIDERS={jev:{label:'Jev',blurb:'TypeSafe\'s decision model through Op
     'by any OpenAI-compatible server that returns logprobs. 4B — inside the no-models-over-9B rule.'},
   llm:{label:'Any chat model',blurb:'Any model that can run — OpenRouter, your providers, a local model, or with no key a free one — '+
     'asked the same one-letter question. Logprobs when the model gives them; otherwise samples and the vote share, and the trace says so.'},
+  systemone:{label:'Decision model (System One API)',blurb:'Nace Drex, Ollama nimble, Clef, PPLX-Decider, Liquid d1, TypeSafe Jev — any server '+
+    'that answers POST {model, state, questions} with typed answers and probabilities. A local server running a model bigger than '+
+    'this Mac’s local cap is refused before it is called.'},
   replay:{label:'Replay (no model)',blurb:'Plays the known-correct moves for the order desk, so the loop, the gate and the '+
     'trace can be seen working with no key at all. It proves the machinery, not a model.'}};
 /* The known-correct moves for each order-desk scenario — upstream's own goal_met, as a plan. */
@@ -17150,6 +17260,13 @@ function s1DeciderFor(kind,envKind,scenario){
     if(envKind!=='order')return{error:'Replay only knows the order desk\'s correct moves.'};
     return{decide:s1Scripted(S1_REPLAYS[scenario]||S1_REPLAYS.ship_cheapest),label:'replay'};
   }
+  if(kind==='systemone'){
+    const p=S1_DECISION_PRESETS.find(x=>x.id===c.soPreset)||S1_DECISION_PRESETS[S1_DECISION_PRESETS.length-1];
+    const url=(c.soUrl||p.url||'').trim(),gd=s1DecisionGuard(p,url,FREE.localMaxB!=null?FREE.localMaxB:9);
+    if(!gd.ok)return{error:gd.why};
+    if(p.key&&!c.soKey)return{error:p.label+' needs a key — paste it under Who decides.'};
+    return{decide:s1SystemOneDecider({url,model:(c.soModel||p.model||'').trim(),key:c.soKey}),label:'systemone ('+(c.soModel||p.model||p.id)+')'};
+  }
   if(kind==='cuas1')return{decide:s1LetterDecider({endpoint:c.cuaEndpoint,model:c.cuaModel,family:c.family,
     app:(S1_ENVS[envKind]||{}).label}),label:'cua-s1 ('+c.cuaModel+')'};
   if(kind==='llm'){
@@ -17167,6 +17284,12 @@ function s1DeciderFor(kind,envKind,scenario){
   }
   return{decide:null,label:'jev'};
 }
+/* PURE. A success rule from what was typed: JSON in the predicate shape, or plain words that must be on the screen. */
+function s1ParseSuccess(t){
+  const x=String(t||'').trim();if(!x)return null;
+  if(/^[{[]/.test(x)){try{const j=JSON.parse(x);return j&&typeof j==='object'?j:null;}catch(_){return null;}}
+  return{path:'text',op:'contains',value:x};
+}
 /* The one runner every tab uses. */
 async function s1Go(o){
   if(S1_LIVE)return{status:'failed',reason:'busy',error:'System One is already running — stop it first',steps:[]};
@@ -17176,7 +17299,7 @@ async function s1Go(o){
   else{
     if(!goal)return{status:'failed',reason:'environment_error',error:'say what it should do first',steps:[]};
     decl=JSON.parse(JSON.stringify(S1_COMPUTER_SPACE));decl.gate=Object.assign({},S1CFG.gate);
-    env=s1CuEnv(envKind,{values:o.values||{},window:o.window,url:o.url,allowConsequential:!!o.allowConsequential});
+    env=s1CuEnv(envKind,{values:o.values||{},window:o.window,url:o.url,allowConsequential:!!o.allowConsequential,goal});
   }
   const sp=s1Space(decl);
   if(!sp.ok)return{status:'failed',reason:'environment_error',error:sp.error,steps:[]};
@@ -17185,8 +17308,18 @@ async function s1Go(o){
   S1_ABORT=new AbortController();S1_LIVE={env:envKind,started:Date.now(),goal};
   try{paneEvent('agent','system-one',{label:'System One',note:goal.slice(0,60)});}catch(_){}
   let run;
+  /* S2 escalation (S1 Harness, 11 Oct): when S1 is unsure, a stronger model is asked the SAME bounded question; only a
+     valid answer that clears the same gate acts. The finish gate and success rule apply on screens, not the order desk,
+     whose own goal check is the judge. */
+  let esc2=null;
+  const wantEsc=o.escalate!=null?o.escalate:S1CFG.escalate;
+  if(wantEsc&&envKind!=='order'){const e=s1DeciderFor('llm',envKind);
+    if(!e.error)esc2=e.decide;}
+  const succ=s1ParseSuccess(o.success!=null?o.success:S1CFG.success);
   try{run=await s1Run(goal,{space:sp.space,env,decide:d.decide||undefined,deciderLabel:d.label,
-    maxSteps:+o.maxSteps||S1CFG.maxSteps,disabled:env.disabled,signal:S1_ABORT.signal,onStep:o.onStep});}
+    maxSteps:+o.maxSteps||S1CFG.maxSteps,disabled:env.disabled,signal:S1_ABORT.signal,onStep:o.onStep,
+    escalate:esc2||undefined,confirmGoal:envKind==='order'?1:(+S1CFG.confirmGoal||2),success:envKind==='order'?null:succ,
+    record:d.label!=='replay'});}
   finally{if(env.stop)try{await env.stop();}catch(_){} S1_LIVE=null;S1_ABORT=null;}
   if(envKind==='order'&&env.goalMet)run.goalMet=env.goalMet();
   run.env=envKind;run.space=sp.space;
@@ -17245,7 +17378,7 @@ function s1ScreenHTML(p,opt){
     <label class="field">Values it may type — one <code>name = value</code> per line. It picks names; it never writes text.
       <textarea id="${p}-vals" rows="2" class="mono" placeholder="email = me@example.com"></textarea></label>
     <div class="row" style="gap:10px;flex-wrap:wrap;align-items:center">
-      <label class="chk">Decider <select id="${p}-dec">${['jev','cuas1','llm'].map(k=>
+      <label class="chk">Decider <select id="${p}-dec">${['jev','cuas1','llm','systemone'].map(k=>
         `<option value="${k}"${k===S1CFG.decider?' selected':''}>${esc(S1_DECIDERS[k].label)}</option>`).join('')}</select></label>
       <label class="chk"><input type="checkbox" id="${p}-cons"> allow clicks that commit (pay, send, submit, delete…)</label>
       <span style="flex:1"></span>
@@ -17353,6 +17486,24 @@ function s1Render(){
         The prompt is Cua-S1's own, word for word, and at most 26 options a step.</p>`:''}
     ${c.decider==='llm'?`<label class="field">Model<input id="s1-lmod" class="mono" list="s1-lmods" value="${esc(c.llmModel)}" placeholder="${esc(settings.archModel||'')}"></label>
       <datalist id="s1-lmods">${((typeof CATALOG!=='undefined'&&CATALOG)||[]).slice(0,400).map(m=>`<option value="${esc(m.id)}">`).join('')}</datalist>`:''}
+    ${c.decider==='systemone'?`<div class="row" style="gap:8px;flex-wrap:wrap">
+      <label class="field" style="flex:2 1 240px">Decision model<select id="s1-sop">${S1_DECISION_PRESETS.map(x=>
+        `<option value="${x.id}"${x.id===c.soPreset?' selected':''}>${esc(x.label)}${x.params?' — '+x.params+'B':''}</option>`).join('')}</select></label>
+      <label class="field" style="flex:2 1 240px">Endpoint (blank = the preset’s)<input id="s1-sou" class="mono" value="${esc(c.soUrl)}" placeholder="${esc((S1_DECISION_PRESETS.find(x=>x.id===c.soPreset)||{}).url||'')}"></label>
+      <label class="field" style="flex:1 1 140px">Model id<input id="s1-som" class="mono" value="${esc(c.soModel)}" placeholder="${esc((S1_DECISION_PRESETS.find(x=>x.id===c.soPreset)||{}).model||'')}"></label>
+      <label class="field" style="flex:1 1 160px">Key (hosted only)<input id="s1-sok" type="password" autocomplete="off" value="${esc(c.soKey)}"></label></div>
+      <p class="help">${esc((S1_DECISION_PRESETS.find(x=>x.id===c.soPreset)||{}).note||'')} Presets from S1 Harness; request shapes other than
+        Drex/nimble/SGLang are as their authors document them and were not run here.</p>`:''}
+    <details style="margin-top:10px"><summary>Careful operator — escalation, finish gate, success rule</summary>
+      <label class="chk" style="margin-top:8px"><input type="checkbox" id="s1-esc"${c.escalate?' checked':''}> When S1 is unsure, ask S2 (the “any chat model” decider) the same question;
+        only an answer that clears the same gate acts</label>
+      <div class="row" style="gap:10px;flex-wrap:wrap;margin-top:6px">
+        <label class="chk">confirm “done” on <input type="number" id="s1-cg" min="1" max="4" value="${+c.confirmGoal||2}" style="width:56px"> look(s)</label>
+        <label class="field" style="flex:1 1 260px">Success rule (optional) — words that must be on the screen, or JSON
+          <input id="s1-succ" value="${esc(c.success)}" placeholder='Order placed  —  or  {"path":"text","op":"matches","value":"total: \\$\\d+"}'></label></div>
+      <p class="help">On a screen each control is described with its section and nearby text, the result of every action is read back
+        (“→ nothing visible changed” marks a dead control), and steps that led to a confirmed success are marked “worked before”
+        next time. Ported from S1 Harness’s App Operator.</p></details>
     <details style="margin-top:10px"><summary>Gate and limits</summary>
       <div class="row" style="gap:10px;flex-wrap:wrap;margin-top:8px">${['read','write','destructive','finish'].map(k=>
         `<label class="chk">${k} <input type="number" id="s1-g-${k}" min="0.3" max="0.99" step="0.01" value="${c.gate[k]}" style="width:72px"></label>`).join('')}
@@ -17402,6 +17553,13 @@ function s1Render(){
     if(v('s1-cmod')!=null)c.cuaModel=v('s1-cmod').trim();
     if(v('s1-fam')!=null)c.family=v('s1-fam');
     if(v('s1-lmod')!=null)c.llmModel=v('s1-lmod').trim();
+    if(v('s1-sop')!=null)c.soPreset=v('s1-sop');
+    if(v('s1-sou')!=null)c.soUrl=v('s1-sou').trim();
+    if(v('s1-som')!=null)c.soModel=v('s1-som').trim();
+    if(v('s1-sok')!=null)c.soKey=v('s1-sok').trim();
+    const esc2=document.getElementById('s1-esc');if(esc2)c.escalate=esc2.checked;
+    const cg=+v('s1-cg');if(cg>=1&&cg<=4)c.confirmGoal=cg;
+    if(v('s1-succ')!=null)c.success=v('s1-succ').trim();
     ['read','write','destructive','finish'].forEach(k=>{const x=+v('s1-g-'+k);if(x>=0.3&&x<=0.99)c.gate[k]=x;});
     const mx=+v('s1-max');if(mx>=1)c.maxSteps=Math.min(200,mx);
     saveS1();
@@ -22931,8 +23089,14 @@ function freeCandidates(st){
 /* A free provider that refused (401 allowance spent, 429 rate limit, 402, 503) is skipped for a while
    instead of being tried first on every call. */
 const FREE_COOL={};
+const FREE_STICKY={};
 const freeCooling=m=>{const id=String(m||''),h=id.split('/')[0],now=Date.now();return (FREE_COOL[h]>now)||(FREE_COOL[id]>now);};
-function freeModelFor(model,st){return freeCandidates(st).find(m=>!freeCooling(m))||null;}
+function freeModelFor(model,st){
+  const c=freeCandidates(st),k=FREE_STICKY[String(model||'')];
+  /* freellmapi's sticky session: a free model that answered stays the answer for 30 minutes. */
+  if(k&&k.until>Date.now()&&c.includes(k.model)&&!freeCooling(k.model))return k.model;
+  return c.find(m=>!freeCooling(m))||null;
+}
 /* Returns the options to use, or null to leave the call alone. */
 function freeRoute(opts){
   if(!FREE.on||!opts)return null;
@@ -22997,14 +23161,16 @@ async function streamComplete(opts,onUpdate,signal,label){
       /* 429 is per MODEL on OVH (2/min per model per network), so only that model cools; 401/402 mean the
          provider's allowance or account is spent, so the whole provider cools. */
       const key=/HTTP 429\b/.test(msg)?String(o.model):String(o.model).split('/')[0];
-      FREE_COOL[key]=Date.now()+(/HTTP 429\b/.test(msg)?90*1000:10*60*1000);
+      /* For as long as the provider SAID ("retry after 20", "try again in 7.66s"), else the old guesses. */
+      FREE_COOL[key]=Date.now()+(freeCoolMs(msg)||(/HTTP 429\b/.test(msg)?90*1000:10*60*1000));
+      if(FREE_STICKY[fr._freeFrom]&&FREE_STICKY[fr._freeFrom].model===o.model)delete FREE_STICKY[fr._freeFrom];
       const next=freeModelFor(fr._freeFrom);
       if(!next||next===o.model)throw e;
       logEvent('free-route',{from:o.model,to:next,why:msg.slice(0,80)});
       o=Object.assign({},o,{model:next});tries++;
     }
   }
-  if(fr&&acc){acc.freeFrom=fr._freeFrom;acc.freeModel=o.model;}
+  if(fr&&acc){acc.freeFrom=fr._freeFrom;acc.freeModel=o.model;FREE_STICKY[fr._freeFrom]={model:o.model,until:Date.now()+30*60*1000};}
   return acc;
 }
 async function streamCompleteOnce(opts,onUpdate,signal,label){
@@ -23430,7 +23596,7 @@ function initStudio(){
        1. only the actual preview frame's contentWindow is heard at all;
        2. `type` is validated against the known enum before it is stored, so a
           value that could break out of an attribute never enters previewLogs. */
-  const PREVIEW_TYPES=['log','warn','error','info','debug','shot','probe','telemetry'];
+  const PREVIEW_TYPES=['log','warn','error','info','debug','shot','probe','telemetry','playtest'];
   window.addEventListener('message',ev=>{
     const d=ev.data;if(!d||!d.__gbPreview)return;
     const fr=$('#st-frame');
@@ -23588,6 +23754,42 @@ function composePreview(withShim=true){
         out.push({id:'blank',sev:'high',msg:'The page rendered nothing: no canvas, no images and no text. It probably failed to start.'});
       return out;
     }
+    /* ---- playtest: does REAL input move the picture or window.gameState more than idling does? ---- */
+    function ptSample(){
+      var best=null,ba=0,px=null,tainted=false,st=null;
+      Array.prototype.forEach.call(document.querySelectorAll('canvas'),function(c){var a=(c.width||0)*(c.height||0);if(a>ba){ba=a;best=c;}});
+      if(best&&ba>256){try{var c2=document.createElement('canvas');c2.width=24;c2.height=24;var x=c2.getContext('2d');
+        x.drawImage(best,0,0,24,24);var d=x.getImageData(0,0,24,24).data;px=[];
+        for(var i=0;i<d.length;i+=4)px.push((d[i]*299+d[i+1]*587+d[i+2]*114)/1000);}catch(e){tainted=true;}}
+      try{var gs=window.gameState||window.GAME_STATE||(window.game&&window.game.state);if(gs!=null)st=JSON.stringify(gs).slice(0,4000);}catch(e){}
+      return{px:px,canvas:!!best,tainted:tainted,st:st,text:(document.body?document.body.innerText:'').slice(0,2000),el:best,f:_f};
+    }
+    function ptDiff(a,b){if(!a.px||!b.px)return 0;var s=0;for(var i=0;i<a.px.length;i++)s+=Math.abs(a.px[i]-b.px[i]);return s/(a.px.length*255);}
+    function ptVar(a){if(!a.px)return 0;var m=0,i;for(i=0;i<a.px.length;i++)m+=a.px[i];m/=a.px.length;var v=0;for(i=0;i<a.px.length;i++)v+=(a.px[i]-m)*(a.px[i]-m);return v/a.px.length;}
+    function playtest(done){
+      var a=ptSample();
+      setTimeout(function(){
+        var b=ptSample(),t=b.el||document.body,keys=[['ArrowUp',38],['ArrowRight',39],['KeyW',87],['KeyD',68],['Space',32]];
+        var r=t.getBoundingClientRect?t.getBoundingClientRect():{left:0,top:0,width:window.innerWidth,height:window.innerHeight};
+        var cx=r.left+r.width/2,cy=r.top+r.height/2,k=0;
+        try{['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(n){
+          var E=/pointer/.test(n)&&window.PointerEvent?PointerEvent:MouseEvent;
+          t.dispatchEvent(new E(n,{bubbles:true,cancelable:true,clientX:cx,clientY:cy,button:0}));});}catch(e){}
+        (function next(){
+          if(k>=keys.length){setTimeout(function(){
+            var c=ptSample();
+            /* The game's own scripts only — this probe's source mentions pointer lock too, and matching itself flagged every game. */
+            var own=Array.prototype.map.call(document.scripts,function(x){return x.textContent;}).filter(function(t){return t.indexOf('__gbPreview')<0;}).join(' ');
+            done({canvas:c.canvas,tainted:c.tainted,hasState:c.st!=null,idle:ptDiff(a,b),input:ptDiff(b,c),variance:ptVar(c),
+              stateIdle:a.st!==b.st,stateInput:b.st!==c.st&&c.st!=null,textInput:b.text!==c.text,frames:c.f-a.f,
+              pointerLock:!!document.pointerLockElement||new RegExp('request'+'PointerLock').test(own.slice(0,300000))});},350);return;}
+          var key=keys[k++],o={key:key[0]==='Space'?' ':key[0].replace(/^Key/,'').toLowerCase().replace(/^arrow/,'Arrow'),code:key[0],keyCode:key[1],which:key[1],bubbles:true,cancelable:true};
+          if(/^Arrow/.test(key[0]))o.key=key[0];
+          [window,document,t].forEach(function(x){try{x.dispatchEvent(new KeyboardEvent('keydown',o));}catch(e){}});
+          setTimeout(function(){[window,document,t].forEach(function(x){try{x.dispatchEvent(new KeyboardEvent('keyup',o));}catch(e){}});next();},110);
+        })();
+      },450);
+    }
     window.addEventListener('message',function(e){
       /* Only the embedder may drive this frame. Not a demonstrated hole \u2014 reaching a
          frame needs a handle to it, which in practice only the parent has \u2014 but every other
@@ -23612,6 +23814,8 @@ function composePreview(withShim=true){
             title:document.title||''},'*');
         }else if(d.__gbAsk==='telemetry'){
           parent.postMessage({__gbPreview:1,type:'telemetry',id:d.id,stats:telemetry()},'*');
+        }else if(d.__gbAsk==='playtest'){
+          playtest(function(res){parent.postMessage({__gbPreview:1,type:'playtest',id:d.id,result:res},'*');});
         }
       }catch(err){
         parent.postMessage({__gbPreview:1,type:d.__gbAsk==='probe'?'probe':'telemetry',id:d.id,
@@ -24945,6 +25149,19 @@ async function relayRound(){
     RS.lastErrors=runtimeErrors;
   }
 
+  // ---- playtest: a game must answer REAL input (threejs-gameplay-systems' commonest failure) ----
+  let playFindings=[];
+  if(RS.studio&&!runtimeErrors.length&&(RS.projType==='threejs_game'||/\bgame\b/i.test(String(RS.baseTask||RS.task||'')))){
+    setPhase(`🎮 Playtest · round ${rn}`,'arrow keys, WASD, space and a click');
+    try{const pt=await playtestStudio();
+      if(pt&&!pt.skipped){RS.lastPlaytest=pt;
+        playFindings=pt.findings.filter(f=>f.sev==='high').map(f=>'Playtest: '+f.msg);
+        /* A blank canvas is unambiguous, so it fails the round like a runtime error. Unresponsiveness goes to the
+           reviewer as evidence: synthetic input cannot prove a negative for every control scheme. */
+        pt.findings.filter(f=>f.id==='blank').forEach(f=>runtimeErrors.push('Playtest: '+f.msg));}}
+    catch(e){if(e.name!=='AbortError')toast('Playtest failed: '+e.message,4000);}
+  }
+
   // ---- mobile QA: run it at real phone viewports and probe for phone-only defects ----
   let mobileFindings=[],perfProblems=[],regressions=[];
   if(RS.studio&&(OPS.mobileQA.on||OPS.perfGate.on||OPS.regressionGate)){
@@ -24982,7 +25199,9 @@ async function relayRound(){
     'Always populate "suggestions" with at least two concrete ideas worth building next.';
   let jmsg='OBJECTIVES & ACCEPTANCE CRITERIA:\n'+RS.brief+'\n\nBUILDER DELIVERABLE:\n'+output.slice(0,80000);
   if(RS.studio)jmsg+='\n\nRUNTIME EVIDENCE — the code was executed in a real browser:\n'+
-    (runtimeErrors.length?('ERRORS:\n'+runtimeErrors.join('\n')):'No console errors. Page rendered.');
+    (runtimeErrors.length?('ERRORS:\n'+runtimeErrors.join('\n')):'No console errors. Page rendered.')+
+    (playFindings.length?'\n\nPLAYTEST — the harness pressed real keys and clicked:\n'+playFindings.join('\n')+
+      '\nA game that does not answer input does not meet the objectives.':'');
   const jr=buildReasoning({mode:'auto',effort:'medium',budget:8192,cutoff:false,room:8192},RS.arch);
   const jacc=await streamComplete({model:RS.arch,messages:[{role:'system',content:jsys},{role:'user',content:jmsg}],
     reasoning:jr.reasoning,maxTokens:jr.maxTokens,response_format:{type:'json_object'},temperature:0.2},null,relayAbort.signal,'Judge verdict');
@@ -29037,6 +29256,7 @@ function feedbackAdd({surface,verdict,note,model,subject,cost}){
     tags:['surface:'+(surface||'unknown')],cost:+cost||0};
   FEEDBACK.unshift(rec);saveFeedback();
   if(/^route:/.test(String(subject||'')))try{routeLogThumbs(String(subject).slice(6),rec.good);}catch(_){}
+  if(rec.model)try{ledgerFeedback(rec.model,rec.verdict);}catch(_){}
   /* A rating with a written reason becomes a standing instruction. One without stays a statistic —
      "you rated 6 things down" cannot change any future output on its own. */
   if(rec.verdict==='down'&&rec.note)feedbackLearn(rec);
@@ -31684,6 +31904,161 @@ function gauntletCases(g){
     what:'localhost, 127.0.0.1 and [::1] pages need no local-network permission',
     run:()=>['http://localhost:8765','http://127.0.0.1:8770','http://[::1]:8766'].every(o=>g.pageIsLoopback(o)),expect:v=>v===true,
     antiWhat:'while the public site does',anti:()=>g.pageIsLoopback('https://glassbox-jet.vercel.app'),antiExpect:v=>v===false});
+  /* ── pass 32: Learning, careful System One, self-audit, playtest ── */
+  const L32=()=>({runs:[],decisions:[],instincts:[],floor:0.7,cap:6});
+  add({id:'ledger-judge-observed',sub:'learning',uses:['ledgerJudge'],
+    what:'a run with a failed check fails whatever else it claims, and a passing check passes',
+    run:()=>[g.ledgerJudge({checks:{passed:2,failed:1}}).status,g.ledgerJudge({checks:{passed:1,failed:0}}).status].join(),expect:v=>v==='fail,pass',
+    antiWhat:'and a run nothing checked is unverified, not a pass',anti:()=>g.ledgerJudge({toolCalls:5}).status,antiExpect:v=>v==='unverified'});
+  add({id:'ledger-wilson',sub:'learning',uses:['wilsonLower'],
+    what:'three passes out of three is not yet a reliable 100%',run:()=>{const w=g.wilsonLower(3,3);return w>0.3&&w<0.8;},expect:v=>v===true,
+    antiWhat:'while 300 out of 300 is',anti:()=>g.wilsonLower(300,300)>0.98,antiExpect:v=>v===true});
+  add({id:'ledger-verdict-not-from-caller',sub:'learning',uses:['ledgerRecord'],
+    what:'a run that calls itself a pass but ended in an error is stored as a failure',
+    run:()=>{const L=L32();g.ledgerRecord({request:'x',status:'pass',error:'boom'},L);return L.runs[0].status;},expect:v=>v==='fail',
+    antiWhat:'and it is stored exactly once',anti:()=>{const L=L32();g.ledgerRecord({id:'a',request:'x'},L);g.ledgerRecord({id:'a',request:'x'},L);return L.runs.length;},antiExpect:v=>v===1});
+  add({id:'ledger-matrix-judged-only',sub:'learning',uses:['ledgerMatrix','ledgerRecord'],
+    what:'the pass rate counts judged runs only',
+    run:()=>{const L=L32();[1,1,0].forEach(p=>g.ledgerRecord({request:'fix bug',model:'m/a',checks:p?{passed:1,failed:0}:{passed:0,failed:1}},L));
+      for(let i=0;i<5;i++)g.ledgerRecord({request:'fix bug',model:'m/a'},L);const c=g.ledgerMatrix(L)[0];return c.passRate.toFixed(2)+'|'+c.unverified;},
+    expect:v=>v==='0.67|5',antiWhat:'and an empty ledger has no rows',anti:()=>g.ledgerMatrix(L32()).length,antiExpect:v=>v===0});
+  add({id:'ledger-recommend-thin',sub:'learning',uses:['ledgerRecommend','ledgerRecord'],
+    what:'two judged runs are too few to recommend with confidence',
+    run:()=>{const L=L32();for(let i=0;i<2;i++)g.ledgerRecord({request:'fix bug',model:'m/a',checks:{passed:1,failed:0}},L);return g.ledgerRecommend('debug',{},L).confident;},
+    expect:v=>v===false,antiWhat:'and four are enough',
+    anti:()=>{const L=L32();for(let i=0;i<4;i++)g.ledgerRecord({request:'fix bug',model:'m/a',checks:{passed:1,failed:0}},L);const r=g.ledgerRecommend('debug',{},L);return r.confident+':'+r.model;},
+    antiExpect:v=>v==='true:m/a'});
+  add({id:'ledger-calibration',sub:'learning',uses:['ledgerCalibration','ledgerRecordDecision'],
+    what:'a decider that says 95% and is right half the time is flagged overconfident',
+    run:()=>{const L=L32();for(let i=0;i<20;i++)g.ledgerRecordDecision({decider:'d',confidence:0.95,correct:i%2===0},L);return g.ledgerCalibration(L)[0].overconfident;},
+    expect:v=>v===true,antiWhat:'and one that says 50% and is right half the time is not',
+    anti:()=>{const L=L32();for(let i=0;i<20;i++)g.ledgerRecordDecision({decider:'d',confidence:0.5,correct:i%2===0},L);return g.ledgerCalibration(L)[0].overconfident;},antiExpect:v=>v===false});
+  add({id:'ledger-escalation-threshold',sub:'learning',uses:['ledgerEscalationThreshold','ledgerRecordDecision'],
+    what:'the escalation bar is the lowest confidence that was right 90% of the time over at least ten decisions',
+    run:()=>{const L=L32();for(let i=0;i<15;i++)g.ledgerRecordDecision({decider:'d',confidence:0.9,correct:true},L);
+      for(let i=0;i<15;i++)g.ledgerRecordDecision({decider:'d',confidence:0.5,correct:i%2===0},L);return g.ledgerEscalationThreshold('d',0.9,L);},
+    expect:v=>v===0.9,antiWhat:'and below twenty known outcomes there is no bar',
+    anti:()=>{const L=L32();for(let i=0;i<10;i++)g.ledgerRecordDecision({decider:'d',confidence:0.9,correct:true},L);return g.ledgerEscalationThreshold('d',0.9,L);},antiExpect:v=>v===null});
+  add({id:'ledger-lessons',sub:'learning',uses:['ledgerLesson'],
+    what:'a looping failure becomes a lesson to stop repeating, and real tool work that passed becomes a "what worked"',
+    run:()=>[/Do not repeat/.test((g.ledgerLesson({status:'fail',loopsBlocked:1,cluster:'debug'})||{}).text),
+      (g.ledgerLesson({status:'pass',toolCalls:3,toolSeq:['search','read','edit'],cluster:'code-edit'})||{}).source].join(),
+    expect:v=>v==='true,success',antiWhat:'and an unverified run teaches nothing',anti:()=>g.ledgerLesson({status:'unverified',loopsBlocked:1}),antiExpect:v=>v===null});
+  add({id:'tool-signature-normalised',sub:'learning',uses:['toolSignature'],
+    what:'the same call with keys reordered and whitespace changed has one signature',
+    run:()=>g.toolSignature('a',{x:1,y:' b  c'})===g.toolSignature('a',{y:'b c',x:1}),expect:v=>v===true,
+    antiWhat:'and different arguments differ',anti:()=>g.toolSignature('a',{x:1})===g.toolSignature('a',{x:2}),antiExpect:v=>v===false});
+  add({id:'tool-loop-guard',sub:'learning',uses:['toolLoopGuard'],
+    what:'the third identical call is blocked',run:()=>{const q=g.toolLoopGuard(3);q.check('s',{a:1});q.check('s',{a:1});return q.check('s',{a:1}).block;},expect:v=>v===true,
+    antiWhat:'and a changed argument is not',anti:()=>{const q=g.toolLoopGuard(3);q.check('s',{a:1});q.check('s',{a:1});return q.check('s',{a:2}).block;},antiExpect:v=>v===false});
+  add({id:'instinct-trial-then-judged',sub:'learning',uses:['instinctAdd','instinctPick','instinctCredit'],
+    what:'a new lesson is shown on trial, and three failures while it was shown retire it',
+    run:()=>{const L=L32();const i=g.instinctAdd({text:'Read first.',cluster:'debug'},L);const on=g.instinctPick('debug',L).length;
+      g.instinctCredit([i.id],'fail',L);g.instinctCredit([i.id],'fail',L);g.instinctCredit([i.id],'fail',L);return on+':'+g.instinctPick('debug',L).length;},
+    expect:v=>v==='1:0',antiWhat:'while three passes make it confident',
+    anti:()=>{const L=L32();const i=g.instinctAdd({text:'Read first.',cluster:'debug'},L);['pass','pass','pass'].forEach(x=>g.instinctCredit([i.id],x,L));
+      return g.instinctPick('debug',L).length===1&&g.instinctConf(i)>=0.7;},antiExpect:v=>v===true});
+  add({id:'instinct-credit-moves',sub:'learning',uses:['instinctCredit','instinctAdd'],
+    what:'a thumbs-down on a passed run moves the credit instead of adding a second judgement',
+    run:()=>{const L=L32();const i=g.instinctAdd({text:'x',cluster:'chat'},L);g.instinctCredit([i.id],'pass',L);g.instinctCredit([i.id],'fail',L,'pass');
+      return i.alpha+'/'+i.beta+'/'+i.trials;},expect:v=>v==='1/2/1',
+    antiWhat:'and an unverified run changes nothing',anti:()=>{const L=L32();const i=g.instinctAdd({text:'x',cluster:'chat'},L);g.instinctCredit([i.id],'unverified',L);return i.alpha+'/'+i.beta;},antiExpect:v=>v==='1/1'});
+  add({id:'router-prefers-proven',sub:'learning',uses:['routerPick','ledgerRecord','learnRng'],
+    what:'with a 9/10 model and a 1/10 model, Thompson sampling picks the proven one nearly always',
+    run:()=>{const L=L32();for(let i=0;i<10;i++){g.ledgerRecord({request:'fix bug',model:'a',checks:i<9?{passed:1,failed:0}:{passed:0,failed:1}},L);
+        g.ledgerRecord({request:'fix bug',model:'b',checks:i<1?{passed:1,failed:0}:{passed:0,failed:1}},L);}
+      let n=0;for(let s=1;s<=40;s++)if(g.routerPick('debug',['a','b'],L,{rng:g.learnRng(s)}).model==='a')n++;return n>=37;},
+    expect:v=>v===true,antiWhat:'and with exploration off and no evidence it declines to guess',
+    anti:()=>g.routerPick('debug',['a','b'],L32(),{explore:false,rng:g.learnRng(1)}).model,antiExpect:v=>v===null});
+  add({id:'router-price-penalty',sub:'learning',uses:['routerPick','ledgerRecord','learnRng'],
+    what:'two models with the same record: a strong price weight sends the task to the cheaper one',
+    run:()=>{const L=L32();['a','b'].forEach(m=>{for(let i=0;i<6;i++)g.ledgerRecord({request:'fix bug',model:m,checks:{passed:1,failed:0}},L);});
+      let n=0;for(let s=1;s<=30;s++)if(g.routerPick('debug',['a','b'],L,{rng:g.learnRng(s),lambda:1,priceOf:m=>m==='a'?10:1}).model==='b')n++;return n>=27;},
+    expect:v=>v===true,antiWhat:'and the cheapest candidate carries no penalty',
+    anti:()=>{const r=g.routerPick('debug',['a','b'],L32(),{rng:g.learnRng(2),lambda:1,priceOf:m=>m==='a'?10:1});return r.rows.find(x=>x.model==='b').penalty;},antiExpect:v=>v===0.1});
+  add({id:'ledger-react-row',sub:'learning',uses:['ledgerRowFromReact','ledgerJudge'],
+    what:'an agent answer that passed its self-check is a passed check',
+    run:()=>g.ledgerJudge(g.ledgerRowFromReact('t','m',{ok:true,steps:[{action:'search',observation:'ok'},{verify:'verified'},{final:'x'}]},5)).status,expect:v=>v==='pass',
+    antiWhat:'and unresolved problems at the step ceiling fail',
+    anti:()=>g.ledgerJudge(g.ledgerRowFromReact('t','m',{ok:false,error:'stopped after 8 step(s) without an answer',steps:[{verify:'problems'}]},5)).status,antiExpect:v=>v==='fail'});
+  add({id:'ledger-s1-decisions',sub:'learning',uses:['ledgerRowsFromS1'],
+    what:'when S2 overrode S1, the S1 decision is scored wrong; a step that changed nothing is scored wrong',
+    run:()=>{const x=g.ledgerRowsFromS1({goal:'g',status:'completed',decider:'jev',steps:[
+        {verdict:'run',action:'click',s1Before:{action:'wait',confidence:0.4}},
+        {verdict:'run',action:'click',weakest:0.8,result:{ok:true,text:'Clicked g1. → nothing visible changed'}},
+        {verdict:'run',action:'click',weakest:0.9,result:{ok:true,text:'Clicked g2. → appeared: Save'}}]});
+      return x.decisions.map(d=>d.label+':'+d.correct).join(',')+'|'+x.row.checks.passed;},
+    expect:v=>v==='s2-agreement:false,visible-effect:false,visible-effect:true|1',
+    antiWhat:'and an incomplete run carries no passed check',anti:()=>g.ledgerRowsFromS1({goal:'g',status:'incomplete',reason:'max_steps',steps:[]}).row.checks,antiExpect:v=>v===null});
+  add({id:'s1-diff-effect',sub:'system one',uses:['s1Diff'],
+    what:'what an action changed is said in plain words',
+    run:()=>g.s1Diff({page:'p',cands:[{role:'input',label:'Name',value:''}]},{page:'p',cands:[{role:'input',label:'Name',value:'Al'},{role:'button',label:'Save'}]}),
+    expect:v=>/appeared: Save/.test(v)&&/Name: "" → "Al"/.test(v),antiWhat:'and nothing changed is an empty answer',
+    anti:()=>g.s1Diff({page:'p',cands:[{role:'button',label:'Go'}]},{page:'p',cands:[{role:'button',label:'Go'}]}),antiExpect:v=>v===''});
+  add({id:'s1-path-sig',sub:'system one',uses:['s1PathSig'],
+    what:'a screen’s name ignores control order',run:()=>g.s1PathSig('p',[{kind:'click',label:'A'},{kind:'click',label:'B'}])===g.s1PathSig('p',[{kind:'click',label:'B'},{kind:'click',label:'A'}]),
+    expect:v=>v===true,antiWhat:'and a different screen has a different name',anti:()=>g.s1PathSig('p',[{kind:'click',label:'A'}])===g.s1PathSig('p',[{kind:'click',label:'C'}]),antiExpect:v=>v===false});
+  add({id:'s1-success-rule',sub:'system one',uses:['s1SuccessHolds'],
+    what:'a success rule reads the screen: contains, matches and all',
+    run:()=>[g.s1SuccessHolds({path:'text',op:'contains',value:'order placed'},{text:'Your Order Placed!'}),
+      g.s1SuccessHolds({all:[{path:'text',op:'matches',value:'total: \\$\\d+'},{path:'page',op:'exists'}]},{text:'total: $12',page:'p'})].join(),
+    expect:v=>v==='true,true',antiWhat:'and an unknown operator or a broken pattern never holds',
+    anti:()=>[g.s1SuccessHolds({path:'text',op:'roughly',value:'x'},{text:'x'}),g.s1SuccessHolds({path:'text',op:'matches',value:'('},{text:'('})].join(),antiExpect:v=>v==='false,false'});
+  add({id:'s1-parse-success',sub:'system one',uses:['s1ParseSuccess'],
+    what:'plain words become "the screen contains these words"',run:()=>JSON.stringify(g.s1ParseSuccess('Order placed')),expect:v=>v==='{"path":"text","op":"contains","value":"Order placed"}',
+    antiWhat:'and broken JSON is no rule at all',anti:()=>g.s1ParseSuccess('{"path":'),antiExpect:v=>v===null});
+  add({id:'s1-wire-answers',sub:'system one',uses:['s1WireAnswers'],
+    what:'a System One server’s answers become this app’s: choice with its probability, yes/no as P(yes)',
+    run:()=>{const a=g.s1WireAnswers({next_action:{type:'choice'},goal_reached:{type:'noul'}},{next_action:{choice:'click',probabilities:{click:0.8,wait:0.2}},goal_reached:{noul:0.3}});
+      return a.next_action.value+':'+a.next_action.confidence+'|'+a.goal_reached.value+':'+a.goal_reached.confidence;},expect:v=>v==='click:0.8|0.3:0.7',
+    antiWhat:'and a missing answer is left out, not invented',anti:()=>Object.keys(g.s1WireAnswers({q:{type:'choice'}},{})).length,antiExpect:v=>v===0});
+  add({id:'s1-decision-guard',sub:'system one',uses:['s1DecisionGuard','S1_DECISION_PRESETS'],
+    what:'a 27B decision model on this Mac is refused before it is called',
+    run:()=>g.s1DecisionGuard(g.S1_DECISION_PRESETS.find(p=>p.id==='pplx-decider'),'http://127.0.0.1:30000/v1/systemone',9).ok,expect:v=>v===false,
+    antiWhat:'while the same model on a GPU server is allowed',anti:()=>g.s1DecisionGuard(g.S1_DECISION_PRESETS.find(p=>p.id==='pplx-decider'),'https://gpu.example.com/v1/systemone',9).ok,antiExpect:v=>v===true});
+  add({id:'s1-observe-context',sub:'system one',uses:['s1CuObserve'],
+    what:'a control is described with its section, the text beside it, and that it did nothing last time',
+    run:()=>g.s1CuObserve([{ref:'g1',label:'Add',role:'button',section:'Quantity',near:'x 2'}],{},'p',{noEffect:new Set(['button|Add|Quantity'])}).text,
+    expect:v=>/\[g1\] button "Add" in "Quantity" near "x 2" \(last time: nothing changed\)/.test(v),
+    antiWhat:'and "near" that only repeats the label is left out',anti:()=>/near/.test(g.s1CuObserve([{ref:'g1',label:'Add',role:'button',near:'Add'}],{},'p').text),antiExpect:v=>v===false});
+  add({id:'free-cool-told',sub:'free models',uses:['freeCoolMs'],
+    what:'a refusal that says how long to wait is believed',
+    run:()=>[g.freeCoolMs('HTTP 429 — retry after 20'),g.freeCoolMs('Please try again in 7.66s'),g.freeCoolMs('limit resets in 1m30s')].join(),
+    expect:v=>v==='20000,7660,90000',antiWhat:'and one that does not say leaves the old guess in place',anti:()=>g.freeCoolMs('HTTP 429 — rate limited'),antiExpect:v=>v===null});
+  add({id:'audit-confirmed-trace',sub:'guards',uses:['auditChecks'],
+    what:'a frame that can remove its own sandbox is a confirmed, high finding with a trace',
+    run:()=>{const f=g.auditChecks({iframes:[{id:'x',sandbox:'allow-scripts allow-same-origin'}]})[0];return f.verdict+':'+f.severity+':'+/iframe#x/.test(f.trace);},
+    expect:v=>v==='confirmed:high:true',antiWhat:'and allow-scripts alone is not a finding',anti:()=>g.auditChecks({iframes:[{id:'x',sandbox:'allow-scripts'}]}).length,antiExpect:v=>v===0});
+  add({id:'audit-inferred-no-severity',sub:'guards',uses:['auditChecks'],
+    what:'an inferred risk is "needs validation" and carries no severity',
+    run:()=>{const f=g.auditChecks({ollamaFromPublic:'http://127.0.0.1:11434',page:{origin:'https://x'}})[0];return f.verdict+':'+('severity' in f);},
+    expect:v=>v==='needs_validation:false',antiWhat:'and the secret scanner never repeats a key',
+    anti:()=>{const m=g.auditSecretScan('key sk-ant-abcdefghijklmnopqrstuvwxyz0123456789')[0];return !!m&&!/abcdefghij/.test(m.sample);},antiExpect:v=>v===true});
+  add({id:'playtest-unresponsive',sub:'studio',uses:['playtestVerdict'],
+    what:'a game whose picture and state move no more under input than when idle fails the playtest',
+    run:()=>{const r=g.playtestVerdict({canvas:true,hasState:true,idle:0.02,input:0.02,variance:300,stateInput:false});return r.pass+':'+r.findings.some(f=>f.id==='unresponsive');},
+    expect:v=>v==='false:true',antiWhat:'and one whose state changes under input passes',
+    anti:()=>g.playtestVerdict({canvas:true,hasState:true,idle:0.02,input:0.02,variance:300,stateInput:true}).pass,antiExpect:v=>v===true});
+  add({id:'playtest-blank-and-lock',sub:'studio',uses:['playtestVerdict'],
+    what:'a one-colour canvas is reported blank',run:()=>g.playtestVerdict({canvas:true,hasState:false,idle:0,input:0,variance:0}).findings.some(f=>f.id==='blank'&&f.sev==='high'),
+    expect:v=>v===true,antiWhat:'and a pointer-lock game is told to check by hand, not failed',
+    anti:()=>g.playtestVerdict({canvas:true,hasState:true,idle:0,input:0,variance:200,stateInput:false,pointerLock:true}).pass,antiExpect:v=>v===true});
+  add({id:'playtest-paused',sub:'studio',uses:['playtestVerdict'],
+    what:'a preview whose animation loop the browser paused is not judged',
+    run:()=>{const r=g.playtestVerdict({canvas:true,hasState:true,idle:0,input:0,variance:200,stateInput:false,frames:0});return r.pass+':'+r.skipped+':'+r.findings[0].id;},
+    expect:v=>v==='true:true:paused',antiWhat:'while one that ran frames and ignored input is',
+    anti:()=>g.playtestVerdict({canvas:true,hasState:true,idle:0,input:0,variance:200,stateInput:false,frames:40}).pass,antiExpect:v=>v===false});
+  add({id:'preview-shim-parses',sub:'studio',uses:['composePreview'],
+    what:'the script injected into every preview parses (a stray escape inside its template once broke it silently)',
+    run:()=>{const keep=[g.WS.files,g.WS.entry];try{g.WS.files={'index.html':'<html><head></head><body></body></html>'};g.WS.entry='index.html';
+        const h=g.composePreview(true),m=h.match(/<script>([\s\S]*?)<\/script>/);new Function(m[1]);return /playtest/.test(m[1]);}
+      finally{g.WS.files=keep[0];g.WS.entry=keep[1];}},
+    expect:v=>v===true,antiWhat:'and without the shim nothing is injected',
+    anti:()=>{const keep=[g.WS.files,g.WS.entry];try{g.WS.files={'index.html':'<p>x</p>'};g.WS.entry='index.html';return /<script>/.test(g.composePreview(false));}
+      finally{g.WS.files=keep[0];g.WS.entry=keep[1];}},antiExpect:v=>v===false});
+  add({id:'ledger-cluster',sub:'learning',uses:['ledgerClusterOf'],
+    what:'requests fall into stable kinds of work',run:()=>[g.ledgerClusterOf('fix the failing login test'),g.ledgerClusterOf('build a dashboard app')].join(),
+    expect:v=>v==='debug,build-app',antiWhat:'and small talk is chat',anti:()=>g.ledgerClusterOf('hello there'),antiExpect:v=>v==='chat'});
   add({id:'boot-steps-isolated',sub:'boot',uses:['bootRun'],
     what:'a start-up step that throws is recorded and the next step still runs',
     run:()=>{let ran=false;const sink=[];g.bootRun([function bad(){throw new Error('x');},()=>{ran=true;}],sink);
@@ -37937,6 +38312,26 @@ const GAUNTLET_SABOTAGE=[
    broken:()=>()=>({clean:true,hits:[],high:0})},
   {id:'retry-everything',export:'isRetryable',why:'auth failures become retryable and hammer a dead key',
    broken:()=>()=>true},
+  {id:'ledger-trusts-silence',export:'ledgerJudge',why:'a run nothing checked is reported as a pass',broken:()=>r=>({status:(r&&r.checks&&r.checks.failed)?'fail':'pass',reasons:[]})},
+  {id:'wilson-naive',export:'wilsonLower',why:'three lucky wins read as a reliable 100%',broken:()=>(p,n)=>n?p/n:0},
+  {id:'ledger-trusts-caller',export:'ledgerRecord',why:'the run’s own claim becomes its verdict',broken:()=>(run,L)=>{const D=L||{runs:[]};D.runs.push(Object.assign({status:'pass'},run));return run;}},
+  {id:'calibration-blind',export:'ledgerCalibration',why:'an overconfident decider is never flagged',broken:()=>()=>[]},
+  {id:'escalation-lucky',export:'ledgerEscalationThreshold',why:'the escalation bar comes from too few decisions',broken:()=>()=>0.5},
+  {id:'lessons-silent',export:'ledgerLesson',why:'failures teach nothing',broken:()=>()=>null},
+  {id:'signature-order',export:'toolSignature',why:'reordered arguments slip past the loop guard',broken:()=>(n,a)=>n+JSON.stringify(a)},
+  {id:'loop-guard-never',export:'toolLoopGuard',why:'an agent can call the same tool forever',broken:()=>()=>({check:()=>({block:false,count:1}),blocked:0})},
+  {id:'instinct-no-floor',export:'instinctPick',why:'lessons that keep failing are shown forever',broken:()=>(cl,L)=>((L&&L.instincts)||[]).filter(i=>i.cluster===cl)},
+  {id:'router-greedy',export:'routerPick',why:'the first candidate gets every task, whatever its record',broken:()=>(cl,c)=>({model:(c||[])[0]||null,rows:[]})},
+  {id:'s1-diff-blind',export:'s1Diff',why:'S1 is never told what its action changed',broken:()=>()=>''},
+  {id:'s1-success-always',export:'s1SuccessHolds',why:'any success rule counts as met',broken:()=>()=>true},
+  {id:'s1-wire-drops',export:'s1WireAnswers',why:'System One servers’ answers are thrown away',broken:()=>()=>({})},
+  {id:'s1-guard-open',export:'s1DecisionGuard',why:'a 27B local decision model is loaded on this Mac',broken:()=>()=>({ok:true,local:true})},
+  {id:'s1-observe-bare',export:'s1CuObserve',why:'controls lose their section and nearby text',broken:()=>(c,v,p)=>({text:(c||[]).map(x=>'['+x.ref+'] '+x.role+' "'+x.label+'"').join('\n'),fields:{},candidates:{},terminal:false})},
+  {id:'free-cool-guess',export:'freeCoolMs',why:'a provider that says "retry after 20" is cooled for a guess instead',broken:()=>()=>null},
+  {id:'audit-silent',export:'auditChecks',why:'the self-audit finds nothing, ever',broken:()=>()=>[]},
+  {id:'playtest-always-pass',export:'playtestVerdict',why:'a game that ignores input passes the playtest',broken:()=>()=>({pass:true,findings:[]})},
+  {id:'preview-shim-broken',export:'composePreview',why:'the preview’s injected script no longer parses — no errors, no probes, no playtest',
+   broken:()=>()=>'<'+'script>(function(){ var x=\'<'+'/script>'},
   {id:'notify-always',export:'notifyAllowed',why:'notification gate stops suppressing anything',
    broken:()=>()=>({ok:true})},
   {id:'notify-never',export:'notifyAllowed',why:'notification gate suppresses everything',
@@ -40252,7 +40647,7 @@ function renderLocal(){
     toast(r.note,9000);};
 }
 /* ═══════════════════ AGENT BAR + SUGGESTIONS ═══════════════════ */
-let AGENTBAR_LAST='';
+let AGENTBAR_LAST='',AGENTBAR_ALL=false;
 function renderAgentBar(){
   const bar=$('#agentbar');if(!bar)return;
   const st=agentState();
@@ -40264,7 +40659,7 @@ function renderAgentBar(){
   /* Measured: this rewrote innerHTML every 4s forever, mutating the DOM twice per 9 idle
      seconds for no visible change — ~15 pointless layout passes a minute for the lifetime of
      the tab. The state is cheap to fingerprint and the write is not, so compare first. */
-  const fingerprint=JSON.stringify([st.busy,st.label,SUGGEST.on,
+  const fingerprint=JSON.stringify([st.busy,st.label,SUGGEST.on,AGENTBAR_ALL,
     sug.map(x=>x.surface+'|'+x.sev+'|'+x.text)]);
   if(fingerprint===AGENTBAR_LAST&&bar.childElementCount)return;
   AGENTBAR_LAST=fingerprint;
@@ -40273,12 +40668,13 @@ function renderAgentBar(){
     <div class="ab-state${st.busy?' busy':''}">
       <span class="ab-dot"></span><span class="ab-label">${esc(st.label)}</span>
     </div>
-    ${showSug?`<div class="ab-sug">${sug.map((s,i)=>
+    ${showSug?`<div class="ab-sug${AGENTBAR_ALL?' all':''}">${sug.map((s,i)=>
       `<button class="ab-chip ${esc(s.sev)}" data-sug="${i}">${esc(s.text)}
-        <b>${esc(s.action)}</b></button>`).join('')}</div>`:''}
+        <b>${esc(s.action)}</b></button>`).join('')}${sug.length>1?`<button class="ab-more" id="ab-more" aria-expanded="${AGENTBAR_ALL}">${AGENTBAR_ALL?'Show fewer':'+'+(sug.length-1)+' more'}</button>`:''}</div>`:''}
     <button class="ab-off" id="ab-toggle" title="${SUGGEST.on?'Turn suggestions off':'Turn suggestions on'}">${SUGGEST.on?'suggestions on':'suggestions off'}</button>`;
   bar.querySelectorAll('[data-sug]').forEach(b=>b.onclick=()=>{
     const s=sug[+b.dataset.sug];if(s&&s.run)s.run();});
+  const more=$('#ab-more');if(more)more.onclick=()=>{AGENTBAR_ALL=!AGENTBAR_ALL;renderAgentBar();};
   const t=$('#ab-toggle');
   if(t)t.onclick=()=>{SUGGEST.on=!SUGGEST.on;saveSuggest();renderAgentBar();
     toast(SUGGEST.on?'Suggestions on':'Suggestions off — nothing will be computed or shown');};
@@ -46571,6 +46967,746 @@ function pbWireArena(){
     const wi=r.scores.indexOf(Math.max(...r.scores)),c=r.contenders[wi];
     PB.routines=(PB.routines||[]).concat([{id:'rt'+uid(),name:c.name+' · '+c.model.split('/').pop(),playbook:c.item,model:c.model,examples:[r.input.slice(0,300)],on:true}]);
     savePB();toast('Saved: '+c.name+' on '+c.model+' — tasks like this one now run it directly',4200);pbRender();};
+}
+
+/* ═══════════════════ LEARNING — runs the harness judges, and what it learns from them ═══════════════════
+   Pass 32. The core is a port of S1 Harness's ledger (packages/core/src/ledger.js, 11 Oct 2026). Around it is
+   what this month's harness repos converged on, each kept to the part that can be measured:
+     · ECC 2.2 (affaan-m/ECC): lessons are "instincts" with a confidence. Only confident ones are injected,
+       at most six, so a bad lesson cannot quietly steer every run.
+     · ReasoningBank (ruvnet/agentic-flow, ruflo): memories come from successes AND failures.
+     · freellmapi: stay on a free model that works for the whole conversation, and cool a refusing provider for
+       as long as it SAYS, not a guess.
+     · Bandit routing (the vLLM Semantic Router team's recommendation): explore while evidence is thin,
+       exploit once it is not.
+
+   The rule that makes any of it trustworthy, from the S1 ledger: the HARNESS decides pass, fail or unverified
+   from counts of observed events. A model never marks its own run done, and silence is "unverified", not a pass.
+   Routing and instincts are off until you turn them on, and their effect is measured either way. */
+const LEDGER_CLUSTERS=[
+  ['s1',/\b(s1|decision|decide|classif|triage|route|rank|sort into|jev|drex)\b/i],
+  ['media',/\b(image|picture|photo|video|audio|music|voice|draw|render|animation|logo)\b/i],
+  ['build-app',/\b(build|make|create|write)\b[\s\S]{0,40}\b(app|game|website|page|tool|ui|dashboard|extension)\b/i],
+  ['debug',/\b(fix|bug|error|crash|broken|failing|fails|debug|stack ?trace|exception)\b/i],
+  ['code-edit',/\b(refactor|rename|edit|change|update|add|implement|function|class|module|test|tests)\b/i],
+  ['research',/\b(research|search|find out|look up|compare|summari[sz]e|read (the|this) (page|url|paper))\b/i],
+  ['data',/\b(csv|spreadsheet|table|json|sql|data|chart|plot|analy[sz]e)\b/i],
+  ['writing',/\b(write|draft|essay|email|post|doc|documentation|readme|story)\b/i]];
+/* PURE. A coarse, stable kind of work from the request, so a route learned today still applies tomorrow. */
+function ledgerClusterOf(text){
+  const t=String(text||'');
+  for(const [id,re] of LEDGER_CLUSTERS)if(re.test(t))return id;
+  return 'chat';
+}
+/* PURE. The verdict, from observed counts only. Passing needs evidence: a check that ran and passed, or a
+   person's thumbs up. */
+function ledgerJudge(r){
+  const x=r||{},reasons=[];
+  if(x.error)reasons.push('the run ended with an error');
+  if(x.aborted)reasons.push('the run was stopped');
+  if((x.parseFailures||0)>0)reasons.push(x.parseFailures+' tool call(s) could not be read');
+  if((x.truncated||0)>0)reasons.push('it hit the step or length limit');
+  if((x.loopsBlocked||0)>0)reasons.push('it repeated the same action until the loop guard stopped it');
+  if((x.unknownCitations||0)>0)reasons.push(x.unknownCitations+' cited source(s) do not exist');
+  if(x.checks&&x.checks.failed>0)reasons.push(x.checks.failed+' check(s) failed');
+  if((x.toolErrors||0)>=3)reasons.push(x.toolErrors+' tool calls failed');
+  if(x.userVerdict==='down')reasons.push('you marked it as wrong');
+  if(reasons.length)return{status:'fail',reasons};
+  if(x.checks&&x.checks.passed>0)return{status:'pass',reasons:[x.checks.passed+' check(s) passed']};
+  if(x.userVerdict==='up')return{status:'pass',reasons:['you marked it as right']};
+  return{status:'unverified',reasons:['nothing checked it']};
+}
+/* PURE. Wilson score lower bound: a pass rate you can rely on, given how few runs there are. */
+function wilsonLower(pass,n,z){
+  if(!n)return 0;const k=z||1.64,p=pass/n,d=1+k*k/n;
+  return (p+k*k/(2*n)-k*Math.sqrt(p*(1-p)/n+k*k/(4*n*n)))/d;
+}
+const LEARN_DEFAULTS={runs:[],decisions:[],instincts:[],inject:true,cap:6,floor:0.7,
+  route:{on:false,explore:true,lambda:0.15,minJudged:3}};
+let LEARN=Object.assign({},LEARN_DEFAULTS,store.get('learning',{}));
+['runs','decisions','instincts'].forEach(k=>{if(!Array.isArray(LEARN[k]))LEARN[k]=[];});
+LEARN.route=Object.assign({},LEARN_DEFAULTS.route,LEARN.route||{});
+const saveLearn=()=>store.set('learning',Object.assign({},LEARN,{runs:LEARN.runs.slice(-400),
+  decisions:LEARN.decisions.slice(-1500),instincts:LEARN.instincts.slice(0,150)}));
+const learnState=L=>L||LEARN;
+const learnMedian=xs=>{const a=xs.filter(Number.isFinite).sort((x,y)=>x-y);if(!a.length)return 0;const m=a.length>>1;return a.length%2?a[m]:(a[m-1]+a[m])/2;};
+/* Add a finished run. The verdict is computed here, never taken from the caller. */
+function ledgerRecord(run,L){
+  const D=learnState(L),x=run||{};
+  const r={id:x.id||('run_'+uid()),ts:x.ts||Date.now(),cluster:x.cluster||ledgerClusterOf(x.request),
+    model:String(x.model||'unknown'),surface:String(x.surface||''),request:String(x.request||'').slice(0,240),
+    toolCalls:x.toolCalls||0,toolErrors:x.toolErrors||0,parseFailures:x.parseFailures||0,truncated:x.truncated||0,
+    loopsBlocked:x.loopsBlocked||0,unknownCitations:x.unknownCitations||0,checks:x.checks||null,
+    userVerdict:x.userVerdict||null,error:x.error?String(x.error).slice(0,240):'',aborted:!!x.aborted,
+    tokensIn:x.tokensIn||0,tokensOut:x.tokensOut||0,cost:+x.cost||0,ms:x.ms||0,routed:x.routed||null,
+    instincts:(x.instincts||[]).slice(0,8),toolSeq:(x.toolSeq||[]).slice(0,12),errorSamples:(x.errorSamples||[]).slice(0,4)};
+  Object.assign(r,ledgerJudge(r));
+  const i=D.runs.findIndex(y=>y.id===r.id);
+  if(i>=0)D.runs[i]=r;else D.runs.push(r);
+  if(D.runs.length>400)D.runs.splice(0,D.runs.length-400);
+  if(r.instincts.length)instinctCredit(r.instincts,r.status,D);
+  if(!L){try{const les=ledgerLesson(r);if(les)instinctAdd(les,D);}catch(_){}saveLearn();}
+  return r;
+}
+/* Your thumbs, or a check that ran later, change a recorded run's verdict. */
+function ledgerUpdate(id,patch,L){
+  const D=learnState(L),r=D.runs.find(x=>x.id===id);if(!r)return null;
+  const before=r.status;Object.assign(r,patch||{});Object.assign(r,ledgerJudge(r));
+  if(r.instincts&&r.instincts.length&&before!==r.status)instinctCredit(r.instincts,r.status,D,before);
+  if(!L)saveLearn();
+  return r;
+}
+/* PURE. Pass rate, time and tokens per model for each kind of task. Only judged runs count toward the rate. */
+function ledgerMatrix(L){
+  const cells={};
+  for(const r of learnState(L).runs){
+    const k=r.cluster+'|'+r.model;
+    const c=cells[k]||(cells[k]={cluster:r.cluster,model:r.model,n:0,pass:0,fail:0,unverified:0,ms:[],tokens:0,cost:0});
+    c.n++;c[r.status]=(c[r.status]||0)+1;c.ms.push(r.ms);c.tokens+=(r.tokensIn||0)+(r.tokensOut||0);c.cost+=r.cost||0;
+  }
+  return Object.values(cells).map(c=>{const j=c.pass+c.fail;
+    return{cluster:c.cluster,model:c.model,n:c.n,pass:c.pass,fail:c.fail,unverified:c.unverified,
+      passRate:j?c.pass/j:null,lower:wilsonLower(c.pass,j),medianMs:learnMedian(c.ms),
+      tokensPerPass:c.pass?Math.round(c.tokens/c.pass):null,costPerPass:c.pass?c.cost/c.pass:null};});
+}
+/* PURE. The model for a kind of task, from the matrix: it needs at least `minJudged` judged runs, and it says
+   when the data are too thin instead of guessing. */
+function ledgerRecommend(cluster,o,L){
+  const opt=o||{},min=opt.minJudged||3;
+  const m=ledgerMatrix(L).filter(c=>!opt.candidates||opt.candidates.includes(c.model));
+  const pick=rows=>rows.filter(c=>c.pass+c.fail>=min).sort((a,b)=>b.lower-a.lower||(a.tokensPerPass||1e12)-(b.tokensPerPass||1e12))[0]||null;
+  const overall={};
+  m.forEach(c=>{const w=overall[c.model]||(overall[c.model]={model:c.model,pass:0,fail:0});w.pass+=c.pass;w.fail+=c.fail;});
+  const best=Object.values(overall).filter(w=>w.pass+w.fail>=min).map(w=>Object.assign(w,{lower:wilsonLower(w.pass,w.pass+w.fail)}))
+    .sort((a,b)=>b.lower-a.lower)[0]||null;
+  const here=pick(m.filter(c=>c.cluster===cluster));
+  if(!here)return{model:best?best.model:null,confident:false,bestSingle:best?best.model:null,
+    why:best?'not enough judged runs of this kind yet; the best model overall':'not enough judged runs yet'};
+  return{model:here.model,confident:true,bestSingle:best?best.model:null,
+    why:here.pass+'/'+(here.pass+here.fail)+' judged '+cluster+' runs passed (reliable rate ≥ '+Math.round(here.lower*100)+'%)'};
+}
+/* A decision and, once known, whether it was right. The raw probability is NOT assumed to be calibrated. */
+function ledgerRecordDecision(d,L){
+  const D=learnState(L),x=d||{};
+  D.decisions.push({ts:x.ts||Date.now(),decider:String(x.decider||'unknown'),
+    confidence:Math.max(0,Math.min(1,+x.confidence||0)),correct:x.correct===undefined||x.correct===null?null:!!x.correct,
+    label:x.label||''});
+  if(D.decisions.length>1500)D.decisions.splice(0,D.decisions.length-1500);
+}
+/* PURE. Brier score and expected calibration error per decider, over decisions whose outcome is known. */
+function ledgerCalibration(L){
+  const by={};
+  learnState(L).decisions.forEach(d=>{if(d.correct!==null)(by[d.decider]=by[d.decider]||[]).push(d);});
+  return Object.entries(by).map(([decider,ds])=>{
+    const brier=ds.reduce((a,d)=>a+(d.confidence-(d.correct?1:0))**2,0)/ds.length;
+    const bins=Array.from({length:5},()=>({n:0,conf:0,acc:0}));
+    ds.forEach(d=>{const b=bins[Math.min(4,Math.floor(d.confidence*5))];b.n++;b.conf+=d.confidence;b.acc+=d.correct?1:0;});
+    const ece=bins.reduce((a,b)=>a+(b.n?(b.n/ds.length)*Math.abs(b.acc/b.n-b.conf/b.n):0),0);
+    const accuracy=ds.filter(d=>d.correct).length/ds.length;
+    const meanConf=ds.reduce((a,d)=>a+d.confidence,0)/ds.length;
+    return{decider,n:ds.length,accuracy,brier,ece,meanConf,overconfident:ece>0.1&&meanConf>accuracy};
+  });
+}
+/* PURE. The lowest confidence at which this decider's past decisions were right at least `target` of the
+   time: every distinct confidence is a candidate cut, judged on ALL decisions at or above it (at least 10),
+   never on one lucky answer. Null below 20 known outcomes. */
+function ledgerEscalationThreshold(decider,target,L){
+  const tg=target||0.9;
+  const ds=learnState(L).decisions.filter(d=>d.decider===decider&&d.correct!==null);
+  if(ds.length<20)return null;
+  let best=null;
+  [...new Set(ds.map(d=>d.confidence))].sort((a,b)=>b-a).forEach(t=>{
+    const above=ds.filter(d=>d.confidence>=t);
+    if(above.length>=10&&above.filter(d=>d.correct).length/above.length>=tg)best=t;});
+  return best;
+}
+/* PURE. */
+function ledgerTotals(L){
+  const t={runs:0,pass:0,fail:0,unverified:0,tokens:0,cost:0};
+  learnState(L).runs.forEach(r=>{t.runs++;t[r.status]++;t.tokens+=(r.tokensIn||0)+(r.tokensOut||0);t.cost+=r.cost||0;});
+  return Object.assign(t,{tokensPerPass:t.pass?Math.round(t.tokens/t.pass):null,costPerPass:t.pass?t.cost/t.pass:null,
+    passRateJudged:t.pass+t.fail?t.pass/(t.pass+t.fail):null});
+}
+/* PURE. One short reusable instruction from a judged run. A failure says what to stop doing; a success with
+   real tool work says what worked (ReasoningBank keeps both). Null when there is nothing to learn. */
+function ledgerLesson(run){
+  if(!run)return null;
+  if(run.status==='pass'&&run.toolCalls>=2&&run.toolSeq&&run.toolSeq.length)
+    return{text:'What worked for '+run.cluster+': '+run.toolSeq.slice(0,6).join(' → ')+', then a checked answer.',
+      cluster:run.cluster,source:'success',from:run.id};
+  if(run.status!=='fail')return null;
+  const parts=[],s=(run.errorSamples||[])[0];
+  if(run.loopsBlocked)parts.push('Do not repeat an action that already returned the same result; change the approach or ask.');
+  if(run.parseFailures)parts.push('Send tool arguments as one valid JSON object that matches the tool’s schema.');
+  if(run.truncated)parts.push('Keep answers shorter or split the work; the last run hit its limit.');
+  if(run.unknownCitations)parts.push('Only cite sources that appear in the recalled material.');
+  if(run.checks&&run.checks.failed)parts.push('Check the work yourself before saying it is done, and fix what fails.');
+  if(s&&s.tool)parts.push('When '+s.tool+' fails with "'+String(s.error||'').slice(0,80)+'", read the current state first and try a different approach.');
+  if(!parts.length)return null;
+  return{text:'Lesson ('+run.cluster+'): '+parts.join(' '),cluster:run.cluster,source:'failure',from:run.id};
+}
+/* PURE. The same tool with the same arguments: a signature that ignores key order and whitespace. */
+function toolSignature(name,args){
+  const norm=v=>Array.isArray(v)?v.map(norm):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,norm(v[k])]))
+    :typeof v==='string'?v.trim().replace(/\s+/g,' '):v;
+  return name+':'+JSON.stringify(norm(args==null?{}:args));
+}
+/* The Nth identical call (default the 3rd) is blocked with a message the model can act on. */
+function toolLoopGuard(limit){
+  const seen=new Map(),lim=limit||3;let blocked=0;
+  return{check(name,args){const sig=toolSignature(name,args),n=(seen.get(sig)||0)+1;seen.set(sig,n);
+      if(n>=lim){blocked++;return{block:true,count:n,message:'Loop guard: '+name+' was called '+n+' times with the same arguments. '+
+        'Use the result you already have, change the arguments, or say what is blocking you.'};}
+      return{block:false,count:n};},
+    get blocked(){return blocked;}};
+}
+
+/* ── Instincts ─────────────────────────────────────────────────────────────
+   A lesson with a track record. alpha counts judged runs of its kind that passed while it was shown, beta the
+   ones that failed anyway; confidence is the posterior mean. A new one is on trial for its first three judged
+   runs (ECC injects only above 0.7, which would mean a new lesson could never be shown and so never earn it). */
+const instinctConf=i=>(i.alpha||1)/((i.alpha||1)+(i.beta||1));
+const learnNorm=s=>String(s||'').toLowerCase().replace(/\s+/g,' ').replace(/[^\w ]+/g,'').trim();
+function instinctAdd(lesson,L){
+  const D=learnState(L);if(!lesson||!lesson.text)return null;
+  const k=learnNorm(lesson.text);
+  let i=D.instincts.find(x=>learnNorm(x.text)===k);
+  if(i){i.seen=(i.seen||1)+1;i.ts=Date.now();return i;}
+  i={id:'in_'+uid(),text:String(lesson.text).slice(0,400),cluster:lesson.cluster||'chat',source:lesson.source||'failure',
+    from:lesson.from||'',alpha:1,beta:1,trials:0,seen:1,on:true,ts:Date.now()};
+  D.instincts.unshift(i);if(D.instincts.length>150)D.instincts.length=150;
+  return i;
+}
+/* PURE given the state. The instincts to show for this kind of work. */
+function instinctPick(cluster,L,cap,floor){
+  const D=learnState(L),fl=floor==null?(D.floor||0.7):floor;
+  return D.instincts.filter(i=>i.on!==false&&(i.cluster===cluster||i.cluster==='any'))
+    .filter(i=>{const c=instinctConf(i);return c>=fl||(i.trials||0)<3;})
+    .filter(i=>!((i.trials||0)>=3&&instinctConf(i)<0.3))
+    .sort((a,b)=>instinctConf(b)-instinctConf(a)||(b.seen||1)-(a.seen||1))
+    .slice(0,cap==null?(D.cap||6):cap);
+}
+/* Credit or blame each shown instinct with the run's verdict. A changed verdict (your thumbs) moves the
+   credit rather than adding a second one. Unverified runs teach nothing. */
+function instinctCredit(ids,status,L,undo){
+  const D=learnState(L);
+  (ids||[]).forEach(id=>{const i=D.instincts.find(x=>x.id===id);if(!i)return;
+    if(undo==='pass')i.alpha=Math.max(1,i.alpha-1);else if(undo==='fail')i.beta=Math.max(1,i.beta-1);
+    if(status==='pass'){i.alpha++;if(undo!=='pass'&&undo!=='fail')i.trials=(i.trials||0)+1;}
+    else if(status==='fail'){i.beta++;if(undo!=='pass'&&undo!=='fail')i.trials=(i.trials||0)+1;}});
+}
+let LEARN_LAST_INJECT={ids:[],ts:0,cluster:''};
+/* The block a run's system prompt carries, and a record of which instincts it showed. */
+function instinctBlock(task){
+  if(!LEARN.inject)return '';
+  const cl=ledgerClusterOf(task),picks=instinctPick(cl);
+  LEARN_LAST_INJECT={ids:picks.map(i=>i.id),ts:Date.now(),cluster:cl};
+  if(!picks.length)return '';
+  return 'LESSONS FROM EARLIER RUNS OF THIS KIND (each was judged by the harness, not by a model):\n'+
+    picks.map(i=>'- '+i.text+((i.trials||0)<3?' (on trial)':' ('+Math.round(instinctConf(i)*100)+'% held up)')).join('\n');
+}
+
+/* ── Learned routing ───────────────────────────────────────────────────────
+   Thompson sampling over Beta(pass+1, fail+1) for each candidate on this kind of task, minus a cost penalty
+   (lambda × the candidate's price relative to the dearest). Exploration is what lets a cheap model earn a
+   route; without it the first model to get lucky keeps every task. */
+function learnRng(seed){let a=(seed>>>0)||1;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function learnGamma(k,rng){
+  if(k<1){const u=rng();return learnGamma(1+k,rng)*Math.pow(u||1e-12,1/k);}
+  const d=k-1/3,c=1/Math.sqrt(9*d);
+  for(;;){let x,v;do{const u1=rng()||1e-12,u2=rng();x=Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2);v=1+c*x;}while(v<=0);
+    v=v*v*v;const u=rng();if(u<1-0.0331*x*x*x*x||Math.log(u||1e-12)<0.5*x*x+d*(1-v+Math.log(v)))return d*v;}
+}
+function betaSample(a,b,rng){const x=learnGamma(a,rng),y=learnGamma(b,rng);return x/(x+y);}
+/* PURE given rng and priceOf. */
+function routerPick(cluster,candidates,L,o){
+  const opt=Object.assign({lambda:0.15,minJudged:3,explore:true,rng:Math.random,priceOf:()=>0},o||{});
+  const cands=[...new Set((candidates||[]).filter(Boolean))];
+  if(!cands.length)return{model:null,why:'no candidate can run',rows:[]};
+  const cells={};ledgerMatrix(L).filter(c=>c.cluster===cluster).forEach(c=>{cells[c.model]=c;});
+  const prices=cands.map(m=>Math.max(0,+opt.priceOf(m)||0)),maxP=Math.max(...prices,0);
+  const rows=cands.map((m,i)=>{const c=cells[m]||{pass:0,fail:0},j=c.pass+c.fail;
+    const eligible=opt.explore||j>=opt.minJudged;
+    const sample=eligible?betaSample(c.pass+1,c.fail+1,opt.rng):null;
+    const penalty=maxP>0?opt.lambda*(prices[i]/maxP):0;
+    return{model:m,pass:c.pass,fail:c.fail,judged:j,sample,penalty,score:sample==null?null:sample-penalty};});
+  const ok=rows.filter(r=>r.score!=null);
+  if(!ok.length)return{model:null,why:'no candidate has '+opt.minJudged+' judged runs of this kind yet',rows};
+  const best=ok.reduce((a,b)=>b.score>a.score?b:a);
+  return{model:best.model,rows,explored:best.judged<opt.minJudged,
+    why:best.judged<opt.minJudged?'exploring: only '+best.judged+' judged '+cluster+' run(s) so far'
+      :best.pass+'/'+best.judged+' judged '+cluster+' runs passed; sampled '+best.sample.toFixed(2)+(best.penalty?' minus '+best.penalty.toFixed(2)+' for price':'')};
+}
+/* freellmapi keeps a conversation on one model for 30 minutes; a route that changes every message makes
+   every comparison meaningless. */
+const LEARN_STICKY={};
+function routerChoose(task,candidates,stickyKey){
+  const cl=ledgerClusterOf(task),k=stickyKey?stickyKey+'|'+cl:'',now=Date.now();
+  const st=k&&LEARN_STICKY[k];
+  if(st&&st.until>now&&(candidates||[]).includes(st.model))return Object.assign({},st.pick,{model:st.model,sticky:true});
+  const pick=routerPick(cl,candidates,null,{lambda:LEARN.route.lambda,minJudged:LEARN.route.minJudged,explore:LEARN.route.explore,
+    priceOf:m=>{try{return (priceIn(m)+priceOut(m))*1e6;}catch(_){return 0;}}});
+  if(k&&pick.model)LEARN_STICKY[k]={model:pick.model,until:now+30*60*1000,pick};
+  return pick;
+}
+/* The candidates a route may choose among: the models you have already picked for something, plus any the
+   ledger has evidence for — and only those that can actually run right now. */
+function routerCandidates(){
+  const S=settings,out=[S.primaryModel,S.archModel,S.buildModel];
+  ledgerMatrix().forEach(c=>{if(c.pass+c.fail>0)out.push(c.model);});
+  return [...new Set(out.filter(Boolean))].filter(m=>{try{return modelRunnable(m);}catch(_){return false;}});
+}
+
+/* ── Recording, from the places runs happen ──────────────────────────────── */
+/* PURE. A tool-using agent run (either transport) becomes a ledger row. The self-verification step is the
+   check: a final answer that passed it is evidence, problems that were never resolved are a failed check. */
+function ledgerRowFromReact(task,model,r,ms){
+  const steps=(r&&r.steps)||[],tools=steps.filter(s=>s.action);
+  const errs=tools.filter(s=>(s.ok===false||/^ERROR\b/.test(String(s.observation||'')))&&!/Loop guard/.test(String(s.observation||'')));
+  const loops=steps.filter(s=>/Loop guard/.test(String(s.observation||''))).length;
+  const vs=steps.filter(s=>s.verify);const last=vs[vs.length-1];
+  const checks=last?{passed:last.verify==='verified'?1:0,failed:last.verify==='verified'?0:1}:null;
+  const ceiling=/step ceiling|without an answer/.test(String(r&&r.error||''));
+  return{request:task,model,surface:'agent',toolCalls:tools.length,toolErrors:errs.length,loopsBlocked:loops,
+    truncated:ceiling?1:0,checks:r&&r.ok?checks:(checks&&checks.failed?checks:null),
+    error:r&&!r.ok&&!ceiling?(r.error||'no answer'):'',ms:ms||0,toolSeq:tools.map(s=>s.action),
+    errorSamples:errs.slice(0,4).map(s=>({tool:s.action,error:String(s.observation||'').slice(0,160)}))};
+}
+function ledgerFromReact(task,model,r,t0,routed){
+  try{
+    const row=ledgerRowFromReact(task,model,r,Date.now()-t0);row.routed=routed||null;
+    if(LEARN_LAST_INJECT.ts>=t0-50&&LEARN_LAST_INJECT.cluster===ledgerClusterOf(task))row.instincts=LEARN_LAST_INJECT.ids;
+    return ledgerRecord(row);
+  }catch(_){return null;}
+}
+/* PURE. A System One run: completion that the finish gate confirmed, or the environment's own terminal
+   state, is a passed check. Each executed step becomes a decision whose correctness is a PROXY — the action
+   visibly changed the screen — unless S2 was asked the same question, in which case agreement decides. */
+function ledgerRowsFromS1(run){
+  const steps=(run&&run.steps)||[],ran=steps.filter(s=>s.verdict==='run'||s.verdict==='s2');
+  const ok=run&&run.status==='completed';
+  const row={request:run&&run.goal,model:'s1:'+((run&&run.decider)||'jev'),surface:'system-one',cluster:'s1',
+    toolCalls:ran.length,toolErrors:ran.filter(s=>s.result&&s.result.ok===false).length,
+    loopsBlocked:run&&run.reason==='repeated_action'?1:0,truncated:run&&run.reason==='max_steps'?1:0,
+    checks:ok?{passed:1,failed:0}:null,aborted:run&&run.status==='cancelled',
+    error:run&&run.status==='failed'?(run.error||run.reason||'failed'):'',
+    ms:run&&run.ended&&run.started?run.ended-run.started:0,cost:run&&run.usage?run.usage.cost||0:0};
+  const decisions=[];
+  steps.forEach(s=>{
+    if(s.s1Before)decisions.push({decider:row.model,confidence:s.s1Before.confidence,correct:s.s1Before.action===s.action,label:'s2-agreement'});
+    else if(s.verdict==='run')decisions.push({decider:row.model,confidence:s.weakest!=null?s.weakest:s.confidence,
+      correct:!!(s.result&&s.result.ok&&!/nothing visible changed/.test(String(s.result.text||''))),label:'visible-effect'});});
+  return{row,decisions};
+}
+function ledgerFromS1(run){
+  try{const x=ledgerRowsFromS1(run);x.decisions.forEach(d=>ledgerRecordDecision(d));return ledgerRecord(x.row);}catch(_){return null;}
+}
+/* A thumbs rating on some surface lands on that model's most recent unrated run from the last 15 minutes. */
+function ledgerFeedback(model,verdict){
+  const now=Date.now(),r=LEARN.runs.slice().reverse().find(x=>x.model===model&&!x.userVerdict&&now-x.ts<15*60*1000);
+  return r?ledgerUpdate(r.id,{userVerdict:verdict==='up'?'up':'down'}):null;
+}
+
+/* ═══════════════════ SYSTEM ONE, CAREFUL OPERATOR — pass 32 ═══════════════════
+   Ported from S1 Harness's App Operator (b4a56ad and ec9fc64, 11 Oct 2026). What S1 is now told, so it acts
+   like a careful person rather than a random clicker:
+     · each control's section heading and the plain text beside it, so two "Add" buttons are told apart —
+       and that text EXCLUDES other controls' labels, because S1 picked the wrong button when "nearby" was
+       the next button's label;
+     · what the last action actually changed, or that NOTHING changed; a control that did nothing is marked;
+     · controls behind an open dialog are not offered;
+     · steps that led to a confirmed success on this screen before are marked "worked before";
+     · "done" ends a run only when a fresh look confirms it (and the success rule holds, when there is one). */
+const S1_CTL_SEL='button,a[href],[role="button"],input,select,textarea,[role="tab"],[role="checkbox"],[role="link"],[role="menuitem"]';
+function learnHash(s){let h=2166136261>>>0;const t=String(s==null?'':s);
+  for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}return h.toString(36);}
+const s1Txt=el=>String((el&&(el.innerText||el.textContent))||'').replace(/\s+/g,' ').trim();
+function s1Headings(scope){
+  return [...(scope||document).querySelectorAll('h1,h2,h3,h4,legend,[role="heading"],caption,summary')]
+    .filter(h=>{const r=h.getBoundingClientRect();return (r.width>1||r.height>1)&&h.getClientRects().length&&s1Txt(h);});
+}
+/* Text of a container WITHOUT the text of any control inside it. */
+function s1PlainText(root){
+  let out='';
+  const walk=n=>{if(out.length>200)return;
+    if(n.nodeType===3){out+=' '+n.textContent;return;}
+    if(n.nodeType!==1||/^(SCRIPT|STYLE|TEMPLATE)$/.test(n.tagName))return;
+    if(n.matches&&n.matches(S1_CTL_SEL))return;
+    for(const c of n.childNodes)walk(c);};
+  walk(root);
+  return out.replace(/\s+/g,' ').trim();
+}
+function s1ControlContext(el,hs){
+  let section='';
+  for(const h of hs||[]){if(h===el||h.contains(el))continue;
+    if(h.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING)section=s1Txt(h);else break;}
+  let near='';
+  for(let n=el.parentElement,d=0;n&&n!==document.body&&d<4;n=n.parentElement,d++){
+    if(s1Txt(n).length>400)break;
+    const rest=s1PlainText(n);if(rest.length>=2){near=rest;break;}}
+  return{section:section.slice(0,50),near:near.slice(0,60)};
+}
+/* PURE. A stable name for "this screen": the page plus the sorted labels of what can be operated. */
+function s1PathSig(page,cands){
+  return learnHash(String(page||'')+'|'+[...new Set((cands||[]).map(c=>(c.kind||'')+':'+(c.label||'')))].sort().slice(0,40).join('|'));
+}
+const s1CandKey=c=>(c.role||c.kind||'')+'|'+(c.label||'')+'|'+(c.section||'');
+/* PURE. What the last action changed, from two backend observations: page, controls that appeared or went,
+   values that moved. Plain words, short. Empty string when nothing visible changed. */
+function s1Diff(before,after){
+  if(!before||!after)return '';
+  const out=[];
+  const first=p=>String(p||'').split('\n')[0];
+  if(first(before.page)!==first(after.page))out.push('now on: '+first(after.page).slice(0,60));
+  const lab=o=>new Map((o.cands||[]).map(c=>[s1CandKey(c),c]));
+  const bm=lab(before),am=lab(after);
+  const appeared=[...am.keys()].filter(k=>!bm.has(k)).map(k=>am.get(k).label).filter(Boolean);
+  const gone=[...bm.keys()].filter(k=>!am.has(k)).map(k=>bm.get(k).label).filter(Boolean);
+  if(appeared.length)out.push('appeared: '+appeared.slice(0,4).join(', ').slice(0,90));
+  if(gone.length)out.push('gone: '+gone.slice(0,4).join(', ').slice(0,90));
+  for(const [k,c] of am){const b=bm.get(k);
+    if(b&&(String(b.value||'')!==String(c.value||'')||!!b.checked!==!!c.checked)){
+      out.push((c.label||c.role)+': '+(b.checked!=null&&c.checked!=null&&b.checked!==c.checked?(b.checked?'checked':'unchecked')+' → '+(c.checked?'checked':'unchecked')
+        :'"'+String(b.value||'').slice(0,20)+'" → "'+String(c.value||'').slice(0,20)+'"'));
+      if(out.length>6)break;}}
+  if(after.dialog&&after.dialog!==before.dialog)out.push('a dialog opened: "'+String(after.dialog).slice(0,40)+'"');
+  if(String(before.text||'')!==String(after.text||'')&&!out.length)out.push('the page text changed');
+  return out.join('; ');
+}
+/* PURE. A success rule, S1 Harness's predicate shape: {path, op, value}, combined with {all:[…]} or {any:[…]},
+   over facts such as {text, page}. An unknown op or a malformed rule never holds. */
+function s1SuccessHolds(rule,facts){
+  if(!rule||typeof rule!=='object')return false;
+  if(Array.isArray(rule.all))return rule.all.length>0&&rule.all.every(r=>s1SuccessHolds(r,facts));
+  if(Array.isArray(rule.any))return rule.any.some(r=>s1SuccessHolds(r,facts));
+  const get=(o,p)=>String(p||'').split('.').reduce((a,k)=>a!=null&&typeof a==='object'?a[k]:undefined,o);
+  const v=get(facts||{},rule.path),w=rule.value,s=String(v==null?'':v),ws=String(w==null?'':w);
+  switch(rule.op){
+    case 'exists':return v!==undefined&&v!==null&&v!=='';
+    case '==':return v==w; case '!=':return v!=w;
+    case '<':return +v<+w; case '<=':return +v<=+w; case '>':return +v>+w; case '>=':return +v>=+w;
+    case 'in':return Array.isArray(w)&&w.map(String).includes(s);
+    case 'contains':return s.toLowerCase().includes(ws.toLowerCase());
+    case 'startsWith':return s.toLowerCase().startsWith(ws.toLowerCase());
+    case 'endsWith':return s.toLowerCase().endsWith(ws.toLowerCase());
+    case 'matches':try{return new RegExp(ws,'i').test(s);}catch(_){return false;}
+    default:return false;
+  }
+}
+/* Learned paths: on a confirmed success, which control was used on each screen, per goal and app. */
+let S1PATHS=store.get('s1paths',{});
+const saveS1Paths=()=>{const ks=Object.keys(S1PATHS);if(ks.length>60)ks.slice(0,ks.length-60).forEach(k=>delete S1PATHS[k]);store.set('s1paths',S1PATHS);};
+const s1PathKey=(goal,backend)=>learnHash(String(goal||'').toLowerCase().replace(/\s+/g,' ').trim()+'|'+(backend||''));
+
+/* ── System One decision models over the "systemone" wire dialect ─────────
+   The questions this app asks are already in that shape ({id:{type, instructions, criteria}}), so any server
+   that speaks it — Nace Drex, Ollama nimble, SGLang's /v1/systemone, Liquid d1, TypeSafe — is one URL away.
+   Presets are copied from S1 Harness (43c9dcf, 10 Oct 2026). Sizes matter on this Mac: a LOCAL server running
+   a model bigger than the free route's local cap is refused, because loading one is what crashes it. */
+const S1_DECISION_PRESETS=[
+  {id:'drex-api',label:'Nace · Drex v1.5 (hosted)',url:'https://console.nace.ai/v1/systemone',model:'drex-v1.5',key:true,
+   note:'Key starts nace_sk_. Calibrated probabilities for choice, score and yes/no. CORS from a browser is unverified.'},
+  {id:'drex-local',label:'Drex v1.5 · local (serve.py or llama.cpp)',url:'http://127.0.0.1:8000/v1/systemone',model:'drex-v1.5',params:9,
+   note:'9B, Q8_0 about 9.5 GB — at this Mac’s limit.'},
+  {id:'drex-ollama',label:'Drex v1.5 · Ollama (Nace fork)',url:'http://localhost:11434/v1/systemone',model:'drex-v1.5',params:9,
+   note:'Drex imported into the Nace fork of Ollama.'},
+  {id:'ollama-nimble',label:'Ollama · nimble',url:'http://localhost:11434/v1/systemone',model:'nimble',
+   note:'Ollama 0.35 or newer, after ollama pull nimble. Native probabilities, no output tokens.'},
+  {id:'clef',label:'Cloudflare Clef / Clef Flash (SGLang)',url:'http://127.0.0.1:30000/v1/systemone',model:'default',params:27,
+   note:'Clef 27B needs a GPU server. Clef Flash is 9B. Point the URL at the server that runs it.'},
+  {id:'pplx-decider',label:'Perplexity Decider 27B (SGLang)',url:'http://127.0.0.1:30000/v1/systemone',model:'default',params:27,
+   note:'Needs an H200-class GPU — a remote server, never this Mac.'},
+  {id:'jev27b',label:'AutoTrust JEV-27B · /v1/decide (vLLM)',url:'http://127.0.0.1:8000/v1/decide',model:'',params:27,
+   note:'Request shape not verified; if it differs, use Custom.'},
+  {id:'liquid-d1',label:'Liquid · d1 (hosted)',url:'https://api.liquid.ai/decisions/v1/systemone',model:'d1:free',key:true,
+   note:'Hosted decision model. CORS unverified.'},
+  {id:'typesafe-jev',label:'TypeSafe · Jev (hosted)',url:'https://api.typesafe.ai/v1/systemone',model:'jev-latest',key:true,
+   note:'Output tokens are free. CORS unverified.'},
+  {id:'custom',label:'Custom System One endpoint',url:'',model:'',note:'Any server that answers POST {model, state, questions} with {answers}.'}];
+/* PURE. Refuse a local decision server whose model is bigger than the local cap. */
+function s1DecisionGuard(preset,url,maxB){
+  const p=preset||{},cap=maxB==null?9:maxB,u=String(url||p.url||'');
+  if(!u)return{ok:false,why:'no endpoint URL'};
+  let loop=false;try{loop=pageIsLoopback(new URL(u).origin);}catch(_){return{ok:false,why:'that is not a URL'};}
+  if(loop&&p.params&&p.params>cap)
+    return{ok:false,why:p.label+' is '+p.params+'B; this Mac runs local models up to '+cap+'B (Settings → Free models). Point the URL at a GPU server instead.'};
+  return{ok:true,local:loop};
+}
+/* PURE. Wire answers ({choice|score|noul|yes|value, probabilities, confidence}) → this app's shape. */
+function s1WireAnswers(questions,answers){
+  const out={},A=answers||{};
+  Object.keys(questions||{}).forEach(id=>{
+    const q=questions[id]||{},a=A[id];if(!a||typeof a!=='object')return;
+    const pr=a.probabilities&&typeof a.probabilities==='object'?a.probabilities:null;
+    if(q.type==='noul'){
+      let v=typeof a.noul==='number'?a.noul:typeof a.yes==='number'?a.yes:a.value===true?1:a.value===false?0:
+        typeof a.value==='number'?a.value:pr&&pr.true!=null?+pr.true:null;
+      if(v==null)return;v=Math.max(0,Math.min(1,+v));
+      out[id]={type:'noul',value:v,confidence:Math.max(v,1-v)};return;}
+    const val=q.type==='score'?(a.score!=null?a.score:a.value):(a.choice!=null?a.choice:a.value);
+    if(val==null)return;
+    const conf=typeof a.confidence==='number'?a.confidence:pr&&pr[val]!=null?+pr[val]:0;
+    out[id]={type:q.type||'choice',value:val,confidence:Math.max(0,Math.min(1,conf)),probabilities:pr||undefined};
+  });
+  return out;
+}
+function s1SystemOneDecider(cfg){
+  const c=cfg||{};
+  return async(state,questions)=>{
+    const t0=Date.now(),url=String(c.url||'');
+    const st=JSON.stringify(state);
+    const h={'Content-Type':'application/json'};if(c.key)h.Authorization='Bearer '+c.key;
+    let loop=false;try{loop=pageIsLoopback(new URL(url).origin);}catch(_){}
+    const r=await fetch(url,Object.assign({method:'POST',headers:h,body:JSON.stringify({model:c.model||undefined,
+      state:st.length>24000?st.slice(0,24000):st,questions}),signal:deadline(DL_API)},loop?localFetchOpts():{}));
+    const t=await r.text();
+    if(!r.ok)throw new Error('HTTP '+r.status+(t?' — '+t.slice(0,200):''));
+    let j;try{j=JSON.parse(t);}catch(_){throw new Error('the decision server did not answer JSON');}
+    if(!j||typeof j.answers!=='object')return{ok:false,error:'the decision server answered without an "answers" object'};
+    const u=j.usage||{};
+    return{ok:true,answers:s1WireAnswers(questions,j.answers),ms:Date.now()-t0,
+      usage:{input:u.prompt_tokens||u.input_tokens||0,output:u.completion_tokens||u.output_tokens||0,cost:+u.cost||0}};
+  };
+}
+
+/* ═══════════════════ FREE ROUTE, TOLD BY THE PROVIDER — pass 32 ═══════════════════
+   A refusal usually says how long to wait ("retry after 20", "Please try again in 7.66s", "resets in 1m30s").
+   Cooling for that long, not a fixed guess, is what freellmapi means by learning a provider's ceilings. */
+/* PURE. Milliseconds to cool, or null when the message does not say. Clamped to 5 s … 30 min. */
+function freeCoolMs(msg){
+  const t=String(msg||'');
+  const clamp=ms=>Math.max(5000,Math.min(30*60*1000,Math.round(ms)));
+  let m=t.match(/retry[-_ ]?after["'\s:=]*(\d+(?:\.\d+)?)\s*(ms|milliseconds?|s|sec|seconds?|m|min|minutes?)?/i);
+  if(m){const n=+m[1],u=(m[2]||'s').toLowerCase();return clamp(u.startsWith('ms')||u.startsWith('milli')?n:u.startsWith('m')&&!u.startsWith('ms')?n*60000:n*1000);}
+  m=t.match(/(?:try again|resets?|available)\s+in\s+((?:\d+(?:\.\d+)?\s*(?:h|m|s|ms)\s*)+)/i);
+  if(m){let ms=0;(m[1].match(/\d+(?:\.\d+)?\s*(?:ms|h|m|s)/gi)||[]).forEach(p=>{const n=parseFloat(p),u=p.replace(/[\d.\s]/g,'').toLowerCase();
+      ms+=u==='ms'?n:u==='h'?n*3600000:u==='m'?n*60000:n*1000;});
+    if(ms>0)return clamp(ms);}
+  return null;
+}
+
+/* ═══════════════════ HARNESS SELF-AUDIT — pass 32 ═══════════════════
+   This app's own configuration, audited the way Cloudflare's security-audit-skill (October 2026) audits code:
+   a finding is CONFIRMED only with an exact trace (where it lives) and an observed fact (what was seen);
+   anything inferred stays NEEDS VALIDATION and carries no severity; a missing extra layer is a HARDENING note,
+   not a vulnerability. AgentShield's point applies too: the harness itself is an attack surface. */
+const AUDIT_SECRET_RX=[['OpenAI/Anthropic-style key',/\bsk-(?:ant-|proj-|or-v1-)?[A-Za-z0-9_-]{20,}/],['Google API key',/\bAIza[0-9A-Za-z_-]{30,}/],
+  ['GitHub token',/\bgh[pousr]_[A-Za-z0-9]{30,}/],['Slack token',/\bxox[abposr]-[A-Za-z0-9-]{10,}/],['Hugging Face token',/\bhf_[A-Za-z0-9]{30,}/],
+  ['Nace key',/\bnace_sk_[A-Za-z0-9]{16,}/],['AWS access key',/\bAKIA[0-9A-Z]{16}\b/],['private key block',/-----BEGIN [A-Z ]*PRIVATE KEY-----/]];
+/* PURE. Secrets in a piece of text, redacted so the report never repeats them. */
+function auditSecretScan(text){
+  const t=String(text||''),out=[];
+  AUDIT_SECRET_RX.forEach(([name,rx])=>{const m=t.match(rx);if(m)out.push({name,sample:m[0].slice(0,6)+'…'+m[0].slice(-2)});});
+  return out;
+}
+/* PURE. Findings from a snapshot (see auditSnapshot for its shape). */
+function auditChecks(snap){
+  const s=snap||{},F=[];
+  const add=(id,verdict,title,trace,fact,fix,severity)=>F.push(Object.assign({id,verdict,title,trace,fact,fix},verdict==='confirmed'?{severity:severity||'medium'}:{}));
+  (s.iframes||[]).forEach(f=>{const sb=String(f.sandbox==null?'':f.sandbox);
+    if(f.sandbox!=null&&/allow-same-origin/.test(sb)&&/allow-scripts/.test(sb))
+      add('iframe-escape','confirmed','A sandboxed frame can reach this page’s storage and keys','iframe#'+(f.id||'?')+' sandbox="'+sb+'"',
+        'allow-scripts together with allow-same-origin lets code in the frame remove its own sandbox.','Drop allow-same-origin.','high');});
+  (s.secretsOutsideKeys||[]).forEach(x=>add('secret-in-content','confirmed','A secret sits in content that is sent to models',
+    'storage "'+x.key+'"',x.name+' ('+x.sample+') found outside the key store.','Delete it from there and keep keys only in Settings → Providers.','high'));
+  (s.providers||[]).forEach(p=>{let u;try{u=new URL(p.base);}catch(_){return;}
+    if(u.protocol==='http:'&&!pageIsLoopback(u.origin)&&p.key)
+      add('provider-plaintext','confirmed','A key is sent to a provider over plain HTTP','provider "'+p.id+'" base '+u.origin,
+        'Its API key travels unencrypted.','Use the https:// address.','high');});
+  (s.connectors||[]).forEach(c=>{let u;try{u=new URL(c.url);}catch(_){return;}
+    if(u.protocol==='http:'&&!pageIsLoopback(u.origin))
+      add('mcp-plaintext','confirmed','A tool server is reached over plain HTTP','connector "'+(c.label||c.id)+'" '+u.origin,
+        'Tool calls and results travel unencrypted'+(c.token?', with a token':'')+'.','Use https:// or the local bridge.',c.token?'high':'medium');});
+  if(s.toolGate&&s.toolGate.triOn===false&&s.toolGate.phaseOn===false)
+    add('gate-open','confirmed','Nothing stands between a model and a destructive tool','Guards → lethal-trifecta guard off, phase gate off',
+      'Both tool gates are switched off.','Switch the trifecta guard on (warn at least).','medium');
+  else if(s.toolGate&&s.toolGate.triMode==='warn')
+    add('gate-warn','hardening','The lethal-trifecta guard only warns','Guards → trifecta mode "warn"',
+      'A run holding private data, untrusted content and a way out is flagged, not stopped.','Use "block" for unattended runs.');
+  if(s.automate&&s.automate.allowConsequential)
+    add('automate-commit','hardening','Automate may press pay/send/delete-style buttons','Automate → allow consequential clicks',
+      'Consequential clicks are allowed (still gated at 0.9 confidence).','Leave it off unless a task needs it.');
+  if(s.ollamaFromPublic)
+    add('ollama-public','needs_validation','Your local Ollama answers a public website','Ollama at '+s.ollamaFromPublic+' answered this page ('+(s.page&&s.page.origin)+')',
+      'Its allowed-origins list includes this site — check it does not include "*", which would let every website use it.','List only the sites you use (Settings → Ollama gives the command).');
+  if(s.keysAtRest)
+    add('keys-at-rest','hardening','Provider keys are stored unencrypted in this browser','localStorage "gb.key" and "gb.providers"',
+      'Anyone with this browser profile can read them.','Use a separate browser profile, or the desktop app.');
+  if(s.page&&s.page.protocol==='http:'&&!s.page.loopback)
+    add('page-http','confirmed','This page itself is served over plain HTTP','location '+s.page.origin,
+      'Everything typed here, keys included, can be read on the network.','Open it over https://.','high');
+  return F;
+}
+/* The live snapshot. Keys are never copied into it — only whether they exist. */
+function auditSnapshot(){
+  const keyStores=new Set(['gb.key','gb.providers','gb.connectors','gb.settings']);
+  const secrets=[];
+  try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(!k||!/^gb\./.test(k)||keyStores.has(k))continue;
+    const v=localStorage.getItem(k)||'';if(v.length>400000)continue;
+    auditSecretScan(v).forEach(m=>secrets.push({key:k,name:m.name,sample:m.sample}));}}catch(_){}
+  const pub=!pageIsLoopback(location.origin);
+  return{iframes:[...document.querySelectorAll('iframe')].map(f=>({id:f.id,sandbox:f.getAttribute('sandbox')})),
+    secretsOutsideKeys:secrets,
+    providers:(PROVIDERS||[]).filter(p=>p&&p.on).map(p=>({id:p.id,base:p.base,key:!!p.key})),
+    connectors:(CONNECTORS||[]).filter(c=>c&&c.on&&c.url).map(c=>({id:c.id,label:c.label,url:c.url,token:!!c.token})),
+    toolGate:{triOn:TRI.on!==false,triMode:TRI.mode,phaseOn:!!PHASE.on},
+    automate:{allowConsequential:!!S1CFG.allowConsequential},
+    ollamaFromPublic:pub&&OLLAMA_MODELS.length?settings.ollama:'',keysAtRest:!!(API_KEY||(PROVIDERS||[]).some(p=>p&&p.key)),
+    page:{protocol:location.protocol,origin:location.origin,loopback:pageIsLoopback(location.origin)}};
+}
+
+/* ═══════════════════ PLAYTEST GATE — pass 32 ═══════════════════
+   The most common way a generated game fails is a mechanic that compiles and cannot be triggered by real input
+   (threejs-gameplay-systems, "Common Failure Modes"). The preview frame now answers a 'playtest' ask: it samples
+   the largest canvas (24×24 grey) and window.gameState, idles, sends real keys (arrows, WASD, space) and a
+   click at the canvas centre, and samples again. Input must move the picture or the state MORE than idling did.
+   A pointer-lock game cannot be driven by synthetic events; that is reported, never failed. */
+/* PURE. */
+function playtestVerdict(r){
+  if(!r)return{pass:false,findings:[{id:'no-answer',sev:'high',msg:'The preview never answered the playtest — it likely crashed.'}]};
+  const F=[];
+  if(!r.canvas&&!r.hasState)return{pass:true,skipped:true,findings:[{id:'not-a-game',sev:'low',msg:'No canvas and no window.gameState — nothing to playtest.'}]};
+  /* A preview that is not on screen has its animation loop paused by the browser; judging input then would blame the game
+     for the browser's throttling. */
+  if(r.frames!=null&&r.frames<3&&!r.stateInput&&!r.stateIdle&&!(r.input>0)&&!(r.idle>0))return{pass:true,skipped:true,findings:[{id:'paused',sev:'low',
+    msg:'The preview was not on screen, so the browser paused its animation loop — the playtest could not run. Keep Studio visible during game builds.'}]};
+  if(r.canvas&&r.tainted)F.push({id:'tainted',sev:'low',msg:'The canvas could not be read (cross-origin image) — only window.gameState was checked.'});
+  if(r.canvas&&!r.tainted&&r.variance<2&&!r.hasState)F.push({id:'blank',sev:'high',msg:'The canvas is one flat colour — nothing is being drawn.'});
+  const moved=r.hasState?(r.stateInput||(r.input>Math.max(0.004,r.idle*1.5))):(r.input>Math.max(0.004,r.idle*1.5)||r.textInput);
+  if(!moved&&!r.pointerLock)F.push({id:'unresponsive',sev:'high',msg:'Real input (arrow keys, WASD, space and a click) changed nothing measurable'+
+    (r.hasState?' in window.gameState':'')+' beyond what idling changed. The game loop is not wired to input, or it ignores synthetic events.'});
+  if(!moved&&r.pointerLock)F.push({id:'pointer-lock',sev:'low',msg:'The game asks for pointer lock, which synthetic input cannot grant — check controls by hand.'});
+  if(!r.hasState)F.push({id:'no-state-hook',sev:'low',msg:'Expose window.gameState (score, lives, state, player position) so this check can see input land.'});
+  return{pass:!F.some(f=>f.sev==='high'),findings:F,moved};
+}
+async function playtestStudio(){
+  const fr=$('#st-frame');if(!fr)return null;
+  const r=await askFrame(fr,'playtest',{},6000);
+  return playtestVerdict(r&&r.result);
+}
+/* The contract a game build is held to, from threejs-gameplay-systems: a design brief before code, a loop
+   that real input drives, feel that is tuned rather than defaulted, and a state hook the harness can read. */
+const GAME_LOOP_CONTRACT='Start the file with a 6-line DESIGN BRIEF comment: player promise, primary verb, objective, pressure, '+
+  'reward, fail/retry. Build a playable loop, not a scene: real input → state → feedback (visual + audio hook) → HUD, with a '+
+  'restart that works without reloading. Expose window.gameState = {state, score, lives, player:{x,y,z}} and keep it current '+
+  'every frame — the harness presses arrow keys, WASD, space and clicks, and fails the build if this does not change. Tune feel: '+
+  'acceleration rather than instant velocity, a damped follow camera that shows the next decision, 40–80 ms hit-stop plus a small '+
+  'screen shake and flash on impacts, cooldowns that read on screen, and difficulty that escalates over the first two minutes '+
+  'with recovery beats. Keyboard AND touch from the first version; no pointer lock unless the genre demands it.';
+
+/* ═══════════════════ THE LEARNING TAB ═══════════════════ */
+let LEARN_AUDIT=null,LEARN_TRY=null;
+function learnPct(x){return x==null?'—':Math.round(x*100)+'%';}
+function learnRender(){
+  const host=$('#learn-panel');if(!host)return;
+  const T=ledgerTotals(),M=ledgerMatrix().sort((a,b)=>a.cluster<b.cluster?-1:a.cluster>b.cluster?1:b.lower-a.lower);
+  const C=ledgerCalibration(),R=LEARN.route,clusters=[...new Set(M.map(c=>c.cluster))];
+  const chip=s=>`<span class="chip lr-${esc(s)}">${s==='pass'?'✅ pass':s==='fail'?'⛔ fail':'… unverified'}</span>`;
+  const runs=LEARN.runs.slice(-24).reverse();
+  host.innerHTML=`<div class="card">
+    <h2 style="margin-top:0">🧠 Learning</h2>
+    <p class="help">Every agent, System One and build run is <b>judged by the harness</b> from what it observed — tool errors, loops,
+      checks that ran, your thumbs — never by the model’s own claim. A run nothing checked is <b>unverified</b>, not a pass.
+      From those verdicts come a model × task outcome matrix, decision-model calibration, lessons with a track record, and
+      (if you turn it on) routing that learns. Ported from S1 Harness’s ledger, with ECC’s instincts, ReasoningBank’s
+      success-and-failure memory and bandit routing.</p>
+    <div class="lr-stats">
+      <div><b>${T.runs}</b><span>runs</span></div><div><b>${T.pass}</b><span>passed</span></div>
+      <div><b>${T.fail}</b><span>failed</span></div><div><b>${T.unverified}</b><span>unverified</span></div>
+      <div><b>${learnPct(T.passRateJudged)}</b><span>pass rate (judged)</span></div>
+      <div><b>${T.tokensPerPass==null?'—':fmt(T.tokensPerPass)}</b><span>tokens per pass</span></div></div>
+  </div>
+  <div class="card"><h3 style="margin-top:0">🎲 Routing that learns <span class="help" style="font-weight:400">— off by default, measured either way</span></h3>
+    <div class="row" style="gap:12px;flex-wrap:wrap;align-items:center">
+      <label class="row" style="gap:6px"><input type="checkbox" id="lr-route" ${R.on?'checked':''}> Route agent runs by the ledger</label>
+      <label class="row" style="gap:6px"><input type="checkbox" id="lr-explore" ${R.explore?'checked':''}> Explore while evidence is thin</label>
+      <label class="row" style="gap:6px">Price weight <input type="number" id="lr-lambda" min="0" max="1" step="0.05" value="${R.lambda}" style="width:70px" aria-label="Price weight"></label>
+      <label class="row" style="gap:6px">Judged runs before trusting <input type="number" id="lr-min" min="1" max="20" value="${R.minJudged}" style="width:60px" aria-label="Judged runs before trusting"></label>
+    </div>
+    <p class="help">Thompson sampling over each model’s pass/fail record for this kind of task, minus a price penalty. A model you
+      pin for a run is never overridden, and a conversation stays on one route for 30 minutes.</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><input id="lr-try" style="flex:1;min-width:200px" placeholder="Try a task — e.g. fix the failing login test" aria-label="Task to route">
+      <button class="btn small" id="lr-try-go">Which model?</button></div>
+    <div id="lr-try-out" class="help" style="margin-top:6px">${LEARN_TRY?learnTryHtml(LEARN_TRY):''}</div>
+    ${clusters.length?`<table class="lr-t"><thead><tr><th>Kind of task</th><th>Recommended</th><th>Why</th></tr></thead><tbody>${
+      clusters.map(cl=>{const r=ledgerRecommend(cl,{minJudged:R.minJudged});
+        return `<tr><td>${esc(cl)}</td><td class="mono">${esc(r.model||'—')}</td><td>${esc(r.why)}${r.confident?'':' <span class="help">(not confident)</span>'}</td></tr>`;}).join('')
+    }</tbody></table>`:''}
+  </div>
+  <div class="card"><h3 style="margin-top:0">📊 Outcome matrix</h3>
+    ${M.length?`<div class="lr-scroll"><table class="lr-t"><thead><tr><th>Kind</th><th>Model</th><th>Runs</th><th>Pass / fail</th><th>Reliable rate ≥</th><th>Median time</th><th>Tokens per pass</th></tr></thead><tbody>${
+      M.map(c=>`<tr><td>${esc(c.cluster)}</td><td class="mono">${esc(c.model)}</td><td>${c.n}${c.unverified?` <span class="help">(${c.unverified} unverified)</span>`:''}</td>
+        <td>${c.pass} / ${c.fail}</td><td><span class="lr-bar"><i style="width:${Math.round(c.lower*100)}%"></i></span> ${learnPct(c.lower)}</td>
+        <td>${c.medianMs?(c.medianMs/1000).toFixed(1)+' s':'—'}</td><td>${c.tokensPerPass==null?'—':fmt(c.tokensPerPass)}</td></tr>`).join('')
+    }</tbody></table></div>`:'<p class="help">No runs yet. Run anything with tools — the Agent harness, System One, Automate or a build — and it lands here.</p>'}
+    <p class="help">“Reliable rate” is the Wilson lower bound: three passes out of three is not yet 100%.</p>
+  </div>
+  <div class="card"><h3 style="margin-top:0">🎯 Decision-model calibration</h3>
+    ${C.length?`<table class="lr-t"><thead><tr><th>Decider</th><th>Decisions</th><th>Right</th><th>Mean confidence</th><th>Brier</th><th>Calibration error</th><th>Escalate below</th></tr></thead><tbody>${
+      C.map(c=>{const th=ledgerEscalationThreshold(c.decider);return `<tr><td class="mono">${esc(c.decider)}</td><td>${c.n}</td><td>${learnPct(c.accuracy)}</td><td>${learnPct(c.meanConf)}</td>
+        <td>${c.brier.toFixed(3)}</td><td>${c.ece.toFixed(3)}${c.overconfident?' <span class="chip lr-fail">overconfident</span>':''}</td><td>${th!=null?learnPct(th):c.n<20?'<span class="help">needs 20</span>':'<span class="help" title="No confidence level was right 90% of the time over ten or more decisions">always escalate</span>'}</td></tr>`;}).join('')
+    }</tbody></table>`:'<p class="help">No decisions with a known outcome yet. Each System One step is scored by a proxy — did the action visibly change the screen — and, when S2 was asked the same question, by agreement with S2.</p>'}
+  </div>
+  <div class="card"><h3 style="margin-top:0">🪴 Instincts — lessons with a track record</h3>
+    <div class="row" style="gap:12px;flex-wrap:wrap;align-items:center">
+      <label class="row" style="gap:6px"><input type="checkbox" id="lr-inject" ${LEARN.inject?'checked':''}> Show them to agent runs of the same kind</label>
+      <label class="row" style="gap:6px">At most <input type="number" id="lr-cap" min="0" max="12" value="${LEARN.cap}" style="width:60px" aria-label="Most instincts per run"></label>
+      <label class="row" style="gap:6px">Confidence floor <input type="number" id="lr-floor" min="0.3" max="0.95" step="0.05" value="${LEARN.floor}" style="width:70px" aria-label="Instinct confidence floor"></label></div>
+    ${LEARN.instincts.length?`<div class="lr-list">${LEARN.instincts.slice(0,40).map(i=>`<div class="lr-inst${i.on===false?' off':''}">
+      <span class="lr-bar"><i style="width:${Math.round(instinctConf(i)*100)}%"></i></span>
+      <span class="help">${learnPct(instinctConf(i))} · ${esc(i.cluster)} · ${i.source==='success'?'from a success':'from a failure'} · ${(i.trials||0)<3?'on trial':(i.trials+' judged runs')}</span>
+      <div>${esc(i.text)}</div>
+      <div class="row" style="gap:6px"><button class="btn small ghost" data-lr-tog="${esc(i.id)}">${i.on===false?'Turn on':'Turn off'}</button>
+        <button class="btn small ghost" data-lr-del="${esc(i.id)}" aria-label="Delete this instinct">Delete</button></div></div>`).join('')}</div>`
+      :'<p class="help">None yet. A failed run that shows a pattern (a loop, unreadable tool calls, a failed check) becomes one; so does a passing run that took real tool work.</p>'}
+  </div>
+  <div class="card"><h3 style="margin-top:0">🧾 Recent runs</h3>
+    ${runs.length?`<div class="lr-list">${runs.map(r=>`<div class="lr-run">${chip(r.status)} <span class="mono">${esc(r.model)}</span>
+      <span class="help">${esc(r.cluster)} · ${esc(r.surface||'')} · ${new Date(r.ts).toLocaleString()}</span>
+      <div>${esc(r.request||'(no request text)')}</div><div class="help">${esc((r.reasons||[]).join('; '))}${r.routed?' · routed: '+esc(r.routed.why||''):''}</div>
+      <div class="row" style="gap:6px"><button class="btn small ghost" data-lr-up="${esc(r.id)}" aria-label="Mark this run right">👍</button>
+        <button class="btn small ghost" data-lr-down="${esc(r.id)}" aria-label="Mark this run wrong">👎</button></div></div>`).join('')}</div>`:'<p class="help">Nothing yet.</p>'}
+    <div class="row" style="gap:8px;margin-top:8px"><button class="btn small" id="lr-export">Export the ledger (JSON)</button>
+      <button class="btn small ghost" id="lr-clear">Clear runs</button></div>
+  </div>
+  <div class="card"><h3 style="margin-top:0">🛡 Harness self-audit</h3>
+    <p class="help">This app’s own setup, audited like code: <b>confirmed</b> needs an exact trace and an observed fact; anything inferred
+      is <b>needs validation</b> with no severity; a missing extra layer is a <b>hardening</b> note. Keys are never copied into the report.</p>
+    <button class="btn small" id="lr-audit">Run the audit</button>
+    <div id="lr-audit-out">${LEARN_AUDIT?learnAuditHtml(LEARN_AUDIT):''}</div>
+  </div>`;
+  const num=(id,k,lo,hi,obj)=>{const e=$(id);if(e)e.onchange=()=>{(obj||LEARN)[k]=Math.max(lo,Math.min(hi,+e.value||0));saveLearn();};};
+  $('#lr-route').onchange=e=>{R.on=e.target.checked;saveLearn();toast(R.on?'Agent runs now route by the ledger':'Learned routing off');};
+  $('#lr-explore').onchange=e=>{R.explore=e.target.checked;saveLearn();};
+  num('#lr-lambda','lambda',0,1,R);num('#lr-min','minJudged',1,20,R);
+  $('#lr-inject').onchange=e=>{LEARN.inject=e.target.checked;saveLearn();};
+  num('#lr-cap','cap',0,12);num('#lr-floor','floor',0.3,0.95);
+  $('#lr-try-go').onclick=()=>{const t=$('#lr-try').value.trim();if(!t)return;
+    const cands=routerCandidates();LEARN_TRY={task:t,cluster:ledgerClusterOf(t),cands,pick:routerPick(ledgerClusterOf(t),cands,null,
+      {lambda:R.lambda,minJudged:R.minJudged,explore:R.explore,priceOf:m=>{try{return(priceIn(m)+priceOut(m))*1e6;}catch(_){return 0;}}})};
+    $('#lr-try-out').innerHTML=learnTryHtml(LEARN_TRY);};
+  host.querySelectorAll('[data-lr-tog]').forEach(b=>b.onclick=()=>{const i=LEARN.instincts.find(x=>x.id===b.dataset.lrTog);if(i){i.on=i.on===false;saveLearn();learnRender();}});
+  host.querySelectorAll('[data-lr-del]').forEach(b=>b.onclick=()=>{LEARN.instincts=LEARN.instincts.filter(x=>x.id!==b.dataset.lrDel);saveLearn();learnRender();});
+  host.querySelectorAll('[data-lr-up]').forEach(b=>b.onclick=()=>{ledgerUpdate(b.dataset.lrUp,{userVerdict:'up'});learnRender();});
+  host.querySelectorAll('[data-lr-down]').forEach(b=>b.onclick=()=>{ledgerUpdate(b.dataset.lrDown,{userVerdict:'down'});learnRender();});
+  $('#lr-export').onclick=()=>{const blob=new Blob([JSON.stringify({v:1,exported:nowISO(),runs:LEARN.runs,decisions:LEARN.decisions,instincts:LEARN.instincts},null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='glassbox-ledger.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);};
+  $('#lr-clear').onclick=()=>{if(!confirm('Clear every recorded run and decision? Instincts are kept.'))return;LEARN.runs=[];LEARN.decisions=[];saveLearn();learnRender();};
+  $('#lr-audit').onclick=()=>{LEARN_AUDIT=auditChecks(auditSnapshot());$('#lr-audit-out').innerHTML=learnAuditHtml(LEARN_AUDIT);};
+}
+function learnTryHtml(t){
+  if(!t.cands.length)return 'No model can run right now — add a key or connect a local model.';
+  const p=t.pick;
+  return `Kind: <b>${esc(t.cluster)}</b> · ${p.model?`pick <span class="mono">${esc(p.model)}</span> — ${esc(p.why)}`:esc(p.why)}<br>`+
+    (p.rows||[]).map(r=>`<span class="mono">${esc(r.model)}</span> ${r.pass}/${r.judged} · sample ${r.sample==null?'—':r.sample.toFixed(2)}${r.penalty?' − '+r.penalty.toFixed(2):''}`).join('<br>');
+}
+function learnAuditHtml(F){
+  if(!F.length)return '<p class="help" style="margin-top:8px">✅ Nothing found. That covers the checks listed above, not everything.</p>';
+  const grp=[['confirmed','Confirmed'],['needs_validation','Needs validation'],['hardening','Hardening notes']];
+  return grp.map(([v,label])=>{const xs=F.filter(f=>f.verdict===v);if(!xs.length)return '';
+    return `<h4>${label} (${xs.length})</h4>`+xs.map(f=>`<div class="lr-run">${f.severity?`<span class="chip lr-fail">${esc(f.severity)}</span> `:''}<b>${esc(f.title)}</b>
+      <div class="help">Where: <span class="mono">${esc(f.trace)}</span></div><div class="help">Seen: ${esc(f.fact)}</div><div>Fix: ${esc(f.fix)}</div></div>`).join('');}).join('');
 }
 
 /* ═══════════════════ ASSISTANT — the front door ═══════════════════
@@ -54198,7 +55334,7 @@ const TAB_GROUPS=[
   {id:'build', label:'Build & ship',     icon:'🏗',
    views:['factory','forge','library','handoff','launch','webos','connect']},
   {id:'models',label:'Models & cost',    icon:'🎚',
-   views:['modelhub','models','local','metrics','graphs','viz','evolve','playbooks']},
+   views:['modelhub','models','local','metrics','graphs','viz','evolve','playbooks','learn']},
   {id:'agents',label:'Agents & teams',   icon:'🤖',
    views:['vo','bots','mission','awards','study','jev','systemone','router','hlab']},
   {id:'know',  label:'Knowledge & ops',  icon:'🧠',
@@ -55143,7 +56279,7 @@ const ONB_INTERESTS=[
    core:['lab'],                      more:['council','compare','transplant','pane','analysis']},
   {id:'agents',  icon:'🤖', label:'Agents & automation',
    why:'Swarms, bots, long-running work',
-   core:['vo','bots'],                more:['mission','factory','guards','awards','systemone','router','hlab']},
+   core:['vo','bots'],                more:['mission','factory','guards','awards','systemone','router','hlab','learn']},
   {id:'data',    icon:'📊', label:'Data & analysis',
    why:'Sheets, graphs, metrics',
    core:['office'],                   more:['graphs','metrics','viz']},
@@ -55518,6 +56654,36 @@ const HELP_TOPICS=[
         Jev picks the analysis and the columns from the ones that exist. The write-up is generated from those
         computed facts only, and any number it states that the facts do not contain is highlighted as
         unsupported.</p>`},
+   ]},
+  {id:'pass32',icon:'🧠',title:'Learning, a careful System One, and games that must answer input',
+   blurb:'Runs judged by the harness, lessons with a track record, routing that learns, S1 Harness’s App Operator, a self-audit, a playtest gate.',
+   arts:[
+    {q:'What is the Learning tab?',
+     a:`<p>Every agent run, System One run and build lands in a <b>ledger</b>, and the <b>harness</b> decides its verdict from what it
+        observed — tool errors, loops, the self-check, your thumbs. A run that nothing checked is <b>unverified</b>, never a pass. From
+        that come an outcome matrix (which model passes which kind of task, with a Wilson lower bound so three wins out of three is
+        not 100%), calibration for decision models (Brier score, calibration error, and the confidence below which to escalate),
+        and <b>instincts</b>: lessons from failures and successes that gain or lose confidence with every judged run that sees them.
+        Ported from S1 Harness, with ideas from ECC, ReasoningBank and bandit routing.</p>`},
+    {q:'Does it change which model answers?',
+     a:`<p>Only if you turn on <b>Routing that learns</b>. Then an agent run with no pinned model is routed by Thompson sampling over
+        each model’s record for that kind of task, minus a price penalty, and stays on that route for 30 minutes. Off, the ledger
+        still recommends, and you can ask it “which model?” for any task.</p>`},
+    {q:'What changed in System One and Automate?',
+     a:`<p>From S1 Harness’s App Operator: each control is described with its section heading and the text beside it (not the next
+        button’s label), every action is read back (“→ nothing visible changed” marks a dead control), controls behind a dialog are
+        not offered, and steps that led to a confirmed success are marked “worked before”. “Done” must be confirmed on a fresh look,
+        and an optional success rule must hold. When S1 is unsure it can ask S2 the same question. There is a new decider for
+        System One APIs — Drex, nimble, Clef, PPLX-Decider, Liquid d1 — and a local one bigger than this Mac’s cap is refused.</p>`},
+    {q:'What is the harness self-audit?',
+     a:`<p>Learning → 🛡 audits this app’s own setup the way Cloudflare’s security-audit skill audits code: <b>confirmed</b> needs an
+        exact place and an observed fact (a sandboxed frame that can escape, a key pasted into a prompt, a key sent over plain HTTP,
+        both tool gates off); anything inferred is <b>needs validation</b>; a missing extra layer is a <b>hardening</b> note.</p>`},
+    {q:'What does the playtest do to my game builds?',
+     a:`<p>After each build round the harness presses arrow keys, WASD and space, clicks the canvas, and compares the picture and
+        <span class="mono">window.gameState</span> with what idling changed. A blank canvas fails the round; a game that ignores input
+        goes to the reviewer as evidence. Game builds are also told the gameplay contract: a design brief, a real loop with restart,
+        tuned feel, and the state hook.</p>`},
    ]},
   {id:'pass31',icon:'⚗',title:'Evidence Engine, Playbooks, one model everywhere, and Automate',
    blurb:'Research modes, recursive attack, Ask; a prompt arena and router; a primary model; computer use from the top bar.',
@@ -61684,7 +62850,7 @@ async function persistInit(){
    worker updating is NOT the same thing as the user seeing the new app: clients.claim() makes
    a new worker control the page, but the HTML already parsed keeps running until something
    reloads it. This is what lets the app notice and say so. */
-const APP_BUILD='5539b2c5b6edab5f';
+const APP_BUILD='b619b3f7451eea68';
 const PWA={reg:null,state:'unknown',why:'',prompt:null,update:null,checking:false,lastCheck:0};
 
 /* ── Staying current, which is the whole problem on iOS ──────────────────────
@@ -65266,6 +66432,7 @@ function go(view){
   if(view==='evolve')panelGuard(view,()=>peRender());
   if(view==='hlab')panelGuard(view,()=>hlRender());
   if(view==='playbooks')panelGuard(view,()=>pbRender());
+  if(view==='learn')panelGuard(view,()=>learnRender());
   if(view==='webos')panelGuard(view,()=>{wosInit();wosRender();wosFillFolders();wosClockTick();});
 }
 /* ═══ BOOT ISOLATION ═══
@@ -65577,7 +66744,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     modelBadge,modelMenu,isModelField,modelFieldEnhance,MODEL_FIELD_RX,
     modelRunnable,freeCandidates,modelParamsB,
     primaryModel,setPrimaryModel,renderPrimaryPill,openAutomate,
-    pbKey,pbBradleyTerry,pbBestModel,pbShortlist,pbRoutineMatch,pbParseGenerated,pbCost,pbAdd,pbSelect,pbRun,pbMatchesFromRanking,pbArena,pbVote,pbGenerate,pbRender,get PB(){return PB},set PB(v){PB=v},pageIsLoopback,localFetchOpts,lnaPermission,ollamaOS,ollamaFixCommands,
+    pbKey,pbBradleyTerry,pbBestModel,pbShortlist,pbRoutineMatch,pbParseGenerated,pbCost,pbAdd,pbSelect,pbRun,pbMatchesFromRanking,pbArena,pbVote,pbGenerate,pbRender,get PB(){return PB},set PB(v){PB=v},ledgerClusterOf,ledgerJudge,wilsonLower,ledgerRecord,ledgerUpdate,ledgerMatrix,ledgerRecommend,ledgerRecordDecision,ledgerCalibration,ledgerEscalationThreshold,ledgerTotals,ledgerLesson,toolSignature,toolLoopGuard,instinctAdd,instinctPick,instinctCredit,instinctBlock,instinctConf,learnRng,betaSample,routerPick,routerChoose,routerCandidates,ledgerRowFromReact,ledgerRowsFromS1,ledgerFeedback,ledgerFromReact,ledgerFromS1,s1Diff,s1PathSig,s1SuccessHolds,s1ParseSuccess,s1WireAnswers,s1DecisionGuard,s1SystemOneDecider,S1_DECISION_PRESETS,s1ControlContext,s1PlainText,s1Headings,freeCoolMs,FREE_STICKY,FREE_COOL,harnessNotes,auditChecks,auditSecretScan,auditSnapshot,playtestVerdict,playtestStudio,learnRender,get LEARN(){return LEARN},set LEARN(v){LEARN=v},saveLearn,get S1PATHS(){return S1PATHS},pageIsLoopback,localFetchOpts,lnaPermission,ollamaOS,ollamaFixCommands,
     beaconExportLines,beaconSelfLearn,BEACON_SESSION,
     HL_KINDS,HL_TEMPLATES,HL_TARGETS,hlRefs,hlTemplate,hlValidate,hlOverBudget,hlPick,hlParseSpec,hlRun,hlScore,hlBaseline,hlBench,hlDesign,hlModes,hlApplyHooks,hlRender,get HL(){return HL},set HL(v){HL=v},asstModeEntries,freeModelFor,freeRoute,freeSlotWait,get FREE(){return FREE},set FREE(v){FREE=v},get FREE_LOG(){return FREE_LOG},
     HARNESS_LAYERS,harnessAudit,
