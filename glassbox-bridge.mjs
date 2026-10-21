@@ -418,11 +418,23 @@ function safeJoin(root, rel) {
     throw new Error('path escapes the destination: ' + rel);
   return p;
 }
+/* Folders this bridge wrote in this session, and the one shared handoff root. Reading results back (/handoff/read)
+   is confined to these: a paired page can collect what a harness produced for it, never browse the rest of the disk. */
+const WRITTEN = new Set();
+const HANDOFF_ROOT = () => path.join(os.homedir(), 'GlassBox-Handoffs');
+function readAllowed(dir) {
+  let real; try { real = fs.realpathSync(dir); } catch { return false; }
+  let root; try { root = fs.realpathSync(HANDOFF_ROOT()); } catch { root = null; }
+  if (root && (real === root || real.startsWith(root + path.sep))) return true;
+  for (const w of WRITTEN) { if (real === w || real.startsWith(w + path.sep)) return true; }
+  return false;
+}
 function handoffWrite(res, body) {
   try {
     const dir = String(body.dir || '').replace(/^~/, os.homedir());
     if (!dir) throw new Error('no destination directory');
     fs.mkdirSync(dir, {recursive: true});
+    try { WRITTEN.add(fs.realpathSync(dir)); } catch {}
     const files = body.files || {};
     const written = [];
     for (const [name, content] of Object.entries(files)) {
@@ -438,11 +450,64 @@ function handoffWrite(res, body) {
     res.end(JSON.stringify({ok: false, error: String(e.message || e)}));
   }
 }
-/* Open a Terminal window sitting in the handed-off directory, optionally running a CLI. */
+/* Results back from a harness: every text file under a handoff folder (depth 4, 300 files, 3 MB in all; build output
+   and VCS folders skipped). Binary files are listed with their size but not read. */
+function handoffRead(res, body) {
+  const send = (code, obj) => { res.writeHead(code, {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}); res.end(JSON.stringify(obj)); };
+  try {
+    const dir = String(body.dir || '').replace(/^~/, os.homedir());
+    if (!dir || !fs.existsSync(dir)) return send(404, {ok: false, error: 'no such folder: ' + dir});
+    if (!readAllowed(dir)) return send(403, {ok: false, error: 'outside ~/GlassBox-Handoffs and the folders this bridge wrote'});
+    const root = fs.realpathSync(dir), files = [], cap = Math.min(+body.maxBytes || 3e6, 8e6);
+    let total = 0;
+    const walk = (d, depth) => {
+      if (depth > 4 || files.length >= 300) return;
+      for (const ent of fs.readdirSync(d, {withFileTypes: true})) {
+        if (files.length >= 300) return;
+        if (/^(node_modules|\.git|\.venv|__pycache__|dist|build|\.next)$/.test(ent.name)) continue;
+        const p = path.join(d, ent.name);
+        if (ent.isSymbolicLink()) continue;
+        if (ent.isDirectory()) { walk(p, depth + 1); continue; }
+        const st = fs.statSync(p), rel = path.relative(root, p);
+        const f = {name: rel, bytes: st.size, mtime: st.mtimeMs};
+        if (st.size <= 262144 && total + st.size <= cap) {
+          const buf = fs.readFileSync(p);
+          const bin = buf.subarray(0, 4096).includes(0);
+          if (!bin) { f.text = buf.toString('utf8'); total += st.size; } else f.binary = true;
+        } else f.skipped = true;
+        files.push(f);
+      }
+    };
+    walk(root, 0);
+    return send(200, {ok: true, dir: root, files, totalBytes: total});
+  } catch (e) { return send(400, {ok: false, error: String(e.message || e)}); }
+}
+/* Which harness apps are installed (/Applications or ~/Applications). Names only, checked as paths — no shell. */
+function appsFound(res, body) {
+  const names = Array.isArray(body.names) ? body.names.slice(0, 60) : [], found = {};
+  for (const n of names) {
+    const s = String(n);
+    if (!/^[\w .()+-]{1,60}$/.test(s) || s.includes('..')) { found[s] = false; continue; }
+    found[s] = [path.join('/Applications', s + '.app'), path.join(os.homedir(), 'Applications', s + '.app')].some(p => { try { return fs.existsSync(p); } catch { return false; } });
+  }
+  res.writeHead(200, {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'});
+  res.end(JSON.stringify({ok: true, found}));
+}
+/* Open a Terminal window sitting in the handed-off directory, optionally running a CLI — or open a desktop app
+   (Claude, ChatGPT, Codex, DeepSeek Harness…) on the folder, by name, with `open -a` and no shell. */
 function handoffLaunch(res, body) {
   try {
     const dir = String(body.dir || '').replace(/^~/, os.homedir());
     if (!fs.existsSync(dir)) throw new Error('directory does not exist: ' + dir);
+    if (body.app) {
+      const app = String(body.app);
+      if (!/^[\w .()+-]{1,60}$/.test(app) || app.includes('..')) throw new Error('not an app name: ' + app);
+      if (process.platform !== 'darwin') throw new Error('opening an app by name needs macOS');
+      const ch = spawn('open', ['-a', app, dir], {detached: true, stdio: 'ignore'});
+      ch.on('error', () => {}); ch.unref();
+      res.writeHead(200, {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'});
+      return res.end(JSON.stringify({ok: true, dir, opened: app}));
+    }
     const id = body.adapter;
     let cmd = '';
     if (id && ADAPTERS[id]) {
@@ -487,7 +552,7 @@ const server = http.createServer((req, res) => {
     return res.end(JSON.stringify({ok: true, version: 3, sandbox: SANDBOX,
       prefixes: Object.keys(ADAPTERS), accounts: accounts(), models, clis, paired: PAIRED,
       // v3 capabilities, declared rather than guessed at by the client
-      features: {exec: true, pty: false, mcpStdio: true, autonomous: ['prime'], memory: true, notify: true, notes: true},
+      features: {exec: true, pty: false, mcpStdio: true, autonomous: ['prime'], memory: true, notify: true, notes: true, handoffRead: true, apps: true, launchApp: true},
       memoryFile: MEM_FILE, memoryRev: memRead().rev,
       terminals: execList()}));
   }
@@ -583,6 +648,10 @@ const server = http.createServer((req, res) => {
         return url === '/exec/input' ? execInput(res, body) : execKill(res, body);
       }
       // Anything that touches the filesystem or spawns a process needs the token.
+      if (url === '/handoff/read' || url === '/apps') {
+        if (!authed(req)) { res.writeHead(401, {'Content-Type': 'application/json'}); return res.end(JSON.stringify({ok: false, error: 'not paired'})); }
+        return url === '/apps' ? appsFound(res, body) : handoffRead(res, body);
+      }
       if (url === '/handoff/write' || url === '/handoff/launch') {
         if (!authed(req)) {
           res.writeHead(401, {'Content-Type': 'application/json'});
