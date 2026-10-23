@@ -32,11 +32,74 @@ const SANDBOX = fs.mkdtempSync(path.join(os.tmpdir(), 'glassbox-bridge-'));
 const NO_TOOLS = 'Bash,Edit,Write,Read,Glob,Grep,Task,WebFetch,WebSearch,NotebookEdit,TodoWrite';
 
 /* ── pairing: gates the file-writing / process-spawning endpoints ────────────── */
-const TOKEN = crypto.randomBytes(16).toString('hex');
+/* Two modes.
+   LOCAL (default): listens on 127.0.0.1. The token is handed out by /pair, but only to a GlassBox page — a loopback
+   origin, the hosted app, or a file:// page (Origin "null") while nothing has paired yet. Any other web page you
+   happen to visit gets nothing: before this, /pair gave the token to the first caller of any origin, and the token
+   is what unlocks /exec.
+   REMOTE (--remote, --tunnel or GLASSBOX_REMOTE=1): for a cloud terminal (Codespaces, a VPS, a container) or a Mac
+   reached through a tunnel. Every endpoint but a minimal /whoami needs the token; /pair is refused. The token comes
+   from GLASSBOX_TOKEN or ~/.glassbox/remote-token (created 0600 on first run), and a 6-digit single-use code printed
+   in the log can be traded for it once, so a phone never has to type 64 characters. */
+const ARGV = process.argv.slice(2);
+const TUNNEL = ARGV.includes('--tunnel');
+const REMOTE = TUNNEL || ARGV.includes('--remote') || process.env.GLASSBOX_REMOTE === '1';
+const HOST = process.env.GLASSBOX_HOST || (REMOTE && !TUNNEL ? '0.0.0.0' : '127.0.0.1');
+function remoteToken() {
+  if (process.env.GLASSBOX_TOKEN && process.env.GLASSBOX_TOKEN.length >= 24) return process.env.GLASSBOX_TOKEN;
+  const dir = path.join(os.homedir(), '.glassbox'), f = path.join(dir, 'remote-token');
+  try { const t = fs.readFileSync(f, 'utf8').trim(); if (t.length >= 24) return t; } catch {}
+  const t = crypto.randomBytes(32).toString('hex');
+  try { fs.mkdirSync(dir, {recursive: true, mode: 0o700}); fs.writeFileSync(f, t + '\n', {mode: 0o600}); } catch {}
+  return t;
+}
+const TOKEN = REMOTE ? remoteToken() : crypto.randomBytes(16).toString('hex');
 let PAIRED = false;
 const STARTED = Date.now();
 const PAIR_WINDOW_MS = 10 * 60 * 1000;
-const authed = req => (req.headers['x-glassbox-token'] || '') === TOKEN;
+function tokenOk(req) {
+  const got = Buffer.from(String(req.headers['x-glassbox-token'] || '')), want = Buffer.from(TOKEN);
+  return got.length === want.length && crypto.timingSafeEqual(got, want);
+}
+const EXTRA_ORIGINS = (process.env.GLASSBOX_ORIGINS || '').split(',').map(x => x.trim()).filter(Boolean);
+/* true: a GlassBox page; 'null': a file:// page (or a sandboxed frame — so it only ever gets the first pairing);
+   false: some other site. No Origin header at all means a non-browser client on this machine. */
+function originKind(o) {
+  if (o === undefined || o === '') return 'none';
+  if (o === 'null') return 'null';
+  if (EXTRA_ORIGINS.includes(o)) return 'glassbox';
+  try {
+    const u = new URL(o);
+    if (/^(localhost|127\.\d+\.\d+\.\d+|\[::1\])$/.test(u.hostname) || /\.localhost$/.test(u.hostname)) return 'glassbox';
+    if (u.protocol === 'https:' && u.hostname === 'glassbox-jet.vercel.app') return 'glassbox';
+  } catch {}
+  return 'other';
+}
+/* Who may use the unauthenticated-by-design endpoints (bridge chat, proxy, the full /whoami). */
+function trusted(req) {
+  if (tokenOk(req)) return true;
+  if (REMOTE) return false;
+  const k = originKind(req.headers.origin);
+  return k === 'glassbox' || k === 'none';
+}
+const authed = req => tokenOk(req);
+/* Remote-mode brute-force brake: 20 failed token checks a minute from one address, then 429 for a minute. */
+const FAILS = new Map();
+function throttled(req) {
+  const ip = req.socket.remoteAddress || '?', now = Date.now(), f = FAILS.get(ip) || {n: 0, t: now};
+  if (now - f.t > 60000) { f.n = 0; f.t = now; }
+  FAILS.set(ip, f);
+  return f.n >= 20;
+}
+function noteFail(req) { const ip = req.socket.remoteAddress || '?', f = FAILS.get(ip) || {n: 0, t: Date.now()}; f.n++; FAILS.set(ip, f); }
+/* The single-use pairing code (remote mode). */
+let PAIR_CODE = null;
+function newPairCode(why) {
+  PAIR_CODE = {code: String(crypto.randomInt(0, 1e6)).padStart(6, '0'), until: Date.now() + 15 * 60 * 1000, tries: 0};
+  console.log('  pairing code: ' + PAIR_CODE.code + '  (single use, 15 min' + (why ? '; ' + why : '') + ')');
+  try { const d = path.join(os.homedir(), '.glassbox'); fs.mkdirSync(d, {recursive: true, mode: 0o700});
+    fs.writeFileSync(path.join(d, 'pair-code'), PAIR_CODE.code + '\n', {mode: 0o600}); } catch {}
+}
 
 /* ── CLI adapters. Every invocation below was read off `--help` on a real install. ──
  * kind: how stdout is parsed.  promptMode: how the prompt reaches the process.       */
@@ -440,7 +503,9 @@ function handoffWrite(res, body) {
     for (const [name, content] of Object.entries(files)) {
       const p = safeJoin(dir, name);
       fs.mkdirSync(path.dirname(p), {recursive: true});
-      fs.writeFileSync(p, String(content));
+      /* {b64: …} carries a binary file (an app, a library, a model) byte for byte; anything else is text. */
+      if (content && typeof content === 'object' && typeof content.b64 === 'string') fs.writeFileSync(p, Buffer.from(content.b64, 'base64'));
+      else fs.writeFileSync(p, String(content));
       written.push(path.relative(dir, p));
     }
     res.writeHead(200, {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'});
@@ -534,11 +599,48 @@ function handoffLaunch(res, body) {
 /* ── server ───────────────────────────────────────────────────────────────── */
 const server = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Headers', '*');
+  /* Named as well as '*': older Safari ignores the wildcard for request headers. */
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-GlassBox-Token, Authorization, *');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Private-Network', 'true');
   if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
 
   const url = req.url.split('?')[0];
+  const deny = (code, error) => { res.writeHead(code, {'Content-Type': 'application/json'}); return res.end(JSON.stringify({ok: false, error})); };
+
+  /* Remote mode: one gate in front of everything except the minimal /whoami and the pairing-code exchange. */
+  if (REMOTE && url !== '/whoami' && url !== '/pair-code') {
+    if (throttled(req)) return deny(429, 'too many failed attempts — wait a minute');
+    if (!tokenOk(req)) { noteFail(req); return deny(401, 'this bridge is remote: send the token (X-GlassBox-Token)'); }
+  }
+
+  if (url === '/pair-code') {
+    if (!REMOTE) return deny(404, 'pairing codes are for remote bridges');
+    if (throttled(req)) return deny(429, 'too many failed attempts — wait a minute');
+    let raw = '';
+    req.on('data', d => { raw += d; if (raw.length > 4096) req.destroy(); });
+    req.on('end', () => {
+      let code = ''; try { code = String(JSON.parse(raw || '{}').code || ''); } catch {}
+      const pc = PAIR_CODE;
+      if (!pc || Date.now() > pc.until) { newPairCode('the old one expired'); return deny(403, 'that code expired — a new one is in the bridge log'); }
+      const a = Buffer.from(code), b = Buffer.from(pc.code);
+      if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+        noteFail(req); pc.tries++;
+        if (pc.tries >= 5) newPairCode('5 wrong tries');
+        return deny(403, 'wrong code');
+      }
+      newPairCode('the last one was used');
+      res.writeHead(200, {'Content-Type': 'application/json'});
+      return res.end(JSON.stringify({ok: true, token: TOKEN}));
+    });
+    return;
+  }
+
+  if (url === '/whoami' && !trusted(req)) {
+    /* Enough to recognise a bridge and know a token is needed — nothing about this machine. */
+    res.writeHead(200, {'Content-Type': 'application/json'});
+    return res.end(JSON.stringify({ok: true, version: 3, remote: REMOTE, needsToken: true}));
+  }
 
   if (url === '/whoami') {
     const models = [];
@@ -552,18 +654,33 @@ const server = http.createServer((req, res) => {
     return res.end(JSON.stringify({ok: true, version: 3, sandbox: SANDBOX,
       prefixes: Object.keys(ADAPTERS), accounts: accounts(), models, clis, paired: PAIRED,
       // v3 capabilities, declared rather than guessed at by the client
-      features: {exec: true, pty: false, mcpStdio: true, autonomous: ['prime'], memory: true, notify: true, notes: true, handoffRead: true, apps: true, launchApp: true},
+      remote: REMOTE, host: os.hostname(), platform: process.platform, tokenValid: tokenOk(req),
+      features: {exec: true, pty: false, mcpStdio: true, autonomous: ['prime'], memory: true, notify: true, notes: true, handoffRead: true, apps: true, launchApp: true, remote: REMOTE, pairCode: REMOTE},
       memoryFile: MEM_FILE, memoryRev: memRead().rev,
       terminals: execList()}));
   }
 
-  // Pairing: hand the token to the first caller, or to anyone inside the opening window.
+  // Pairing: hand the token to a GlassBox page — the first one, or any inside the opening window.
   if (url === '/pair') {
-    const open = !PAIRED || (Date.now() - STARTED) < PAIR_WINDOW_MS;
+    if (REMOTE) return deny(403, 'remote bridge: enter the token or the pairing code from its log');
+    const kind = originKind(req.headers.origin);
+    if (kind === 'other') return deny(403, 'only a GlassBox page can pair with this bridge (set GLASSBOX_ORIGINS to add an origin)');
+    const open = kind === 'null' ? !PAIRED : (!PAIRED || (Date.now() - STARTED) < PAIR_WINDOW_MS);
     res.writeHead(open ? 200 : 403, {'Content-Type': 'application/json'});
     if (!open) return res.end(JSON.stringify({ok: false, error: 'pairing window closed — restart the bridge'}));
     if (!PAIRED) { PAIRED = true; console.log('  ✓ paired with a GlassBox tab'); }
     return res.end(JSON.stringify({ok: true, token: TOKEN}));
+  }
+
+  /* Keys kept on this machine (~/.glassbox/keys.json, owner-only), for a paired GlassBox page. Never in remote mode:
+     a cloud bridge has no business handing out the secrets of the machine it runs on. */
+  if (url === '/keys') {
+    if (REMOTE) return deny(403, 'keys are never served by a remote bridge');
+    if (!tokenOk(req)) return deny(401, 'not paired');
+    let keys = {};
+    try { keys = JSON.parse(fs.readFileSync(path.join(os.homedir(), '.glassbox', 'keys.json'), 'utf8')); } catch {}
+    res.writeHead(200, {'Content-Type': 'application/json', 'Cache-Control': 'no-store'});
+    return res.end(JSON.stringify({ok: true, keys}));
   }
 
   if (req.method === 'POST') {
@@ -572,6 +689,8 @@ const server = http.createServer((req, res) => {
     req.on('end', () => {
       let body; try { body = JSON.parse(raw); } catch { res.writeHead(400); return res.end('bad json'); }
 
+      /* Bridge chat runs your signed-in CLIs and /proxy fetches anything: both need a GlassBox page or the token. */
+      if ((url === '/v1/chat/completions' || url === '/proxy') && !trusted(req)) return deny(401, 'send the bridge token (X-GlassBox-Token)');
       if (url === '/v1/chat/completions') {
         res.writeHead(200, {'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive'});
         return runCLI(res, body);
@@ -888,6 +1007,18 @@ process.on('exit', () => {
 process.on('SIGINT', () => process.exit(0));
 process.on('SIGTERM', () => process.exit(0));
 
+/* A free Cloudflare quick tunnel (no account): the Mac's bridge gets a public https URL for as long as it runs.
+   Remote mode is forced on, so the URL alone is useless without the token or the pairing code. */
+function startTunnel(port) {
+  const bin = whichPath('cloudflared');
+  if (!bin) { console.log('  tunnel   : cloudflared is not installed — `brew install cloudflared`, then run again with --tunnel'); return; }
+  const ch = spawn(bin, ['tunnel', '--no-autoupdate', '--url', 'http://127.0.0.1:' + port], {stdio: ['ignore', 'pipe', 'pipe']});
+  const seen = d => { const m = String(d).match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/);
+    if (m && !startTunnel.url) { startTunnel.url = m[0]; console.log('  tunnel   : ' + m[0] + '   ← paste this URL into GlassBox'); } };
+  ch.stdout.on('data', seen); ch.stderr.on('data', seen);
+  ch.on('exit', c => console.log('  tunnel   : cloudflared exited (' + c + ')'));
+  process.on('exit', () => { try { ch.kill(); } catch {} });
+}
 function listenSomewhere(ports) {
   const port = ports[0];
   if (port === undefined) {
@@ -898,7 +1029,7 @@ function listenSomewhere(ports) {
     if (e.code === 'EADDRINUSE') { console.log('  port ' + port + ' busy, trying ' + ports[1] + '…'); listenSomewhere(ports.slice(1)); }
     else { console.error(e); process.exit(1); }
   });
-  server.listen(port, '127.0.0.1', () => {
+  server.listen(port, HOST, () => {
     const found = Object.entries(ADAPTERS).filter(([id]) => DETECTED[id]);
     const missing = Object.entries(ADAPTERS).filter(([id]) => !DETECTED[id]);
     console.log('──────────────────────────────────────────────');
@@ -908,7 +1039,13 @@ function listenSomewhere(ports) {
     if (missing.length) console.log('  missing  : ' + missing.map(([, a]) => a.bin).join(', '));
     for (const a of accounts()) console.log('  account  : ' + a.tool + ' — ' + (a.email || a.status));
     console.log('  sandbox  : ' + SANDBOX + '  (tools disabled)');
-    console.log('\n  Press "Connect bridge" in GlassBox Settings. Ctrl-C to stop.');
+    if (REMOTE) {
+      console.log('  mode     : REMOTE on ' + HOST + ':' + port + ' — every request needs the token');
+      console.log('  token    : ' + TOKEN.slice(0, 6) + '…  (full value: ~/.glassbox/remote-token or $GLASSBOX_TOKEN)');
+      newPairCode();
+      console.log('\n  In GlassBox: Terminal → Cloud terminal → paste this bridge\'s URL and the pairing code.');
+      if (TUNNEL) startTunnel(port);
+    } else console.log('\n  Press "Connect bridge" in GlassBox Settings. Ctrl-C to stop.');
   });
 }
 listenSomewhere(PORT_LADDER);

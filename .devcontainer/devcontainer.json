@@ -1,0 +1,17 @@
+{
+  "name": "GlassBox cloud terminal",
+  "build": { "dockerfile": "../cloud/Dockerfile", "context": ".." },
+  "remoteUser": "node",
+  "forwardPorts": [8791],
+  "portsAttributes": { "8791": { "label": "GlassBox bridge", "onAutoForward": "silent", "protocol": "http" } },
+  "postStartCommand": "bash cloud/start-bridge.sh",
+  "hostRequirements": { "cpus": 2 },
+  "secrets": {
+    "ANTHROPIC_API_KEY": { "description": "Optional. Claude Code can also be signed in once with `claude` in the terminal." },
+    "OPENAI_API_KEY": { "description": "Optional. For Codex (or run `codex login` once)." },
+    "OPENROUTER_API_KEY": { "description": "Optional. For OpenCode / Oh My Pi with OpenRouter models." },
+    "GEMINI_API_KEY": { "description": "Optional. For Gemini CLI." },
+    "GLASSBOX_TOKEN": { "description": "Optional fixed bridge token (24+ characters). Without it one is generated and kept in ~/.glassbox/remote-token." }
+  },
+  "customizations": { "codespaces": { "openFiles": ["cloud/README.md"] } }
+}
