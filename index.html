@@ -28,7 +28,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Glassbox Jet">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0b0d12">
+<meta name="theme-color" content="#0e0f13" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
 <title>Glassbox Jet — Reasoning &amp; Creation Studio</title>
 <style>
 :root{
@@ -2411,6 +2412,311 @@ ul.oui-list{list-style:none;padding-left:0}ul.oui-list li{display:flex;align-ite
 .cu-run summary{cursor:pointer;font-size:12px}
 
 </style>
+<style id="ds36">
+/* ═══════════════════ PASS 36 — DESIGN SYSTEM ═══════════════════
+   One calm base look. Loaded after the original stylesheet so it wins at equal specificity, and
+   before #user-css so a person's own CSS (and the theme generator's inline tokens) still win.
+   Rules of the system, in order of how much clutter each removes:
+     1. Hierarchy by weight, not by colour: one solid button per area (plain .btn — the codebase
+        already uses it for Run/Send/Go), tinted for secondary (.btn.small), neutral for the rest.
+     2. Sentence-case headings. The small uppercase tracked labels were the loudest "AI dashboard" tell.
+     3. Surfaces instead of outlines: cards sit on the page by tone, hairlines only where they separate.
+     4. Navigation lives in one place per form factor: a sidebar on a wide screen, a dock on a phone.
+   Contrast: every text token below is ≥4.5:1 on the surface it is used on (checked by contrast36()). */
+
+:root{
+  --bg:#0e0f13; --bg2:#121419; --panel:#121419; --panel2:#181a20; --edge:#262932; --edge2:#343844;
+  --ink:#ececf1; --ink2:#b0b4bf; --ink3:#8b909c; --acc:#6aa2ff; --acc2:#a98bff;
+  --acc-fill:#2f6fe8; --on-acc:#ffffff;
+  --good:#3ccf86; --warn:#f2b64c; --bad:#ff6b6b;
+  --radius:14px; --r-ctl:10px; --r-sm:8px;
+  --side-w:240px; --head-h:52px; --dock-h:64px;
+  --shadow-1:0 1px 2px rgba(0,0,0,.25);
+  --shadow-pop:0 18px 50px -12px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06);
+  --glass:color-mix(in srgb,var(--bg2) 78%,transparent);
+  --glass-rim:inset 0 1px 0 rgba(255,255,255,.07),inset 0 0 0 1px rgba(255,255,255,.035);
+  --ease:cubic-bezier(.2,.8,.2,1);
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI Variable","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+:root[data-theme="light"]{
+  --bg:#f5f5f7; --bg2:#fbfbfd; --panel:#f5f5f7; --panel2:#ffffff; --edge:#e2e2e7; --edge2:#cfcfd6;
+  --ink:#1d1d1f; --ink2:#48484d; --ink3:#6b6b70; --acc:#0066cc; --acc2:#7b4ddb;
+  --acc-fill:#0071e3; --on-acc:#ffffff; --good:#1a8d4f; --warn:#a86a00; --bad:#d70015;
+  --shadow-1:0 1px 2px rgba(0,0,0,.05),0 0 0 1px rgba(0,0,0,.035);
+  --shadow-pop:0 20px 50px -14px rgba(0,0,0,.22),0 0 0 1px rgba(0,0,0,.06);
+  --glass:color-mix(in srgb,#ffffff 84%,transparent);
+  --glass-rim:inset 0 1px 0 rgba(255,255,255,.9),inset 0 0 0 1px rgba(0,0,0,.05);
+}
+
+/* ── Page ─────────────────────────────────────────────────────────────── */
+body{font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  font-feature-settings:"cv11","ss01";text-rendering:optimizeLegibility;
+  background:var(--bg);
+  background-image:radial-gradient(1200px 700px at 12% -10%,color-mix(in srgb,var(--acc) 9%,transparent),transparent 60%),
+                   radial-gradient(900px 600px at 100% 0%,color-mix(in srgb,var(--acc2) 7%,transparent),transparent 55%);
+  background-attachment:fixed}
+:root[data-theme="light"] body{background-image:radial-gradient(1100px 650px at 10% -10%,color-mix(in srgb,var(--acc) 6%,transparent),transparent 60%)}
+::selection{background:color-mix(in srgb,var(--acc) 35%,transparent)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--ink) 16%,transparent);border-radius:10px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background-color:color-mix(in srgb,var(--ink) 28%,transparent)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+main{background:transparent;border-top:none}
+.view{padding:24px 28px 40px}
+.view.active{animation:v36in .22s var(--ease)}
+@keyframes v36in{from{transform:translateY(6px)}to{transform:none}}
+.wrap{max-width:min(1320px,100%)}
+.view h2{font-size:22px;font-weight:650;letter-spacing:-.018em;line-height:1.25;color:var(--ink)}
+.card h2{font-size:19px;letter-spacing:-.015em;margin-top:0}
+h1,h2,h3,h4{text-wrap:balance}
+p{text-wrap:pretty}
+a{color:var(--acc);text-decoration-color:color-mix(in srgb,var(--acc) 40%,transparent);text-underline-offset:2px}
+
+/* ── Surfaces ─────────────────────────────────────────────────────────── */
+.card{background:var(--panel2);border:1px solid color-mix(in srgb,var(--edge) 75%,transparent);
+  border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-1)}
+.card .card{background:color-mix(in srgb,var(--ink) 3%,var(--panel2));box-shadow:none}
+.card h3{font-size:15px;font-weight:600;text-transform:none;letter-spacing:-.005em;color:var(--ink);margin:0 0 12px}
+.help{font-size:12.5px;color:var(--ink3);line-height:1.55;max-width:84ch}
+p.help{margin:.4em 0}
+.row{gap:10px}
+hr{border:0;border-top:1px solid var(--edge)}
+details.dd{border-color:var(--edge);background:transparent}
+.diagbox{border-color:var(--edge);background:color-mix(in srgb,var(--ink) 3%,transparent)}
+.banner{border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.5}
+.tbl,table{border-collapse:collapse}
+.tbl th{font-weight:600;color:var(--ink2);font-size:12px;text-transform:none;letter-spacing:0}
+.tbl td,.tbl th{border-color:var(--edge)}
+
+/* ── Controls ─────────────────────────────────────────────────────────── */
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),select,textarea{
+  background:color-mix(in srgb,var(--bg) 82%,transparent);border:1px solid var(--edge);border-radius:var(--r-ctl);
+  transition:border-color .15s,box-shadow .15s}
+input:not([type=checkbox]):not([type=radio]):not([type=range]):focus,select:focus,textarea:focus{
+  outline:none;border-color:color-mix(in srgb,var(--acc) 70%,var(--edge));
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 22%,transparent)}
+input::placeholder,textarea::placeholder{color:color-mix(in srgb,var(--ink3) 85%,transparent)}
+input[type=checkbox],input[type=radio],input[type=range]{accent-color:var(--acc-fill)}
+label.field{font-weight:500;color:var(--ink2)}
+
+.btn{background:var(--acc-fill);color:var(--on-acc);border:0;border-radius:var(--r-ctl);padding:9px 16px;
+  font-weight:600;font-size:13.5px;letter-spacing:-.005em;line-height:1.2;
+  transition:background .15s,transform .08s,box-shadow .15s,filter .15s;box-shadow:0 1px 0 rgba(255,255,255,.12) inset}
+.btn:hover{filter:none;background:color-mix(in srgb,var(--acc-fill) 88%,#fff)}
+.btn:active{transform:scale(.98)}
+.btn.small{background:color-mix(in srgb,var(--acc) 15%,transparent);color:var(--acc);box-shadow:none;
+  padding:6px 12px;font-size:12.5px;border-radius:var(--r-sm)}
+.btn.small:hover{background:color-mix(in srgb,var(--acc) 24%,transparent)}
+.btn.ghost{background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink);border:0;box-shadow:none}
+.btn.ghost:hover{background:color-mix(in srgb,var(--ink) 12%,transparent);border:0}
+.btn.ghost.small{color:var(--ink2)}
+.btn.ghost.small.on,.btn.ghost.on{background:color-mix(in srgb,var(--acc) 18%,transparent);color:var(--acc)}
+.btn.danger,.btn.bad{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad);box-shadow:none}
+.btn.danger:hover,.btn.bad:hover{background:color-mix(in srgb,var(--bad) 26%,transparent)}
+.btn.good{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good);box-shadow:none}
+.btn:disabled{opacity:.42;transform:none}
+/* The old light theme forced white text on every non-ghost button; tinted buttons need their accent text back. */
+:root[data-theme="light"] .btn.small:not(.ghost):not(.good):not(.danger){color:var(--acc)}
+:root[data-theme="light"] .btn.danger,:root[data-theme="light"] .btn.bad{color:var(--bad)}
+:root[data-theme="light"] .btn.good{color:var(--good)}
+.chip{background:transparent;border:1px solid var(--edge);color:var(--ink2);font-weight:500;padding:5px 12px}
+.chip:hover{border-color:var(--edge2);color:var(--ink)}
+.chip.on{background:color-mix(in srgb,var(--acc) 16%,transparent);border-color:color-mix(in srgb,var(--acc) 55%,transparent);color:var(--ink)}
+.pill-sm,.chip-sm{border-color:var(--edge)}
+.subnav{background:color-mix(in srgb,var(--ink) 5%,transparent);border-radius:12px;padding:4px;border:0}
+.subtab{border-radius:9px;color:var(--ink2);font-weight:500}
+.subtab.on{background:var(--panel2);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.25),0 0 0 1px color-mix(in srgb,var(--edge) 60%,transparent)}
+.kbd{background:color-mix(in srgb,var(--ink) 8%,transparent);border:0;border-radius:5px;font-size:11px;padding:1px 6px}
+
+/* ── Overlays: modal, palette, toast, menus ───────────────────────────── */
+.modal{background:var(--panel2);border:0;border-radius:18px;box-shadow:var(--shadow-pop)}
+#toast{background:var(--glass);-webkit-backdrop-filter:blur(24px) saturate(170%);backdrop-filter:blur(24px) saturate(170%);
+  border:0;border-radius:14px;box-shadow:var(--shadow-pop),var(--glass-rim);padding:11px 16px;font-size:13px;
+  bottom:calc(24px + env(safe-area-inset-bottom))}
+.pal{background:rgba(0,0,0,.35);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);align-items:flex-start;padding-top:12vh}
+.palbox{background:var(--glass);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);
+  border:0;border-radius:18px;box-shadow:var(--shadow-pop),var(--glass-rim);overflow:hidden}
+.palbox input{font-size:18px!important;padding:16px 18px!important;border-bottom:1px solid var(--edge)!important;background:transparent!important;box-shadow:none!important}
+.palrow{border-radius:10px;margin:2px 6px}
+.palrow.sel{background:color-mix(in srgb,var(--acc) 18%,transparent)}
+.palrow .pbadge{background:color-mix(in srgb,var(--ink) 7%,transparent);border:0;color:var(--ink3)}
+.pal36-sec{padding:8px 16px 4px;font-size:11.5px;font-weight:600;color:var(--ink3)}
+.menu,.tabmenu{border-radius:12px!important;box-shadow:var(--shadow-pop)!important;border:0!important}
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+header.top{background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(170%);backdrop-filter:blur(22px) saturate(170%);
+  border-bottom:1px solid color-mix(in srgb,var(--edge) 70%,transparent);gap:8px;
+  padding:8px 14px;padding-top:calc(8px + env(safe-area-inset-top));min-height:var(--head-h);position:relative;z-index:60}
+.brand{font-weight:650;letter-spacing:-.01em;font-size:14.5px;gap:9px}
+.brand small{display:none}
+.brand .logo{width:24px;height:24px}
+.keypill{background:transparent;border:1px solid var(--edge);color:var(--ink2);padding:5px 11px;font-size:12.5px;font-weight:500;
+  border-radius:999px;transition:background .15s,border-color .15s}
+.keypill:hover{background:color-mix(in srgb,var(--ink) 6%,transparent);border-color:var(--edge2)}
+.icon-btn{background:transparent;border:1px solid transparent;border-radius:9px;color:var(--ink2)}
+.icon-btn:hover{background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink)}
+#primarypill{border-color:color-mix(in srgb,var(--acc) 40%,var(--edge))}
+/* The search field: the one way to find anything — tabs, sections, settings, notes, chats. */
+#omnibtn.s36{display:inline-flex;align-items:center;gap:8px;min-width:min(340px,30vw);height:32px;padding:0 10px 0 11px;
+  border-radius:10px;background:color-mix(in srgb,var(--ink) 6%,transparent);border:1px solid transparent;color:var(--ink3);font-size:13px}
+#omnibtn.s36:hover{background:color-mix(in srgb,var(--ink) 9%,transparent);color:var(--ink2)}
+#omnibtn.s36 .s36-k{margin-left:auto;font-size:11px;color:var(--ink3);background:color-mix(in srgb,var(--ink) 8%,transparent);padding:1px 6px;border-radius:5px}
+.ic36{width:16px;height:16px;flex:0 0 auto;stroke-width:1.9}
+/* Secondary header controls live behind ⋯ on every screen size — six icon buttons in a row is
+   exactly the "everything is a peer" problem. They are moved, not cloned, so their handlers work. */
+@media(min-width:641px){
+  header.top>:is(#autoBtn,#projpill,#fsBtn,#popBtn,#themeBtn,#modeBtn,#helpBtn,#spendpill){display:none}
+  #tb-more{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;
+    background:transparent;border:1px solid transparent;color:var(--ink2);cursor:pointer}
+  #tb-more:hover{background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink)}
+  #tb-sheet{position:fixed;z-index:80;display:none;right:12px;top:calc(var(--head-h) + 6px + env(safe-area-inset-top));
+    flex-direction:column;align-items:stretch;gap:2px;min-width:240px;padding:6px;border-radius:14px;
+    background:var(--glass);-webkit-backdrop-filter:blur(28px) saturate(180%);backdrop-filter:blur(28px) saturate(180%);
+    box-shadow:var(--shadow-pop),var(--glass-rim)}
+  #tb-sheet.on{display:flex}
+  #tb-sheet>*{display:flex!important;justify-content:flex-start;width:100%;border:0!important;background:transparent!important;
+    border-radius:9px!important;padding:8px 10px!important;color:var(--ink)!important;font-size:13px;gap:9px;min-height:34px}
+  #tb-sheet>*:hover{background:color-mix(in srgb,var(--ink) 8%,transparent)!important}
+  #tb-sheet>*[data-l36]::after{content:attr(data-l36);color:var(--ink2)}
+}
+#tb-more .ic36{width:18px;height:18px}
+
+/* ── Agent / suggestion bar: one quiet line ───────────────────────────── */
+.agentbar{background:transparent;border-bottom:0;padding:6px 28px 0;gap:8px;flex-wrap:nowrap;min-width:0}
+.ab-sug{flex-wrap:nowrap;overflow:hidden}
+.ab-sug:not(.all) .ab-chip:not(:first-child){display:none}
+.ab-sug.all{flex-wrap:wrap}
+.ab-chip{background:color-mix(in srgb,var(--ink) 5%,transparent);border:0;padding:5px 12px;font-size:12.5px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;display:inline-block}
+.ab-chip.warn{background:color-mix(in srgb,var(--warn) 12%,transparent);border:0}
+.ab-chip b{margin-left:6px}
+.ab-off,.ab-more{border:0;background:transparent;color:var(--ink3);font-size:12px;white-space:nowrap}
+.ab-chip,.ab-chip *{white-space:nowrap!important}
+.ab-chip b{display:inline}
+.ab-chip{max-width:min(100%,720px);text-align:left}
+.ab-state:not(.busy) .ab-label{display:none}
+:root[data-shell="dock"] .ab-off{font-size:0;width:28px;height:28px;padding:0;position:relative}
+:root[data-shell="dock"] .ab-off::after{content:'';position:absolute;inset:9px;border-radius:50%;border:1.5px solid currentColor}
+:where(.wrap,.col,section,.sub)>.card+.card{margin-top:14px}
+
+/* ── Sidebar (wide screens) ───────────────────────────────────────────── */
+:root[data-shell="side"] body[data-tabpos=left] #app{grid-template-columns:var(--side-w) minmax(0,1fr);
+  grid-template-rows:auto auto minmax(0,1fr) auto;grid-template-areas:"top top" "nav banner" "nav main" "nav bar";height:100%;min-height:0}
+:root[data-shell="side"] body[data-tabpos=left] main{height:100%;min-height:0;overflow:hidden}
+:root[data-shell="side"] body[data-tabpos=left] .tabs{max-height:none;height:100%;position:relative;padding:10px 10px 24px;gap:1px;
+  background:color-mix(in srgb,var(--bg2) 55%,transparent);border-right:1px solid color-mix(in srgb,var(--edge) 70%,transparent);
+  scrollbar-width:none;align-self:stretch}
+:root[data-shell="side"] body[data-tabpos=left] .tabs:hover{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--ink) 18%,transparent) transparent}
+:root[data-shell="side"] .tabs .tab{display:flex;align-items:center;gap:10px;border:0!important;border-radius:8px;
+  padding:6px 10px;min-height:32px;font-size:13.5px;font-weight:500;color:var(--ink2);background:transparent}
+:root[data-shell="side"] .tabs .tab:hover:not(.active){background:color-mix(in srgb,var(--ink) 6%,transparent);color:var(--ink)}
+:root[data-shell="side"] .tabs .tab.active{background:color-mix(in srgb,var(--acc) 17%,transparent);color:var(--ink);font-weight:600}
+:root[data-shell="side"] .tabs .tab.active .ic36{color:var(--acc)}
+:root[data-shell="side"] .tabs .tab .ic36{color:var(--ink3)}
+:root[data-shell="side"] .tabs .tabgroup{display:flex!important;align-items:center;gap:6px;width:100%;margin:14px 0 4px;padding:4px 10px;
+  border:0!important;border-top:0!important;background:transparent!important;text-transform:none;letter-spacing:0;
+  font-size:12px;font-weight:600;color:var(--ink3);opacity:1;min-height:26px;border-radius:7px}
+:root[data-shell="side"] .tabs .tabgroup:first-child{margin-top:2px}
+:root[data-shell="side"] .tabs .tabgroup:hover{color:var(--ink2);background:color-mix(in srgb,var(--ink) 5%,transparent)!important}
+:root[data-shell="side"] .tabs .tabgroup .tg-car{order:3;margin-left:auto;opacity:.6;transition:transform .15s;display:inline-flex}
+.tg-car .ic36{width:13px;height:13px}
+:root[data-shell="side"] .tabs .tabgroup.folded .tg-car{transform:rotate(-90deg)}
+:root[data-shell="side"] .tabs .tabgroup .tg-n{order:2;background:transparent;color:var(--ink3);font-weight:500}
+:root[data-shell="side"] .tabs .tabgroup .tg-ico{display:none}
+:root[data-shell="side"] .tabs .tab-add{margin-top:12px;color:var(--ink3)}
+:root[data-shell="side"] .agentbar{padding-left:28px}
+
+/* ── Dock + all-tabs sheet (phones and narrow windows) ────────────────── */
+#dock36{display:none}
+:root[data-shell="dock"] #dock36{display:flex;position:fixed;z-index:85;left:10px;right:10px;
+  bottom:calc(8px + env(safe-area-inset-bottom));height:var(--dock-h);border-radius:22px;padding:6px;gap:2px;
+  background:var(--glass);-webkit-backdrop-filter:blur(26px) saturate(190%);backdrop-filter:blur(26px) saturate(190%);
+  box-shadow:var(--shadow-pop),var(--glass-rim)}
+#dock36 button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;
+  border:0;background:transparent;color:var(--ink2);border-radius:16px;font-size:10.5px;font-weight:600;letter-spacing:.01em;
+  transition:background .15s,color .15s}
+#dock36 button .ic36{width:22px;height:22px;stroke-width:1.8}
+#dock36 button.on{color:var(--acc);background:color-mix(in srgb,var(--acc) 13%,transparent)}
+#dock36 button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+:root[data-shell="dock"] nav.tabs{display:none}
+/* The dock floats over main, so main ends above it — views with a pinned composer (Assistant, Terminal) keep it visible. */
+:root[data-shell="dock"] main{padding-bottom:calc(var(--dock-h) + 14px + env(safe-area-inset-bottom))}
+:root[data-shell="dock"] .view{padding:16px 14px 24px}
+:root[data-shell="dock"] .agentbar{padding:6px 14px 0}
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs{display:flex;position:fixed;z-index:84;left:0;right:0;
+  top:0;bottom:0;padding:calc(var(--head-h) + env(safe-area-inset-top) + 8px) 14px calc(var(--dock-h) + 28px + env(safe-area-inset-bottom));
+  flex-direction:row;flex-wrap:wrap;align-content:flex-start;gap:8px;overflow-y:auto;overflow-x:hidden;
+  background:color-mix(in srgb,var(--bg) 95%,transparent);-webkit-backdrop-filter:blur(30px) saturate(160%);backdrop-filter:blur(30px) saturate(160%);
+  animation:v36sheet .22s var(--ease)}
+@keyframes v36sheet{from{transform:translateY(12px)}to{transform:none}}
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs .tabgroup{display:flex!important;width:100%;flex:0 0 100%;border:0!important;
+  background:transparent!important;text-transform:none;letter-spacing:0;font-size:13px;font-weight:650;color:var(--ink2);
+  padding:10px 4px 2px;margin:4px 0 0;gap:6px;align-items:center;min-height:32px}
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs .tabgroup .tg-car{order:3;margin-left:auto;display:inline-flex}
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs .tabgroup .tg-ico{display:none}
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs .tabgroup.folded .tg-car{transform:rotate(-90deg)}
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs .tab{flex:0 0 calc((100% - 16px)/3);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:6px;min-height:78px;padding:10px 4px;border:0!important;border-radius:16px;
+  background:color-mix(in srgb,var(--panel2) 92%,transparent);box-shadow:var(--shadow-1);color:var(--ink);font-size:12px;
+  font-weight:500;white-space:normal;text-align:center;line-height:1.2}
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs .tab .ic36{width:22px;height:22px;color:var(--acc)}
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs .tab.active{outline:2px solid var(--acc);outline-offset:-2px}
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs .tab-add{flex:0 0 100%}
+:root[data-shell="dock"] #toast{bottom:calc(var(--dock-h) + 22px + env(safe-area-inset-bottom))}
+:root[data-shell="dock"] header.top{z-index:86;padding:6px 10px;padding-top:calc(6px + env(safe-area-inset-top));min-height:48px}
+:root[data-shell="dock"] .brand .s36-title{font-weight:650}
+.s36-title{display:none}
+:root[data-shell="dock"] .brand .s36-title{display:inline}
+:root[data-shell="dock"] .brand .s36-name{display:none}
+:root[data-shell="dock"] #omnibtn.s36{min-width:0;width:36px;height:36px;padding:0;justify-content:center;background:transparent}
+:root[data-shell="dock"] #omnibtn.s36 :is(.s36-l,.s36-k){display:none}
+@media(max-width:640px){:root[data-onerow="1"] header.top>#omnibtn.s36.s36{display:inline-flex}}
+
+
+/* ── Assistant on a phone: a messages app, not a long page. Chat list and modes become one scrolling
+   row each, the thread takes the rest, and the composer sits on the dock. ── */
+:root[data-shell="dock"] #view-assistant{display:none;overflow:hidden;padding-bottom:10px}
+:root[data-shell="dock"] #view-assistant.active{display:flex;flex-direction:column}
+:root[data-shell="dock"] #view-assistant>.wrap{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;width:100%}
+:root[data-shell="dock"] #view-assistant .asst-shell{flex:1 1 auto;height:auto;min-height:0;display:flex;flex-direction:column;gap:8px}
+:root[data-shell="dock"] .asst-side{display:flex;flex-direction:row;align-items:center;gap:8px;border:0!important;padding:0!important;flex:0 0 auto}
+:root[data-shell="dock"] #asst-new{flex:0 0 auto;width:auto;white-space:nowrap}
+:root[data-shell="dock"] .asst-list{flex:1 1 auto;display:flex;flex-direction:row;gap:6px;overflow-x:auto;max-height:none;scrollbar-width:none}
+:root[data-shell="dock"] .asst-list>p.help{margin:0;white-space:nowrap}
+:root[data-shell="dock"] .asst-main{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+:root[data-shell="dock"] .asst-main>.row:first-child{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;flex:0 0 auto}
+:root[data-shell="dock"] #asst-modes{flex-wrap:nowrap}
+:root[data-shell="dock"] #asst-modes>*{flex:0 0 auto}
+:root[data-shell="dock"] .asst-thread{flex:1 1 auto;min-height:0;overflow:auto}
+
+/* ── Long descriptions: two lines, then "More" ────────────────────────── */
+.clamp36{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;position:relative}
+.clamp36.open{display:block;-webkit-line-clamp:unset;cursor:auto}
+.more36{display:inline-block;border:0;background:transparent;color:var(--acc);font-size:12.5px;font-weight:500;padding:0;margin:0 0 6px;cursor:pointer}
+
+/* Living: the shader replaces the static gradient; cards let a little of it through. */
+:root[data-fx="living"] body{background-image:none;background-color:transparent}
+:root[data-fx="living"] .card{background:color-mix(in srgb,var(--panel2) 90%,transparent)}
+:root[data-fx="living"] .tabs{background:transparent!important}
+
+/* Emoji in headings and buttons: kept for search and for the emoji icon style, not drawn otherwise. */
+:root:not([data-icons="emoji"]) .emo36{display:none}
+
+/* ── Fallbacks ────────────────────────────────────────────────────────── */
+@media (prefers-reduced-transparency:reduce){
+  header.top,#dock36,#toast,.palbox,#tb-sheet,:root[data-navsheet="1"] nav.tabs{background:var(--panel2)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+}
+@media (prefers-reduced-motion:reduce){.view.active,nav.tabs{animation:none!important}.btn:active{transform:none}}
+@media (prefers-contrast:more){:root{--ink2:#d0d3db;--ink3:#b3b7c2;--edge:#3b404c}}
+@media print{header.top,nav.tabs,#dock36,.agentbar{display:none!important}}
+
+/* Specs task list */
+.sp-tasks{display:flex;flex-direction:column;gap:6px}
+.sp-task{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--ink) 4%,transparent);cursor:pointer}
+.sp-task span{display:flex;flex-direction:column;gap:3px;min-width:0}
+.sp-task.ready{box-shadow:inset 3px 0 0 var(--good)}
+.sp-task.done b{text-decoration:line-through;color:var(--ink3)}
+</style>
 </head>
 <body>
 <div id="app">
@@ -2499,6 +2805,7 @@ ul.oui-list{list-style:none;padding-left:0}ul.oui-list li{display:flex;align-ite
     <button class="tab" data-view="genui">✨ Generative UI</button>
     <button class="tab" data-view="artifacts">🗂 Artifacts</button>
     <button class="tab" data-view="frameworks">🧩 Frameworks</button>
+    <button class="tab" data-view="specs">📐 Specs</button>
     <button class="tab" data-view="harnesshub">🤝 Harness Hub</button>
     <button class="tab" data-view="hsq">♻️ Harness²</button>
     <button class="tab" data-view="rea">🔬 REA</button>
@@ -3275,6 +3582,7 @@ ul.oui-list{list-style:none;padding-left:0}ul.oui-list li{display:flex;align-ite
           <div class="row" style="margin-bottom:10px">
             <label class="chip"><input type="checkbox" id="cz-icons" style="margin:0"> show icons</label>
             <label class="chip"><input type="checkbox" id="cz-labels" style="margin:0"> show labels</label>
+            <label class="chip"><input type="checkbox" id="cz-lineicons" style="margin:0"> line icons (off = emoji)</label>
           </div>
           <div id="cz-tabs"></div>
         </div>
@@ -5563,6 +5871,7 @@ ul.oui-list{list-style:none;padding-left:0}ul.oui-list li{display:flex;align-ite
     <section class="view" id="view-genui"><div class="wrap"><div id="genui-panel"></div></div></section>
     <section class="view" id="view-artifacts"><div class="wrap"><div id="art-panel"></div></div></section>
     <section class="view" id="view-frameworks"><div class="wrap"><div id="fw-panel"></div></div></section>
+    <section class="view" id="view-specs"><div class="wrap"><div id="specs-panel"></div></div></section>
     <section class="view" id="view-harnesshub"><div class="wrap"><div id="hh-panel"></div></div></section>
     <section class="view" id="view-hsq"><div class="wrap"><div id="h2-panel"></div></div></section>
     <section class="view" id="view-rea"><div class="wrap"><div id="rea-panel"></div></div></section>
@@ -6268,6 +6577,40 @@ const DEFAULT_PROVIDERS=[
    models:['openai','openai-fast','openai/gpt-oss-20b'],
    hint:'No key needed for these three models (answers arrive whole, not streamed). A free key from '+
         'enter.pollinations.ai unlocks streaming and the rest of their catalogue.'},
+  /* LLM7 — measured 27 Oct 2026: answers WITHOUT a key for its "turbo" tier (the rows whose
+     usage_based_only is false), sends Access-Control-Allow-Origin:* and streams. Its anonymous rate limit
+     is per second, not per hour ("retry after 1 s"), so it suits single questions and short chats.
+     A free token from token.llm7.io raises the limits; paste it as the key. */
+  {id:'llm7',label:'LLM7 — free, no key',base:'https://api.llm7.io/v1',key:'',on:true,viaBridge:false,anonymous:true,rpm:20,
+   models:['gpt-oss:20b','mistral-Nemo-Instruct-2407','codestral-latest','minimax-m2.7','nemotron-3-nano:30b'],
+   hint:'No account needed, with a per-second rate limit and a daily token quota per network. A free token from token.llm7.io raises both — paste it as the key.'},
+  /* Kilo's OpenRouter-compatible gateway serves its ":free" routes with no key at all (measured: 200 with
+     an answer, streaming). It sends NO Access-Control-Allow-Origin, so a browser cannot call it directly —
+     it goes through the bridge, and it only counts as available while the bridge is connected. */
+  {id:'kilo',label:'Kilo Gateway — free models, no key (needs the bridge)',base:'https://api.kilo.ai/api/openrouter',key:'',on:true,
+   viaBridge:true,anonymous:true,rpm:20,syncFilter:'(:free$|^kilo-auto/free$)',
+   models:['kilo-auto/free','nvidia/nemotron-3.5-super-vl:free','poolside/laguna-s-2.1:free','nvidia/nemotron-3-ultra-550b-a55b:free','cohere/north-mini-code:free'],
+   hint:'Free models through Kilo with no account. The gateway blocks browsers, so this runs through the local or cloud bridge.'},
+  /* Free WITH a free key. CORS checked 27 Oct 2026 with a preflight from the app's origin: Hugging Face and
+     Z.ai answer browsers; NVIDIA and SambaNova do not, so they go through the bridge. */
+  {id:'hf',label:'Hugging Face — free monthly credit (token)',base:'https://router.huggingface.co/v1',key:'',on:false,viaBridge:false,freeTier:true,rpm:20,
+   models:['openai/gpt-oss-120b','deepseek-ai/DeepSeek-V4.1-Flash','Qwen/Qwen3.8-27B','zai-org/GLM-5.3-Flash','moonshotai/Kimi-K3'],
+   hint:'A free read token from huggingface.co/settings/tokens. Every account gets a small monthly credit across the inference providers.'},
+  {id:'nvidia',label:'NVIDIA NIM — free developer key (≈40 req/min)',base:'https://integrate.api.nvidia.com/v1',key:'',on:false,viaBridge:true,freeTier:true,rpm:40,
+   models:['deepseek-ai/deepseek-v4.1-flash','moonshotai/kimi-k2.6','nvidia/nemotron-3-ultra-550b-a55b','z-ai/glm-5.3','openai/gpt-oss-20b'],
+   hint:'Free key at build.nvidia.com — for evaluation, about 40 requests a minute. Runs through the bridge (NVIDIA does not answer browsers).'},
+  {id:'sambanova',label:'SambaNova Cloud — free key',base:'https://api.sambanova.ai/v1',key:'',on:false,viaBridge:true,freeTier:true,rpm:20,
+   models:['gpt-oss-120b','DeepSeek-V3.2','Meta-Llama-3.3-70B-Instruct','MiniMax-M3.1-Flash','gemma-4-31B-it'],
+   hint:'Free key at cloud.sambanova.ai. Very fast. Runs through the bridge.'},
+  {id:'zaifree',label:'Z.ai — GLM Flash, free key',base:ZAI_GENERAL_BASE,key:'',on:false,viaBridge:false,freeTier:true,rpm:20,
+   models:['glm-4.7-flash','glm-4.5-flash'],
+   hint:'Free models on a free Z.ai key (z.ai) — GLM-4.7-Flash and GLM-4.5-Flash are priced at zero.'},
+  /* Uncensored, honestly labelled: no API serves one for free today (Venice bills free accounts per token;
+     OpenRouter's Dolphin "Venice edition" lost its :free route). These are the cheap paid ones. The free
+     route for uncensored models is local — see Help → "Free and uncensored". */
+  {id:'venice',label:'Venice — uncensored models (paid per token)',base:'https://api.venice.ai/api/v1',key:'',on:false,viaBridge:false,uncensored:true,
+   models:['venice-uncensored-1-2','venice-uncensored-role-play'],
+   hint:'Paid per token (about $0.20 in / $0.90 out per million for Venice Uncensored). Free accounts can call the API but are billed.'},
   {id:'moonshot',label:'Moonshot — Kimi',base:'https://api.moonshot.ai/v1',
    key:'',on:false,viaBridge:true,models:['kimi-k2-0905-preview','kimi-k2-turbo-preview','moonshot-v1-128k'],
    hint:'Use api.moonshot.cn instead if your account is on the mainland endpoint.'},
@@ -6333,7 +6676,7 @@ const providerById=id=>PROVIDERS.find(p=>p.id===id);
 function providerFor(model){
   const head=(model||'').split('/')[0];
   const p=providerById(head);
-  return (p&&p.on&&(p.key||p.anonymous))?p:null;
+  return (p&&p.on&&(p.key||(p.anonymous&&!(p.viaBridge&&!bridgeUp36()))))?p:null;
 }
 /* PURE. Can anything answer at all? The OpenRouter key is one way, not the only one. */
 function canRunAnything(o){
@@ -6422,11 +6765,12 @@ async function syncProviderModels(p,{quiet}={}){
       max_completion_tokens:(m.top_provider&&m.top_provider.max_completion_tokens)||m.max_output_tokens||null,
       pricing:m.pricing||null,supported_parameters:m.supported_parameters||null};
   });
-  p.synced=[...new Set(ids)];p.syncedAt=nowISO();p.syncError=null;
+  const keep=syncKeep36(p,rows,ids);
+  p.synced=[...new Set(keep)];p.syncedAt=nowISO();p.syncError=null;
   saveProviders();rebuildProviderModels();
   logEvent('model-sync',{provider:p.id,found:ids.length,route});
-  if(!quiet)toast(`${p.label}: ${ids.length} model(s) via ${route}`,3500);
-  return{ok:true,count:ids.length,route};
+  if(!quiet)toast(`${p.label}: ${keep.length} model(s) via ${route}`+(keep.length<ids.length?` (${ids.length-keep.length} need a key)`:''),3500);
+  return{ok:true,count:keep.length,route};
 }
 async function syncAllProviders(opts){
   const on=PROVIDERS.filter(p=>p.on&&p.key);
@@ -19947,6 +20291,9 @@ function toolCatalog(){
     out.push({name:'recall',description:'Restore a tool result that was offloaded to save context. '+
       'Input: {"handle":"h1234abcd"} — the handle is printed where the result used to be.',
       schema:{type:'object',properties:{handle:{type:'string'}},required:['handle']},source:'memory'});
+  if(typeof READER36!=='undefined'&&READER36.on)
+    out.push({name:'read_web_page',description:'Read a public web page as clean Markdown (title, text, links) — far fewer tokens than raw HTML. '+
+      'Input: {"url":"https://…"}.',schema:{type:'object',properties:{url:{type:'string'}},required:['url']},source:'reader'});
   /* First registration wins. Two sources advertising the same name is a real possibility once MCP
      servers are in play, and silently calling whichever happened to be last would be worse than
      picking one and saying so. */
@@ -20098,6 +20445,7 @@ async function toolInvoke(name,args){
       if(p==null)throw new Error('no offloaded result has that handle — it may be from an earlier session');
       result=p;
     }
+    else if(spec.source==='reader')  result=await readerFetch((args||{}).url);
     else if(spec.source==='ocr')     result=await ocrToolCall(name,args||{});
     else if(spec.source==='openbot') result=await openbotToolCall(name,args||{});
     else{
@@ -23403,7 +23751,7 @@ function modelParamsB(name,reported){
 let FREE=Object.assign({},FREE_DEFAULTS,store.get('freeroute',{}));
 const saveFree=()=>store.set('freeroute',FREE);
 let FREE_LOG=[];
-const FREE_PREFER=['openai','gpt-oss-20b','openai/gpt-oss-20b','Qwen3.6-27B','openai-fast','Mistral-Nemo-Instruct-2407','Mistral-7B-Instruct-v0.3'];
+const FREE_PREFER=['openai','gpt-oss-20b','gpt-oss:20b','kilo-auto/free','openai/gpt-oss-20b','Qwen3.6-27B','openai-fast','Mistral-Nemo-Instruct-2407','Mistral-7B-Instruct-v0.3'];
 const FREE_NOT_CHAT=/embed|embedding|nomic|bge-|minilm|rerank|whisper|tts|clip/i;
 /* PURE given `st` ({apiKey, providers}). Could a call to this model be answered right now? */
 function modelRunnable(model,st){
@@ -23411,7 +23759,7 @@ function modelRunnable(model,st){
   if(!model)return false;
   const head=String(model).split('/')[0];
   const p=(S.providers||[]).find(x=>x&&x.id===head);
-  if(p)return !!(p.on&&(p.key||p.anonymous));
+  if(p)return !!(p.on&&(p.key||(p.anonymous&&!(p.viaBridge&&!(S.bridge!=null?S.bridge:bridgeUp36())))));
   if(isBridge(model)||isLocal(model)||runtimeOf(model))return true;
   return !!S.apiKey;
 }
@@ -23481,7 +23829,7 @@ function renderFree(){
   const st=$('#free-status');if(!st)return;
   const c=freeCandidates();
   st.innerHTML=(c.length?'Free models that can run right now: '+c.slice(0,6).map(m=>'<span class="mono">'+esc(m)+'</span>').join(', ')+(c.length>6?' …':'')
-    :'<b>No free model can run</b> — switch on the OVHcloud no-key provider below, or connect Ollama.')+
+    :'<b>No free model can run</b> — switch on OVHcloud or LLM7 (no key) below, or connect Ollama.')+
     (FREE_LOG.length?'<br>Switched this session: '+FREE_LOG.length+' call(s), last '+esc(FREE_LOG[0].from)+' → '+esc(FREE_LOG[0].to):'');
 }
 function initFree(){
@@ -32726,6 +33074,130 @@ function gauntletCases(g){
     what:'deterministic metrics score without a model: contains and JSON schema',
     run:()=>g.DE_METRICS.contains.fn({actual:'The answer is 4',mustContain:['4','answer']})+'|'+g.DE_METRICS.json_schema.fn({actual:'{"a":1}',schema:{type:'object',required:['a']}}),expect:v=>v==='1|1',
     antiWhat:'and a missing phrase or a schema miss scores low',anti:()=>g.DE_METRICS.contains.fn({actual:'nope',mustContain:['4']})+'|'+g.DE_METRICS.json_schema.fn({actual:'{}',schema:{type:'object',required:['a']}}),antiExpect:v=>v==='0|0'});
+  /* ── pass 36: Specs (Spec Kit + Beads) and the web reader ── */
+  add({id:'spec-tasks-normalised',sub:'specs',uses:['specParseTasks'],
+    what:'a model task list is cleaned: unique ids, no self or unknown dependencies, JSON found inside prose',
+    run:()=>{const t=g.specParseTasks('Here you go: [{"id":"T1","title":"a","deps":["T1","T9"]},{"id":"T1","title":"b","deps":["T1"]}] thanks');
+      return t.map(x=>x.id+':'+x.deps.join('+')).join(',');},
+    expect:v=>v==='T1:,T1b:T1',
+    antiWhat:'and text with no list in it yields no tasks rather than an invented one',
+    anti:()=>g.specParseTasks('I could not do that.').length,antiExpect:v=>v===0});
+  add({id:'spec-ready-queue',sub:'specs',uses:['specReady','specCycles'],
+    what:'ready = open tasks whose dependencies are done; a dependency cycle is reported and never ready',
+    run:()=>{const T=[{id:'A',deps:[],status:'done'},{id:'B',deps:['A'],status:'open'},{id:'C',deps:['B'],status:'open'},
+      {id:'X',deps:['Y'],status:'open'},{id:'Y',deps:['X'],status:'open'}];
+      return g.specReady(T).map(t=>t.id).join()+'|'+g.specCycles(T).sort().join();},
+    expect:v=>v==='B|X,Y',
+    antiWhat:'and with every dependency done, the blocked task becomes ready',
+    anti:()=>g.specReady([{id:'A',deps:[],status:'done'},{id:'B',deps:['A'],status:'done'},{id:'C',deps:['B'],status:'open'}]).map(t=>t.id).join(),antiExpect:v=>v==='C'});
+  add({id:'spec-beads-export',sub:'specs',uses:['specJsonl','specHandoff'],
+    what:'the Beads export is one JSON issue per line with blocking dependencies, and a hand-off names exactly one task',
+    run:()=>{const it={slug:'login',title:'Login',spec:'S',plan:'P',tasks:[{id:'T1',title:'a',detail:'',deps:[],status:'done'},{id:'T2',title:'b',detail:'d',deps:['T1'],status:'open'}]};
+      const l=g.specJsonl(it).split('\n').map(x=>JSON.parse(x));
+      const h=g.specHandoff('C',it,it.tasks[1]);
+      return [l.length,l[0].status,l[1].dependencies[0].depends_on_id,/# Task T2: b/.test(h),/T1 a/.test(h)].join(',');},
+    expect:v=>v==='2,closed,login-T1,true,true',
+    antiWhat:'and an item with no tasks exports nothing',
+    anti:()=>g.specJsonl({slug:'x',tasks:[]}),antiExpect:v=>v===''});
+  add({id:'reader-public-only',sub:'tools',uses:['readerUrlOk','toolCatalog'],
+    what:'the web reader takes only public http(s) pages, and agents see it as a tool',
+    run:()=>[g.readerUrlOk('https://example.com/a'),g.toolCatalog().some(t=>t.name==='read_web_page'&&t.source==='reader')].join(','),
+    expect:v=>v==='true,true',
+    antiWhat:'and local or private addresses are never handed to a third party',
+    anti:()=>['http://localhost:3000','http://127.0.0.1','http://192.168.1.4','http://10.0.0.2','file:///etc/passwd','http://[::1]/','http://printer.local'].filter(g.readerUrlOk).length,antiExpect:v=>v===0});
+
+  /* ── pass 36: free providers ── */
+  add({id:'nokey-sync-keeps-free',sub:'providers',uses:['syncKeep36'],
+    what:'a no-key provider keeps only the models that answer without a key (LLM7 tiers, Kilo :free ids)',
+    run:()=>{const l=g.syncKeep36({anonymous:true,key:''},[{id:'a',usage_based_only:false},{id:'b',usage_based_only:true}],['a','b']);
+      const k=g.syncKeep36({anonymous:true,key:'',syncFilter:'(:free$|^kilo-auto/free$)'},[],['x/y:free','x/z','kilo-auto/free']);
+      return l.join()+'|'+k.join();},
+    expect:v=>v==='a|x/y:free,kilo-auto/free',
+    antiWhat:'and with a key in, nothing is filtered',
+    anti:()=>g.syncKeep36({anonymous:true,key:'k',syncFilter:':free$'},[{id:'b',usage_based_only:true}],['b','x/z']).join(),antiExpect:v=>v==='b,x/z'});
+  add({id:'bridge-only-free-needs-bridge',sub:'providers',uses:['modelRunnable'],
+    what:'a no-key provider that blocks browsers counts as runnable only while the bridge is connected',
+    run:()=>{const P=[{id:'kilo',on:true,anonymous:true,viaBridge:true,key:''}];
+      return g.modelRunnable('kilo/x',{providers:P,bridge:false})+','+g.modelRunnable('kilo/x',{providers:P,bridge:true});},
+    expect:v=>v==='false,true',
+    antiWhat:'and a browser-friendly no-key provider runs without one',
+    anti:()=>g.modelRunnable('llm7/x',{providers:[{id:'llm7',on:true,anonymous:true,viaBridge:false,key:''}],bridge:false}),antiExpect:v=>v===true});
+
+  /* ── pass 36: shell, icons, contrast, clamping ── */
+  add({id:'shell-mode-by-width',sub:'ui',uses:['shellMode36','tabPosFor36'],
+    what:'wide screens get the sidebar, narrow ones the dock, and a chosen tab position is kept',
+    run:()=>[g.shellMode36(1440),g.shellMode36(393,'auto'),g.shellMode36(1440,'top'),
+      g.tabPosFor36(1440,'auto'),g.tabPosFor36(393,'auto'),g.tabPosFor36(393,'right')].join(','),
+    expect:v=>v==='side,dock,classic,left,top,right',
+    antiWhat:'and the boundary belongs to the sidebar, not the dock',
+    anti:()=>g.shellMode36(900,'auto')+','+g.shellMode36(899,'auto'),antiExpect:v=>v==='side,dock'});
+
+  add({id:'tab-face-line-icons',sub:'ui',uses:['tabFace36','ICONS36'],
+    what:'a tab shows a drawn icon and its name, keeps an accessible name without a label, and emoji style still works',
+    run:()=>{const keep={s:g.UI.iconStyle,i:g.UI.showTabIcons,l:g.UI.showTabLabels,ti:g.UI.tabIcons};
+      try{const t={id:'lab',text:'Reason Lab',icon:'🔬',el:document.createElement('button')};
+        g.UI.iconStyle='line';g.UI.showTabIcons=true;g.UI.showTabLabels=true;g.UI.tabIcons={};
+        g.tabFace36(t);const line=!!t.el.querySelector('svg')&&t.el.textContent.trim()==='Reason Lab';
+        g.UI.showTabLabels=false;g.tabFace36(t);const named=t.el.getAttribute('aria-label')==='Reason Lab'&&!t.el.textContent.trim();
+        g.UI.showTabLabels=true;g.UI.iconStyle='emoji';g.tabFace36(t);const emoji=t.el.textContent.includes('🔬')&&!t.el.querySelector('svg');
+        return [line,named,emoji].join(',');
+      }finally{g.UI.iconStyle=keep.s;g.UI.showTabIcons=keep.i;g.UI.showTabLabels=keep.l;g.UI.tabIcons=keep.ti;}},
+    expect:v=>v==='true,true,true',
+    antiWhat:'and a tab with no drawn icon falls back to its emoji rather than going blank',
+    anti:()=>{const keep=g.UI.iconStyle;try{g.UI.iconStyle='line';const t={id:'no-such-tab',text:'X',icon:'🧪',el:document.createElement('button')};
+      g.tabFace36(t);return t.el.textContent.includes('🧪');}finally{g.UI.iconStyle=keep;}},antiExpect:v=>v===true});
+
+  add({id:'text-contrast-aa',sub:'a11y',uses:['contrast36'],
+    what:'every text colour of the design system reads at 4.5:1 or better on its surfaces, in dark and light',
+    run:()=>{const css=(document.getElementById('ds36')||{}).textContent||'';
+      const blocks=[css.match(/:root\{([^}]*)\}/),css.match(/:root\[data-theme="light"\]\{([^}]*)\}/)].map(m=>m?m[1]:'');
+      const bad=[];
+      blocks.forEach((b,bi)=>{const v=k=>(b.match(new RegExp('--'+k+':\\s*(#[0-9a-fA-F]{6})'))||[])[1];
+        [['ink','bg'],['ink','panel2'],['ink2','panel2'],['ink3','panel2'],['ink3','bg'],['acc','panel2'],['acc','bg'],['on-acc','acc-fill']]
+          .forEach(([f,s])=>{const r=g.contrast36(v(f),v(s));if(!(r>=4.5))bad.push((bi?'light ':'dark ')+f+'/'+s+'='+r);});});
+      return bad.length?bad.join('; '):'aa';},
+    expect:v=>v==='aa',
+    antiWhat:'and the check can fail: mid-grey on mid-grey is far below 4.5',
+    anti:()=>g.contrast36('#777777','#888888'),antiExpect:v=>v>0&&v<4.5});
+
+  add({id:'long-prose-clamps',sub:'ui',uses:['clamp36'],
+    what:'a long description folds to two lines with a More button; short text and text holding a control are left alone',
+    run:()=>{const box=document.createElement('div');box.style.cssText='position:fixed;left:-2000px;top:0;width:300px';
+      const long='This explains at length why the feature exists and what it measures, '.repeat(6);
+      box.innerHTML=`<div class="card"><p id="c36a">${long}</p><p id="c36b">Short note.</p><p id="c36c">${long}<button>x</button></p></div>`;
+      document.body.appendChild(box);
+      try{g.clamp36(box);
+        const a=box.querySelector('#c36a'),b=box.querySelector('#c36b'),c=box.querySelector('#c36c');
+        return [a.classList.contains('clamp36')&&!!(a.nextElementSibling&&a.nextElementSibling.classList.contains('more36')),
+          !b.classList.contains('clamp36'),!c.classList.contains('clamp36')].join(',');
+      }finally{box.remove();}},
+    expect:v=>v==='true,true,true',
+    antiWhat:'and a paragraph that already fits is not given a pointless More button',
+    anti:()=>{const box=document.createElement('div');box.style.cssText='position:fixed;left:-4000px;top:0;width:4000px';
+      box.innerHTML=`<div class="card"><p>${'word '.repeat(60)}</p></div>`;document.body.appendChild(box);
+      try{g.clamp36(box);return box.querySelectorAll('.more36').length;}finally{box.remove();}},antiExpect:v=>v===0});
+
+  add({id:'dock-targets-real',sub:'ui',uses:['DOCK36'],
+    what:'every dock button points at a tab that exists, so the phone dock cannot lead nowhere',
+    run:()=>{const ids=new Set((g.REGISTRY||{tabs:[]}).tabs.map(t=>t.id));
+      const miss=g.DOCK36.filter(([id])=>id!=='__all'&&!ids.has(id)).map(([id])=>id);
+      return g.DOCK36.length===5&&!miss.length?'ok':'missing:'+miss.join(',');},
+    expect:v=>v==='ok',
+    antiWhat:'and a renamed tab would be caught',
+    anti:()=>{const ids=new Set((g.REGISTRY||{tabs:[]}).tabs.map(t=>t.id));return ids.has('no-such-tab-36');},antiExpect:v=>v===false});
+
+  add({id:'light-tinted-buttons-readable',sub:'a11y',uses:['contrast36'],
+    what:'in the light theme a secondary (tinted) button keeps dark accent text, not white on a pale tint',
+    run:()=>{const de=document.documentElement,keep=de.getAttribute('data-theme');const b=document.createElement('button');
+      b.className='btn small';b.textContent='x';document.body.appendChild(b);
+      try{de.setAttribute('data-theme','light');return getComputedStyle(b).color;}finally{b.remove();de.setAttribute('data-theme',keep||'dark');}},
+    expect:v=>v!=='rgb(255, 255, 255)'&&/^rgb/.test(v),
+    antiWhat:'and the primary button in the light theme is white on solid blue',
+    anti:()=>{const de=document.documentElement,keep=de.getAttribute('data-theme');const b=document.createElement('button');
+      b.className='btn';b.textContent='x';document.body.appendChild(b);
+      try{de.setAttribute('data-theme','light');return getComputedStyle(b).color;}finally{b.remove();de.setAttribute('data-theme',keep||'dark');}},
+    antiExpect:v=>v==='rgb(255, 255, 255)'});
+
   add({id:'fixture-chat-sweep',sub:'resilience',uses:['fixtureChatSweep'],
     what:'chats left behind by the old fork self-test are removed, and nothing else is',
     run:()=>{const fx=[{id:'a',title:'fixture',msgs:[{role:'user',content:'Q'},{role:'assistant',content:'A'},{role:'user',content:'Q2'}]},
@@ -35686,12 +36158,12 @@ function gauntletCases(g){
   add({id:'render-escapes',sub:'rendering',uses:['esc'],
     what:'user text with markup is escaped before it reaches innerHTML',
     run:()=>{const host=document.createElement('div');
-      host.innerHTML='<span>'+g.esc('<img src=x onerror=alert(1)>')+'</span>';
+      host.innerHTML='<span>'+g.esc('<img data-gb-probe>')+'</span>';
       const injected=host.querySelectorAll('img').length;host.remove();return injected;},
     expect:v=>v===0,
     antiWhat:'unescaped markup genuinely would inject (proving the test is live)',
     anti:()=>{const host=document.createElement('div');
-      host.innerHTML='<span>'+'<img src=x>'+'</span>';
+      host.innerHTML='<span>'+'<img data-gb-probe>'+'</span>';
       const injected=host.querySelectorAll('img').length;host.remove();return injected;},
     antiExpect:v=>v===1});
   add({id:'render-panels-mount',sub:'rendering',uses:['renderGauntlet','renderNotify'],
@@ -39121,6 +39593,17 @@ const GAUNTLET_SABOTAGE=[
   {id:'cognee-dupes',export:'cogneeAdd',why:'the graph fills with duplicate edges',broken:()=>(G,t)=>{const g2=G||{nodes:{},edges:[]};(t||[]).forEach(x=>g2.edges.push({s:x.subject,p:x.predicate,o:x.object}));return g2;}},
   {id:'langfuse-flat',export:'lfBatch',why:'traces lose their generations and nesting',broken:()=>()=>({batch:[{type:'trace-create',body:{}}],traceId:'T'})},
   {id:'residue-sweep-noop',export:'gauntletResidueSweep',why:'old self-test fixtures stay in the activity log and Creations',broken:()=>()=>({s:{},n:{}})},
+  {id:'spec-parse-raw',export:'specParseTasks',why:'self-dependencies and duplicate ids survive into the task list',broken:()=>x=>Array.isArray(x)?x:JSON.parse((String(x).match(/\[[\s\S]*\]/)||['[]'])[0]).map(t=>Object.assign({status:'open',deps:[]},t))},
+  {id:'spec-ready-all',export:'specReady',why:'blocked tasks are offered as ready',broken:()=>T=>(T||[]).filter(t=>t.status!=='done')},
+  {id:'spec-jsonl-flat',export:'specJsonl',why:'the Beads export drops dependencies',broken:()=>it=>(it.tasks||[]).map(t=>JSON.stringify({id:t.id,title:t.title,status:'open',dependencies:[]})).join('\n')},
+  {id:'reader-any-url',export:'readerUrlOk',why:'local and private addresses are sent to the reader service',broken:()=>()=>true},
+  {id:'sync-keeps-paid',export:'syncKeep36',why:'no-key providers list models that refuse without a key',broken:()=>(p,r,ids)=>ids},
+  {id:'shell-always-classic',export:'shellMode36',why:'every screen keeps the old 57-tab strip',broken:()=>()=>'classic'},
+  {id:'tabface-no-icon',export:'tabFace36',why:'tabs lose their icons and icon-only tabs lose their names',broken:()=>t=>{t.el.textContent=t.text;}},
+  {id:'contrast-always-passes',export:'contrast36',why:'the AA check approves any colour pair',broken:()=>()=>21},
+  {id:'clamp-noop',export:'clamp36',why:'long descriptions are never folded',broken:()=>()=>{}},
+  {id:'dock-dead-target',export:'DOCK36',why:'a dock button leads to a tab that does not exist',broken:()=>[['nope','X'],['lab','R'],['gen','C'],['brain','B'],['__all','All']]},
+
   {id:'sandbox-noop',export:'gauntletSandbox',why:'self-test fixtures stay in the person\'s data',broken:()=>()=>()=>{}},
   {id:'fixture-sweep-noop',export:'fixtureChatSweep',why:'the old self-test chats stay in the list',broken:()=>l=>l},
   {id:'junk-sweep-noop',export:'storageJunkSweep',why:'the WebKit residue stays in storage',broken:()=>()=>false},
@@ -39139,23 +39622,19 @@ const GAUNTLET_SABOTAGE=[
   {id:'temporal-leak',export:'memoryParts',why:'the clock leaks into the cached prefix',
    broken:()=>(model,task,o)=>({stable:'TIME AND BUDGET\nNow: leaked',volatile:'',meta:null})},
 ];
-function gauntletSabotage(){
-  const g=window.__gb;
-  const report=[];
-  const baseline=gauntletRun();
-  GAUNTLET_SABOTAGE.forEach(s=>{
-    const original=g[s.export];
-    if(original===undefined){report.push({id:s.id,caught:false,note:'export missing — cannot sabotage'});return;}
-    try{
-      g[s.export]=s.broken();
-      const r=gauntletRun();
-      report.push({id:s.id,export:s.export,why:s.why,caught:r.failed>0,
-        failedCases:r.results.filter(x=>!x.ok).map(x=>x.id)});
-    }finally{
-      g[s.export]=original;                        // unconditional restore
-    }
-  });
-  const after=gauntletRun();
+/* One sabotage: swap the export for its broken version, run the suite, restore unconditionally. */
+function sabotageOne(s){
+  const g=window.__gb,original=g[s.export];
+  if(original===undefined)return{id:s.id,caught:false,note:'export missing — cannot sabotage'};
+  try{
+    g[s.export]=s.broken();
+    const r=gauntletRun();
+    return{id:s.id,export:s.export,why:s.why,caught:r.failed>0,failedCases:r.results.filter(x=>!x.ok).map(x=>x.id)};
+  }finally{
+    g[s.export]=original;                        // unconditional restore
+  }
+}
+function sabotageSummary(baseline,report,after){
   return{baselineGreen:baseline.green,
     sabotages:report.length,
     caught:report.filter(r=>r.caught).length,
@@ -39168,6 +39647,29 @@ function gauntletSabotage(){
       ?'The suite can go red: every sabotage was caught, and the app was restored to green.'
       :`Coverage hole: ${report.filter(r=>!r.caught).length} sabotage(s) went undetected.`,
     report};
+}
+/* Synchronous, for scripts and tests. The UI uses gauntletSabotageAsync. */
+function gauntletSabotage(){
+  const baseline=gauntletRun();
+  const report=GAUNTLET_SABOTAGE.map(sabotageOne);
+  return sabotageSummary(baseline,report,gauntletRun());
+}
+/* The same work in ~250 ms slices, yielding between them so the page stays responsive and progress can be shown. */
+function gauntletSabotageAsync(onStep){
+  return new Promise((resolve,reject)=>{
+    const list=GAUNTLET_SABOTAGE.slice(),report=[];let i=0,baseline=null;
+    const step=()=>{
+      try{
+        if(!baseline)baseline=gauntletRun();
+        const t0=performance.now();
+        while(i<list.length&&performance.now()-t0<250)report.push(sabotageOne(list[i++]));
+        if(onStep)try{onStep(i,list.length);}catch(_){}
+        if(i<list.length)return setTimeout(step,0);
+        resolve(sabotageSummary(baseline,report,gauntletRun()));
+      }catch(e){reject(e);}
+    };
+    setTimeout(step,0);
+  });
 }
 function gauntletReport(run){
   const r=run||GAUNTLET_LAST;
@@ -41113,7 +41615,9 @@ function renderGauntletInto(host){
   $('.gt-sabotage',host).onclick=()=>{
     if(GAUNTLET_BUSY)return; GAUNTLET_BUSY=true;
     out().innerHTML='<p class="help">deliberately breaking each guard in turn…</p>';
-    setTimeout(()=>{const sab=gauntletSabotage();GAUNTLET_BUSY=false;
+    gauntletSabotageAsync((i,n)=>{const o=out();if(o)o.innerHTML='<p class="help">Breaking guard '+i+' of '+n+' — the page stays usable while this runs.</p>';})
+    .catch(e=>{GAUNTLET_BUSY=false;toast('Sabotage run stopped: '+(e&&e.message||e),6000);return null;})
+    .then(sab=>{if(!sab)return;GAUNTLET_BUSY=false;
       out().innerHTML=`
       <div class="ds-audit">
         <div class="ds-arow${sab.caught===sab.sabotages&&sab.restoredGreen?'':' fail'}">
@@ -41126,7 +41630,7 @@ function renderGauntletInto(host){
             ? 'caught by: '+esc((x.failedCases||[]).slice(0,4).join(', '))
             : '<b style="color:var(--bad)">NOT CAUGHT — coverage hole</b>'}</div></div></div>`).join('')}
       </div>`;
-      toast(sab.verdict,8000);renderGauntlet();},20);
+      toast(sab.verdict,8000);renderGauntlet();});
   };
   $('.gt-export',host).onclick=()=>{
     if(!GAUNTLET_LAST){toast('Run it first');return;}
@@ -52902,6 +53406,462 @@ FW_DEMOS.push(
    input:'What is 2+2?',run:async(v,opt)=>deEvaluate([{name:'math',input:v,actual:'2+2 is 4.',expected:'4',mustContain:['4'],context:['Arithmetic: 2+2=4']}],
      [{name:'contains',threshold:1},{name:'length',threshold:1},{name:'answer_relevancy',threshold:0.7},{name:'faithfulness',threshold:0.7}],opt)});
 
+/* Line icons — Lucide v0.469.0 (ISC, lucide.dev). Inner SVG only; ic36() wraps them. */
+const ICONS36={"modelhub":"<svg class=\"lucide lucide-sliders-horizontal\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <line x1=\"21\" x2=\"14\" y1=\"4\" y2=\"4\"/> <line x1=\"10\" x2=\"3\" y1=\"4\" y2=\"4\"/> <line x1=\"21\" x2=\"12\" y1=\"12\" y2=\"12\"/> <line x1=\"8\" x2=\"3\" y1=\"12\" y2=\"12\"/> <line x1=\"21\" x2=\"16\" y1=\"20\" y2=\"20\"/> <line x1=\"12\" x2=\"3\" y1=\"20\" y2=\"20\"/> <line x1=\"14\" x2=\"14\" y1=\"2\" y2=\"6\"/> <line x1=\"8\" x2=\"8\" y1=\"10\" y2=\"14\"/> <line x1=\"16\" x2=\"16\" y1=\"18\" y2=\"22\"/>","assistant":"<svg class=\"lucide lucide-message-circle\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M7.9 20A9 9 0 1 0 4 16.1L2 22Z\"/>","vo":"<svg class=\"lucide lucide-building-2\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z\"/> <path d=\"M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2\"/> <path d=\"M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2\"/> <path d=\"M10 6h4\"/> <path d=\"M10 10h4\"/> <path d=\"M10 14h4\"/> <path d=\"M10 18h4\"/>","bots":"<svg class=\"lucide lucide-bot\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M12 8V4H8\"/> <rect width=\"16\" height=\"12\" x=\"4\" y=\"8\" rx=\"2\"/> <path d=\"M2 14h2\"/> <path d=\"M20 14h2\"/> <path d=\"M15 13v2\"/> <path d=\"M9 13v2\"/>","study":"<svg class=\"lucide lucide-graduation-cap\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z\"/> <path d=\"M22 10v6\"/> <path d=\"M6 12.5V16a6 3 0 0 0 12 0v-3.5\"/>","lab":"<svg class=\"lucide lucide-flask-conical\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2\"/> <path d=\"M6.453 15h11.094\"/> <path d=\"M8.5 2h7\"/>","relay":"<svg class=\"lucide lucide-repeat\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m17 2 4 4-4 4\"/> <path d=\"M3 11v-1a4 4 0 0 1 4-4h14\"/> <path d=\"m7 22-4-4 4-4\"/> <path d=\"M21 13v1a4 4 0 0 1-4 4H3\"/>","ops":"<svg class=\"lucide lucide-gauge\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m12 14 4-4\"/> <path d=\"M3.34 19a10 10 0 1 1 17.32 0\"/>","library":"<svg class=\"lucide lucide-library\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m16 6 4 14\"/> <path d=\"M12 6v14\"/> <path d=\"M8 8v12\"/> <path d=\"M4 4v16\"/>","mission":"<svg class=\"lucide lucide-satellite\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M13 7 9 3 5 7l4 4\"/> <path d=\"m17 11 4 4-4 4-4-4\"/> <path d=\"m8 12 4 4 6-6-4-4Z\"/> <path d=\"m16 8 3-3\"/> <path d=\"M9 21a6 6 0 0 0-6-6\"/>","pane":"<svg class=\"lucide lucide-scan-eye\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M3 7V5a2 2 0 0 1 2-2h2\"/> <path d=\"M17 3h2a2 2 0 0 1 2 2v2\"/> <path d=\"M21 17v2a2 2 0 0 1-2 2h-2\"/> <path d=\"M7 21H5a2 2 0 0 1-2-2v-2\"/> <circle cx=\"12\" cy=\"12\" r=\"1\"/> <path d=\"M18.944 12.33a1 1 0 0 0 0-.66 7.5 7.5 0 0 0-13.888 0 1 1 0 0 0 0 .66 7.5 7.5 0 0 0 13.888 0\"/>","terminal":"<svg class=\"lucide lucide-square-terminal\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m7 11 2-2-2-2\"/> <path d=\"M11 13h4\"/> <rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" ry=\"2\"/>","metrics":"<svg class=\"lucide lucide-chart-column\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M3 3v16a2 2 0 0 0 2 2h16\"/> <path d=\"M18 17V9\"/> <path d=\"M13 17V5\"/> <path d=\"M8 17v-3\"/>","creations":"<svg class=\"lucide lucide-shapes\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z\"/> <rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/> <circle cx=\"17.5\" cy=\"17.5\" r=\"3.5\"/>","customise":"<svg class=\"lucide lucide-palette\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <circle cx=\"13.5\" cy=\"6.5\" r=\".5\" fill=\"currentColor\"/> <circle cx=\"17.5\" cy=\"10.5\" r=\".5\" fill=\"currentColor\"/> <circle cx=\"8.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\"/> <circle cx=\"6.5\" cy=\"12.5\" r=\".5\" fill=\"currentColor\"/> <path d=\"M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z\"/>","forge":"<svg class=\"lucide lucide-hammer\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m15 12-8.373 8.373a1 1 0 1 1-3-3L12 9\"/> <path d=\"m18 15 4-4\"/> <path d=\"m21.5 11.5-1.914-1.914A2 2 0 0 1 19 8.172V7l-2.26-2.26a6 6 0 0 0-4.202-1.756L9 2.96l.92.82A6.18 6.18 0 0 1 12 8.4V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5\"/>","brain":"<svg class=\"lucide lucide-brain\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z\"/> <path d=\"M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z\"/> <path d=\"M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4\"/> <path d=\"M17.599 6.5a3 3 0 0 0 .399-1.375\"/> <path d=\"M6.003 5.125A3 3 0 0 0 6.401 6.5\"/> <path d=\"M3.477 10.896a4 4 0 0 1 .585-.396\"/> <path d=\"M19.938 10.5a4 4 0 0 1 .585.396\"/> <path d=\"M6 18a4 4 0 0 1-1.967-.516\"/> <path d=\"M19.967 17.484A4 4 0 0 1 18 18\"/>","factory":"<svg class=\"lucide lucide-factory\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z\"/> <path d=\"M17 18h1\"/> <path d=\"M12 18h1\"/> <path d=\"M7 18h1\"/>","viz":"<svg class=\"lucide lucide-orbit\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <circle cx=\"12\" cy=\"12\" r=\"3\"/> <circle cx=\"19\" cy=\"5\" r=\"2\"/> <circle cx=\"5\" cy=\"19\" r=\"2\"/> <path d=\"M10.4 21.9a10 10 0 0 0 9.941-15.416\"/> <path d=\"M13.5 2.1a10 10 0 0 0-9.841 15.416\"/>","gen":"<svg class=\"lucide lucide-clapperboard\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z\"/> <path d=\"m6.2 5.3 3.1 3.9\"/> <path d=\"m12.4 3.4 3.1 4\"/> <path d=\"M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z\"/>","design":"<svg class=\"lucide lucide-pen-tool\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M15.707 21.293a1 1 0 0 1-1.414 0l-1.586-1.586a1 1 0 0 1 0-1.414l5.586-5.586a1 1 0 0 1 1.414 0l1.586 1.586a1 1 0 0 1 0 1.414z\"/> <path d=\"m18 13-1.375-6.874a1 1 0 0 0-.746-.776L3.235 2.028a1 1 0 0 0-1.207 1.207L5.35 15.879a1 1 0 0 0 .776.746L13 18\"/> <path d=\"m2.3 2.3 7.286 7.286\"/> <circle cx=\"11\" cy=\"11\" r=\"2\"/>","local":"<svg class=\"lucide lucide-cpu\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <rect width=\"16\" height=\"16\" x=\"4\" y=\"4\" rx=\"2\"/> <rect width=\"6\" height=\"6\" x=\"9\" y=\"9\" rx=\"1\"/> <path d=\"M15 2v2\"/> <path d=\"M15 20v2\"/> <path d=\"M2 15h2\"/> <path d=\"M2 9h2\"/> <path d=\"M20 15h2\"/> <path d=\"M20 9h2\"/> <path d=\"M9 2v2\"/> <path d=\"M9 20v2\"/>","graphs":"<svg class=\"lucide lucide-waypoints\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <circle cx=\"12\" cy=\"4.5\" r=\"2.5\"/> <path d=\"m10.2 6.3-3.9 3.9\"/> <circle cx=\"4.5\" cy=\"12\" r=\"2.5\"/> <path d=\"M7 12h10\"/> <circle cx=\"19.5\" cy=\"12\" r=\"2.5\"/> <path d=\"m13.8 17.7 3.9-3.9\"/> <circle cx=\"12\" cy=\"19.5\" r=\"2.5\"/>","guards":"<svg class=\"lucide lucide-shield-check\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\"/> <path d=\"m9 12 2 2 4-4\"/>","office":"<svg class=\"lucide lucide-file-text\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\"/> <path d=\"M14 2v4a2 2 0 0 0 2 2h4\"/> <path d=\"M10 9H8\"/> <path d=\"M16 13H8\"/> <path d=\"M16 17H8\"/>","reverse":"<svg class=\"lucide lucide-wrench\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\"/>","devices":"<svg class=\"lucide lucide-smartphone\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <rect width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\"/> <path d=\"M12 18h.01\"/>","handoff":"<svg class=\"lucide lucide-send\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z\"/> <path d=\"m21.854 2.147-10.94 10.939\"/>","spline":"<svg class=\"lucide lucide-spline\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <circle cx=\"19\" cy=\"5\" r=\"2\"/> <circle cx=\"5\" cy=\"19\" r=\"2\"/> <path d=\"M5 17A12 12 0 0 1 17 5\"/>","three":"<svg class=\"lucide lucide-box\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z\"/> <path d=\"m3.3 7 8.7 5 8.7-5\"/> <path d=\"M12 22V12\"/>","studio":"<svg class=\"lucide lucide-code-xml\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m18 16 4-4-4-4\"/> <path d=\"m6 8-4 4 4 4\"/> <path d=\"m14.5 4-5 16\"/>","council":"<svg class=\"lucide lucide-landmark\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <line x1=\"3\" x2=\"21\" y1=\"22\" y2=\"22\"/> <line x1=\"6\" x2=\"6\" y1=\"18\" y2=\"11\"/> <line x1=\"10\" x2=\"10\" y1=\"18\" y2=\"11\"/> <line x1=\"14\" x2=\"14\" y1=\"18\" y2=\"11\"/> <line x1=\"18\" x2=\"18\" y1=\"18\" y2=\"11\"/> <polygon points=\"12 2 20 7 4 7\"/>","compare":"<svg class=\"lucide lucide-scale\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z\"/> <path d=\"m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z\"/> <path d=\"M7 21h10\"/> <path d=\"M12 3v18\"/> <path d=\"M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2\"/>","transplant":"<svg class=\"lucide lucide-dna\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m10 16 1.5 1.5\"/> <path d=\"m14 8-1.5-1.5\"/> <path d=\"M15 2c-1.798 1.998-2.518 3.995-2.807 5.993\"/> <path d=\"m16.5 10.5 1 1\"/> <path d=\"m17 6-2.891-2.891\"/> <path d=\"M2 15c6.667-6 13.333 0 20-6\"/> <path d=\"m20 9 .891.891\"/> <path d=\"M3.109 14.109 4 15\"/> <path d=\"m6.5 12.5 1 1\"/> <path d=\"m7 18 2.891 2.891\"/> <path d=\"M9 22c1.798-1.998 2.518-3.995 2.807-5.993\"/>","models":"<svg class=\"lucide lucide-book-open\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M12 7v14\"/> <path d=\"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z\"/>","history":"<svg class=\"lucide lucide-history\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8\"/> <path d=\"M3 3v5h5\"/> <path d=\"M12 7v5l4 2\"/>","awards":"<svg class=\"lucide lucide-trophy\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M6 9H4.5a2.5 2.5 0 0 1 0-5H6\"/> <path d=\"M18 9h1.5a2.5 2.5 0 0 0 0-5H18\"/> <path d=\"M4 22h16\"/> <path d=\"M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22\"/> <path d=\"M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22\"/> <path d=\"M18 2H6v7a6 6 0 0 0 12 0V2Z\"/>","jev":"<svg class=\"lucide lucide-zap\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z\"/>","systemone":"<svg class=\"lucide lucide-target\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <circle cx=\"12\" cy=\"12\" r=\"10\"/> <circle cx=\"12\" cy=\"12\" r=\"6\"/> <circle cx=\"12\" cy=\"12\" r=\"2\"/>","router":"<svg class=\"lucide lucide-split\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M16 3h5v5\"/> <path d=\"M8 3H3v5\"/> <path d=\"M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3\"/> <path d=\"m15 9 6-6\"/>","analysis":"<svg class=\"lucide lucide-chart-pie\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M21 12c.552 0 1.005-.449.95-.998a10 10 0 0 0-8.953-8.951c-.55-.055-.998.398-.998.95v8a1 1 0 0 0 1 1z\"/> <path d=\"M21.21 15.89A10 10 0 1 1 8 2.83\"/>","evolve":"<svg class=\"lucide lucide-trending-up\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <polyline points=\"22 7 13.5 15.5 8.5 10.5 2 17\"/> <polyline points=\"16 7 22 7 22 13\"/>","hlab":"<svg class=\"lucide lucide-test-tube\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M14.5 2v17.5c0 1.4-1.1 2.5-2.5 2.5c-1.4 0-2.5-1.1-2.5-2.5V2\"/> <path d=\"M8.5 2h7\"/> <path d=\"M14.5 16h-5\"/>","playbooks":"<svg class=\"lucide lucide-compass\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z\"/> <circle cx=\"12\" cy=\"12\" r=\"10\"/>","learn":"<svg class=\"lucide lucide-lightbulb\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\"/> <path d=\"M9 18h6\"/> <path d=\"M10 22h4\"/>","genui":"<svg class=\"lucide lucide-wand-sparkles\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72\"/> <path d=\"m14 7 3 3\"/> <path d=\"M5 6v4\"/> <path d=\"M19 14v4\"/> <path d=\"M10 2v2\"/> <path d=\"M7 8H3\"/> <path d=\"M21 16h-4\"/> <path d=\"M11 3H9\"/>","artifacts":"<svg class=\"lucide lucide-archive\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <rect width=\"20\" height=\"5\" x=\"2\" y=\"3\" rx=\"1\"/> <path d=\"M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8\"/> <path d=\"M10 12h4\"/>","frameworks":"<svg class=\"lucide lucide-puzzle\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M15.39 4.39a1 1 0 0 0 1.68-.474 2.5 2.5 0 1 1 3.014 3.015 1 1 0 0 0-.474 1.68l1.683 1.682a2.414 2.414 0 0 1 0 3.414L19.61 15.39a1 1 0 0 1-1.68-.474 2.5 2.5 0 1 0-3.014 3.015 1 1 0 0 1 .474 1.68l-1.683 1.682a2.414 2.414 0 0 1-3.414 0L8.61 19.61a1 1 0 0 0-1.68.474 2.5 2.5 0 1 1-3.014-3.015 1 1 0 0 0 .474-1.68l-1.683-1.682a2.414 2.414 0 0 1 0-3.414L4.39 8.61a1 1 0 0 1 1.68.474 2.5 2.5 0 1 0 3.014-3.015 1 1 0 0 1-.474-1.68l1.683-1.682a2.414 2.414 0 0 1 3.414 0z\"/>","harnesshub":"<svg class=\"lucide lucide-plug\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M12 22v-5\"/> <path d=\"M9 8V2\"/> <path d=\"M15 8V2\"/> <path d=\"M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z\"/>","hsq":"<svg class=\"lucide lucide-refresh-ccw-dot\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M3 2v6h6\"/> <path d=\"M21 12A9 9 0 0 0 6 5.3L3 8\"/> <path d=\"M21 22v-6h-6\"/> <path d=\"M3 12a9 9 0 0 0 15 6.7l3-2.7\"/> <circle cx=\"12\" cy=\"12\" r=\"1\"/>","rea":"<svg class=\"lucide lucide-microscope\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M6 18h8\"/> <path d=\"M3 22h18\"/> <path d=\"M14 22a7 7 0 1 0 0-14h-1\"/> <path d=\"M9 14h2\"/> <path d=\"M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z\"/> <path d=\"M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3\"/>","evidence":"<svg class=\"lucide lucide-search-check\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m8 11 2 2 4-4\"/> <circle cx=\"11\" cy=\"11\" r=\"8\"/> <path d=\"m21 21-4.3-4.3\"/>","launch":"<svg class=\"lucide lucide-rocket\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z\"/> <path d=\"m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z\"/> <path d=\"M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0\"/> <path d=\"M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5\"/>","webos":"<svg class=\"lucide lucide-app-window\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <rect x=\"2\" y=\"4\" width=\"20\" height=\"16\" rx=\"2\"/> <path d=\"M10 4v4\"/> <path d=\"M2 8h20\"/> <path d=\"M6 4v4\"/>","connect":"<svg class=\"lucide lucide-link\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71\"/> <path d=\"M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71\"/>","help":"<svg class=\"lucide lucide-circle-help\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <circle cx=\"12\" cy=\"12\" r=\"10\"/> <path d=\"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3\"/> <path d=\"M12 17h.01\"/>","settings":"<svg class=\"lucide lucide-settings\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z\"/> <circle cx=\"12\" cy=\"12\" r=\"3\"/>","g:talk":"<svg class=\"lucide lucide-message-square\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z\"/>","g:make":"<svg class=\"lucide lucide-sparkles\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z\"/> <path d=\"M20 3v4\"/> <path d=\"M22 5h-4\"/> <path d=\"M4 17v2\"/> <path d=\"M5 18H3\"/>","g:build":"<svg class=\"lucide lucide-blocks\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <rect width=\"7\" height=\"7\" x=\"14\" y=\"3\" rx=\"1\"/> <path d=\"M10 21V8a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H3\"/>","g:models":"<svg class=\"lucide lucide-cpu\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <rect width=\"16\" height=\"16\" x=\"4\" y=\"4\" rx=\"2\"/> <rect width=\"6\" height=\"6\" x=\"9\" y=\"9\" rx=\"1\"/> <path d=\"M15 2v2\"/> <path d=\"M15 20v2\"/> <path d=\"M2 15h2\"/> <path d=\"M2 9h2\"/> <path d=\"M20 15h2\"/> <path d=\"M20 9h2\"/> <path d=\"M9 2v2\"/> <path d=\"M9 20v2\"/>","g:agents":"<svg class=\"lucide lucide-users\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/> <circle cx=\"9\" cy=\"7\" r=\"4\"/> <path d=\"M22 21v-2a4 4 0 0 0-3-3.87\"/> <path d=\"M16 3.13a4 4 0 0 1 0 7.75\"/>","g:know":"<svg class=\"lucide lucide-book-marked\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M10 2v8l3-3 3 3V2\"/> <path d=\"M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20\"/>","g:setup":"<svg class=\"lucide lucide-settings-2\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M20 7h-9\"/> <path d=\"M14 17H5\"/> <circle cx=\"17\" cy=\"17\" r=\"3\"/> <circle cx=\"7\" cy=\"7\" r=\"3\"/>","ui:grid":"<svg class=\"lucide lucide-layout-grid\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <rect width=\"7\" height=\"7\" x=\"3\" y=\"3\" rx=\"1\"/> <rect width=\"7\" height=\"7\" x=\"14\" y=\"3\" rx=\"1\"/> <rect width=\"7\" height=\"7\" x=\"14\" y=\"14\" rx=\"1\"/> <rect width=\"7\" height=\"7\" x=\"3\" y=\"14\" rx=\"1\"/>","ui:search":"<svg class=\"lucide lucide-search\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <circle cx=\"11\" cy=\"11\" r=\"8\"/> <path d=\"m21 21-4.3-4.3\"/>","ui:chev":"<svg class=\"lucide lucide-chevron-down\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m6 9 6 6 6-6\"/>","ui:more":"<svg class=\"lucide lucide-ellipsis\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <circle cx=\"12\" cy=\"12\" r=\"1\"/> <circle cx=\"19\" cy=\"12\" r=\"1\"/> <circle cx=\"5\" cy=\"12\" r=\"1\"/>","ui:side":"<svg class=\"lucide lucide-panel-left\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\"/> <path d=\"M9 3v18\"/>","ui:x":"<svg class=\"lucide lucide-x\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M18 6 6 18\"/> <path d=\"m6 6 12 12\"/>","ui:cmd":"<svg class=\"lucide lucide-command\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3\"/>","ui:sun":"<svg class=\"lucide lucide-sun\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <circle cx=\"12\" cy=\"12\" r=\"4\"/> <path d=\"M12 2v2\"/> <path d=\"M12 20v2\"/> <path d=\"m4.93 4.93 1.41 1.41\"/> <path d=\"m17.66 17.66 1.41 1.41\"/> <path d=\"M2 12h2\"/> <path d=\"M20 12h2\"/> <path d=\"m6.34 17.66-1.41 1.41\"/> <path d=\"m19.07 4.93-1.41 1.41\"/>","ui:moon":"<svg class=\"lucide lucide-moon\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z\"/>"};
+ICONS36.specs="<svg class=\"lucide lucide-list-checks\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m3 17 2 2 4-4\"/> <path d=\"m3 7 2 2 4-4\"/> <path d=\"M13 6h8\"/> <path d=\"M13 12h8\"/> <path d=\"M13 18h8\"/>";
+
+/* ═══════════════════ PASS 36 — SHELL ═══════════════════
+   Navigation in one place per form factor, decided by width, never by user agent:
+     · ≥900px  "side"  — the tab bar becomes a grouped sidebar (the existing data-tabpos=left grid)
+     · <900px  "dock"  — a five-item glass dock at the bottom; "All" opens every tab as a sheet
+   Both reuse the SAME .tab buttons, their handlers, folding, ordering and hiding — nothing is
+   rebuilt, so every feature that reads or writes the tab bar keeps working.
+   A person who picked top/left/right/bottom in Customise keeps it ("classic"); "auto" is the default. */
+const ic36=(k,cls)=>ICONS36[k]?`<svg class="ic36${cls?' '+cls:''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS36[k]}</svg>`:'';
+const SHELL36_WIDE=900;
+const DOCK36=[['assistant','Chat'],['lab','Reason'],['gen','Create'],['brain','Brain'],['__all','All']];
+/* Header controls that live behind ⋯ on a wide screen, with the words their icon buttons lack. */
+const SEC36={autoBtn:'Automate a task',projpill:'',fsBtn:'Fullscreen this tab',popBtn:'Open in its own window',
+  themeBtn:'Light or dark',modeBtn:'How many tabs to show',helpBtn:'Help',spendpill:''};
+/* PURE. Which shell a width and a tab-position setting produce. */
+function shellMode36(width,tabPos){
+  if(tabPos&&tabPos!=='auto')return 'classic';
+  return width>=SHELL36_WIDE?'side':'dock';
+}
+/* PURE. Where the tab bar goes for a setting at a width. */
+function tabPosFor36(width,tabPos){
+  if(!tabPos||tabPos==='auto')return width>=SHELL36_WIDE?'left':'top';
+  return tabPos;
+}
+/* One tab's face: a line icon and its name. Emoji are kept for anyone who chose a custom icon or
+   switched icon style back, and an icon-only bar still has an accessible name. */
+function tabFace36(t){
+  const lab=(UI.tabLabels&&UI.tabLabels[t.id])||t.text;
+  const custom=UI.tabIcons&&UI.tabIcons[t.id];
+  if(UI.iconStyle==='emoji'||custom||!ICONS36[t.id]){
+    t.el.textContent=(UI.showTabIcons&&(custom||t.icon)?(custom||t.icon)+'\u00a0\u00a0':'')+(UI.showTabLabels?lab:((custom||t.icon)?'':lab));
+  }else{
+    t.el.innerHTML=(UI.showTabIcons?ic36(t.id):'')+((UI.showTabLabels||!UI.showTabIcons)?`<span class="tl36">${esc(lab)}</span>`:'');
+  }
+  if(!UI.showTabLabels)t.el.setAttribute('aria-label',lab);else t.el.removeAttribute('aria-label');
+}
+function shellCurrent36(){return (typeof currentView==='function'&&currentView())||'';}
+function shellNavSheet36(on){
+  const de=document.documentElement;
+  const open=on==null?de.getAttribute('data-navsheet')!=='1':!!on;
+  de.setAttribute('data-navsheet',open?'1':'0');
+  const all=document.querySelector('#dock36 [data-d36="__all"]');
+  if(all)all.setAttribute('aria-expanded',open?'true':'false');
+  shellDock36();
+  if(open){const a=document.querySelector('#tabs .tab.active');if(a)a.scrollIntoView({block:'nearest'});}
+}
+function shellDock36(){
+  const d=document.getElementById('dock36');if(!d)return;
+  const v=shellCurrent36(),sheet=document.documentElement.getAttribute('data-navsheet')==='1';
+  const inDock=DOCK36.some(([id])=>id===v);
+  d.querySelectorAll('button').forEach(b=>{
+    const id=b.dataset.d36;
+    const on=id==='__all'?(sheet||!inDock):(!sheet&&id===v);
+    b.classList.toggle('on',on);
+    if(id!=='__all')b.setAttribute('aria-current',on?'page':'false');
+  });
+}
+function shellBuild36(){
+  setTimeout(()=>{try{applyUI();}catch(_){}},0);
+  const head=document.querySelector('header.top');if(!head||head.dataset.s36)return;
+  head.dataset.s36='1';
+  /* Search: the one entry point for tabs, sections, settings AND content. */
+  const omni=document.getElementById('omnibtn');
+  if(omni){
+    omni.classList.add('s36');omni.setAttribute('role','button');omni.tabIndex=0;
+    omni.setAttribute('aria-label','Search or jump to anything (⌘K)');
+    omni.innerHTML=ic36('ui:search')+'<span class="s36-l">Search or jump to…</span><span class="s36-k">⌘K</span>';
+    omni.onclick=()=>openPalette();
+    omni.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openPalette();}};
+    const brand=head.querySelector('.brand');
+    if(brand&&brand.nextElementSibling!==omni)brand.after(omni);
+  }
+  const brand=head.querySelector('.brand>div');
+  if(brand&&!brand.querySelector('.s36-name')){
+    const small=brand.querySelector('small');
+    brand.innerHTML='<span class="s36-name">Glassbox&nbsp;Jet</span><span class="s36-title"></span>';
+    if(small)brand.appendChild(small);
+  }
+  Object.entries(SEC36).forEach(([id,l])=>{const el=document.getElementById(id);if(el&&l)el.setAttribute('data-l36',l);});
+  const more=document.getElementById('tb-more');
+  if(more){more.innerHTML=ic36('ui:more');more.setAttribute('aria-haspopup','menu');}
+  if(!document.getElementById('dock36')){
+    const d=document.createElement('nav');d.id='dock36';d.setAttribute('aria-label','Main');
+    d.innerHTML=DOCK36.map(([id,l])=>{
+      const t=id==='__all'?null:(REGISTRY.tabs||[]).find(x=>x.id===id);
+      return `<button type="button" data-d36="${id}"${id==='__all'?' aria-expanded="false" aria-controls="tabs"':''}>${ic36(id==='__all'?'ui:grid':id)}<span>${esc(l||(t&&t.text)||id)}</span></button>`;
+    }).join('');
+    d.onclick=e=>{const b=e.target.closest('[data-d36]');if(!b)return;
+      const id=b.dataset.d36;
+      if(id==='__all')return shellNavSheet36();
+      shellNavSheet36(false);goEnsure(id);};
+    document.getElementById('app').appendChild(d);
+  }
+  /* Picking a tab from the sheet closes it — the sheet is a way to get somewhere, not a place. */
+  const nav=document.getElementById('tabs');
+  if(nav)nav.addEventListener('click',e=>{
+    if(document.documentElement.getAttribute('data-navsheet')!=='1')return;
+    if(e.target.closest('.tab[data-view]'))setTimeout(()=>shellNavSheet36(false),0);
+  });
+  addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&document.documentElement.getAttribute('data-navsheet')==='1'){shellNavSheet36(false);}
+  });
+  clampObserve36();
+}
+/* Called at the end of applyUI — which go(), resize and every setting change already run. */
+function shellApply36(){
+  const de=document.documentElement;
+  const mode=shellMode36(innerWidth,UI.tabPos);
+  de.setAttribute('data-shell',mode);
+  de.setAttribute('data-icons',UI.iconStyle==='emoji'?'emoji':'line');
+  if(mode!=='dock'&&de.getAttribute('data-navsheet')==='1')de.setAttribute('data-navsheet','0');
+  const v=shellCurrent36();
+  const t=(REGISTRY.tabs||[]).find(x=>x.id===v);
+  const title=document.querySelector('header.top .s36-title');
+  if(title)title.textContent=t?((UI.tabLabels&&UI.tabLabels[v])||t.text):'';
+  shellDock36();
+  clamp36();
+  if(typeof living36Sync==='function')living36Sync();
+}
+
+/* ── Long descriptions: two lines and "More" ─────────────────────────────
+   Most panels open with a paragraph explaining why the feature exists. Useful once, clutter every
+   visit after. Only prose is clamped: never a paragraph holding a control, never output or chat. */
+const CLAMP36_SEL=':is(.card,.wrap,section,.panel)>:is(p,.help,div.help)';
+const CLAMP36_SKIP='.oui-root,.asst-msgs,.amsg,.md,.msg,pre,.out,[contenteditable],.modal,.pal,.no-clamp36,.term,.ee-doc,.of-paper,#tb-sheet';
+/* Headings keep their emoji in the DOM (search, REGISTRY and screen readers still see them) but the
+   line-icon style does not draw them: a page of "🔍 Glass-Pane", "📎 Paperclip", "⚡ Cache" is the look
+   this pass removes. Only a heading's FIRST text node is touched. */
+function emoji36(r){
+  r.querySelectorAll('h1,h2,h3,h4,.subtab,.chip,.btn').forEach(h=>{
+    if(h.dataset.e36)return;h.dataset.e36='1';
+    const t=[...h.childNodes].find(n=>n.nodeType===3&&n.textContent.trim()||n.nodeType===1);
+    if(!t||t.nodeType!==3)return;
+    const m=t.textContent.replace(/^\s+/,'').match(RE_TAB_ICON);if(!m)return;
+    const lead=t.textContent.match(/^\s*/)[0];
+    const rest=t.textContent.slice(lead.length+m[0].length);
+    if(!rest.trim()&&h.textContent.trim()===t.textContent.trim())return;   // the emoji IS the label
+    const sp=document.createElement('span');sp.className='emo36';sp.setAttribute('aria-hidden','true');sp.textContent=m[0];
+    t.textContent=t.textContent.slice(lead.length+m[0].length);
+    h.insertBefore(sp,t);
+  });
+}
+function clamp36(root){
+  const r=root||document.querySelector('.view.active');if(!r)return;
+  emoji36(r);
+  r.querySelectorAll(CLAMP36_SEL).forEach(el=>{
+    if(el.dataset.c36)return;
+    el.dataset.c36='1';
+    if(el.closest(CLAMP36_SKIP)||el.querySelector('input,select,textarea,button,canvas,svg,img,table'))return;
+    if((el.textContent||'').trim().length<260)return;
+    el.classList.add('clamp36');
+    /* Only keep the clamp if it actually hides something at this width. */
+    if(el.scrollHeight<=el.clientHeight+2){el.classList.remove('clamp36');return;}
+    const b=document.createElement('button');b.type='button';b.className='more36';b.textContent='More';
+    b.setAttribute('aria-expanded','false');
+    b.onclick=()=>{const open=!el.classList.contains('open');el.classList.toggle('open',open);
+      b.textContent=open?'Less':'More';b.setAttribute('aria-expanded',open?'true':'false');};
+    el.onclick=e=>{if(!el.classList.contains('open')&&!e.target.closest('a'))b.click();};
+    el.after(b);
+  });
+}
+let CLAMP36_T=0;
+function clampObserve36(){
+  const main=document.getElementById('main');if(!main||main._c36)return;main._c36=1;
+  new MutationObserver(()=>{clearTimeout(CLAMP36_T);CLAMP36_T=setTimeout(()=>clamp36(),350);})
+    .observe(main,{childList:true,subtree:true});
+}
+
+/* ── Contrast check (WCAG 2.x relative luminance), used by the gauntlet ── */
+function contrast36(fg,bg){
+  const lum=h=>{const m=String(h).trim().match(/^#?([0-9a-f]{6})$/i);if(!m)return null;
+    const n=parseInt(m[1],16),c=[n>>16,(n>>8)&255,n&255].map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4);});
+    return .2126*c[0]+.7152*c[1]+.0722*c[2];};
+  const a=lum(fg),b=lum(bg);if(a==null||b==null)return 0;
+  return Math.round(((Math.max(a,b)+.05)/(Math.min(a,b)+.05))*100)/100;
+}
+
+/* ═══════════════════ PASS 36 — free providers ═══════════════════ */
+/* PURE. Which synced model ids a provider should keep. With no key, a no-key provider keeps only what
+   answers anonymously: rows that say they are not usage-billed (LLM7's turbo tier), and ids matching its
+   syncFilter (Kilo's ":free" routes). With a key, everything stays. */
+function syncKeep36(p,rows,ids){
+  if(!p||p.key||!p.anonymous)return ids.slice();
+  const billed=new Set((rows||[]).filter(r=>r&&typeof r==='object'&&r.usage_based_only===true).map(r=>String(r.id||r.name||'')));
+  let keep=ids.filter(id=>!billed.has(id));
+  if(p.syncFilter){let rx=null;try{rx=new RegExp(p.syncFilter);}catch(_){}if(rx)keep=keep.filter(id=>rx.test(id));}
+  return keep;
+}
+const bridgeUp36=()=>typeof BRIDGE_INFO!=='undefined'&&!!BRIDGE_INFO;
+
+/* ═══════════════════ PASS 36 — "Living" background ═══════════════════
+   An opt-in effect (Customise → Effects → Living): a slow flowing light field behind the glass bars, drawn
+   by one WebGL fragment shader. Raw WebGL, not three.js — this is one full-screen quad, and a 600 KB
+   library for a gradient is the wrong trade. Costs, kept small on purpose:
+     · drawn at a quarter of the screen's pixels and stretched (it is all soft gradients anyway)
+     · 20 frames a second, and none at all while the page is hidden or a 3D tab owns the GPU
+     · reduced motion → one still frame; no WebGL → the CSS gradient that is already there */
+const LIVING36={on:false,cv:null,gl:null,raf:0,last:0,t0:0,prog:null,uRes:null,uT:null,uA:null,uB:null};
+const LIVING36_FS=`precision mediump float;uniform vec2 r;uniform float t;uniform vec3 a;uniform vec3 b;
+float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
+void main(){vec2 uv=gl_FragCoord.xy/r;vec2 p=uv*vec2(r.x/r.y,1.)*1.6;float s=t*.035;
+float f=n(p+vec2(s,-s))*.55+n(p*2.1-vec2(s*1.7,s))*.3+n(p*4.3+s)*.15;
+float g=smoothstep(.35,.95,f);vec3 c=mix(a,b,smoothstep(.2,.8,uv.x+.25*sin(s*3.+uv.y*3.)));
+float v=1.-smoothstep(.2,1.25,length(uv-vec2(.25,.95)));
+gl_FragColor=vec4(c*g*.36*v+c*.05,1.);}`;
+function living36Hex(v,d){const m=String(v||'').trim().match(/^#([0-9a-f]{6})$/i);if(!m)return d;const n=parseInt(m[1],16);return[(n>>16)/255,((n>>8)&255)/255,(n&255)/255];}
+function living36Start(){
+  if(LIVING36.on)return true;
+  const cv=document.createElement('canvas');cv.id='bg36';cv.setAttribute('aria-hidden','true');
+  cv.style.cssText='position:fixed;inset:0;width:100vw;height:100vh;z-index:-1;pointer-events:none';
+  const gl=cv.getContext('webgl',{alpha:false,antialias:false,powerPreference:'low-power'});
+  if(!gl)return false;
+  const sh=(type,src)=>{const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);return gl.getShaderParameter(s,gl.COMPILE_STATUS)?s:null;};
+  const vs=sh(gl.VERTEX_SHADER,'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}'),fs=sh(gl.FRAGMENT_SHADER,LIVING36_FS);
+  if(!vs||!fs)return false;
+  const pr=gl.createProgram();gl.attachShader(pr,vs);gl.attachShader(pr,fs);gl.linkProgram(pr);
+  if(!gl.getProgramParameter(pr,gl.LINK_STATUS))return false;
+  gl.useProgram(pr);
+  const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+  const loc=gl.getAttribLocation(pr,'p');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+  Object.assign(LIVING36,{on:true,cv,gl,prog:pr,uRes:gl.getUniformLocation(pr,'r'),uT:gl.getUniformLocation(pr,'t'),
+    uA:gl.getUniformLocation(pr,'a'),uB:gl.getUniformLocation(pr,'b'),t0:performance.now()});
+  document.body.prepend(cv);
+  living36Frame();
+  return true;
+}
+function living36Stop(){
+  if(!LIVING36.on)return;
+  cancelAnimationFrame(LIVING36.raf);clearTimeout(LIVING36.raf);
+  if(LIVING36.cv)LIVING36.cv.remove();
+  const ext=LIVING36.gl&&LIVING36.gl.getExtension('WEBGL_lose_context');if(ext)ext.loseContext();
+  Object.assign(LIVING36,{on:false,cv:null,gl:null,prog:null});
+}
+function living36Frame(){
+  if(!LIVING36.on)return;
+  const {gl,cv}=LIVING36;
+  const still=UI.motion===false||matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const busy3d=['three','spline','viz','brain','webos'].includes(shellCurrent36());
+  const w=Math.max(160,Math.round(innerWidth/4)),h=Math.max(120,Math.round(innerHeight/4));
+  if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;gl.viewport(0,0,w,h);}
+  if(!document.hidden&&!busy3d){
+    const css=getComputedStyle(document.documentElement);
+    gl.uniform2f(LIVING36.uRes,w,h);
+    gl.uniform1f(LIVING36.uT,still?40:(performance.now()-LIVING36.t0)/1000);
+    gl.uniform3fv(LIVING36.uA,living36Hex(css.getPropertyValue('--acc'),[.42,.63,1]));
+    gl.uniform3fv(LIVING36.uB,living36Hex(css.getPropertyValue('--acc2'),[.66,.55,1]));
+    gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+  }
+  if(still)return;                         // one frame is the whole effect
+  LIVING36.raf=setTimeout(()=>{LIVING36.raf=requestAnimationFrame(living36Frame);},50);   // ≈20 fps
+}
+/* Called from shellApply36: follows the Effects setting. */
+function living36Sync(){
+  if(UI.fx==='living'){if(!living36Start())document.documentElement.setAttribute('data-fx','aurora');}
+  else living36Stop();
+}
+
+/* ═══════════════════ PASS 36 — web reader tool ═══════════════════
+   Agents read pages as clean Markdown instead of raw HTML — the Firecrawl / Jina Reader pattern that coding and
+   research agents now use everywhere: a third of the tokens, none of the navigation chrome. Jina Reader serves it
+   free with no key and answers browsers (measured 28 Oct 2026). It is a normal tool: it passes the tool gate,
+   counts as untrusted input for the lethal-trifecta guard, and its output is injection-scanned like any other. */
+const READER36={on:store.get('reader36',{on:true}).on!==false,cap:30000};
+/* PURE. Only public http(s) pages go to the reader — never a local or private address, which would hand
+   something on this machine or network to a third party. */
+function readerUrlOk(u){
+  let x;try{x=new URL(String(u||'').trim());}catch(_){return false;}
+  if(!/^https?:$/.test(x.protocol))return false;
+  const h=x.hostname.toLowerCase();
+  if(h==='localhost'||h.endsWith('.localhost')||h.endsWith('.local')||h.endsWith('.internal')||h==='0.0.0.0'||h.includes(':'))return false;
+  const m=h.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if(m){const[a,b]=[+m[1],+m[2]];if(a===10||a===127||a===0||(a===169&&b===254)||(a===172&&b>=16&&b<=31)||(a===192&&b===168)||(a===100&&b>=64&&b<=127))return false;}
+  return true;
+}
+async function readerFetch(url){
+  if(!readerUrlOk(url))throw new Error('only public http(s) addresses can be read — local and private ones stay on this machine');
+  const r=await fetch('https://r.jina.ai/'+String(url).trim(),{headers:{'X-Return-Format':'markdown'},signal:AbortSignal.timeout(25000)});
+  if(!r.ok)throw new Error('reader answered HTTP '+r.status+(r.status===429?' — free rate limit, try again in a minute':''));
+  const t=await r.text();
+  return t.length>READER36.cap?t.slice(0,READER36.cap)+'\n\n[… truncated at '+READER36.cap+' characters]':t;
+}
+
+/* ═══════════════════ PASS 36 — SPECS (spec-driven development) ═══════════════════
+   The workflow GitHub's Spec Kit (MIT) made standard for coding agents: write down the project's
+   principles once (the constitution), then for each feature a SPEC (what and why, no tech), a PLAN
+   (how), and TASKS small enough for one agent round each. Tasks carry dependencies the way Beads
+   (steveyegge/beads, MIT) tracks them, so "what can be worked on now" is computed, not guessed:
+   a task is READY when it is open and every task it depends on is done.
+   Everything is local (IndexedDB). Model calls go through streamComplete, so the free route works. */
+const SPECS36_DEF={constitution:'',items:[],cur:''};
+let SPECS36=JSON.parse(JSON.stringify(SPECS36_DEF)),SPECS36_LOADED=false,SPECS36_BUSY='';
+const SPECS36_CAP=40000;                       // per field — keeps one project well under storage limits
+
+/* PURE. Normalise a model's task list: ids unique and slug-safe, dependencies only on tasks that exist
+   (never on themselves), status open|done. Accepts an array or text containing one. */
+function specParseTasks(input){
+  let arr=input;
+  if(typeof arr==='string'){
+    const m=arr.match(/\[[\s\S]*\]/);if(!m)return[];
+    try{arr=JSON.parse(m[0]);}catch(_){return[];}
+  }
+  if(!Array.isArray(arr))return[];
+  const seen=new Set(),out=[];
+  arr.forEach((t,i)=>{
+    if(!t||typeof t!=='object')return;
+    let id=String(t.id||('T'+(i+1))).replace(/[^A-Za-z0-9_.-]/g,'').slice(0,24)||('T'+(i+1));
+    while(seen.has(id))id+='b';
+    seen.add(id);
+    out.push({id,title:String(t.title||t.name||'Untitled task').slice(0,160),detail:String(t.detail||t.description||'').slice(0,1200),
+      deps:Array.isArray(t.deps||t.dependencies)?(t.deps||t.dependencies).map(String):[],status:t.status==='done'?'done':'open'});
+  });
+  const ids=new Set(out.map(t=>t.id));
+  out.forEach(t=>{t.deps=[...new Set(t.deps.map(d=>d.replace(/[^A-Za-z0-9_.-]/g,'')))].filter(d=>ids.has(d)&&d!==t.id);});
+  return out;
+}
+/* PURE. Tasks caught in a dependency cycle (they can never become ready). */
+function specCycles(tasks){
+  const by=new Map((tasks||[]).map(t=>[t.id,t])),state={},bad=new Set();
+  const visit=(id,stack)=>{
+    if(state[id]===2)return;if(state[id]===1){stack.slice(stack.indexOf(id)).forEach(x=>bad.add(x));return;}
+    state[id]=1;stack.push(id);(by.get(id)||{deps:[]}).deps.forEach(d=>visit(d,stack));stack.pop();state[id]=2;};
+  (tasks||[]).forEach(t=>visit(t.id,[]));
+  return[...bad];
+}
+/* PURE. Beads' "ready" queue: open tasks whose dependencies are all done, in list order, cycles excluded. */
+function specReady(tasks){
+  const done=new Set((tasks||[]).filter(t=>t.status==='done').map(t=>t.id)),cyc=new Set(specCycles(tasks));
+  return(tasks||[]).filter(t=>t.status!=='done'&&!cyc.has(t.id)&&t.deps.every(d=>done.has(d)));
+}
+/* PURE. Beads-compatible JSONL (one issue per line) so an agent repo can import it. */
+function specJsonl(item){
+  return(item.tasks||[]).map(t=>JSON.stringify({id:(item.slug||'spec')+'-'+t.id,title:t.title,description:t.detail,
+    status:t.status==='done'?'closed':'open',issue_type:'task',
+    dependencies:t.deps.map(d=>({depends_on_id:(item.slug||'spec')+'-'+d,type:'blocks'}))})).join('\n');
+}
+/* PURE. The prompt a coding agent gets for ONE task — one feature per round, criteria in, nothing else. */
+function specHandoff(constitution,item,task){
+  const done=(item.tasks||[]).filter(t=>t.status==='done').map(t=>'- '+t.id+' '+t.title).join('\n')||'- (none yet)';
+  return['# Task '+task.id+': '+task.title,'',task.detail||'','',
+    '## Do this one task and nothing else','Attempting several at once is how these runs fail: context runs out mid-way and everything is left half-built.','',
+    '## Already done — do not redo or break',done,'',
+    '## Constitution (project rules)',(constitution||'(none)').slice(0,4000),'',
+    '## Spec: '+item.title,(item.spec||'').slice(0,6000),'',
+    '## Plan',(item.plan||'').slice(0,6000),'',
+    '## When finished','Run the project\'s checks. Report what you changed and how you verified it. Do not mark anything done that you did not run.'].join('\n');
+}
+const specSlug=t=>String(t||'spec').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,32)||'spec';
+
+/* ── storage ── */
+async function specsLoad(){
+  if(SPECS36_LOADED)return;
+  try{const v=await IDB.getStrict('specs36');if(v&&typeof v==='object')SPECS36=Object.assign(JSON.parse(JSON.stringify(SPECS36_DEF)),v);}
+  catch(e){toast('Specs could not be read from storage: '+(e&&e.message||e),5000);}
+  SPECS36_LOADED=true;
+}
+async function specsSave(){
+  SPECS36.items.forEach(it=>['spec','plan'].forEach(k=>{if((it[k]||'').length>SPECS36_CAP)it[k]=it[k].slice(0,SPECS36_CAP);}));
+  const ok=await IDB.set('specs36',SPECS36);
+  if(ok===false&&typeof persistFailBanner==='function')persistFailBanner('Could not save your specs — storage is unavailable.');
+  return ok!==false;
+}
+const specCur=()=>SPECS36.items.find(x=>x.id===SPECS36.cur)||null;
+
+/* ── model steps ── */
+const SPEC_PROMPTS={
+  spec:'Write a feature SPECIFICATION in Markdown for the request below. Describe WHAT and WHY only — no technology choices. Sections: Summary, User stories (with acceptance scenarios as Given/When/Then), Functional requirements (numbered FR-1…, each testable), Edge cases, Out of scope, Open questions (mark each [NEEDS CLARIFICATION]). Follow the constitution.',
+  plan:'Write an implementation PLAN in Markdown for the spec below, following the constitution. Sections: Approach, Architecture and data model, Files to create or change, Verification (how each FR is proven — tests or checks that can fail), Risks. Prefer the simplest design that satisfies every requirement.',
+  tasks:'Break the plan into TASKS small enough for one coding-agent round each (roughly 1–2 hours of work). Return ONLY a JSON array: [{"id":"T1","title":"…","detail":"what to do and how it is verified","deps":["T0"]}]. Order them so dependencies come first; tests come with or before the code they check. 5–20 tasks.'};
+async function specStep(kind){
+  const it=specCur();if(!it||SPECS36_BUSY)return;
+  const model=primaryModel();if(!model)return toast('Pick a model first (the model pill at the top).',4000);
+  const ctx=kind==='spec'?'REQUEST:\n'+it.request:kind==='plan'?'SPEC:\n'+it.spec:'SPEC:\n'+it.spec+'\n\nPLAN:\n'+it.plan;
+  if(kind!=='spec'&&!(kind==='plan'?it.spec:it.plan))return toast(kind==='plan'?'Write the spec first.':'Write the plan first.',3500);
+  SPECS36_BUSY=kind;specsRender();
+  let txt='';
+  try{
+    const acc=await streamComplete({model,maxTokens:6000,messages:[
+      {role:'system',content:'You are a careful staff engineer doing spec-driven development.\n\nCONSTITUTION:\n'+(SPECS36.constitution||'(none)')},
+      {role:'user',content:SPEC_PROMPTS[kind]+'\n\n'+ctx}]},
+      a=>{txt=(a&&a.content)||'';const o=$('#sp-live');if(o)o.textContent=txt.slice(-1600);},null,'specs:'+kind);
+    txt=(acc&&acc.content)||txt;
+    if(kind==='tasks'){const t=specParseTasks(txt);if(!t.length)throw new Error('the model did not return a task list — try again or another model');it.tasks=t;}
+    else it[kind]=txt.trim();
+    it.ts=nowISO();await specsSave();
+    toast(kind==='tasks'?it.tasks.length+' tasks — '+specReady(it.tasks).length+' ready now':'Done — edit it freely before the next step',3500);
+  }catch(e){toast('Could not '+kind+': '+(e&&e.message||e),6000);}
+  finally{SPECS36_BUSY='';specsRender();}
+}
+
+/* ── panel ── */
+async function specsRender(){
+  const host=$('#specs-panel');if(!host)return;
+  await specsLoad();
+  const it=specCur(),ready=it?specReady(it.tasks||[]):[],cyc=it?specCycles(it.tasks||[]):[];
+  const step=(k,label,have)=>`<button class="btn${have?' small':''}" data-sp-step="${k}" ${SPECS36_BUSY?'disabled':''}>${SPECS36_BUSY===k?'Writing…':label}</button>`;
+  host.innerHTML=`
+  <div class="card"><h2>Specs</h2>
+    <p class="help">Spec-driven development, the way GitHub's Spec Kit does it: principles once, then for each feature a spec (what and why), a plan (how) and small tasks. Tasks carry dependencies like Beads, so the <b>ready</b> list is computed — hand coding agents one ready task at a time.</p>
+    <details class="dd"${SPECS36.constitution?'':' open'}><summary>Constitution — the rules every spec, plan and task must follow</summary><div class="ddb">
+      <textarea id="sp-const" aria-label="Constitution" rows="5" placeholder="e.g. Tests before code. No new dependencies without a reason. Accessible by keyboard. Simplest design that works.">${esc(SPECS36.constitution)}</textarea>
+      <button class="btn small" id="sp-const-save" style="margin-top:8px">Save constitution</button></div></details>
+    <div class="row" style="margin-top:12px;align-items:center">
+      <select id="sp-pick" aria-label="Feature" style="flex:1;min-width:180px"><option value="">${SPECS36.items.length?'Choose a feature…':'No features yet'}</option>
+        ${SPECS36.items.map(x=>`<option value="${esc(x.id)}"${x.id===SPECS36.cur?' selected':''}>${esc(x.title)}</option>`).join('')}</select>
+      <button class="btn ghost small" id="sp-new">New feature</button>
+      ${it?'<button class="btn ghost small" id="sp-del">Delete</button>':''}</div>
+  </div>
+  ${it?`<div class="card"><h3>${esc(it.title)}</h3>
+    <label class="field">What should it do?<textarea id="sp-req" rows="3">${esc(it.request||'')}</textarea></label>
+    <div class="row" style="margin-top:10px">${step('spec','1 · Write the spec',!!it.spec)}${step('plan','2 · Write the plan',!!it.plan)}${step('tasks','3 · Break into tasks',!!(it.tasks||[]).length)}</div>
+    ${SPECS36_BUSY?'<pre class="mono help" id="sp-live" style="white-space:pre-wrap;max-height:220px;overflow:auto"></pre>':''}
+    ${it.spec?`<details class="dd"><summary>Spec</summary><div class="ddb"><textarea id="sp-spec" aria-label="Spec" rows="14">${esc(it.spec)}</textarea></div></details>`:''}
+    ${it.plan?`<details class="dd"><summary>Plan</summary><div class="ddb"><textarea id="sp-plan" aria-label="Plan" rows="14">${esc(it.plan)}</textarea></div></details>`:''}
+    ${it.spec||it.plan?'<button class="btn ghost small" id="sp-save-docs" style="margin-top:8px">Save edits</button>':''}
+  </div>`:''}
+  ${it&&(it.tasks||[]).length?`<div class="card"><h3>Tasks <span class="muted">${it.tasks.filter(t=>t.status==='done').length}/${it.tasks.length} done · ${ready.length} ready</span></h3>
+    ${cyc.length?`<div class="banner">These tasks depend on each other in a circle and can never start: ${esc(cyc.join(', '))}. Edit their dependencies.</div>`:''}
+    <div class="sp-tasks">${it.tasks.map(t=>{const r=ready.some(x=>x.id===t.id);
+      return `<label class="sp-task${t.status==='done'?' done':''}${r?' ready':''}"><input type="checkbox" data-sp-done="${esc(t.id)}"${t.status==='done'?' checked':''}>
+        <span><b>${esc(t.id)} · ${esc(t.title)}</b>${r?' <span class="chip-sm ok">ready</span>':''}${t.deps.length?` <span class="muted mini">needs ${esc(t.deps.join(', '))}</span>`:''}
+        ${t.detail?`<small class="help">${esc(t.detail)}</small>`:''}</span></label>`;}).join('')}</div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn small" id="sp-next" ${ready.length?'':'disabled'}>Copy the next ready task for a coding agent</button>
+      <button class="btn ghost small" id="sp-asst" ${ready.length?'':'disabled'}>Open it in the Assistant</button>
+      <button class="btn ghost small" id="sp-export">Download spec, plan, tasks (.md + Beads .jsonl)</button></div>
+  </div>`:''}`;
+  const on=(sel,fn)=>{const el=host.querySelector(sel);if(el)el.onclick=fn;};
+  on('#sp-const-save',async()=>{SPECS36.constitution=host.querySelector('#sp-const').value.slice(0,SPECS36_CAP);await specsSave();toast('Constitution saved',2000);});
+  const pick=host.querySelector('#sp-pick');if(pick)pick.onchange=()=>{SPECS36.cur=pick.value;specsSave();specsRender();};
+  on('#sp-new',async()=>{const title=(prompt('Feature name?')||'').trim();if(!title)return;
+    const it2={id:uid(),title:title.slice(0,120),slug:specSlug(title),request:'',spec:'',plan:'',tasks:[],ts:nowISO()};
+    SPECS36.items.unshift(it2);SPECS36.cur=it2.id;await specsSave();specsRender();});
+  on('#sp-del',async()=>{if(!confirm('Delete “'+it.title+'” and its spec, plan and tasks?'))return;
+    SPECS36.items=SPECS36.items.filter(x=>x.id!==it.id);SPECS36.cur=(SPECS36.items[0]||{}).id||'';await specsSave();specsRender();});
+  const req=host.querySelector('#sp-req');if(req)req.onchange=()=>{it.request=req.value.slice(0,8000);specsSave();};
+  host.querySelectorAll('[data-sp-step]').forEach(b=>b.onclick=()=>{if(req)it.request=req.value.slice(0,8000);specStep(b.dataset.spStep);});
+  on('#sp-save-docs',async()=>{const s=host.querySelector('#sp-spec'),p=host.querySelector('#sp-plan');
+    if(s)it.spec=s.value;if(p)it.plan=p.value;await specsSave();toast('Saved',1800);});
+  host.querySelectorAll('[data-sp-done]').forEach(c=>c.onchange=async()=>{const t=it.tasks.find(x=>x.id===c.dataset.spDone);
+    if(t)t.status=c.checked?'done':'open';await specsSave();specsRender();});
+  const next=()=>ready[0]?specHandoff(SPECS36.constitution,it,ready[0]):'';
+  on('#sp-next',async()=>{const t=next();try{await navigator.clipboard.writeText(t);toast('Copied task '+ready[0].id+' — paste it into Claude Code, Codex, OpenCode…',3500);}
+    catch(_){downloadText(it.slug+'-'+ready[0].id+'.md',t);toast('Clipboard blocked — downloaded it instead',3500);}});
+  on('#sp-asst',()=>{const t=next();if(!t)return;const c=achatNew('Task '+ready[0].id+': '+ready[0].title);go('assistant');
+    setTimeout(()=>{const inp=$('#asst-input');if(inp){inp.value=t;inp.focus();}},120);void c;});
+  on('#sp-export',()=>{downloadText(it.slug+'.md',['# '+it.title,'','## Constitution',SPECS36.constitution||'(none)','','## Spec',it.spec||'','','## Plan',it.plan||'','','## Tasks',
+      ...(it.tasks||[]).map(t=>'- ['+(t.status==='done'?'x':' ')+'] **'+t.id+'** '+t.title+(t.deps.length?' (needs '+t.deps.join(', ')+')':'')+(t.detail?'\n  '+t.detail:''))].join('\n'));
+    downloadText(it.slug+'.issues.jsonl',specJsonl(it));});
+  if(SPECS36_BUSY){const live=host.querySelector('#sp-live');if(live)live.textContent='…';}
+}
+
 /* ═══════════════════ ASSISTANT — the front door ═══════════════════
    A ChatGPT/Codex-shaped surface over everything already in this app. It is deliberately a
    FRONT END, not a new engine: every message runs through the same streamComplete, the same
@@ -57162,6 +58122,8 @@ function initCustomise(){
       if(!UI.showTabIcons&&!UI.showTabLabels){UI.showTabLabels=true;el.checked=true;
         toast('Tabs need either an icon or a label');}
       saveUI();applyUI();};});
+  const li=$('#cz-lineicons');
+  if(li){li.checked=UI.iconStyle!=='emoji';li.onchange=()=>{UI.iconStyle=li.checked?'line':'emoji';saveUI();applyUI();};}
   $('#cz-scale').oninput=e=>{UI.scale=+e.target.value;$('#cz-scaleval').textContent=Math.round(UI.scale*100)+'%';
     saveUI();applyUI();};
   $('#cz-radius').oninput=e=>{UI.radius=+e.target.value;$('#cz-radval').textContent=UI.radius+'px';
@@ -57263,6 +58225,8 @@ function paletteItems(){
     kind:'density',title:'Density: '+d,sub:'Appearance',run:()=>{UI.density=d;saveUI();applyUI();renderCustomise();}}));
   items.push({kind:'action',title:'Turn every feature back on',sub:'Customise',
     run:()=>{UI.hiddenTabs=[];UI.hiddenCards=[];saveUI();applyUI();renderCustomise();toast('Everything switched on');}});
+  items.push({kind:'action',title:'Web reader tool for agents: '+(READER36.on?'on — turn off':'off — turn on'),sub:'Tools',
+    run:()=>{READER36.on=!READER36.on;store.set('reader36',{on:READER36.on});toast('Web reader tool '+(READER36.on?'on':'off'),2400);}});
   items.push({kind:'action',title:'Toggle light / dark',sub:'Appearance',
     run:()=>{UI.theme=UI.theme==='dark'?'light':'dark';saveUI();applyUI();renderCustomise();}});
   items.push({kind:'action',title:'Export all settings',sub:'Customise',run:()=>downloadJSON('glassbox-ui.json',UI)});
@@ -57282,7 +58246,7 @@ function openPalette(){
   const items=paletteItems();
   const o=document.createElement('div');o.className='pal';
   o.innerHTML=`<div class="palbox" role="dialog" aria-label="Command palette">
-    <input type="text" id="pal-q" placeholder="Jump to a tab, section, theme or preset…" autocomplete="off">
+    <input type="text" id="pal-q" placeholder="Search tabs, settings, notes, chats…" autocomplete="off" aria-label="Search">
     <div class="pallist" id="pal-list"></div></div>`;
   document.body.appendChild(o);PAL=o;
   const q=o.querySelector('#pal-q'),list=o.querySelector('#pal-list');
@@ -57290,7 +58254,10 @@ function openPalette(){
   const draw=()=>{
     const term=q.value.toLowerCase().trim();
     shown=items.map(it=>({it,s:palScore(term,it.title+' '+(it.sub||''))}))
-      .filter(x=>x.s>0).sort((a,b)=>b.s-a.s).slice(0,40).map(x=>x.it);
+      .filter(x=>x.s>0).sort((a,b)=>b.s-a.s).slice(0,term?24:40).map(x=>x.it);
+    /* Content too — the old 🔎 search lived in a second box; one place to look is the point. */
+    if(term.length>=2&&typeof omniSearch==='function'){try{omniSearch(term,16).forEach(r=>shown.push(
+      {kind:r.kind,title:r.title,sub:r.sub||'',run:()=>go(r.go)}));}catch(_){}}
     if(sel>=shown.length)sel=Math.max(0,shown.length-1);
     list.innerHTML=shown.length?shown.map((it,i)=>`<div class="palrow ${i===sel?'sel':''}" data-i="${i}">
       <div class="pk"><div class="pt">${esc(it.title)}</div><div class="ps">${esc(it.sub||'')}</div></div>
@@ -57525,9 +58492,12 @@ function initForge(){
       /* Move the real controls in, rather than cloning: a clone would not carry their
          handlers and every button in the sheet would be dead. */
       sheet.innerHTML='';
+      const phone=document.documentElement.getAttribute('data-onerow')==='1';
       [...head.children].forEach(el=>{
         if(el===b||el.classList.contains('brand'))return;
         if(el.classList.contains('spacer'))return;
+        if(!phone&&!(el.id in SEC36))return;
+        if(phone&&el.id==='omnibtn')return;
         el.classList.add('tb-extra-moved');
         sheet.appendChild(el);
       });
@@ -58479,7 +59449,8 @@ function closeModal(){
    Hidden surfaces are display:none, never removed. Anything still holding a reference to an
    element inside a hidden card keeps working, so switching a feature off can never throw. */
 const UI_FX={
-  none:{label:'Flat',hint:'No effects. Fastest, and the safest on an old phone.'},
+  none:{label:'Standard',hint:'Glass bars over a calm page. Turns solid with Reduce Transparency.'},
+  living:{label:'Living',hint:'A slow light field behind the glass, drawn by one WebGL shader at a quarter resolution. Pauses when hidden or on 3D tabs.'},
   glass:{label:'Liquid Glass',hint:'Translucent frosted panels with a specular edge and a lit backdrop.'},
   frost:{label:'Frosted',hint:'Heavier blur, no glow — quieter than glass.'},
   neon:{label:'Neon',hint:'Glowing accent edges and headings.'},
@@ -58909,8 +59880,7 @@ function applyUI(){
       t.el.style.display=tabHidden(t.id)?'none':'';
       // Two non-breaking spaces: a plain space visually vanishes against an emoji's advance
       // width, which rendered every tab as "🎛Ops".
-      t.el.textContent=(UI.showTabIcons&&t.icon?t.icon+'  ':'')+
-        (UI.showTabLabels?t.text:(t.icon?'':t.text));
+      tabFace36(t);
       t.el.title=t.text;
     });
   }
@@ -58919,6 +59889,7 @@ function applyUI(){
   // if the active tab just vanished, move somewhere real
   const active=$('.view.active');
   if(active){const id=active.id.replace(/^view-/,'');if(tabHidden(id))go(firstVisibleTab());}
+  try{applyTabPos();shellApply36();}catch(_){}
 }
 const UI_TOKEN_LIST={
   '--bg':'Page background','--bg2':'Sunken background','--panel':'Panel','--panel2':'Card',
@@ -58927,7 +59898,7 @@ const UI_TOKEN_LIST={
   '--warn':'Warning','--bad':'Error','--raw':'Raw reasoning','--sum':'Summary','--enc':'Encrypted',
 };
 const UI_FONTS={
-  system:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif',
+  system:'-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI Variable","Segoe UI",Roboto,Helvetica,Arial,sans-serif',
   inter:'Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif',
   georgia:'Georgia,"Times New Roman",serif',
   system_rounded:'ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,sans-serif',
@@ -60522,7 +61493,7 @@ const TAB_GROUPS=[
   {id:'make',  label:'Create',           icon:'🎨',
    views:['gen','design','studio','three','spline','office','creations','artifacts']},
   {id:'build', label:'Build & ship',     icon:'🏗',
-   views:['factory','forge','library','handoff','harnesshub','launch','webos','connect']},
+   views:['factory','forge','library','specs','handoff','harnesshub','launch','webos','connect']},
   {id:'models',label:'Models & cost',    icon:'🎚',
    views:['modelhub','models','local','metrics','graphs','viz','evolve','playbooks','learn']},
   {id:'agents',label:'Agents & teams',   icon:'🤖',
@@ -60653,7 +61624,7 @@ function applyTabMode(){
       chip.title=(folded?`Show the ${mine.length} ${g.label.toLowerCase()} tabs`
                         :`Fold these ${mine.length} tabs into “${g.label}”`)+
         ' — click the group name';
-      chip.innerHTML=`<span class="tg-car">${folded?'▸':'▾'}</span>${esc(g.icon)} ${esc(g.label)}`+
+      chip.innerHTML=`<span class="tg-car" aria-hidden="true">${UI.iconStyle==='emoji'?(folded?'▸':'▾'):ic36('ui:chev')}</span><span class="tg-ico">${esc(g.icon)} </span>${esc(g.label)}`+
         (folded?`<span class="tg-n">${mine.length}</span>`:'');
       nav.appendChild(chip);
       mine.forEach(t=>{
@@ -61454,7 +62425,7 @@ const ONB_INTERESTS=[
      middle option pointless and the first two identical on screen. */
   {id:'build',   icon:'🛠', label:'Build apps & sites',
    why:'Write, preview and ship real HTML/JS',
-   core:['studio','relay'],           more:['launch','webos','design','devices','handoff']},
+   core:['studio','relay'],           more:['specs','launch','webos','design','devices','handoff']},
   {id:'write',   icon:'📝', label:'Write & documents',
    why:'Docs, spreadsheets, decks',
    core:['office'],                   more:['brain','creations','library']},
@@ -61598,16 +62569,16 @@ function onbMaybe(){
    depends on the screen, so it is a setting rather than a decision made for the user. The
    layout is done with a body class and CSS grid areas — no JS re-parenting, so the tab bar
    keeps its identity, its scroll position and its event handlers across a move. */
-const TABPOS=['top','left','right','bottom'];
+const TABPOS=['auto','top','left','right','bottom'];
 function applyTabPos(){
-  const p=TABPOS.includes(UI.tabPos)?UI.tabPos:'top';
+  const p=tabPosFor36(innerWidth,TABPOS.includes(UI.tabPos)?UI.tabPos:'auto');
   document.body.setAttribute('data-tabpos',p);
   const n=$('#tabs');
   if(n)n.setAttribute('aria-orientation',(p==='left'||p==='right')?'vertical':'horizontal');
 }
 function setTabPos(p){
-  UI.tabPos=TABPOS.includes(p)?p:'top';saveUI();applyTabPos();
-  toast('Tab bar moved to the '+UI.tabPos,2000);
+  UI.tabPos=TABPOS.includes(p)?p:'auto';saveUI();applyTabPos();applyUI();
+  toast(UI.tabPos==='auto'?'Navigation: sidebar on wide screens, dock on narrow ones':'Tab bar moved to the '+UI.tabPos,2600);
 }
 /* The ＋ at the end of the bar: everything switched off, one click to bring back. */
 function renderTabAdder(){
@@ -61655,7 +62626,7 @@ function openTabManager(){
       section keeps all its data and comes back exactly as you left it.</p>
     <div class="row" style="gap:6px;margin:10px 0">
       <span class="mini muted" style="align-self:center">Tab bar on the</span>
-      ${TABPOS.map(p=>`<button class="btn ghost small${(UI.tabPos||'top')===p?' on':''}" data-tmpos="${p}">${p}</button>`).join('')}
+      ${TABPOS.map(p=>`<button class="btn ghost small${(UI.tabPos||'auto')===p?' on':''}" data-tmpos="${p}">${p}</button>`).join('')}
     </div>
     <div class="row" style="gap:6px;margin-bottom:10px">
       <button class="btn ghost small" id="tm-all">Show everything</button>
@@ -61737,6 +62708,24 @@ const HELP_TOPICS=[
         <p>Honest expectation: an 8B model is genuinely useful for drafting, summarising and small
         edits. It is not a frontier model, and asking it to one-shot a large app will disappoint you.
         Give it small, well-shaped tasks and it earns its place.</p>`},
+    {q:'Free with no key at all',
+     a:`<p>Four providers answer with no account. Each is rate limited per network, and the app falls through
+        to the next one when one says no.</p>
+        <ul><li><b>OVHcloud</b> — about 2 requests a minute per model.</li>
+        <li><b>LLM7</b> — several open models, streams; a free token from token.llm7.io raises the limit.</li>
+        <li><b>Pollinations</b> — three models, answers arrive whole; a small hourly allowance.</li>
+        <li><b>Kilo Gateway</b> — its <code>:free</code> models; needs the bridge because it blocks browsers.</li></ul>
+        <p>With a free sign-up key: Groq, Cerebras, Mistral, Google AI Studio, Hugging Face, NVIDIA NIM,
+        SambaNova and Z.ai GLM Flash — all in Settings → Providers.</p>`},
+    {q:'Free and uncensored',
+     a:`<p>No hosted API serves an uncensored model for free at the moment — the ones advertised as free either
+        bill free accounts (Venice) or lost their free route (OpenRouter's Dolphin "Venice edition"). The free
+        and private way is a small local model through Ollama:</p>
+        <ul><li><code>ollama pull dolphin3:8b</code></li>
+        <li><code>ollama pull huihui_ai/qwen3-abliterated:8b</code></li>
+        <li><code>ollama pull huihui_ai/gemma3-abliterated:4b</code> — for laptops with less memory</li></ul>
+        <p>They appear in the Local tab once pulled. Paid and cheap: the Venice provider, or
+        <code>cognitivecomputations/dolphin-mistral-24b-venice-edition</code> with an OpenRouter key.</p>`},
     {q:'Is my key safe here?',
      a:`<p>It is stored in your browser's localStorage and sent only to the provider you chose. There is
         no server of ours in the path. That also means: anyone with access to your browser profile can
@@ -68064,7 +69053,7 @@ async function persistInit(){
    worker updating is NOT the same thing as the user seeing the new app: clients.claim() makes
    a new worker control the page, but the HTML already parsed keeps running until something
    reloads it. This is what lets the app notice and say so. */
-const APP_BUILD='97780de22bb677e2';
+const APP_BUILD='df206332e431f38a';
 const PWA={reg:null,state:'unknown',why:'',prompt:null,update:null,checking:false,lastCheck:0};
 
 /* ── Staying current, which is the whole problem on iOS ──────────────────────
@@ -71644,6 +72633,7 @@ function go(view){
   if(view==='artifacts')panelGuard(view,()=>artRender());
   if(view==='frameworks')panelGuard(view,()=>fwRender());
   if(view==='harnesshub')panelGuard(view,()=>hhRender());
+  if(view==='specs')panelGuard(view,()=>specsRender());
   if(view==='hsq')panelGuard(view,()=>h2Render());
   if(view==='rea')panelGuard(view,()=>reaRender());
   if(view==='webos')panelGuard(view,()=>{wosInit();wosRender();wosFillFolders();wosClockTick();});
@@ -71700,7 +72690,7 @@ async function boot(){
   if(TABMODE!=='full'&&!store.get('tipFold',false)){
     setTimeout(()=>{
       if(TABMODE==='full')return;
-      toast('Tip: click a group name in the tab bar to fold its tabs away',6000);
+      toast('Tip: click a section name in the sidebar to fold it away',6000);
       store.set('tipFold',true);
     },2500);
   }
@@ -71769,7 +72759,7 @@ async function boot(){
   /* Name everything already in the DOM, then keep naming whatever gets rendered later. Lazily
      rendered tabs are the majority here, so the observer does more work than this first pass. */
   bootSafe(a11yNamePass,a11yObserve);
-  bootSafe(storageJunkSweep,fixtureChatBoot,gauntletResidueBoot,modelFieldObserve,modelSelectWire,initFree,hlApplyHooks,initPrimaryPill);
+  bootSafe(storageJunkSweep,shellBuild36,fixtureChatBoot,gauntletResidueBoot,modelFieldObserve,modelSelectWire,initFree,hlApplyHooks,initPrimaryPill);
   window.__gb={EE,eeNewInv,eeSetCurrent,eeDeleteInv,eeAutopsy,eeAttackPass,eeSelfAttack,eeAnalyseAI,eePurgeAi,
     eeExportInv,eeImportInv,eeImportFiles,eeDecompose,eeJustified,eeAttackClaim,eeWarrantsFor,eeFalsify,
     eeClassifyPassage,eeDefaultStatus,eeTextToCda,eeHtmlToCda,eeDocxToCda,eePdfToCda,eePassagesFromCda,
@@ -71957,7 +72947,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     modelBadge,modelMenu,isModelField,modelFieldEnhance,MODEL_FIELD_RX,
     modelRunnable,freeCandidates,modelParamsB,
     primaryModel,setPrimaryModel,renderPrimaryPill,openAutomate,
-    pbKey,pbBradleyTerry,pbBestModel,pbShortlist,pbRoutineMatch,pbParseGenerated,pbCost,pbAdd,pbSelect,pbRun,pbMatchesFromRanking,pbArena,pbVote,pbGenerate,pbRender,get PB(){return PB},set PB(v){PB=v},ledgerClusterOf,ledgerJudge,wilsonLower,ledgerRecord,ledgerUpdate,ledgerMatrix,ledgerRecommend,ledgerRecordDecision,ledgerCalibration,ledgerEscalationThreshold,ledgerTotals,ledgerLesson,toolSignature,toolLoopGuard,instinctAdd,instinctPick,instinctCredit,instinctBlock,instinctConf,learnRng,betaSample,routerPick,routerChoose,routerCandidates,ledgerRowFromReact,ledgerRowsFromS1,ledgerFeedback,ledgerFromReact,ledgerFromS1,s1Diff,s1PathSig,s1SuccessHolds,s1ParseSuccess,s1WireAnswers,s1DecisionGuard,s1SystemOneDecider,S1_DECISION_PRESETS,s1ControlContext,s1PlainText,s1Headings,freeCoolMs,FREE_STICKY,FREE_COOL,harnessNotes,auditChecks,auditSecretScan,auditSnapshot,playtestVerdict,playtestStudio,learnRender,get LEARN(){return LEARN},set LEARN(v){LEARN=v},storageJunkSweep,fixtureChatSweep,gauntletResidueSweep,saveAChats,gauntletSandbox,cloudNormUrl,bridgeOrder,codespaceBridgeUrl,bridgeBase,cloudPairCode,gtfixContext,gtfixPrompt,gtfixHandoff,gtfixEnv,gtfixOpen,steLint,EXPLAIN_AS,STE_STYLE_BLOCK,h2PathOk,h2Validate,h2Diff,h2Assemble,h2Files,h2ParseReply,h2AnonIds,h2ParseExperience,h2Budget,h2RunTask,h2LibraryAdd,h2Render,reaSniff,reaEntropy,reaStrings,reaClassify,reaWasm,reaJS,reaLedger,reaEvidenceText,reaCliFor,reaGhidraReadOnly,reaInspect,reaHAR,reaSafetensors,reaPE,reaELF,reaMachO,reaRender,lgGraph,lgMerge,lgAppend,mastraWorkflow,mastraStep,graphitiAdd,graphitiAsOf,cogneeAdd,lfBatch,deEvaluate,DE_METRICS,buIndex,e2bRun,genuiRoute,ouiMermaidHydrate,get CLOUD(){return CLOUD},get H2(){return H2},get REA(){return REA},modelKind,modelGroupOf,modelGroups,modelOptionsHTML,modelDatalistHTML,modelListAttrs,modelListsRepaint,catalogSummary,catalogAgeText,catalogStale,artNearest,catalogRefresh,catalogFetchRemote,catalogStatusText,genImageModalities,MODEL_KINDS,get CATALOG_META(){return CATALOG_META},ouiPrepare,ouiStripComments,ouiLex,ouiSplit,ouiParse,ouiEvaluate,ouiSummary,ouiMerge,ouiSerialize,ouiValidate,ouiRuntime,ouiLibFromSpec,ouiLib,ouiSystemPrompt,ouiMount,ouiPaint,ouiSplitMessage,ouiXYChart,ouiPie,ouiMd,ouiFindByPath,ouiInteractionReplay,ouiTok,OUI_R,OUI_LIB_SPEC,artSave,artDelete,artPin,artCollect,artFilter,artKindOf,artBlocksFrom,artBody,artPreviewHtml,artRender,get ARTLIB(){return ARTLIB},set ARTLIB(v){ARTLIB=v},genuiCompare,genuiBodyHTML,genuiHydrate,genuiChatSystem,genuiGenerate,genuiRender,get GENUI(){return GENUI},GENUI_CORE,asstBodyHTML,fwValidate,fwJson,fwEmbedLexical,fwCosine,fwArith,lcRunnable,lcPrompt,lcCoerce,lcFill,lcParallel,lcBranch,liSplit,liIndex,chromaClient,chromaWhere,chromaWhereDoc,instructorCreate,instructorReask,paAgent,paSystem,crewPrompt,crewKickoff,skKernel,skParse,hsPipeline,autogptParse,autogptRun,TF_TASKS,tfPipeline,fwRender,FW_DEMOS,hhCommand,hhSlug,hhHandoffDoc,hhReadmeCommands,hhAddCustom,hhRender,HH_HARNESSES,get HH(){return HH},hhPassOff,hhCollect,hhExperiment,hhSearch,saveLearn,get S1PATHS(){return S1PATHS},pageIsLoopback,localFetchOpts,lnaPermission,ollamaOS,ollamaFixCommands,
+    pbKey,pbBradleyTerry,pbBestModel,pbShortlist,pbRoutineMatch,pbParseGenerated,pbCost,pbAdd,pbSelect,pbRun,pbMatchesFromRanking,pbArena,pbVote,pbGenerate,pbRender,get PB(){return PB},set PB(v){PB=v},ledgerClusterOf,ledgerJudge,wilsonLower,ledgerRecord,ledgerUpdate,ledgerMatrix,ledgerRecommend,ledgerRecordDecision,ledgerCalibration,ledgerEscalationThreshold,ledgerTotals,ledgerLesson,toolSignature,toolLoopGuard,instinctAdd,instinctPick,instinctCredit,instinctBlock,instinctConf,learnRng,betaSample,routerPick,routerChoose,routerCandidates,ledgerRowFromReact,ledgerRowsFromS1,ledgerFeedback,ledgerFromReact,ledgerFromS1,s1Diff,s1PathSig,s1SuccessHolds,s1ParseSuccess,s1WireAnswers,s1DecisionGuard,s1SystemOneDecider,S1_DECISION_PRESETS,s1ControlContext,s1PlainText,s1Headings,freeCoolMs,FREE_STICKY,FREE_COOL,harnessNotes,auditChecks,auditSecretScan,auditSnapshot,playtestVerdict,playtestStudio,learnRender,get LEARN(){return LEARN},set LEARN(v){LEARN=v},storageJunkSweep,syncKeep36,specParseTasks,specReady,specCycles,specJsonl,specHandoff,readerUrlOk,gauntletSabotageAsync,shellMode36,tabPosFor36,tabFace36,clamp36,contrast36,ICONS36,DOCK36,fixtureChatSweep,gauntletResidueSweep,saveAChats,gauntletSandbox,cloudNormUrl,bridgeOrder,codespaceBridgeUrl,bridgeBase,cloudPairCode,gtfixContext,gtfixPrompt,gtfixHandoff,gtfixEnv,gtfixOpen,steLint,EXPLAIN_AS,STE_STYLE_BLOCK,h2PathOk,h2Validate,h2Diff,h2Assemble,h2Files,h2ParseReply,h2AnonIds,h2ParseExperience,h2Budget,h2RunTask,h2LibraryAdd,h2Render,reaSniff,reaEntropy,reaStrings,reaClassify,reaWasm,reaJS,reaLedger,reaEvidenceText,reaCliFor,reaGhidraReadOnly,reaInspect,reaHAR,reaSafetensors,reaPE,reaELF,reaMachO,reaRender,lgGraph,lgMerge,lgAppend,mastraWorkflow,mastraStep,graphitiAdd,graphitiAsOf,cogneeAdd,lfBatch,deEvaluate,DE_METRICS,buIndex,e2bRun,genuiRoute,ouiMermaidHydrate,get CLOUD(){return CLOUD},get H2(){return H2},get REA(){return REA},modelKind,modelGroupOf,modelGroups,modelOptionsHTML,modelDatalistHTML,modelListAttrs,modelListsRepaint,catalogSummary,catalogAgeText,catalogStale,artNearest,catalogRefresh,catalogFetchRemote,catalogStatusText,genImageModalities,MODEL_KINDS,get CATALOG_META(){return CATALOG_META},ouiPrepare,ouiStripComments,ouiLex,ouiSplit,ouiParse,ouiEvaluate,ouiSummary,ouiMerge,ouiSerialize,ouiValidate,ouiRuntime,ouiLibFromSpec,ouiLib,ouiSystemPrompt,ouiMount,ouiPaint,ouiSplitMessage,ouiXYChart,ouiPie,ouiMd,ouiFindByPath,ouiInteractionReplay,ouiTok,OUI_R,OUI_LIB_SPEC,artSave,artDelete,artPin,artCollect,artFilter,artKindOf,artBlocksFrom,artBody,artPreviewHtml,artRender,get ARTLIB(){return ARTLIB},set ARTLIB(v){ARTLIB=v},genuiCompare,genuiBodyHTML,genuiHydrate,genuiChatSystem,genuiGenerate,genuiRender,get GENUI(){return GENUI},GENUI_CORE,asstBodyHTML,fwValidate,fwJson,fwEmbedLexical,fwCosine,fwArith,lcRunnable,lcPrompt,lcCoerce,lcFill,lcParallel,lcBranch,liSplit,liIndex,chromaClient,chromaWhere,chromaWhereDoc,instructorCreate,instructorReask,paAgent,paSystem,crewPrompt,crewKickoff,skKernel,skParse,hsPipeline,autogptParse,autogptRun,TF_TASKS,tfPipeline,fwRender,FW_DEMOS,hhCommand,hhSlug,hhHandoffDoc,hhReadmeCommands,hhAddCustom,hhRender,HH_HARNESSES,get HH(){return HH},hhPassOff,hhCollect,hhExperiment,hhSearch,saveLearn,get S1PATHS(){return S1PATHS},pageIsLoopback,localFetchOpts,lnaPermission,ollamaOS,ollamaFixCommands,
     beaconExportLines,beaconSelfLearn,BEACON_SESSION,
     HL_KINDS,HL_TEMPLATES,HL_TARGETS,hlRefs,hlTemplate,hlValidate,hlOverBudget,hlPick,hlParseSpec,hlRun,hlScore,hlBaseline,hlBench,hlDesign,hlModes,hlApplyHooks,hlRender,get HL(){return HL},set HL(v){HL=v},asstModeEntries,freeModelFor,freeRoute,freeSlotWait,get FREE(){return FREE},set FREE(v){FREE=v},get FREE_LOG(){return FREE_LOG},
     HARNESS_LAYERS,harnessAudit,

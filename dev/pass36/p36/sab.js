@@ -1,0 +1,5 @@
+  {id:'shell-always-classic',export:'shellMode36',why:'every screen keeps the old 57-tab strip',broken:()=>()=>'classic'},
+  {id:'tabface-no-icon',export:'tabFace36',why:'tabs lose their icons and icon-only tabs lose their names',broken:()=>t=>{t.el.textContent=t.text;}},
+  {id:'contrast-always-passes',export:'contrast36',why:'the AA check approves any colour pair',broken:()=>()=>21},
+  {id:'clamp-noop',export:'clamp36',why:'long descriptions are never folded',broken:()=>()=>{}},
+  {id:'dock-dead-target',export:'DOCK36',why:'a dock button leads to a tab that does not exist',broken:()=>[['nope','X'],['lab','R'],['gen','C'],['brain','B'],['__all','All']]},

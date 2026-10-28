@@ -1,0 +1,303 @@
+/* ═══════════════════ PASS 36 — DESIGN SYSTEM ═══════════════════
+   One calm base look. Loaded after the original stylesheet so it wins at equal specificity, and
+   before #user-css so a person's own CSS (and the theme generator's inline tokens) still win.
+   Rules of the system, in order of how much clutter each removes:
+     1. Hierarchy by weight, not by colour: one solid button per area (plain .btn — the codebase
+        already uses it for Run/Send/Go), tinted for secondary (.btn.small), neutral for the rest.
+     2. Sentence-case headings. The small uppercase tracked labels were the loudest "AI dashboard" tell.
+     3. Surfaces instead of outlines: cards sit on the page by tone, hairlines only where they separate.
+     4. Navigation lives in one place per form factor: a sidebar on a wide screen, a dock on a phone.
+   Contrast: every text token below is ≥4.5:1 on the surface it is used on (checked by contrast36()). */
+
+:root{
+  --bg:#0e0f13; --bg2:#121419; --panel:#121419; --panel2:#181a20; --edge:#262932; --edge2:#343844;
+  --ink:#ececf1; --ink2:#b0b4bf; --ink3:#8b909c; --acc:#6aa2ff; --acc2:#a98bff;
+  --acc-fill:#2f6fe8; --on-acc:#ffffff;
+  --good:#3ccf86; --warn:#f2b64c; --bad:#ff6b6b;
+  --radius:14px; --r-ctl:10px; --r-sm:8px;
+  --side-w:240px; --head-h:52px; --dock-h:64px;
+  --shadow-1:0 1px 2px rgba(0,0,0,.25);
+  --shadow-pop:0 18px 50px -12px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06);
+  --glass:color-mix(in srgb,var(--bg2) 78%,transparent);
+  --glass-rim:inset 0 1px 0 rgba(255,255,255,.07),inset 0 0 0 1px rgba(255,255,255,.035);
+  --ease:cubic-bezier(.2,.8,.2,1);
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI Variable","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+:root[data-theme="light"]{
+  --bg:#f5f5f7; --bg2:#fbfbfd; --panel:#f5f5f7; --panel2:#ffffff; --edge:#e2e2e7; --edge2:#cfcfd6;
+  --ink:#1d1d1f; --ink2:#48484d; --ink3:#6b6b70; --acc:#0066cc; --acc2:#7b4ddb;
+  --acc-fill:#0071e3; --on-acc:#ffffff; --good:#1a8d4f; --warn:#a86a00; --bad:#d70015;
+  --shadow-1:0 1px 2px rgba(0,0,0,.05),0 0 0 1px rgba(0,0,0,.035);
+  --shadow-pop:0 20px 50px -14px rgba(0,0,0,.22),0 0 0 1px rgba(0,0,0,.06);
+  --glass:color-mix(in srgb,#ffffff 84%,transparent);
+  --glass-rim:inset 0 1px 0 rgba(255,255,255,.9),inset 0 0 0 1px rgba(0,0,0,.05);
+}
+
+/* ── Page ─────────────────────────────────────────────────────────────── */
+body{font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  font-feature-settings:"cv11","ss01";text-rendering:optimizeLegibility;
+  background:var(--bg);
+  background-image:radial-gradient(1200px 700px at 12% -10%,color-mix(in srgb,var(--acc) 9%,transparent),transparent 60%),
+                   radial-gradient(900px 600px at 100% 0%,color-mix(in srgb,var(--acc2) 7%,transparent),transparent 55%);
+  background-attachment:fixed}
+:root[data-theme="light"] body{background-image:radial-gradient(1100px 650px at 10% -10%,color-mix(in srgb,var(--acc) 6%,transparent),transparent 60%)}
+::selection{background:color-mix(in srgb,var(--acc) 35%,transparent)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--ink) 16%,transparent);border-radius:10px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background-color:color-mix(in srgb,var(--ink) 28%,transparent)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+main{background:transparent;border-top:none}
+.view{padding:24px 28px 40px}
+.view.active{animation:v36in .22s var(--ease)}
+@keyframes v36in{from{transform:translateY(6px)}to{transform:none}}
+.wrap{max-width:min(1320px,100%)}
+.view h2{font-size:22px;font-weight:650;letter-spacing:-.018em;line-height:1.25;color:var(--ink)}
+.card h2{font-size:19px;letter-spacing:-.015em;margin-top:0}
+h1,h2,h3,h4{text-wrap:balance}
+p{text-wrap:pretty}
+a{color:var(--acc);text-decoration-color:color-mix(in srgb,var(--acc) 40%,transparent);text-underline-offset:2px}
+
+/* ── Surfaces ─────────────────────────────────────────────────────────── */
+.card{background:var(--panel2);border:1px solid color-mix(in srgb,var(--edge) 75%,transparent);
+  border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-1)}
+.card .card{background:color-mix(in srgb,var(--ink) 3%,var(--panel2));box-shadow:none}
+.card h3{font-size:15px;font-weight:600;text-transform:none;letter-spacing:-.005em;color:var(--ink);margin:0 0 12px}
+.help{font-size:12.5px;color:var(--ink3);line-height:1.55;max-width:84ch}
+p.help{margin:.4em 0}
+.row{gap:10px}
+hr{border:0;border-top:1px solid var(--edge)}
+details.dd{border-color:var(--edge);background:transparent}
+.diagbox{border-color:var(--edge);background:color-mix(in srgb,var(--ink) 3%,transparent)}
+.banner{border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.5}
+.tbl,table{border-collapse:collapse}
+.tbl th{font-weight:600;color:var(--ink2);font-size:12px;text-transform:none;letter-spacing:0}
+.tbl td,.tbl th{border-color:var(--edge)}
+
+/* ── Controls ─────────────────────────────────────────────────────────── */
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),select,textarea{
+  background:color-mix(in srgb,var(--bg) 82%,transparent);border:1px solid var(--edge);border-radius:var(--r-ctl);
+  transition:border-color .15s,box-shadow .15s}
+input:not([type=checkbox]):not([type=radio]):not([type=range]):focus,select:focus,textarea:focus{
+  outline:none;border-color:color-mix(in srgb,var(--acc) 70%,var(--edge));
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 22%,transparent)}
+input::placeholder,textarea::placeholder{color:color-mix(in srgb,var(--ink3) 85%,transparent)}
+input[type=checkbox],input[type=radio],input[type=range]{accent-color:var(--acc-fill)}
+label.field{font-weight:500;color:var(--ink2)}
+
+.btn{background:var(--acc-fill);color:var(--on-acc);border:0;border-radius:var(--r-ctl);padding:9px 16px;
+  font-weight:600;font-size:13.5px;letter-spacing:-.005em;line-height:1.2;
+  transition:background .15s,transform .08s,box-shadow .15s,filter .15s;box-shadow:0 1px 0 rgba(255,255,255,.12) inset}
+.btn:hover{filter:none;background:color-mix(in srgb,var(--acc-fill) 88%,#fff)}
+.btn:active{transform:scale(.98)}
+.btn.small{background:color-mix(in srgb,var(--acc) 15%,transparent);color:var(--acc);box-shadow:none;
+  padding:6px 12px;font-size:12.5px;border-radius:var(--r-sm)}
+.btn.small:hover{background:color-mix(in srgb,var(--acc) 24%,transparent)}
+.btn.ghost{background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink);border:0;box-shadow:none}
+.btn.ghost:hover{background:color-mix(in srgb,var(--ink) 12%,transparent);border:0}
+.btn.ghost.small{color:var(--ink2)}
+.btn.ghost.small.on,.btn.ghost.on{background:color-mix(in srgb,var(--acc) 18%,transparent);color:var(--acc)}
+.btn.danger,.btn.bad{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad);box-shadow:none}
+.btn.danger:hover,.btn.bad:hover{background:color-mix(in srgb,var(--bad) 26%,transparent)}
+.btn.good{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good);box-shadow:none}
+.btn:disabled{opacity:.42;transform:none}
+/* The old light theme forced white text on every non-ghost button; tinted buttons need their accent text back. */
+:root[data-theme="light"] .btn.small:not(.ghost):not(.good):not(.danger){color:var(--acc)}
+:root[data-theme="light"] .btn.danger,:root[data-theme="light"] .btn.bad{color:var(--bad)}
+:root[data-theme="light"] .btn.good{color:var(--good)}
+.chip{background:transparent;border:1px solid var(--edge);color:var(--ink2);font-weight:500;padding:5px 12px}
+.chip:hover{border-color:var(--edge2);color:var(--ink)}
+.chip.on{background:color-mix(in srgb,var(--acc) 16%,transparent);border-color:color-mix(in srgb,var(--acc) 55%,transparent);color:var(--ink)}
+.pill-sm,.chip-sm{border-color:var(--edge)}
+.subnav{background:color-mix(in srgb,var(--ink) 5%,transparent);border-radius:12px;padding:4px;border:0}
+.subtab{border-radius:9px;color:var(--ink2);font-weight:500}
+.subtab.on{background:var(--panel2);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.25),0 0 0 1px color-mix(in srgb,var(--edge) 60%,transparent)}
+.kbd{background:color-mix(in srgb,var(--ink) 8%,transparent);border:0;border-radius:5px;font-size:11px;padding:1px 6px}
+
+/* ── Overlays: modal, palette, toast, menus ───────────────────────────── */
+.modal{background:var(--panel2);border:0;border-radius:18px;box-shadow:var(--shadow-pop)}
+#toast{background:var(--glass);-webkit-backdrop-filter:blur(24px) saturate(170%);backdrop-filter:blur(24px) saturate(170%);
+  border:0;border-radius:14px;box-shadow:var(--shadow-pop),var(--glass-rim);padding:11px 16px;font-size:13px;
+  bottom:calc(24px + env(safe-area-inset-bottom))}
+.pal{background:rgba(0,0,0,.35);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);align-items:flex-start;padding-top:12vh}
+.palbox{background:var(--glass);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);
+  border:0;border-radius:18px;box-shadow:var(--shadow-pop),var(--glass-rim);overflow:hidden}
+.palbox input{font-size:18px!important;padding:16px 18px!important;border-bottom:1px solid var(--edge)!important;background:transparent!important;box-shadow:none!important}
+.palrow{border-radius:10px;margin:2px 6px}
+.palrow.sel{background:color-mix(in srgb,var(--acc) 18%,transparent)}
+.palrow .pbadge{background:color-mix(in srgb,var(--ink) 7%,transparent);border:0;color:var(--ink3)}
+.pal36-sec{padding:8px 16px 4px;font-size:11.5px;font-weight:600;color:var(--ink3)}
+.menu,.tabmenu{border-radius:12px!important;box-shadow:var(--shadow-pop)!important;border:0!important}
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+header.top{background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(170%);backdrop-filter:blur(22px) saturate(170%);
+  border-bottom:1px solid color-mix(in srgb,var(--edge) 70%,transparent);gap:8px;
+  padding:8px 14px;padding-top:calc(8px + env(safe-area-inset-top));min-height:var(--head-h);position:relative;z-index:60}
+.brand{font-weight:650;letter-spacing:-.01em;font-size:14.5px;gap:9px}
+.brand small{display:none}
+.brand .logo{width:24px;height:24px}
+.keypill{background:transparent;border:1px solid var(--edge);color:var(--ink2);padding:5px 11px;font-size:12.5px;font-weight:500;
+  border-radius:999px;transition:background .15s,border-color .15s}
+.keypill:hover{background:color-mix(in srgb,var(--ink) 6%,transparent);border-color:var(--edge2)}
+.icon-btn{background:transparent;border:1px solid transparent;border-radius:9px;color:var(--ink2)}
+.icon-btn:hover{background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink)}
+#primarypill{border-color:color-mix(in srgb,var(--acc) 40%,var(--edge))}
+/* The search field: the one way to find anything — tabs, sections, settings, notes, chats. */
+#omnibtn.s36{display:inline-flex;align-items:center;gap:8px;min-width:min(340px,30vw);height:32px;padding:0 10px 0 11px;
+  border-radius:10px;background:color-mix(in srgb,var(--ink) 6%,transparent);border:1px solid transparent;color:var(--ink3);font-size:13px}
+#omnibtn.s36:hover{background:color-mix(in srgb,var(--ink) 9%,transparent);color:var(--ink2)}
+#omnibtn.s36 .s36-k{margin-left:auto;font-size:11px;color:var(--ink3);background:color-mix(in srgb,var(--ink) 8%,transparent);padding:1px 6px;border-radius:5px}
+.ic36{width:16px;height:16px;flex:0 0 auto;stroke-width:1.9}
+/* Secondary header controls live behind ⋯ on every screen size — six icon buttons in a row is
+   exactly the "everything is a peer" problem. They are moved, not cloned, so their handlers work. */
+@media(min-width:641px){
+  header.top>:is(#autoBtn,#projpill,#fsBtn,#popBtn,#themeBtn,#modeBtn,#helpBtn,#spendpill){display:none}
+  #tb-more{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;
+    background:transparent;border:1px solid transparent;color:var(--ink2);cursor:pointer}
+  #tb-more:hover{background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink)}
+  #tb-sheet{position:fixed;z-index:80;display:none;right:12px;top:calc(var(--head-h) + 6px + env(safe-area-inset-top));
+    flex-direction:column;align-items:stretch;gap:2px;min-width:240px;padding:6px;border-radius:14px;
+    background:var(--glass);-webkit-backdrop-filter:blur(28px) saturate(180%);backdrop-filter:blur(28px) saturate(180%);
+    box-shadow:var(--shadow-pop),var(--glass-rim)}
+  #tb-sheet.on{display:flex}
+  #tb-sheet>*{display:flex!important;justify-content:flex-start;width:100%;border:0!important;background:transparent!important;
+    border-radius:9px!important;padding:8px 10px!important;color:var(--ink)!important;font-size:13px;gap:9px;min-height:34px}
+  #tb-sheet>*:hover{background:color-mix(in srgb,var(--ink) 8%,transparent)!important}
+  #tb-sheet>*[data-l36]::after{content:attr(data-l36);color:var(--ink2)}
+}
+#tb-more .ic36{width:18px;height:18px}
+
+/* ── Agent / suggestion bar: one quiet line ───────────────────────────── */
+.agentbar{background:transparent;border-bottom:0;padding:6px 28px 0;gap:8px;flex-wrap:nowrap;min-width:0}
+.ab-sug{flex-wrap:nowrap;overflow:hidden}
+.ab-sug:not(.all) .ab-chip:not(:first-child){display:none}
+.ab-sug.all{flex-wrap:wrap}
+.ab-chip{background:color-mix(in srgb,var(--ink) 5%,transparent);border:0;padding:5px 12px;font-size:12.5px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;display:inline-block}
+.ab-chip.warn{background:color-mix(in srgb,var(--warn) 12%,transparent);border:0}
+.ab-chip b{margin-left:6px}
+.ab-off,.ab-more{border:0;background:transparent;color:var(--ink3);font-size:12px;white-space:nowrap}
+.ab-chip,.ab-chip *{white-space:nowrap!important}
+.ab-chip b{display:inline}
+.ab-chip{max-width:min(100%,720px);text-align:left}
+.ab-state:not(.busy) .ab-label{display:none}
+:root[data-shell="dock"] .ab-off{font-size:0;width:28px;height:28px;padding:0;position:relative}
+:root[data-shell="dock"] .ab-off::after{content:'';position:absolute;inset:9px;border-radius:50%;border:1.5px solid currentColor}
+:where(.wrap,.col,section,.sub)>.card+.card{margin-top:14px}
+
+/* ── Sidebar (wide screens) ───────────────────────────────────────────── */
+:root[data-shell="side"] body[data-tabpos=left] #app{grid-template-columns:var(--side-w) minmax(0,1fr);
+  grid-template-rows:auto auto minmax(0,1fr) auto;grid-template-areas:"top top" "nav banner" "nav main" "nav bar";height:100%;min-height:0}
+:root[data-shell="side"] body[data-tabpos=left] main{height:100%;min-height:0;overflow:hidden}
+:root[data-shell="side"] body[data-tabpos=left] .tabs{max-height:none;height:100%;position:relative;padding:10px 10px 24px;gap:1px;
+  background:color-mix(in srgb,var(--bg2) 55%,transparent);border-right:1px solid color-mix(in srgb,var(--edge) 70%,transparent);
+  scrollbar-width:none;align-self:stretch}
+:root[data-shell="side"] body[data-tabpos=left] .tabs:hover{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--ink) 18%,transparent) transparent}
+:root[data-shell="side"] .tabs .tab{display:flex;align-items:center;gap:10px;border:0!important;border-radius:8px;
+  padding:6px 10px;min-height:32px;font-size:13.5px;font-weight:500;color:var(--ink2);background:transparent}
+:root[data-shell="side"] .tabs .tab:hover:not(.active){background:color-mix(in srgb,var(--ink) 6%,transparent);color:var(--ink)}
+:root[data-shell="side"] .tabs .tab.active{background:color-mix(in srgb,var(--acc) 17%,transparent);color:var(--ink);font-weight:600}
+:root[data-shell="side"] .tabs .tab.active .ic36{color:var(--acc)}
+:root[data-shell="side"] .tabs .tab .ic36{color:var(--ink3)}
+:root[data-shell="side"] .tabs .tabgroup{display:flex!important;align-items:center;gap:6px;width:100%;margin:14px 0 4px;padding:4px 10px;
+  border:0!important;border-top:0!important;background:transparent!important;text-transform:none;letter-spacing:0;
+  font-size:12px;font-weight:600;color:var(--ink3);opacity:1;min-height:26px;border-radius:7px}
+:root[data-shell="side"] .tabs .tabgroup:first-child{margin-top:2px}
+:root[data-shell="side"] .tabs .tabgroup:hover{color:var(--ink2);background:color-mix(in srgb,var(--ink) 5%,transparent)!important}
+:root[data-shell="side"] .tabs .tabgroup .tg-car{order:3;margin-left:auto;opacity:.6;transition:transform .15s;display:inline-flex}
+.tg-car .ic36{width:13px;height:13px}
+:root[data-shell="side"] .tabs .tabgroup.folded .tg-car{transform:rotate(-90deg)}
+:root[data-shell="side"] .tabs .tabgroup .tg-n{order:2;background:transparent;color:var(--ink3);font-weight:500}
+:root[data-shell="side"] .tabs .tabgroup .tg-ico{display:none}
+:root[data-shell="side"] .tabs .tab-add{margin-top:12px;color:var(--ink3)}
+:root[data-shell="side"] .agentbar{padding-left:28px}
+
+/* ── Dock + all-tabs sheet (phones and narrow windows) ────────────────── */
+#dock36{display:none}
+:root[data-shell="dock"] #dock36{display:flex;position:fixed;z-index:85;left:10px;right:10px;
+  bottom:calc(8px + env(safe-area-inset-bottom));height:var(--dock-h);border-radius:22px;padding:6px;gap:2px;
+  background:var(--glass);-webkit-backdrop-filter:blur(26px) saturate(190%);backdrop-filter:blur(26px) saturate(190%);
+  box-shadow:var(--shadow-pop),var(--glass-rim)}
+#dock36 button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;
+  border:0;background:transparent;color:var(--ink2);border-radius:16px;font-size:10.5px;font-weight:600;letter-spacing:.01em;
+  transition:background .15s,color .15s}
+#dock36 button .ic36{width:22px;height:22px;stroke-width:1.8}
+#dock36 button.on{color:var(--acc);background:color-mix(in srgb,var(--acc) 13%,transparent)}
+#dock36 button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+:root[data-shell="dock"] nav.tabs{display:none}
+/* The dock floats over main, so main ends above it — views with a pinned composer (Assistant, Terminal) keep it visible. */
+:root[data-shell="dock"] main{padding-bottom:calc(var(--dock-h) + 14px + env(safe-area-inset-bottom))}
+:root[data-shell="dock"] .view{padding:16px 14px 24px}
+:root[data-shell="dock"] .agentbar{padding:6px 14px 0}
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs{display:flex;position:fixed;z-index:84;left:0;right:0;
+  top:0;bottom:0;padding:calc(var(--head-h) + env(safe-area-inset-top) + 8px) 14px calc(var(--dock-h) + 28px + env(safe-area-inset-bottom));
+  flex-direction:row;flex-wrap:wrap;align-content:flex-start;gap:8px;overflow-y:auto;overflow-x:hidden;
+  background:color-mix(in srgb,var(--bg) 95%,transparent);-webkit-backdrop-filter:blur(30px) saturate(160%);backdrop-filter:blur(30px) saturate(160%);
+  animation:v36sheet .22s var(--ease)}
+@keyframes v36sheet{from{transform:translateY(12px)}to{transform:none}}
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs .tabgroup{display:flex!important;width:100%;flex:0 0 100%;border:0!important;
+  background:transparent!important;text-transform:none;letter-spacing:0;font-size:13px;font-weight:650;color:var(--ink2);
+  padding:10px 4px 2px;margin:4px 0 0;gap:6px;align-items:center;min-height:32px}
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs .tabgroup .tg-car{order:3;margin-left:auto;display:inline-flex}
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs .tabgroup .tg-ico{display:none}
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs .tabgroup.folded .tg-car{transform:rotate(-90deg)}
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs .tab{flex:0 0 calc((100% - 16px)/3);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:6px;min-height:78px;padding:10px 4px;border:0!important;border-radius:16px;
+  background:color-mix(in srgb,var(--panel2) 92%,transparent);box-shadow:var(--shadow-1);color:var(--ink);font-size:12px;
+  font-weight:500;white-space:normal;text-align:center;line-height:1.2}
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs .tab .ic36{width:22px;height:22px;color:var(--acc)}
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs .tab.active{outline:2px solid var(--acc);outline-offset:-2px}
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs .tab-add{flex:0 0 100%}
+:root[data-shell="dock"] #toast{bottom:calc(var(--dock-h) + 22px + env(safe-area-inset-bottom))}
+:root[data-shell="dock"] header.top{z-index:86;padding:6px 10px;padding-top:calc(6px + env(safe-area-inset-top));min-height:48px}
+:root[data-shell="dock"] .brand .s36-title{font-weight:650}
+.s36-title{display:none}
+:root[data-shell="dock"] .brand .s36-title{display:inline}
+:root[data-shell="dock"] .brand .s36-name{display:none}
+:root[data-shell="dock"] #omnibtn.s36{min-width:0;width:36px;height:36px;padding:0;justify-content:center;background:transparent}
+:root[data-shell="dock"] #omnibtn.s36 :is(.s36-l,.s36-k){display:none}
+@media(max-width:640px){:root[data-onerow="1"] header.top>#omnibtn.s36.s36{display:inline-flex}}
+
+
+/* ── Assistant on a phone: a messages app, not a long page. Chat list and modes become one scrolling
+   row each, the thread takes the rest, and the composer sits on the dock. ── */
+:root[data-shell="dock"] #view-assistant{display:none;overflow:hidden;padding-bottom:10px}
+:root[data-shell="dock"] #view-assistant.active{display:flex;flex-direction:column}
+:root[data-shell="dock"] #view-assistant>.wrap{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;width:100%}
+:root[data-shell="dock"] #view-assistant .asst-shell{flex:1 1 auto;height:auto;min-height:0;display:flex;flex-direction:column;gap:8px}
+:root[data-shell="dock"] .asst-side{display:flex;flex-direction:row;align-items:center;gap:8px;border:0!important;padding:0!important;flex:0 0 auto}
+:root[data-shell="dock"] #asst-new{flex:0 0 auto;width:auto;white-space:nowrap}
+:root[data-shell="dock"] .asst-list{flex:1 1 auto;display:flex;flex-direction:row;gap:6px;overflow-x:auto;max-height:none;scrollbar-width:none}
+:root[data-shell="dock"] .asst-list>p.help{margin:0;white-space:nowrap}
+:root[data-shell="dock"] .asst-main{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+:root[data-shell="dock"] .asst-main>.row:first-child{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;flex:0 0 auto}
+:root[data-shell="dock"] #asst-modes{flex-wrap:nowrap}
+:root[data-shell="dock"] #asst-modes>*{flex:0 0 auto}
+:root[data-shell="dock"] .asst-thread{flex:1 1 auto;min-height:0;overflow:auto}
+
+/* ── Long descriptions: two lines, then "More" ────────────────────────── */
+.clamp36{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;position:relative}
+.clamp36.open{display:block;-webkit-line-clamp:unset;cursor:auto}
+.more36{display:inline-block;border:0;background:transparent;color:var(--acc);font-size:12.5px;font-weight:500;padding:0;margin:0 0 6px;cursor:pointer}
+
+/* Living: the shader replaces the static gradient; cards let a little of it through. */
+:root[data-fx="living"] body{background-image:none;background-color:transparent}
+:root[data-fx="living"] .card{background:color-mix(in srgb,var(--panel2) 90%,transparent)}
+:root[data-fx="living"] .tabs{background:transparent!important}
+
+/* Emoji in headings and buttons: kept for search and for the emoji icon style, not drawn otherwise. */
+:root:not([data-icons="emoji"]) .emo36{display:none}
+
+/* ── Fallbacks ────────────────────────────────────────────────────────── */
+@media (prefers-reduced-transparency:reduce){
+  header.top,#dock36,#toast,.palbox,#tb-sheet,:root[data-navsheet="1"] nav.tabs{background:var(--panel2)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+}
+@media (prefers-reduced-motion:reduce){.view.active,nav.tabs{animation:none!important}.btn:active{transform:none}}
+@media (prefers-contrast:more){:root{--ink2:#d0d3db;--ink3:#b3b7c2;--edge:#3b404c}}
+@media print{header.top,nav.tabs,#dock36,.agentbar{display:none!important}}
+
+/* Specs task list */
+.sp-tasks{display:flex;flex-direction:column;gap:6px}
+.sp-task{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--ink) 4%,transparent);cursor:pointer}
+.sp-task span{display:flex;flex-direction:column;gap:3px;min-width:0}
+.sp-task.ready{box-shadow:inset 3px 0 0 var(--good)}
+.sp-task.done b{text-decoration:line-through;color:var(--ink3)}
