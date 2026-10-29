@@ -1,0 +1,10 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1440, height: 1100 } })).newPage();
+await p.addInitScript(() => { try { localStorage.setItem('gb.onboarding', JSON.stringify({ done: true })); } catch (_) {} });
+await p.goto(process.argv[2], { waitUntil: 'load' }); await p.waitForTimeout(1500);
+await p.evaluate(() => go('systemone')); await p.waitForTimeout(900);
+await p.evaluate(() => document.getElementById('s1mod37').scrollIntoView()); await p.waitForTimeout(400);
+await p.screenshot({ path: '../shots37/s1mod.png' });
+await p.evaluate(() => { go('design'); DESIGN.panel = 'slop'; renderDesign(); }); await p.waitForTimeout(500);
+await p.evaluate(() => { document.getElementById('slop-in').value = '<style>h1{background:linear-gradient(90deg,#8b5cf6,#ec4899);-webkit-background-clip:text;background-clip:text}.c{transition:all .2s}</style><h1>✨ Unlock the power of seamless AI</h1><div class="card"><div class="card">x</div></div><p>Revolutionize everything.</p>'; document.getElementById('slop-run').click(); document.getElementById('slop-out').scrollIntoView(); });
+await p.waitForTimeout(400); await p.screenshot({ path: '../shots37/slop.png' }); await b.close();

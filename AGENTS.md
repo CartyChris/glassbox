@@ -22,6 +22,9 @@ One file is the app: `GlassBox.html` (`index.html` is a byte-identical copy). No
 - Search: ⌘K palette covers tabs, sections, settings and content.
 - Specs tab (`specs36`, IndexedDB): constitution → spec → plan → tasks with a computed ready queue; `specReady` is the rule.
 - Agent tools: register in `toolCatalog()`, execute in `toolInvoke()` — never a side path around the tool gate.
+- Local servers (pass 37): never declare `targetAddressSpace:'local'` for 127.0.0.1 — Chrome fails the request. Use `localFetchOpts(url)`.
+- System One harness edits go through `s1PatchGate37` (frozen checks in code, loosening needs a person). Never write S1MOD directly.
+- `api/` holds the hosted gateway (Vercel Edge). Its allowlist is the only thing it forwards to; test: `node dev/pass37/gateway-test.mjs`.
 
 ## Deploy
 `vercel --prod --yes --scope cloud-ops-game-time` from this folder, then confirm the live `GlassBox.html` hash equals the local one.

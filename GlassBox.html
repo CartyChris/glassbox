@@ -2717,6 +2717,37 @@ header.top{background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(1
 .sp-task.ready{box-shadow:inset 3px 0 0 var(--good)}
 .sp-task.done b{text-decoration:line-through;color:var(--ink3)}
 </style>
+<style id="ds37">
+/* ── Pass 37: resizable sidebar, icon rail, classic one-row tab strip ── */
+#side37-grip{display:none}
+:root[data-shell="side"] body[data-tabpos=left] #side37-grip{display:block;grid-area:nav;justify-self:end;align-self:stretch;
+  width:9px;margin-right:-5px;z-index:6;cursor:col-resize;touch-action:none;position:relative;outline:none}
+:root[data-shell="side"] body[data-tabpos=left] #side37-grip::after{content:'';position:absolute;top:0;bottom:0;left:4px;width:1px;
+  background:transparent;transition:background .15s,width .15s}
+:root[data-shell="side"] body[data-tabpos=left] #side37-grip:is(:hover,:focus-visible)::after,
+:root[data-resizing="1"] #side37-grip::after{background:var(--acc);width:2px;left:3.5px}
+:root[data-resizing="1"],:root[data-resizing="1"] *{cursor:col-resize!important;user-select:none!important}
+/* icon rail */
+:root[data-shell="side"][data-rail="1"] .tabs .tab{justify-content:center;padding:6px 0;gap:0}
+:root[data-shell="side"][data-rail="1"] .tabs .tab .tl36{display:none}
+:root[data-shell="side"][data-rail="1"] .tabs .tab .ic36{width:19px;height:19px}
+:root[data-shell="side"][data-rail="1"] .tabs .tabgroup{font-size:0;justify-content:center;padding:4px 0;margin:10px 0 2px;
+  border-top:1px solid color-mix(in srgb,var(--edge) 80%,transparent)!important;border-radius:0}
+:root[data-shell="side"][data-rail="1"] .tabs .tabgroup .tg-car{margin:0;font-size:12px}
+:root[data-shell="side"][data-rail="1"] .tabs .tabgroup .tg-n{display:none}
+:root[data-shell="side"][data-rail="1"] body[data-tabpos=left] .tabs{padding:10px 6px 24px}
+/* classic view: one row across the top, a real scrollbar, nothing wraps */
+:root[data-shell="classic"] body[data-tabpos=top] nav.tabs{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;
+  padding-bottom:6px;scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--ink) 30%,transparent) transparent}
+:root[data-shell="classic"] body[data-tabpos=top] nav.tabs::-webkit-scrollbar{height:8px;display:block}
+:root[data-shell="classic"] body[data-tabpos=top] nav.tabs::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--ink) 28%,transparent);border-radius:8px}
+:root[data-shell="classic"] body[data-tabpos=top] nav.tabs::-webkit-scrollbar-track{background:transparent}
+:root[data-shell="classic"] body[data-tabpos=top] nav.tabs>*{flex:0 0 auto;white-space:nowrap}
+:root[data-shell="classic"] body[data-tabpos=top] nav.tabs .tab{display:inline-flex;align-items:center;gap:7px}
+:root[data-shell="classic"] body[data-tabpos=top] nav.tabs .tab .ic36{width:16px;height:16px;flex:0 0 auto}
+#viewBtn .ic36{width:18px;height:18px}
+@media(min-width:641px){header.top>#viewBtn{display:none}}
+</style>
 </head>
 <body>
 <div id="app">
@@ -5861,7 +5892,7 @@ header.top{background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(1
     </div></section>
 
     <!-- ============ JEV DASHBOARD ============ -->
-    <section class="view" id="view-systemone"><div class="wrap"><div id="s1-panel"></div></div></section>
+    <section class="view" id="view-systemone"><div class="wrap"><div id="s1-panel"></div><div id="s1mod37" style="margin-top:14px"></div></div></section>
     <section class="view" id="view-router"><div class="wrap"><div id="hr-panel"></div></div></section>
     <section class="view" id="view-analysis"><div class="wrap"><div id="da-panel"></div></div></section>
     <section class="view" id="view-evolve"><div class="wrap"><div id="pevo-panel"></div></div></section>
@@ -6835,7 +6866,20 @@ function ollamaCandidates(){
 function pageIsLoopback(origin){return /^https?:\/\/(localhost|127\.\d+\.\d+\.\d+|\[::1\])(:\d+)?$/i.test(String(origin||''));}
 /* Chrome 142+ asks before a public site may reach this machine ("Local Network Access"). Declaring the
    target lets it show the prompt instead of failing silently; other browsers ignore the option. */
-function localFetchOpts(){return pageIsLoopback(location.origin)?{}:{targetAddressSpace:'local'};}
+/* PURE. Which address space a URL is in: 'loopback' (this machine), 'local' (private LAN) or '' (public). */
+function addrSpace(u){
+  let h='';try{h=new URL(String(u||'')).hostname.replace(/^\[|\]$/g,'').toLowerCase();}catch(_){return'';}
+  if(/^(localhost|127\.\d+\.\d+\.\d+|::1)$/.test(h)||/\.localhost$/.test(h))return'loopback';
+  if(/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)/.test(h)||/^f[cd][0-9a-f]{2}:/.test(h)||/\.local$/.test(h))return'local';
+  return'';
+}
+/* Chrome 142+ asks before a public site reaches this machine or the LAN. Only a private-LAN target is declared
+   ('local' — it also lifts the mixed-content block on http LAN servers). Loopback is NOT declared: Chrome infers it,
+   and a declared space that differs from the real one fails the request outright, before it is sent. */
+function localFetchOpts(u){
+  if(pageIsLoopback(location.origin))return{};
+  return addrSpace(u)==='local'?{targetAddressSpace:'local'}:{};
+}
 async function lnaPermission(){
   if(!navigator.permissions||!navigator.permissions.query)return'unknown';
   for(const name of ['local-network-access','loopback-network','local-network']){
@@ -6845,7 +6889,7 @@ async function lnaPermission(){
 }
 async function probeOllama(base,ms){
   const go=(opts)=>{const c=new AbortController();const t=setTimeout(()=>c.abort(),ms||2500);
-    return fetch(base+'/api/tags',Object.assign({signal:c.signal},localFetchOpts(),opts)).finally(()=>clearTimeout(t));};
+    return fetch(base+'/api/tags',Object.assign({signal:c.signal},localFetchOpts(base),opts)).finally(()=>clearTimeout(t));};
   try{
     const r=await go({});
     if(!r.ok)return{base,ok:false,reason:'http',code:r.status};
@@ -6959,15 +7003,24 @@ function ollamaFixCommands(origin,os){
   if(os==='linux')return{label:'Linux (systemd)',shell:'a terminal',
     now:`sudo mkdir -p /etc/systemd/system/ollama.service.d && printf '[Service]\nEnvironment="OLLAMA_ORIGINS=${o}"\n' | sudo tee /etc/systemd/system/ollama.service.d/glassbox.conf >/dev/null && sudo systemctl daemon-reload && sudo systemctl restart ollama && sleep 3 && curl -s -o /dev/null -w "HTTP %{http_code}\n" -H "Origin: ${o}" ${check}`,
     permanent:'',permanentWhy:'The systemd drop-in above already survives a reboot.'};
+  /* macOS — two traps measured on a real Mac: the hidden menu-bar app IGNORES "quit app Ollama" and respawns
+     `ollama serve` with the environment it started with, and a terminal `ollama serve` is a SECOND server (IPv4)
+     beside the app's (IPv6) that never sees launchctl. So: add this site to OLLAMA_ORIGINS (never overwrite, a "*"
+     already covers it), save a login item that re-applies it after a restart — and restarts Ollama if it came up
+     first and still refuses the site — then stop BOTH servers hard, reopen the app and check with this site's Origin. */
+  const q1=l=>"'"+l.replace(/'/g,"'\\''")+"'";
+  const agent=`"launchctl setenv OLLAMA_ORIGINS '$new'" 'sleep 20' `+
+    q1(`[ "$(curl -s -o /dev/null -w '%{http_code}' -H 'Origin: ${o}' ${check})" = 403 ] && { pkill -x Ollama; pkill -x ollama; sleep 2; open -a Ollama; }`)+` 'exit 0'`;
   return{label:'macOS',shell:'Terminal',
-    /* Two traps measured on a real Mac (28 Sep 2026): "quit app Ollama" is IGNORED by the hidden menu-bar app, and
-       the app respawns `ollama serve` with the environment it started with — so quitting the server alone, or the
-       app politely, changes nothing. Both are stopped hard, then the app is reopened. The site is ADDED to any
-       existing OLLAMA_ORIGINS (a "*" already covers it) rather than overwriting what other tools rely on. */
-    now:`cur="$(launchctl getenv OLLAMA_ORIGINS)"; case ",$cur," in *",${o},"*|*",*,"*) ;; *) launchctl setenv OLLAMA_ORIGINS "\${cur:+$cur,}${o}";; esac; pkill -x Ollama 2>/dev/null; pkill -x ollama 2>/dev/null; (command -v brew >/dev/null && brew services list 2>/dev/null | grep -q "^ollama.*started" && brew services restart ollama >/dev/null); sleep 2; open -a Ollama 2>/dev/null; for i in $(seq 1 20); do sleep 1; curl -s -o /dev/null -H "Origin: ${o}" ${check} && break; done; curl -s -o /dev/null -w "HTTP %{http_code}  (200 = connected)\n" -H "Origin: ${o}" ${check}`,
-    permanent:`mkdir -p ~/Library/LaunchAgents && printf '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>Label</key><string>com.glassbox.ollama-origins</string><key>ProgramArguments</key><array><string>/bin/launchctl</string><string>setenv</string><string>OLLAMA_ORIGINS</string><string>${o}</string></array><key>RunAtLoad</key><true/></dict></plist>' > ~/Library/LaunchAgents/com.glassbox.ollama-origins.plist && launchctl load -w ~/Library/LaunchAgents/com.glassbox.ollama-origins.plist && echo "Saved — applies at every login"`,
-    permanentWhy:'launchctl setenv is forgotten when the Mac restarts. This adds a tiny login item that sets it again at every login (before Ollama starts).'};
+    now:`cur="$(launchctl getenv OLLAMA_ORIGINS)"; case ",$cur," in *",${o},"*|*",*,"*) new="$cur";; *) new="\${cur:+$cur,}${o}";; esac; launchctl setenv OLLAMA_ORIGINS "$new"; `+
+      `mkdir -p ~/.glassbox ~/Library/LaunchAgents; S=~/.glassbox/ollama-origins.sh; P=~/Library/LaunchAgents/com.glassbox.ollama-origins; printf '%s\\n' ${agent} > "$S"; `+
+      `launchctl unload "$P.plist" 2>/dev/null; rm -f "$P.plist"; defaults write "$P" Label com.glassbox.ollama-origins; defaults write "$P" RunAtLoad -bool true; defaults write "$P" ProgramArguments -array /bin/sh "$S"; launchctl load -w "$P.plist" 2>/dev/null; `+
+      `pkill -x Ollama 2>/dev/null; pkill -x ollama 2>/dev/null; (command -v brew >/dev/null && brew services list 2>/dev/null | grep -q "^ollama.*started" && brew services restart ollama >/dev/null); sleep 2; open -a Ollama 2>/dev/null; `+
+      `for i in $(seq 1 20); do sleep 1; curl -s -o /dev/null -H "Origin: ${o}" ${check} && break; done; curl -s -o /dev/null -w "HTTP %{http_code}  (200 = connected)\\n" -H "Origin: ${o}" ${check}`,
+    permanent:'',permanentWhy:'',
+    undo:`launchctl unload ~/Library/LaunchAgents/com.glassbox.ollama-origins.plist 2>/dev/null; rm -f ~/Library/LaunchAgents/com.glassbox.ollama-origins.plist ~/.glassbox/ollama-origins.sh; launchctl unsetenv OLLAMA_ORIGINS`};
 }
+
 /* After showing a fix, keep checking (every 2.5 s for 3 minutes) and connect the moment Ollama answers. */
 let OLLAMA_WATCH=null;
 function ollamaAutoWatch(){
@@ -7057,8 +7110,9 @@ async function renderOllamaHelp(results){
        command below therefore restarts Ollama and then checks the result itself. */
     const os=ollamaOS(),fx=ollamaFixCommands(location.origin,os);
     h+=`<div class="diagbox bad"><b>Ollama is running</b> at <span class="mono">${esc(addrs)}</span> but refuses this site (<span class="mono">${esc(location.origin)}</span>) — it only reads its allowed-sites list when it starts.</div>`;
-    h+=`<p class="help" style="margin-top:10px"><b>Paste this into ${esc(fx.shell)}</b> — it allows this site, restarts Ollama, and prints <b>HTTP 200</b> when it worked. This page reconnects by itself the moment it does.</p>`+cmd(fx.now);
+    h+=`<p class="help" style="margin-top:10px"><b>Paste this into ${esc(fx.shell)}</b> — it allows this site${fx.undo?' (and keeps it allowed after a restart)':''}, restarts Ollama, and prints <b>HTTP 200</b> when it worked. This page reconnects by itself the moment it does.</p>`+cmd(fx.now);
     if(fx.permanent)h+=`<details class="dd" style="margin-top:8px"><summary>Make it survive a restart of your computer</summary><div class="ddb"><p class="help">${esc(fx.permanentWhy)}</p>${cmd(fx.permanent)}</div></details>`;
+    if(fx.undo)h+=`<details class="dd" style="margin-top:8px"><summary>What it changes, and how to undo it</summary><div class="ddb"><p class="help">It adds this site to Ollama's allowed sites, saves a small login item (<span class="mono">com.glassbox.ollama-origins</span>) so the setting survives a restart, and restarts Ollama. Nothing else. To undo:</p>${cmd(fx.undo)}</div></details>`;
     h+=`<details class="dd" style="margin-top:8px"><summary>Other systems</summary><div class="ddb">${['mac','windows','linux'].filter(o=>o!==os).map(o=>{const f=ollamaFixCommands(location.origin,o);return`<p class="help" style="margin-top:6px"><b>${esc(f.label)}</b> (${esc(f.shell)})</p>`+cmd(f.now);}).join('')}</div></details>`;
     h+=`<p class="help" style="margin-top:8px">Zero-setup alternative: the <b>desktop app</b> (the DMG) serves GlassBox from <span class="mono">localhost</span>, which Ollama allows by default — local models connect with no command at all.</p>`;
     ollamaAutoWatch();
@@ -7070,7 +7124,8 @@ async function renderOllamaHelp(results){
     }else{
       h+=`<div class="diagbox"><b>No Ollama server answered</b> on <span class="mono">${esc(addrs)}</span>.</div>`;
       if(lna==='prompt')h+=`<p class="help" style="margin-top:8px">If your browser asks to let this site <b>access devices on your local network</b>, choose <b>Allow</b> — that is how it reaches Ollama.</p>`;
-      h+=`<p class="help" style="margin-top:10px">Open <b>Ollama.app</b> (or run the line below). This page keeps checking and connects the moment Ollama answers.</p>`+cmd('ollama serve');
+      const mac=ollamaOS()==='mac';
+      h+=`<p class="help" style="margin-top:10px">Open <b>Ollama</b>${mac?' (the menu-bar app — not a terminal <span class="mono">ollama serve</span>, which starts a second server that does not get your settings)':' (or run the line below)'}. This page keeps checking and connects the moment Ollama answers.</p>`+cmd(mac?'open -a Ollama':'ollama serve');
       h+=`<p class="help">Check it independently with:</p>`+cmd('curl http://127.0.0.1:11434/api/tags');
       ollamaAutoWatch();
     }
@@ -17007,7 +17062,7 @@ function s1CuObserve(cands,values,page,marks){
     }else{
       if(kind==='check'){state=c.checked?' (checked)':' (unchecked)';if(c.checked)set.push(`${label}: checked`);}
       const desc=`${role} "${label}"${state}${ctx(c)}`;
-      if(S1_CONSEQUENTIAL.test(label))consequential[c.ref]=desc;else elements[c.ref]=desc;
+      if(s1Consequential37(label))consequential[c.ref]=desc;else elements[c.ref]=desc;
     }
     lines.push(`[${c.ref}] ${role} "${label}"${state}${ctx(c)}`);
   });
@@ -18000,10 +18055,13 @@ function s1DeciderFor(kind,envKind,scenario){
     return{decide:s1Scripted(S1_REPLAYS[scenario]||S1_REPLAYS.ship_cheapest),label:'replay'};
   }
   if(kind==='systemone'){
-    const p=S1_DECISION_PRESETS.find(x=>x.id===c.soPreset)||S1_DECISION_PRESETS[S1_DECISION_PRESETS.length-1];
+    const P=s1Presets37(),p=P.find(x=>x.id===c.soPreset)||P[P.length-1];
     const url=(c.soUrl||p.url||'').trim(),gd=s1DecisionGuard(p,url,FREE.localMaxB!=null?FREE.localMaxB:9);
     if(!gd.ok)return{error:gd.why};
     if(p.key&&!c.soKey)return{error:p.label+' needs a key — paste it under Who decides.'};
+    /* A profile on the one-letter wire (Cua-S1-style logprobs, any fine-tune behind an OpenAI-compatible server). */
+    if(p.wire==='letter')return{decide:s1LetterDecider({endpoint:url.replace(/\/chat\/completions$/,''),key:c.soKey,model:(c.soModel||p.model||'').trim(),
+      family:p.family||'general_decision',app:(S1_ENVS[envKind]||{}).label}),label:'letter ('+(c.soModel||p.model||p.id)+')'};
     return{decide:s1SystemOneDecider({url,model:(c.soModel||p.model||'').trim(),key:c.soKey}),label:'systemone ('+(c.soModel||p.model||p.id)+')'};
   }
   if(kind==='cuas1')return{decide:s1LetterDecider({endpoint:c.cuaEndpoint,model:c.cuaModel,family:c.family,
@@ -18034,10 +18092,10 @@ async function s1Go(o){
   if(S1_LIVE)return{status:'failed',reason:'busy',error:'System One is already running — stop it first',steps:[]};
   const envKind=o.envKind||'order';
   let decl,env,goal=String(o.goal||'').trim();
-  if(envKind==='order'){decl=JSON.parse(JSON.stringify(S1_ORDER_SPACE));env=s1OrderDesk(o.scenario);goal=env.goal;}
+  if(envKind==='order'){decl=s1ModApply37(JSON.parse(JSON.stringify(S1_ORDER_SPACE)),'order');env=s1OrderDesk(o.scenario);goal=env.goal;}
   else{
     if(!goal)return{status:'failed',reason:'environment_error',error:'say what it should do first',steps:[]};
-    decl=JSON.parse(JSON.stringify(S1_COMPUTER_SPACE));decl.gate=Object.assign({},S1CFG.gate);
+    decl=s1ModApply37(JSON.parse(JSON.stringify(S1_COMPUTER_SPACE)),'screen');decl.gate=Object.assign({},S1CFG.gate);
     env=s1CuEnv(envKind,{values:o.values||{},window:o.window,url:o.url,allowConsequential:!!o.allowConsequential,goal});
   }
   const sp=s1Space(decl);
@@ -18057,7 +18115,7 @@ async function s1Go(o){
   const succ=s1ParseSuccess(o.success!=null?o.success:S1CFG.success);
   try{run=await s1Run(goal,{space:sp.space,env,decide:d.decide||undefined,deciderLabel:d.label,
     maxSteps:+o.maxSteps||S1CFG.maxSteps,disabled:env.disabled,signal:S1_ABORT.signal,onStep:o.onStep,
-    escalate:esc2||undefined,confirmGoal:envKind==='order'?1:(+S1CFG.confirmGoal||2),success:envKind==='order'?null:succ,
+    instructions:s1Lessons37()||undefined,escalate:esc2||undefined,confirmGoal:envKind==='order'?1:(+S1CFG.confirmGoal||2),success:envKind==='order'?null:succ,
     record:d.label!=='replay'});}
   finally{if(env.stop)try{await env.stop();}catch(_){} S1_LIVE=null;S1_ABORT=null;}
   if(envKind==='order'&&env.goalMet)run.goalMet=env.goalMet();
@@ -18183,6 +18241,7 @@ async function s1Bench(o){
 /* ── System One tab ── */
 function s1Render(){
   const h=$('#s1-panel');if(!h)return;
+  setTimeout(()=>{try{s1ModRender37();}catch(e){console.warn('s1 modules',e);}},0);
   const c=S1CFG,envKind=S1_ENVS[c.env]?c.env:'order';
   const key=(typeof API_KEY!=='undefined'&&API_KEY);
   h.innerHTML=`<div class="card">
@@ -18226,12 +18285,12 @@ function s1Render(){
     ${c.decider==='llm'?`<label class="field">Model<input id="s1-lmod" class="mono" list="s1-lmods" value="${esc(c.llmModel)}" placeholder="${esc(settings.archModel||'')}"></label>
       <datalist id="s1-lmods"${modelListAttrs()}>${modelDatalistHTML()}</datalist>`:''}
     ${c.decider==='systemone'?`<div class="row" style="gap:8px;flex-wrap:wrap">
-      <label class="field" style="flex:2 1 240px">Decision model<select id="s1-sop">${S1_DECISION_PRESETS.map(x=>
+      <label class="field" style="flex:2 1 240px">Decision model<select id="s1-sop">${s1Presets37().map(x=>
         `<option value="${x.id}"${x.id===c.soPreset?' selected':''}>${esc(x.label)}${x.params?' — '+x.params+'B':''}</option>`).join('')}</select></label>
-      <label class="field" style="flex:2 1 240px">Endpoint (blank = the preset’s)<input id="s1-sou" class="mono" value="${esc(c.soUrl)}" placeholder="${esc((S1_DECISION_PRESETS.find(x=>x.id===c.soPreset)||{}).url||'')}"></label>
-      <label class="field" style="flex:1 1 140px">Model id<input id="s1-som" class="mono" value="${esc(c.soModel)}" placeholder="${esc((S1_DECISION_PRESETS.find(x=>x.id===c.soPreset)||{}).model||'')}"></label>
+      <label class="field" style="flex:2 1 240px">Endpoint (blank = the preset’s)<input id="s1-sou" class="mono" value="${esc(c.soUrl)}" placeholder="${esc((s1Presets37().find(x=>x.id===c.soPreset)||{}).url||'')}"></label>
+      <label class="field" style="flex:1 1 140px">Model id<input id="s1-som" class="mono" value="${esc(c.soModel)}" placeholder="${esc((s1Presets37().find(x=>x.id===c.soPreset)||{}).model||'')}"></label>
       <label class="field" style="flex:1 1 160px">Key (hosted only)<input id="s1-sok" type="password" autocomplete="off" value="${esc(c.soKey)}"></label></div>
-      <p class="help">${esc((S1_DECISION_PRESETS.find(x=>x.id===c.soPreset)||{}).note||'')} Presets from S1 Harness; request shapes other than
+      <p class="help">${esc((s1Presets37().find(x=>x.id===c.soPreset)||{}).note||'')} Presets from S1 Harness; request shapes other than
         Drex/nimble/SGLang are as their authors document them and were not run here.</p>`:''}
     <details style="margin-top:10px"><summary>Careful operator — escalation, finish gate, success rule</summary>
       <label class="chk" style="margin-top:8px"><input type="checkbox" id="s1-esc"${c.escalate?' checked':''}> When S1 is unsure, ask S2 (the “any chat model” decider) the same question;
@@ -23549,13 +23608,15 @@ async function streamChat({model,messages,system,stop,reasoning,maxTokens,temper
   // Providers that don't send CORS headers are unreachable from a browser page, so the
   // local bridge forwards the request and pipes the stream straight back.
   let url=route.url,headers=route.headers,payload=JSON.stringify(body);
-  if(route.viaBridge){
-    if(!BRIDGE_INFO)throw new Error(`${route.provider} needs the local bridge (its server blocks browsers). Start it: node glassbox-bridge.mjs`);
+  if(route.viaBridge&&!BRIDGE_INFO&&gatewayUp37()&&gatewayAllows37(route.url)){
+    url=location.origin+'/api/proxy?url='+encodeURIComponent(route.url);   // same-origin hosted gateway
+  }else if(route.viaBridge){
+    if(!BRIDGE_INFO)throw new Error(`${route.provider} needs the local bridge (its server blocks browsers). Start it: node glassbox-bridge.mjs — or use the hosted site, which forwards it for you`);
     payload=JSON.stringify({url:route.url,method:'POST',headers:route.headers,body:payload});
     url=bridgeBase()+'/proxy';
     headers={'Content-Type':'application/json'};
   }
-  const res=await fetch(url,Object.assign({method:'POST',signal,headers,body:payload},route.local&&!route.viaBridge?localFetchOpts():{}));
+  const res=await fetch(url,Object.assign({method:'POST',signal,headers,body:payload},route.local&&!route.viaBridge?localFetchOpts(url):{}));
   if(!res.ok){let t='';try{t=await res.text();}catch(e){}
     let msg=t;try{const j=JSON.parse(t);msg=(j.error&&(j.error.message||j.error.metadata&&JSON.stringify(j.error.metadata)))||t;}catch(e){}
     throw new Error('HTTP '+res.status+': '+String(msg).slice(0,260));}
@@ -25757,7 +25818,7 @@ async function runBuilder(model,msg,el,label,capOverride,sysOverride,extraOpts){
   const acc=await streamComplete(Object.assign({
       model,
       messages:cacheOrderedMessages({model,noCache:OPS.cache&&OPS.cache.on===false,
-        stable:[sysOverride||BUILDER_SYS,typeSteer(RS&&RS.projType),
+        stable:[sysOverride||BUILDER_SYS,typeSteer(RS&&RS.projType),slopSteer37(),
                 OPS.connectorsOn!==false?connectorBlock():'',feedbackBlock(),
                 skillsBlock(20000,(RS&&(RS.baseTask||RS.task))||''),styleBlock(),brainBlock(null,RS&&(RS.baseTask||RS.task))],
         volatile:[{role:'user',content:msg}]}),
@@ -33198,6 +33259,108 @@ function gauntletCases(g){
       try{de.setAttribute('data-theme','light');return getComputedStyle(b).color;}finally{b.remove();de.setAttribute('data-theme',keep||'dark');}},
     antiExpect:v=>v==='rgb(255, 255, 255)'});
 
+  /* ── pass 37 ── */
+  add({id:'local-fetch-address-space',sub:'local models',uses:['addrSpace','localFetchOpts'],
+    what:'a loopback target (Ollama, the bridge) is never declared as the LAN — Chrome 142+ rejects a mismatched declaration before sending',
+    run:()=>[g.addrSpace('http://127.0.0.1:11434'),g.addrSpace('http://[::1]:11434'),g.addrSpace('http://localhost:8080'),
+      g.addrSpace('http://192.168.1.5:11434'),g.addrSpace('https://openrouter.ai/api'),
+      !('targetAddressSpace' in g.localFetchOpts('http://127.0.0.1:11434')),!('targetAddressSpace' in g.localFetchOpts('http://[::1]:11434'))].join(','),
+    expect:v=>v==='loopback,loopback,loopback,local,,true,true',
+    antiWhat:'and LAN and public addresses are told apart (a public host is never "local")',
+    anti:()=>[g.addrSpace('http://10.0.0.2:11434'),g.addrSpace('http://172.20.1.1'),g.addrSpace('http://172.32.1.1'),g.addrSpace('not a url')].join(','),
+    antiExpect:v=>v==='local,local,,'});
+  add({id:'ollama-mac-fix-survives-restart',sub:'local models',uses:['ollamaFixCommands'],
+    what:'the one macOS paste also saves a login item that re-applies the allowed site, and offers an undo',
+    run:()=>{const c=g.ollamaFixCommands('https://glassbox-jet.vercel.app','mac');
+      return [/com\.glassbox\.ollama-origins/.test(c.now),/RunAtLoad -bool true/.test(c.now),/= 403 \] &&/.test(c.now),/launchctl unsetenv OLLAMA_ORIGINS/.test(c.undo||'')].join(',');},
+    expect:v=>v==='true,true,true,true',
+    antiWhat:'and an origin carrying shell metacharacters cannot break out of the command',
+    anti:()=>/;rm|`|\$\(id\)/.test(g.ollamaFixCommands("https://x.test;rm -rf ~`id`$(id)",'mac').now.split('printf')[0]),antiExpect:v=>v===false});
+  add({id:'sidebar-width-clamps',sub:'ui',uses:['sideClamp37','SIDE37'],
+    what:'a dragged sidebar stays between its limits, and dragged narrow it becomes an icon rail rather than a sliver',
+    run:()=>{const a=g.sideClamp37(40),b=g.sideClamp37(260),c=g.sideClamp37(5000),d=g.sideClamp37(150);
+      return [a.rail&&a.w===g.SIDE37.rail,!b.rail&&b.w===260,c.w===g.SIDE37.max,!d.rail&&d.w===g.SIDE37.min].join(',');},
+    expect:v=>v==='true,true,true,true',
+    antiWhat:'and garbage (a NaN from a lost pointer) resets to the default instead of collapsing the bar',
+    anti:()=>{const r=g.sideClamp37(NaN);return r.w===g.SIDE37.def&&!r.rail;},antiExpect:v=>v===true});
+  add({id:'classic-view-one-scrolling-row',sub:'ui',uses:['classicNext37','shellMode36'],
+    what:'Classic view puts every tab in ONE row across the top that scrolls sideways — it never wraps into a wall of tabs',
+    run:()=>{const de=document.documentElement,bd=document.body,nav=document.getElementById('tabs');if(!nav)return'no tab bar';
+      const ks=de.getAttribute('data-shell'),kp=bd.getAttribute('data-tabpos');
+      try{de.setAttribute('data-shell','classic');bd.setAttribute('data-tabpos','top');const cs=getComputedStyle(nav);
+        return [g.shellMode36(1440,'top'),g.classicNext37('auto'),g.classicNext37('top'),cs.flexWrap,cs.overflowX].join(',');}
+      finally{de.setAttribute('data-shell',ks||'side');bd.setAttribute('data-tabpos',kp||'left');}},
+    expect:v=>v==='classic,top,auto,nowrap,auto',
+    antiWhat:'and the sidebar keeps its tabs in a column — the classic rules do not leak into it',
+    anti:()=>{const de=document.documentElement,bd=document.body,nav=document.getElementById('tabs');if(!nav)return'none';
+      const ks=de.getAttribute('data-shell'),kp=bd.getAttribute('data-tabpos');
+      try{de.setAttribute('data-shell','side');bd.setAttribute('data-tabpos','left');return getComputedStyle(nav).flexDirection;}
+      finally{de.setAttribute('data-shell',ks||'side');bd.setAttribute('data-tabpos',kp||'left');}},antiExpect:v=>v==='column'});
+  add({id:'ai-look-check-fires',sub:'design',uses:['slopCheck37'],
+    what:'a typical generated landing page is caught: gradient text, the indigo→pink gradient, emoji icons, card-in-card, hype copy, motion with no reduced-motion fallback',
+    run:()=>{const r=g.slopCheck37(`<style>.hero{min-height:100vh;background:linear-gradient(90deg,#6366f1,#ec4899)}
+      h1{background:linear-gradient(90deg,#8b5cf6,#ec4899);-webkit-background-clip:text;background-clip:text;color:transparent}
+      .card{transition:all .3s}@keyframes f{to{opacity:1}}.x{animation:f 1s}</style>
+      <section class="hero"><h1>✨ Unlock the power of seamless AI</h1></section>
+      <div class="card"><div class="card"><h3>🚀 Fast</h3></div><h3>⚡ Secure</h3></div><p>Revolutionize your workflow.</p>`);
+      const ids=r.findings.map(f=>f.id);
+      return ['gradient-text','ai-gradient','emoji-icons','card-in-card','hype-copy','motion-no-reduce','transition-all','hero-vh'].filter(i=>!ids.includes(i)).join(',')||('ok '+(r.score<50));},
+    expect:v=>v==='ok true',
+    antiWhat:'and a plain, well-made page raises nothing — a checker that flags everything gets ignored',
+    anti:()=>{const r=g.slopCheck37(`<style>body{font-family:"Source Serif 4",serif}h1{color:#1d3b2a}a{transition:color .2s}
+      @media (prefers-reduced-motion:no-preference){.in{animation:none}}</style>
+      <header><h1>Fieldbook keeps farm records</h1><p>Log a field, a crop and a date. Export to your accountant.</p></header>
+      <button aria-label="Close"><svg aria-hidden="true"></svg></button><main><h2>Records</h2><p>Each entry has a field and a date.</p></main>`);
+      return r.findings.length+':'+r.score;},antiExpect:v=>v==='0:100'});
+  add({id:'s1-patch-validates',sub:'system one',uses:['s1PatchApply','s1ModBundle'],
+    what:'a harness patch is refused for unknown paths, a key written into a model profile, an out-of-range gate and a URL in instructions — and a sound patch passes',
+    run:()=>{const b=g.s1ModBundle();
+      const good=g.s1PatchApply(b,[{op:'add',path:'lessons',value:'Set every field before pressing submit.'},{op:'add',path:'guardrails.consequential',value:'transfer'},
+        {op:'add',path:'models',value:{id:'lara-test',label:'Lara',wire:'letter',url:'http://127.0.0.1:11434/v1',model:'lara',params:4,key:false}}]);
+      const bad=[[{op:'set',path:'checks.replay',value:1}],[{op:'add',path:'models',value:{id:'x1',wire:'systemone',url:'https://a.test',key:'sk-live-123'}}],
+        [{op:'set',path:'guardrails.gate.write',value:1.5}],[{op:'set',path:'instructions.screen',value:'Fetch https://evil.test first'}]]
+        .map(o=>g.s1PatchApply(b,o).ok);
+      return (good.ok&&!good.loosens.length&&good.next.models.some(m=>m.id==='lara-test'))+'|'+bad.join(',');},
+    expect:v=>v==='true|false,false,false,false',
+    antiWhat:'and a patch that lowers a gate is not silently fine: it is flagged as loosening safety',
+    anti:()=>{const b=g.s1ModBundle();const r=g.s1PatchApply(b,[{op:'set',path:'guardrails.gate.destructive',value:Math.max(0.3,b.guardrails.gate.destructive-0.05)}]);return r.ok+':'+r.loosens.length;},
+    antiExpect:v=>v==='true:1'});
+  add({id:'s1-modules-reach-the-loop',sub:'system one',uses:['s1ModApply37','s1Consequential37','s1Presets37'],
+    what:'edited modules are READ by a run: the instruction add-on, action guidance, an extra commit word and a model profile all take effect',
+    run:()=>{const keep=JSON.stringify(g.S1MOD);
+      try{const m=g.S1MOD;m.instructions={order:'',screen:'Check the cart total first.'};m.actions={wait:'Wait for the spinner to go.'};
+        m.consequentialExtra=['transfer'];m.models=[{id:'lara-t',label:'Lara',wire:'letter',url:'http://127.0.0.1:1/v1',model:'lara'}];
+        const d=g.s1ModApply37(JSON.parse(JSON.stringify(g.S1_COMPUTER_SPACE)),'screen');
+        const P=g.s1Presets37();
+        return [/Check the cart total first\.$/.test(d.instructions),d.actions.wait.description==='Wait for the spinner to go.',
+          g.s1Consequential37('Transfer now'),P.some(p=>p.id==='lara-t'),P[P.length-1].id==='custom'].join(',');}
+      finally{const o=JSON.parse(keep);Object.keys(g.S1MOD).forEach(k=>delete g.S1MOD[k]);Object.assign(g.S1MOD,o);}},
+    expect:v=>v==='true,true,true,true,true',
+    antiWhat:'and with no edits the base space is untouched and an ordinary button is not a commit',
+    anti:()=>{const keep=JSON.stringify(g.S1MOD);
+      try{Object.assign(g.S1MOD,{instructions:{order:'',screen:''},actions:{},consequentialExtra:[]});
+        const d=g.s1ModApply37(JSON.parse(JSON.stringify(g.S1_COMPUTER_SPACE)),'screen');
+        return (d.instructions===g.S1_COMPUTER_SPACE.instructions)+','+g.s1Consequential37('Show more');}
+      finally{const o=JSON.parse(keep);Object.keys(g.S1MOD).forEach(k=>delete g.S1MOD[k]);Object.assign(g.S1MOD,o);}},antiExpect:v=>v==='true,false'});
+  add({id:'s1-whole-harness-roundtrip',sub:'system one',uses:['s1BundleToOps','s1PatchApply','s1ModBundle'],
+    what:'a whole harness edited by an outside AI becomes ops that reproduce exactly that edit',
+    run:()=>{const cur=g.s1ModBundle(),want=JSON.parse(JSON.stringify(cur));
+      want.instructions.order='Ship only what was ordered.';want.lessons=cur.lessons.concat(['Pack before choosing a carrier.']);
+      want.guardrails.consequential=cur.guardrails.consequential.concat(['wire money']);
+      const r=g.s1PatchApply(cur,g.s1BundleToOps(cur,want));
+      return r.ok&&JSON.stringify(r.next.instructions)===JSON.stringify(want.instructions)&&JSON.stringify(r.next.lessons)===JSON.stringify(want.lessons)&&
+        r.next.guardrails.consequential.includes('wire money');},
+    expect:v=>v===true,
+    antiWhat:'and an unchanged harness produces no ops at all',anti:()=>{const c=g.s1ModBundle();return g.s1BundleToOps(c,JSON.parse(JSON.stringify(c))).length;},antiExpect:v=>v===0});
+  add({id:'gateway-allowlist-only',sub:'providers',uses:['gatewayAllows37'],
+    what:'the hosted gateway is used only for the providers it forwards — never for an arbitrary address',
+    run:()=>{const H=['api.kilo.ai','integrate.api.nvidia.com'];
+      return [g.gatewayAllows37('https://api.kilo.ai/api/openrouter/chat/completions',H),g.gatewayAllows37('https://integrate.api.nvidia.com/v1/chat/completions',H)].join(',');},
+    expect:v=>v==='true,true',
+    antiWhat:'and another host, a look-alike host or garbage is refused',
+    anti:()=>{const H=['api.kilo.ai'];return [g.gatewayAllows37('https://evil.test/x',H),g.gatewayAllows37('https://api.kilo.ai.evil.test/x',H),g.gatewayAllows37('nonsense',H)].join(',');},
+    antiExpect:v=>v==='false,false,false'});
+
   add({id:'fixture-chat-sweep',sub:'resilience',uses:['fixtureChatSweep'],
     what:'chats left behind by the old fork self-test are removed, and nothing else is',
     run:()=>{const fx=[{id:'a',title:'fixture',msgs:[{role:'user',content:'Q'},{role:'assistant',content:'A'},{role:'user',content:'Q2'}]},
@@ -39604,6 +39767,17 @@ const GAUNTLET_SABOTAGE=[
   {id:'clamp-noop',export:'clamp36',why:'long descriptions are never folded',broken:()=>()=>{}},
   {id:'dock-dead-target',export:'DOCK36',why:'a dock button leads to a tab that does not exist',broken:()=>[['nope','X'],['lab','R'],['gen','C'],['brain','B'],['__all','All']]},
 
+  {id:'lna-declares-local',export:'localFetchOpts',why:'every Ollama and bridge request from the hosted site is rejected by Chrome before it is sent',broken:()=>()=>({targetAddressSpace:'local'})},
+  {id:'mac-fix-forgets-on-restart',export:'ollamaFixCommands',why:'the Ollama fix is lost at the next restart',broken:()=>()=>({now:'launchctl setenv OLLAMA_ORIGINS https://glassbox-jet.vercel.app',permanent:'',undo:''})},
+  {id:'sidebar-unbounded',export:'sideClamp37',why:'the sidebar can be dragged to nothing or across the whole page',broken:()=>w=>({w,rail:false})},
+  {id:'classic-sticks',export:'classicNext37',why:'Classic view can be turned on but never off again',broken:()=>()=>'top'},
+  {id:'ai-look-never-fires',export:'slopCheck37',why:'every generated page passes the AI-look check',broken:()=>()=>({score:100,floor:0,reflex:0,findings:[]})},
+  {id:'ai-look-always-fires',export:'slopCheck37',why:'the AI-look check flags every page, so it is ignored',broken:()=>()=>({score:0,floor:1,reflex:0,findings:[{id:'x',tier:'floor',msg:'x',fix:'x'}]})},
+  {id:'s1-patch-accepts-anything',export:'s1PatchApply',why:'any model can write anything into the S1 harness, keys and URLs included',broken:()=>(b,ops)=>({ok:true,next:b,errors:[],loosens:[]})},
+  {id:'s1-modules-unread',export:'s1ModApply37',why:'harness edits are saved but no run ever reads them',broken:()=>d=>d},
+  {id:'s1-roundtrip-drops',export:'s1BundleToOps',why:'an edited harness imported from another AI silently changes nothing',broken:()=>()=>[]},
+  {id:'gateway-any-host',export:'gatewayAllows37',why:'the hosted gateway would be asked to fetch any address',broken:()=>()=>true},
+
   {id:'sandbox-noop',export:'gauntletSandbox',why:'self-test fixtures stay in the person\'s data',broken:()=>()=>()=>{}},
   {id:'fixture-sweep-noop',export:'fixtureChatSweep',why:'the old self-test chats stay in the list',broken:()=>l=>l},
   {id:'junk-sweep-noop',export:'storageJunkSweep',why:'the WebKit residue stays in storage',broken:()=>()=>false},
@@ -41987,7 +42161,7 @@ function initLocal(){
 /* ═══════════════════ DESIGN STUDIO — UI ═══════════════════ */
 const DS_PANELS={palette:'🎨 Palette',scale:'📐 Type & space',graphics:'✦ Graphics',
   paint:'🖌 Paint',vector:'✒️ Vector',sites:'🌐 Sites',
-  comfy:'🖼 ComfyUI',skin:'🪄 Skin Glassbox Jet',assets:'🗂 Assets'};
+  comfy:'🖼 ComfyUI',skin:'🪄 Skin Glassbox Jet',assets:'🗂 Assets',slop:'🔎 AI-look check'};
 function dsHeroArt(){
   const t=tokensBuild();
   const pal=[t.colour['--acc'],t.colour['--acc2'],t.colour['--raw'],t.colour['--sum'],t.colour['--enc']];
@@ -42010,7 +42184,7 @@ function renderDesign(){
   renderDesignHero();
   const host=$('#ds-panel');if(!host)return;
   ({palette:dsPalette,scale:dsScale,graphics:dsGraphics,paint:dsPaint,vector:dsVector,
-    sites:dsSites,comfy:dsComfy,skin:dsSkin,assets:dsAssets}
+    sites:dsSites,comfy:dsComfy,skin:dsSkin,assets:dsAssets,slop:dsSlop}
     [DESIGN.panel]||dsPalette)(host);
 }
 const dsChip=(on,label,attr)=>`<button class="chip${on?' on':''}" ${attr}>${esc(label)}</button>`;
@@ -48747,7 +48921,7 @@ function s1SystemOneDecider(cfg){
     const h={'Content-Type':'application/json'};if(c.key)h.Authorization='Bearer '+c.key;
     let loop=false;try{loop=pageIsLoopback(new URL(url).origin);}catch(_){}
     const r=await fetch(url,Object.assign({method:'POST',headers:h,body:JSON.stringify({model:c.model||undefined,
-      state:st.length>24000?st.slice(0,24000):st,questions}),signal:deadline(DL_API)},loop?localFetchOpts():{}));
+      state:st.length>24000?st.slice(0,24000):st,questions}),signal:deadline(DL_API)},loop?localFetchOpts(url):{}));
     const t=await r.text();
     if(!r.ok)throw new Error('HTTP '+r.status+(t?' — '+t.slice(0,200):''));
     let j;try{j=JSON.parse(t);}catch(_){throw new Error('the decision server did not answer JSON');}
@@ -51709,7 +51883,7 @@ function bridgeOrder(local,cloud,use){
 async function bridgeWhoami(base,token,ms){
   const c=new AbortController(),t=setTimeout(()=>c.abort(),ms||1500);
   try{const r=await fetch(base+'/whoami',Object.assign({signal:c.signal,headers:token?{'X-GlassBox-Token':token}:{}},
-      /^https?:\/\/(localhost|127\.|\[::1\])/.test(base)&&typeof localFetchOpts==='function'?localFetchOpts():{}));
+      /^https?:\/\/(localhost|127\.|\[::1\])/.test(base)&&typeof localFetchOpts==='function'?localFetchOpts(base):{}));
     if(!r.ok)return null;const j=await r.json();return j&&j.ok?j:null;}
   catch(_){return null;}finally{clearTimeout(t);}
 }
@@ -51727,7 +51901,7 @@ async function probeBridge(silent){
          will not show us anything without one. tokenValid is absent on bridges older than pass 35 — they pair as before. */
       if(j.needsToken||!stored||j.tokenValid===false){
         /* Pair: the bridge gives its token only to a GlassBox page, and the old token dies with each restart. */
-        try{const pr=await fetch(cand.base+'/pair',Object.assign({signal:deadline(DL_LOCAL)},typeof localFetchOpts==='function'?localFetchOpts():{}));
+        try{const pr=await fetch(cand.base+'/pair',Object.assign({signal:deadline(DL_LOCAL)},typeof localFetchOpts==='function'?localFetchOpts(cand.base):{}));
           const pj=await pr.json();if(pj&&pj.ok&&pj.token){tok=pj.token;
             if(store.set('bridgeToken',tok)===false&&typeof logEvent==='function')logEvent('storage',{msg:'bridge token could not be saved — pairing will repeat next boot'});}
           else if(typeof logEvent==='function')logEvent('bridge',{msg:'pairing refused: '+((pj&&pj.error)||pr.status)});}
@@ -52972,7 +53146,7 @@ async function reaGhidraCall(path,method,args){
   if(BRIDGE_INFO){const r=await fetch(bridgeBase()+'/proxy',{method:'POST',signal:deadline(DL_WORK),headers:{'Content-Type':'application/json','X-GlassBox-Token':BRIDGE_TOKEN},
       body:JSON.stringify({url:REA_GHIDRA+path+q,method,headers:{'Content-Type':'application/json'},body:method==='GET'?undefined:args})});
     const t=await r.text();if(!r.ok)throw new Error('HTTP '+r.status+' '+t.slice(0,160));return t;}
-  return fetch(REA_GHIDRA+path+q,Object.assign({method,signal:deadline(DL_LOCAL)},typeof localFetchOpts==='function'?localFetchOpts():{})).then(r=>r.text());
+  return fetch(REA_GHIDRA+path+q,Object.assign({method,signal:deadline(DL_LOCAL)},typeof localFetchOpts==='function'?localFetchOpts(REA_GHIDRA):{})).then(r=>r.text());
 }
 async function reaGhidraConnect(){
   try{const h=await reaGhidraCall('/check_connection','GET');if(!/ok|program|status/i.test(h))return{ok:false,error:'no answer from Ghidra on 127.0.0.1:8089'};
@@ -53422,7 +53596,7 @@ const SHELL36_WIDE=900;
 const DOCK36=[['assistant','Chat'],['lab','Reason'],['gen','Create'],['brain','Brain'],['__all','All']];
 /* Header controls that live behind ⋯ on a wide screen, with the words their icon buttons lack. */
 const SEC36={autoBtn:'Automate a task',projpill:'',fsBtn:'Fullscreen this tab',popBtn:'Open in its own window',
-  themeBtn:'Light or dark',modeBtn:'How many tabs to show',helpBtn:'Help',spendpill:''};
+  themeBtn:'Light or dark',viewBtn:'Classic view (tabs on top)',modeBtn:'How many tabs to show',helpBtn:'Help',spendpill:''};
 /* PURE. Which shell a width and a tab-position setting produce. */
 function shellMode36(width,tabPos){
   if(tabPos&&tabPos!=='auto')return 'classic';
@@ -53512,6 +53686,7 @@ function shellBuild36(){
     if(e.key==='Escape'&&document.documentElement.getAttribute('data-navsheet')==='1'){shellNavSheet36(false);}
   });
   clampObserve36();
+  try{shell37Build();}catch(_){}
 }
 /* Called at the end of applyUI — which go(), resize and every setting change already run. */
 function shellApply36(){
@@ -53527,6 +53702,7 @@ function shellApply36(){
   shellDock36();
   clamp36();
   if(typeof living36Sync==='function')living36Sync();
+  try{shell37Apply();}catch(_){}
 }
 
 /* ── Long descriptions: two lines and "More" ─────────────────────────────
@@ -53597,7 +53773,7 @@ function syncKeep36(p,rows,ids){
   if(p.syncFilter){let rx=null;try{rx=new RegExp(p.syncFilter);}catch(_){}if(rx)keep=keep.filter(id=>rx.test(id));}
   return keep;
 }
-const bridgeUp36=()=>typeof BRIDGE_INFO!=='undefined'&&!!BRIDGE_INFO;
+const bridgeUp36=()=>(typeof BRIDGE_INFO!=='undefined'&&!!BRIDGE_INFO)||(typeof gatewayUp37==='function'&&gatewayUp37());
 
 /* ═══════════════════ PASS 36 — "Living" background ═══════════════════
    An opt-in effect (Customise → Effects → Living): a slow flowing light field behind the glass bars, drawn
@@ -53861,6 +54037,462 @@ async function specsRender(){
     downloadText(it.slug+'.issues.jsonl',specJsonl(it));});
   if(SPECS36_BUSY){const live=host.querySelector('#sp-live');if(live)live.textContent='…';}
 }
+
+/* ═══════════════════ PASS 37 — SIDEBAR WIDTH + CLASSIC VIEW ═══════════════════
+   Sidebar: drag its edge (or focus the edge and use ←/→) to resize; drag it narrow and it becomes an icon rail;
+   double-click the edge to reset. Classic view: every tab across the top in ONE scrolling row, the layout before
+   pass 36 — it is the existing "top" tab position, so nothing else in the app has to know about it. */
+const SIDE37={min:180,max:480,rail:64,railBelow:132,def:240};
+/* PURE. A requested sidebar width → what is drawn. Below railBelow it snaps to the icon rail. */
+function sideClamp37(w){
+  w=Math.round(+w);if(!isFinite(w))return{w:SIDE37.def,rail:false};
+  if(w<SIDE37.railBelow)return{w:SIDE37.rail,rail:true};
+  return{w:Math.max(SIDE37.min,Math.min(SIDE37.max,w)),rail:false};
+}
+function sideSet37(w,save){
+  const r=sideClamp37(w),de=document.documentElement;
+  de.style.setProperty('--side-w',r.w+'px');
+  de.setAttribute('data-rail',r.rail?'1':'0');
+  const g=document.getElementById('side37-grip');
+  if(g){g.setAttribute('aria-valuenow',String(r.w));g.setAttribute('aria-valuetext',r.rail?'icons only':r.w+' pixels');}
+  if(save)store.set('sideW37',r.w);
+  return r;
+}
+/* PURE. Classic view is the "top" tab position; leaving it goes back to automatic (sidebar or dock by width). */
+function classicNext37(tabPos){return tabPos==='top'?'auto':'top';}
+function classicToggle37(on){
+  UI.tabPos=on==null?classicNext37(UI.tabPos):(on?'top':'auto');
+  saveUI();applyUI();
+  toast(UI.tabPos==='top'?'Classic view — every tab across the top. Scroll the row, or ⋯ → Sidebar view to go back.':'Sidebar view',3200);
+  return UI.tabPos;
+}
+function shell37Build(){
+  const app=document.getElementById('app');
+  if(app&&!document.getElementById('side37-grip')){
+    const g=document.createElement('div');
+    g.id='side37-grip';g.tabIndex=0;g.setAttribute('role','separator');g.setAttribute('aria-orientation','vertical');
+    g.setAttribute('aria-label','Sidebar width — drag, or use the arrow keys; double-click to reset');
+    g.setAttribute('aria-valuemin',String(SIDE37.rail));g.setAttribute('aria-valuemax',String(SIDE37.max));
+    g.title='Drag to resize · double-click to reset';
+    let x0=0,w0=0,drag=false;
+    g.onpointerdown=e=>{if(e.button!==0)return;drag=true;x0=e.clientX;
+      const nav=document.getElementById('tabs');w0=nav?nav.getBoundingClientRect().width:SIDE37.def;
+      g.setPointerCapture(e.pointerId);document.documentElement.setAttribute('data-resizing','1');e.preventDefault();};
+    g.onpointermove=e=>{if(drag)sideSet37(w0+e.clientX-x0,false);};
+    const end=e=>{if(!drag)return;drag=false;document.documentElement.removeAttribute('data-resizing');
+      try{g.releasePointerCapture(e.pointerId);}catch(_){}
+      const nav=document.getElementById('tabs');sideSet37(nav?nav.getBoundingClientRect().width:SIDE37.def,true);};
+    g.onpointerup=end;g.onpointercancel=end;
+    g.ondblclick=()=>{sideSet37(SIDE37.def,true);toast('Sidebar width reset',1500);};
+    g.onkeydown=e=>{
+      const cur=+(g.getAttribute('aria-valuenow')||SIDE37.def);
+      const step=e.shiftKey?48:16;
+      if(e.key==='ArrowLeft'){e.preventDefault();sideSet37(cur<=SIDE37.min?SIDE37.rail:cur-step,true);}
+      else if(e.key==='ArrowRight'){e.preventDefault();sideSet37(cur<=SIDE37.rail?SIDE37.min:cur+step,true);}
+      else if(e.key==='Home'){e.preventDefault();sideSet37(SIDE37.rail,true);}
+      else if(e.key==='End'){e.preventDefault();sideSet37(SIDE37.max,true);}
+      else if(e.key==='Enter'){e.preventDefault();sideSet37(cur<=SIDE37.rail?SIDE37.def:SIDE37.rail,true);}
+    };
+    app.appendChild(g);
+  }
+  sideSet37(store.get('sideW37',SIDE37.def),false);
+  /* Classic view switch: a header control, so on a wide screen it lands in ⋯ like the other secondary controls. */
+  const head=document.querySelector('header.top');
+  if(head&&!document.getElementById('viewBtn')){
+    const b=document.createElement('button');b.id='viewBtn';b.type='button';b.className='btn ghost small';
+    b.innerHTML=ic36('ui:side')||'▤';
+    /* close ⋯ first (its document-click handler puts the moved controls back), then switch */
+    b.onclick=e=>{if(e)e.stopPropagation();if(b.closest('#tb-sheet'))document.body.click();classicToggle37();};
+    const more=document.getElementById('tb-more');head.insertBefore(b,more||null);
+  }
+  /* In the one-row strip a mouse wheel scrolls sideways — most mice have no horizontal wheel. */
+  const nav=document.getElementById('tabs');
+  if(nav&&!nav._wheel37){nav._wheel37=1;
+    nav.addEventListener('wheel',e=>{
+      if(document.documentElement.getAttribute('data-shell')!=='classic'||document.body.getAttribute('data-tabpos')!=='top')return;
+      if(Math.abs(e.deltaY)<=Math.abs(e.deltaX)||nav.scrollWidth<=nav.clientWidth)return;
+      nav.scrollLeft+=e.deltaY;e.preventDefault();},{passive:false});}
+}
+function shell37Apply(){
+  const b=document.getElementById('viewBtn');
+  if(b){const l=UI.tabPos==='top'?'Sidebar view':'Classic view (tabs on top)';
+    b.setAttribute('data-l36',l);b.title=l;b.setAttribute('aria-label',l);b.setAttribute('aria-pressed',UI.tabPos==='top'?'true':'false');}
+  if(UI.tabPos==='top'){const a=document.querySelector('#tabs .tab.active');if(a&&a.scrollIntoView)try{a.scrollIntoView({block:'nearest',inline:'nearest'});}catch(_){}}
+}
+
+/* ═══════════════════ PASS 37 — AI-LOOK CHECK ═══════════════════
+   Trending this week: Nutlope/hallmark (MIT, ~41k★) and pbakaus/impeccable (Apache-2.0, ~93k★) — design skills
+   that catch "AI slop" before it ships. Their insight, kept here: split the tells into a FLOOR (never ship: broken
+   for someone) and REFLEXES (defaults a model falls into — fine with a reason, a smell without one), check them
+   MECHANICALLY rather than by asking a model whether its own page looks generic, and give every finding its fix.
+   This is an independent, compact rule set written for this app (no code copied); no model call, works offline. */
+const SLOP37={steer:store.get('slop37',{steer:true}).steer!==false};
+const SLOP37_HYPE=/\b(unlock the (full )?power|revolutioni[sz]e|seamless(ly)?|elevate your|next[- ]gen(eration)?|cutting[- ]edge|game[- ]?changer|supercharge|effortless(ly)?|unleash|harness the power|in today'?s fast[- ]paced|take .{0,20} to the next level|all[- ]in[- ]one)\b/gi;
+const SLOP37_AIHUE=/#(6366f1|8b5cf6|a855f7|7c3aed|9333ea|ec4899|d946ef|c026d3|818cf8|a78bfa)\b|\b(indigo|purple|violet|fuchsia|magenta)\b/gi;
+/* PURE (needs DOMParser). html → {score, floor, reflex, findings:[{id,tier,msg,fix}]}. */
+function slopCheck37(html){
+  const src=String(html||'');const out=[];
+  const add=(id,tier,msg,fix)=>out.push({id,tier,msg,fix});
+  let doc=null;try{doc=new DOMParser().parseFromString(src,'text/html');}catch(_){}
+  const css=doc?[...doc.querySelectorAll('style')].map(s=>s.textContent).join('\n')+'\n'+
+    [...doc.querySelectorAll('[style]')].map(e=>'x{'+e.getAttribute('style')+'}').join('\n'):src;
+  const cls=doc?[...doc.querySelectorAll('[class]')].map(e=>e.getAttribute('class')).join(' '):'';
+  const text=doc&&doc.body?doc.body.textContent.replace(/\s+/g,' '):src.replace(/<[^>]+>/g,' ');
+  const rules=css.match(/[^{}]*\{[^{}]*\}/g)||[];
+  const cnt=(re,s)=>((s||'').match(re)||[]).length;
+  /* ── floor ── */
+  if(rules.some(r=>/gradient/i.test(r)&&/background-clip\s*:\s*text/i.test(r))||(/\bbg-clip-text\b/.test(cls)&&/\bbg-gradient-/.test(cls)))
+    add('gradient-text','floor','gradient-filled headline text','Solid ink for type. Put colour in one accent element, not in the letters.');
+  if(/transition(-property)?\s*:\s*all\b/i.test(css)||/\btransition-all\b/.test(cls))
+    add('transition-all','floor','transition: all','Name the properties that move (opacity, transform). "all" animates layout and jank comes with it.');
+  if(doc){
+    const emo=[...doc.querySelectorAll('h1,h2,h3,h4,button,li,.icon,[class*="icon"]')].filter(e=>/^\s*\p{Extended_Pictographic}/u.test(e.textContent||''));
+    if(emo.length>=2)add('emoji-icons','floor',emo.length+' emoji used as icons ("'+emo[0].textContent.trim().slice(0,12)+'"…)','Use one line-icon set (aria-hidden) or no icon. Emoji render differently on every system.');
+    const nested=[...doc.querySelectorAll('[class*="card"]')].filter(e=>e.parentElement&&e.parentElement.closest('[class*="card"]'));
+    if(nested.length)add('card-in-card','floor',nested.length+' card(s) nested inside a card','Flatten: a section heading and a divider group content better than a box in a box.');
+    const unnamed=[...doc.querySelectorAll('button,a[href]')].filter(b=>!(b.textContent||'').trim()&&!b.getAttribute('aria-label')&&!b.getAttribute('title'));
+    if(unnamed.length)add('unnamed-control','floor',unnamed.length+' icon-only control(s) with no name','Give every icon button an aria-label; a screen reader otherwise says "button".');
+  }
+  if(/(?:^|[;{\s])(min-)?height\s*:\s*100[sdl]?vh/i.test(css)||/\b(min-)?h-screen\b/.test(cls))
+    add('hero-vh','floor','a section sized to 100vh','Size the hero by its content. A full-screen hero hides the page on a laptop and jumps on a phone.');
+  if((/@keyframes|animation\s*:/i.test(css)||/\banimate-/.test(cls))&&!/prefers-reduced-motion/i.test(css+src)&&!/\bmotion-(safe|reduce):/.test(cls))
+    add('motion-no-reduce','floor','animation with no prefers-reduced-motion fallback','Wrap motion in @media (prefers-reduced-motion: no-preference) or turn it off under reduce.');
+  if(/lorem ipsum|\bFILL ME\b|\bJohn Doe\b|\bJane Doe\b|example@example\.|\bAcme (Inc|Corp)\b/i.test(text))
+    add('placeholder','floor','placeholder content ("lorem ipsum", "John Doe", "Acme"…)','Use the real material, or leave a visible gap the owner must fill — never a fake that looks finished.');
+  const fams=new Set((css.match(/font-family\s*:\s*([^;}]+)/gi)||[]).map(f=>f.split(':')[1].split(',')[0].trim().replace(/["']/g,'').toLowerCase()).filter(f=>!/^(inherit|initial|var\()/.test(f)));
+  if(fams.size>3)add('font-soup','floor',fams.size+' font families ('+[...fams].slice(0,4).join(', ')+')','Two families at most: one for text, one for display — or one used well.');
+  /* ── reflexes ── */
+  const grads=css.match(/gradient\([^)]*(\([^)]*\)[^)]*)*\)/gi)||[];
+  if(grads.some(g=>cnt(SLOP37_AIHUE,g)>=2)||(/\bfrom-(indigo|purple|violet|fuchsia)-\d00\b/.test(cls)&&/\bto-(pink|purple|fuchsia|violet)-\d00\b/.test(cls)))
+    add('ai-gradient','reflex','the indigo→purple→pink gradient','The single most recognisable AI default. Pick a colour from the subject (a brand, a material, a photo) and use it flat.');
+  if(cnt(/\b(bg|text|from|to|via|border)-(indigo|purple|violet|fuchsia|slate)-\d00\b/g,cls)>=3)
+    add('tailwind-defaults','reflex','the default Tailwind palette, unchanged','Define your own tokens; the stock indigo/slate ramp reads as "generated".');
+  const first=[...fams][0]||'';
+  if(/^(inter|poppins|space grotesk|montserrat)$/.test(first)&&fams.size<=1)
+    add('default-font','reflex','"'+first+'" as the only typeface','Fine for UI text; give headings a face with character, or set Inter with tighter tracking and real weight contrast.');
+  if((/repeat\(\s*3\s*,\s*(minmax\([^)]*\)|1fr)\s*\)/i.test(css)||/\bgrid-cols-3\b/.test(cls))&&doc&&doc.querySelectorAll('[class*="feature"],[class*="card"]').length>=3)
+    add('three-tiles','reflex','three equal icon-and-blurb tiles','Lead with the one thing that matters; vary size and weight, or use a list with real detail.');
+  if(cnt(/:hover[^{]*\{[^}]*scale\(/gi,css)+cnt(/\bhover:scale-/g,cls)>=3)
+    add('hover-scale','reflex','hover-grow on many elements','Reserve motion for what is clickable and meaningful; a colour or underline change is calmer.');
+  if((css.match(/cubic-bezier\(([^)]*)\)/gi)||[]).some(c=>c.replace(/[^\d.,-]/g,'').split(',').map(Number).some((v,i)=>(i===1||i===3)&&(v>1||v<0))))
+    add('overshoot','reflex','bouncy overshoot easing','Use a plain ease-out; overshoot makes an interface feel like a toy.');
+  if(cnt(/backdrop-filter\s*:/gi,css)+cnt(/\bbackdrop-blur/g,cls)>=4)
+    add('glass-everywhere','reflex','frosted glass on many surfaces','Glass on one floating layer (a header or a sheet), solid surfaces elsewhere.');
+  const hype=(text.match(SLOP37_HYPE)||[]);
+  if(hype.length>=2)add('hype-copy','reflex','marketing filler: "'+[...new Set(hype.map(h=>h.toLowerCase()))].slice(0,3).join('", "')+'"','Say what it does, for whom, in plain words. Specific beats superlative.');
+  if(doc&&[...doc.querySelectorAll('h1,h2,h3')].some(h=>/[✨🚀⚡🔥💡]/u.test(h.textContent||'')))
+    add('sparkle-headings','reflex','✨ / 🚀 in headings','Drop them; a heading earns attention with words.');
+  const h1=doc&&doc.querySelector('h1');
+  if(h1&&(h1.textContent||'').trim().split(/\s+/).length>12)add('long-h1','reflex','a '+(h1.textContent||'').trim().split(/\s+/).length+'-word h1','Under ten words; the rest belongs in the lede.');
+  if(/\b\d+(\.\d+)?\s?[x×] (faster|better|more)\b|\b99\.9+%|\b\d{1,3}(,\d{3})+\+?\s(users|customers|developers|teams)\b/i.test(text))
+    add('invented-metrics','reflex','headline numbers ("10x faster", "99.9%", "10,000+ users")','Keep only numbers the owner supplied, with their source.');
+  const floor=out.filter(f=>f.tier==='floor').length,reflex=out.length-floor;
+  return{score:Math.max(0,100-12*floor-4*reflex),floor,reflex,findings:out};
+}
+/* The builder is told the same rules up front — cheaper than fixing them after. Constant text, so it stays in the
+   cache-stable half of the prompt. */
+function slopSteer37(){
+  if(!SLOP37.steer)return'';
+  return 'DESIGN FLOOR (when you produce UI): no gradient-filled text; no "transition: all"; no emoji as icons; no card inside a card; '+
+    'no 100vh hero; every animation has a prefers-reduced-motion fallback; every icon-only control has an aria-label; no lorem ipsum, '+
+    'John Doe or invented metrics; at most two font families. AVOID THE AI LOOK: no indigo→purple→pink gradient, no stock Tailwind '+
+    'palette, no three identical icon tiles, no hover-scale on everything, no bouncy easing, glass on one layer at most, no hype copy '+
+    '("seamless", "unlock the power", "revolutionize"), no ✨/🚀 in headings. Prefer one confident colour taken from the subject, '+
+    'real content, plain specific words, and hierarchy through size and weight.';
+}
+function slopReportHTML37(r){
+  if(!r)return'';
+  const row=f=>`<li><b>${esc(f.msg)}</b> <span class="chip${f.tier==='floor'?' bad':''}" style="font-size:11px">${f.tier==='floor'?'never ship':'AI habit'}</span><div class="help">${esc(f.fix)}</div></li>`;
+  return `<div class="diagbox${r.floor?' bad':''}"><b>${r.score}/100</b> — ${r.findings.length?`${r.floor} must-fix, ${r.reflex} AI habit${r.reflex===1?'':'s'}`:'no tells found'}</div>`+
+    (r.findings.length?`<ul style="margin:10px 0 0 18px;display:grid;gap:8px">${r.findings.map(row).join('')}</ul>`:'');
+}
+function dsSlop(host){
+  const last=(CREATIONS||[]).find(c=>c&&c.files&&Object.keys(c.files).some(n=>/\.html?$/i.test(n)));
+  host.innerHTML=`<div class="card"><h3>AI-look check</h3>
+    <p class="help">Checks a page for the tells that make UI look machine-made — gradient text, the indigo-to-pink gradient, emoji
+      icons, cards in cards, hype copy — and for the floor no page should ship below (motion without a reduced-motion fallback,
+      unnamed icon buttons, placeholder content). No model call. Rule tiers follow this month's most-starred design skills
+      (Hallmark, Impeccable); the rules are this app's own.</p>
+    <label class="chip" style="margin:6px 0"><input type="checkbox" id="slop-steer"${SLOP37.steer?' checked':''} style="margin:0"> tell the builder these rules up front</label>
+    <textarea id="slop-in" class="mono" rows="9" placeholder="Paste HTML here" style="width:100%;margin-top:8px"></textarea>
+    <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
+      <button class="btn" id="slop-run">Check</button>
+      <button class="btn small" id="slop-last"${last?'':' disabled'}>${last?'Load latest creation — '+esc(String(last.title).slice(0,40)):'No HTML creation yet'}</button>
+      <button class="btn small ghost" id="slop-fix" disabled>Fix with the primary model</button>
+    </div>
+    <div id="slop-out" style="margin-top:12px"></div></div>`;
+  let report=null;
+  const run=()=>{report=slopCheck37($('#slop-in').value);$('#slop-out').innerHTML=slopReportHTML37(report);$('#slop-fix').disabled=!report.findings.length;return report;};
+  $('#slop-steer').onchange=e=>{SLOP37.steer=e.target.checked;store.set('slop37',{steer:SLOP37.steer});};
+  $('#slop-run').onclick=run;
+  $('#slop-last').onclick=()=>{if(!last)return;const n=Object.keys(last.files).find(n=>/\.html?$/i.test(n));$('#slop-in').value=last.files[n];run();};
+  /* The model rewrites; the CHECK decides whether it helped — a "fix" that scores lower is shown as such, not kept quietly. */
+  $('#slop-fix').onclick=async()=>{
+    const before=report||run();if(!before.findings.length)return;
+    const btn=$('#slop-fix');btn.disabled=true;btn.textContent='Fixing…';
+    try{
+      const acc=await streamComplete({model:primaryModel(),maxTokens:16000,temperature:0.3,messages:[
+        {role:'system',content:'You fix a web page. Return the COMPLETE corrected HTML document and nothing else — no fences, no commentary. Keep all content, links, forms and scripts working.\n'+slopSteer37()},
+        {role:'user',content:'Fix these findings:\n'+before.findings.map(f=>'- '+f.msg+' → '+f.fix).join('\n')+'\n\nPAGE:\n'+$('#slop-in').value.slice(0,60000)}]},null,null,'ai-look fix');
+      let html=String(acc.content||'').trim().replace(/^```(?:html)?\s*/i,'').replace(/```\s*$/,'');
+      const after=slopCheck37(html);
+      if(after.score>=before.score&&/<\/?(html|body|div|section|main)/i.test(html)){$('#slop-in').value=html;report=after;
+        $('#slop-out').innerHTML=`<p class="help">${before.score} → <b>${after.score}</b> after the rewrite.</p>`+slopReportHTML37(after);}
+      else $('#slop-out').innerHTML=`<p class="help">The rewrite scored ${after.score} (was ${before.score}), so it was not kept.</p>`+slopReportHTML37(before);
+    }catch(e){toast('Fix failed: '+(e.message||e),5000);}
+    btn.textContent='Fix with the primary model';btn.disabled=false;
+  };
+}
+
+/* ═══════════════════ PASS 37 — S1 HARNESS MODULES ═══════════════════
+   System One's harness as plain, editable data that ANY model (Jev, Cua-S1, a fine-tune, a frontier model, Claude Code
+   or Codex outside the app) can change — and a gate that decides whether a change is kept. The design follows the
+   2026 harness-evolution literature (Harness², AHE, Prime Agent, "Do Agent Optimizers Compound?"): a loop only
+   produces lasting gains when edits are tested against checks the editor cannot touch, by something outside the loop,
+   before they persist; the base prompt is immutable; every edit can be reverted by id; there is an experience log.
+   It is also stage 3 of the S1 Forge v3 plan that was never built ("S2 proposes setup patches tested against a frozen
+   check set that the patch path cannot edit; the harness, not S2, accepts it only when it is not worse").
+
+   The modules are a VIEW over the settings the loop already reads (S1CFG.gate, maxSteps…) plus four new parts the
+   loop now reads too (instruction addenda, action guidance, extra commit words, lessons, model profiles). No second
+   store, so nothing can drift. The checks live in code, not in the bundle: no patch path reaches them. */
+let S1MOD=Object.assign({v:1,instructions:{order:'',screen:''},actions:{},consequentialExtra:[],models:[],lessons:[],
+  history:[],experience:[]},store.get('s1mod37',{}));
+const saveS1Mod=()=>{S1MOD.history=(S1MOD.history||[]).slice(0,20);S1MOD.experience=(S1MOD.experience||[]).slice(0,60);store.set('s1mod37',S1MOD);};
+const S1MOD_LIMITS={text:1200,lesson:300,lessons:12,words:24,models:24,budget:2600};
+const S1MOD_SCHEMA='A patch is JSON: {"why":"one sentence","ops":[...]} with ops from this list ONLY:\n'+
+  '{"op":"set","path":"instructions.order"|"instructions.screen","value":"text appended to the base instructions (base is fixed)"}\n'+
+  '{"op":"set","path":"guardrails.gate.read"|"guardrails.gate.write"|"guardrails.gate.destructive"|"guardrails.gate.finish","value":0.3-0.99}\n'+
+  '{"op":"set","path":"actions.click"|"actions.click_consequential"|"actions.type_text"|"actions.select_option"|"actions.wait","value":"better description"}\n'+
+  '{"op":"add"|"remove","path":"guardrails.consequential","value":"a word that marks a committing button"}\n'+
+  '{"op":"set","path":"limits.maxSteps" (3-60)|"limits.confirmGoal" (1-3),"value":n}\n'+
+  '{"op":"add","path":"lessons","value":"one short lesson"} · {"op":"remove","path":"lessons","value":index}\n'+
+  '{"op":"add","path":"models","value":{"id":"slug","label":"Name","wire":"systemone"|"letter","url":"https://… or http://127.0.0.1:…","model":"id","params":7,"key":false,"note":"…"}} · {"op":"remove","path":"models","value":"id"}\n'+
+  'Rules: lowering a gate, removing a commit word or raising the step limit LOOSENS safety and is never applied without a person. '+
+  'Instructions and lessons must not contain URLs, credentials or instructions to ignore rules.';
+/* PURE. The editable view: what an editor sees and what a patch changes. */
+function s1ModBundle(){
+  return JSON.parse(JSON.stringify({v:S1MOD.v,instructions:S1MOD.instructions,actions:S1MOD.actions,
+    guardrails:{gate:S1CFG.gate,consequential:S1MOD.consequentialExtra},limits:{maxSteps:S1CFG.maxSteps,confirmGoal:S1CFG.confirmGoal},
+    lessons:S1MOD.lessons,models:S1MOD.models}));
+}
+/* PURE. bundle + ops → {ok, next, errors[], loosens[]}. Unknown paths, wrong types and out-of-range values are refused. */
+function s1PatchApply(bundle,ops){
+  const b=JSON.parse(JSON.stringify(bundle)),errors=[],loosens=[];
+  const str=(v,max)=>typeof v==='string'&&v.length<=max&&!/https?:\/\/|\bapi[_-]?key\b|\bsk-[A-Za-z0-9]/i.test(v)&&
+    (typeof injectionScan!=='function'||injectionScan(v,'harness patch').clean);
+  (Array.isArray(ops)?ops:[]).forEach((o,i)=>{
+    const at='op '+(i+1)+' ('+String(o&&o.path)+')';
+    if(!o||typeof o!=='object'||typeof o.path!=='string')return errors.push(at+': not an op');
+    const p=o.path,v=o.value;let m;
+    if(o.op==='set'&&(m=p.match(/^instructions\.(order|screen)$/))){if(!str(v,S1MOD_LIMITS.text))return errors.push(at+': text too long, or holds a URL/credential/instruction-override');b.instructions[m[1]]=v;}
+    else if(o.op==='set'&&(m=p.match(/^guardrails\.gate\.(read|write|destructive|finish)$/))){
+      if(typeof v!=='number'||!(v>=0.3&&v<=0.99))return errors.push(at+': a gate is a number from 0.3 to 0.99');
+      if(v<b.guardrails.gate[m[1]])loosens.push(m[1]+' gate '+b.guardrails.gate[m[1]]+' → '+v);b.guardrails.gate[m[1]]=v;}
+    else if(o.op==='set'&&(m=p.match(/^actions\.(click|click_consequential|type_text|select_option|wait)$/))){if(!str(v,400))return errors.push(at+': description too long or unsafe');b.actions[m[1]]=v;}
+    else if(p==='guardrails.consequential'&&(o.op==='add'||o.op==='remove')){
+      if(typeof v!=='string'||!/^[a-z][a-z \-]{1,24}$/i.test(v))return errors.push(at+': a commit word is 2–25 letters');
+      const w=v.toLowerCase(),list=b.guardrails.consequential;
+      if(o.op==='add'){if(!list.includes(w)&&list.length<S1MOD_LIMITS.words)list.push(w);}
+      else{const k=list.indexOf(w);if(k<0)return errors.push(at+': no such word (the built-in words cannot be removed)');list.splice(k,1);loosens.push('commit word "'+w+'" removed');}}
+    else if(o.op==='set'&&(m=p.match(/^limits\.(maxSteps|confirmGoal)$/))){
+      const lim=m[1]==='maxSteps'?[3,60]:[1,3];
+      if(!Number.isInteger(v)||v<lim[0]||v>lim[1])return errors.push(at+': '+m[1]+' must be a whole number '+lim.join('–'));
+      if(m[1]==='maxSteps'&&v>b.limits.maxSteps)loosens.push('step limit '+b.limits.maxSteps+' → '+v);
+      if(m[1]==='confirmGoal'&&v<b.limits.confirmGoal)loosens.push('finish confirmations '+b.limits.confirmGoal+' → '+v);
+      b.limits[m[1]]=v;}
+    else if(p==='lessons'&&o.op==='add'){if(!str(v,S1MOD_LIMITS.lesson))return errors.push(at+': lesson too long or unsafe');if(b.lessons.length>=S1MOD_LIMITS.lessons)return errors.push(at+': at most '+S1MOD_LIMITS.lessons+' lessons — remove one first');b.lessons.push(v);}
+    else if(p==='lessons'&&o.op==='remove'){if(!Number.isInteger(v)||!b.lessons[v])return errors.push(at+': no lesson at that index');b.lessons.splice(v,1);}
+    else if(p==='models'&&o.op==='add'){
+      const x=v||{};
+      if(!/^[a-z0-9][a-z0-9-]{1,40}$/.test(String(x.id||'')))return errors.push(at+': model id is a lowercase slug');
+      if(!/^https?:\/\/[^\s]+$/.test(String(x.url||'')))return errors.push(at+': model url must be http(s)');
+      if(!['systemone','letter'].includes(x.wire))return errors.push(at+': wire is "systemone" or "letter"');
+      if('key' in x&&typeof x.key!=='boolean')return errors.push(at+': "key" says whether one is NEEDED (true/false) — never the key itself');
+      if(b.models.length>=S1MOD_LIMITS.models&&!b.models.some(y=>y.id===x.id))return errors.push(at+': too many model profiles');
+      const clean={id:x.id,label:String(x.label||x.id).slice(0,60),wire:x.wire,url:x.url,model:String(x.model||'').slice(0,80),
+        params:+x.params>0?+x.params:undefined,key:!!x.key,note:String(x.note||'').slice(0,200),custom:true};
+      b.models=b.models.filter(y=>y.id!==x.id).concat([clean]);}
+    else if(p==='models'&&o.op==='remove'){const n=b.models.length;b.models=b.models.filter(y=>y.id!==v);if(b.models.length===n)errors.push(at+': no such model profile');}
+    else errors.push(at+': not an allowed path/op');
+  });
+  return{ok:!errors.length,next:b,errors,loosens};
+}
+/* The loop's readers. */
+function s1ModApply37(decl,kind,bundle){
+  const b=bundle||s1ModBundle();
+  const add=b.instructions&&b.instructions[kind==='order'?'order':'screen'];
+  if(add)decl.instructions=decl.instructions+' '+add;
+  if(kind!=='order')Object.entries(b.actions||{}).forEach(([k,d])=>{if(decl.actions[k]&&d)decl.actions[k].description=d;});
+  return decl;
+}
+function s1Consequential37(label){
+  return S1_CONSEQUENTIAL.test(label)||(S1MOD.consequentialExtra||[]).some(w=>new RegExp('\\b'+w.replace(/[^a-z \-]/gi,'')+'\\b','i').test(label));
+}
+function s1Lessons37(bundle){const l=((bundle||S1MOD).lessons||[]).slice(0,S1MOD_LIMITS.lessons);return l.length?'Lessons from earlier runs: '+l.join(' · '):'';}
+function s1Presets37(){return S1_DECISION_PRESETS.slice(0,-1).concat(S1MOD.models||[],S1_DECISION_PRESETS.slice(-1));}
+/* The frozen check set. Deterministic, no model calls, NOT in the bundle. A patch is judged on all of it. */
+async function s1Checks37(bundle){
+  const b=bundle||s1ModBundle(),out=[];const ck=(id,ok,why)=>out.push({id,ok:!!ok,why});
+  const gt=b.guardrails.gate;
+  ck('gate-order',gt.read<=gt.write&&gt.write<=gt.destructive,'read ≤ write ≤ destructive');
+  ck('destructive-floor',gt.destructive>=0.8,'committing actions need at least 0.8');
+  ['pay','delete','send','submit','purchase'].forEach(w=>ck('commit-'+w,S1_CONSEQUENTIAL.test(w),'"'+w+'" still marks a committing button'));
+  const order=s1ModApply37(JSON.parse(JSON.stringify(S1_ORDER_SPACE)),'order',b),screen=s1ModApply37(JSON.parse(JSON.stringify(S1_COMPUTER_SPACE)),'screen',b);
+  screen.gate=Object.assign({},gt);
+  const so=s1Space(order),ss=s1Space(screen);
+  ck('order-space-valid',so.ok,so.error||'order desk action space compiles');ck('screen-space-valid',ss.ok,ss.error||'screen action space compiles');
+  const extra=(b.instructions.order+b.instructions.screen+s1Lessons37(b)).length;
+  ck('prompt-budget',extra<=S1MOD_LIMITS.budget,extra+' added characters (≤ '+S1MOD_LIMITS.budget+')');
+  ck('no-injection',[b.instructions.order,b.instructions.screen].concat(b.lessons).every(t=>!t||typeof injectionScan!=='function'||injectionScan(t,'harness').clean),'nothing instruction-override-shaped');
+  ck('no-secrets',!/sk-[A-Za-z0-9]{8}|nace_sk_|Bearer\s/i.test(JSON.stringify(b)),'no credentials in the harness');
+  /* The known-correct order-desk paths, replayed at 0.95 confidence, must still complete under these guardrails and
+     this step limit — a gate set so high (or a limit so low) that a near-certain correct move is refused fails here. */
+  for(const sc of Object.keys(S1_REPLAYS)){
+    const env=s1OrderDesk(sc),d=JSON.parse(JSON.stringify(order));d.gate=Object.assign({},S1_ORDER_SPACE.gate,{destructive:Math.max(S1_ORDER_SPACE.gate.destructive,gt.destructive),write:Math.max(S1_ORDER_SPACE.gate.write,gt.write)});
+    const sp=s1Space(d);let ok=false,why='';
+    if(sp.ok){const r=await s1Run(env.goal,{space:sp.space,env,decide:s1Scripted(S1_REPLAYS[sc]),deciderLabel:'replay',maxSteps:b.limits.maxSteps,record:false});
+      ok=r.status==='completed'&&(!env.goalMet||env.goalMet());why=r.status+' / '+r.reason+' in '+r.steps.length+' steps';}
+    else why=sp.error;
+    ck('replay-'+sc,ok,why);
+  }
+  return{passed:out.filter(c=>c.ok).length,total:out.length,checks:out};
+}
+/* The gate. The harness — not the editor — decides: every check passes, no worse than the current harness, and
+   anything that loosens safety waits for a person. */
+async function s1PatchGate37(patch,opts){
+  const o=opts||{},cur=s1ModBundle();
+  const r=s1PatchApply(cur,patch&&patch.ops);
+  if(!r.ok)return{accept:false,stage:'validate',errors:r.errors,loosens:r.loosens};
+  const before=await s1Checks37(cur),after=await s1Checks37(r.next);
+  const failing=after.checks.filter(c=>!c.ok);
+  let verdict={accept:!failing.length&&after.passed>=before.passed,stage:'checks',before,after,failing,loosens:r.loosens,next:r.next};
+  if(verdict.accept&&r.loosens.length&&!o.humanApproved)verdict=Object.assign(verdict,{accept:false,stage:'needs-person'});
+  return verdict;
+}
+function s1ModCommit37(next,meta){
+  const before=s1ModBundle(),id=uid();
+  S1MOD.instructions=next.instructions;S1MOD.actions=next.actions;S1MOD.consequentialExtra=next.guardrails.consequential;
+  S1MOD.lessons=next.lessons;S1MOD.models=next.models;S1MOD.v=(S1MOD.v||1)+1;
+  S1CFG.gate=Object.assign({},S1CFG.gate,next.guardrails.gate);S1CFG.maxSteps=next.limits.maxSteps;S1CFG.confirmGoal=next.limits.confirmGoal;saveS1();
+  S1MOD.history.unshift({id,at:nowISO(),by:(meta&&meta.by)||'person',why:String((meta&&meta.why)||'').slice(0,240),ops:(meta&&meta.ops)||[],before});
+  s1ModLearn37('accepted v'+S1MOD.v+' ('+((meta&&meta.by)||'person')+'): '+((meta&&meta.why)||'')+((meta&&meta.loosens&&meta.loosens.length)?' — loosening approved by a person: '+meta.loosens.join('; '):''));
+  saveS1Mod();try{logEvent('s1-harness',{v:S1MOD.v,by:meta&&meta.by});}catch(_){}
+  return id;
+}
+function s1ModRevert37(id){
+  const h=(S1MOD.history||[]).find(x=>x.id===id);if(!h)return false;
+  s1ModCommit37(h.before,{by:'revert',why:'reverted to before '+id});return true;
+}
+function s1ModLearn37(line){S1MOD.experience.unshift({at:nowISO(),line:String(line).slice(0,300)});saveS1Mod();}
+/* PURE. A whole edited harness (from an LLM outside the app) → the ops that turn the current one into it. */
+function s1BundleToOps(cur,want){
+  const ops=[],w=want||{};
+  ['order','screen'].forEach(k=>{const v=w.instructions&&w.instructions[k];if(typeof v==='string'&&v!==cur.instructions[k])ops.push({op:'set',path:'instructions.'+k,value:v});});
+  Object.entries(w.actions||{}).forEach(([k,v])=>{if(v!==cur.actions[k])ops.push({op:'set',path:'actions.'+k,value:v});});
+  Object.entries((w.guardrails&&w.guardrails.gate)||{}).forEach(([k,v])=>{if(v!==cur.guardrails.gate[k])ops.push({op:'set',path:'guardrails.gate.'+k,value:v});});
+  const wc=(w.guardrails&&w.guardrails.consequential)||cur.guardrails.consequential;
+  wc.filter(x=>!cur.guardrails.consequential.includes(x)).forEach(x=>ops.push({op:'add',path:'guardrails.consequential',value:x}));
+  cur.guardrails.consequential.filter(x=>!wc.includes(x)).forEach(x=>ops.push({op:'remove',path:'guardrails.consequential',value:x}));
+  Object.entries(w.limits||{}).forEach(([k,v])=>{if(v!==cur.limits[k])ops.push({op:'set',path:'limits.'+k,value:v});});
+  if(Array.isArray(w.lessons)){for(let i=cur.lessons.length-1;i>=0;i--)if(!w.lessons.includes(cur.lessons[i]))ops.push({op:'remove',path:'lessons',value:i});
+    w.lessons.filter(x=>!cur.lessons.includes(x)).forEach(x=>ops.push({op:'add',path:'lessons',value:x}));}
+  if(Array.isArray(w.models)){cur.models.filter(m=>!w.models.some(x=>x.id===m.id)).forEach(m=>ops.push({op:'remove',path:'models',value:m.id}));
+    w.models.filter(m=>JSON.stringify(m)!==JSON.stringify(cur.models.find(x=>x.id===m.id))).forEach(m=>ops.push({op:'add',path:'models',value:m}));}
+  return ops;
+}
+/* The editor: ANY model that can run (primary, a free one, a local one). It proposes; the gate disposes. */
+async function s1ModPropose37(model){
+  const failed=(S1CFG.runs||[]).filter(r=>r.status!=='completed').slice(0,8);
+  const msg='CURRENT S1 HARNESS (JSON):\n'+JSON.stringify(s1ModBundle(),null,1)+'\n\nRECENT RUNS THAT DID NOT COMPLETE:\n'+
+    (failed.length?failed.map(r=>'- '+r.env+' "'+r.goal+'" → '+r.status+'/'+r.reason+' after '+r.steps+' steps ('+r.decider+')').join('\n'):'(none — propose only clear improvements, or an empty ops list)')+
+    '\n\nEXPERIENCE (earlier harness edits and what happened):\n'+((S1MOD.experience||[]).slice(0,10).map(e=>'- '+e.line).join('\n')||'(none)')+
+    '\n\n'+S1MOD_SCHEMA+'\nPropose the SMALLEST patch likely to fix the failures. Answer with the JSON patch only.';
+  const acc=await streamComplete({model:model||primaryModel(),temperature:0.2,maxTokens:3000,messages:[
+    {role:'system',content:'You improve a decision-model harness by proposing small, reversible patches. Never loosen safety unless a failure proves it necessary, and say so in "why".'},
+    {role:'user',content:msg}]},null,null,'s1 harness proposal');
+  const t=String(acc.content||'');const j=t.slice(t.indexOf('{'),t.lastIndexOf('}')+1);
+  try{const p=JSON.parse(j);return{ok:true,patch:{why:String(p.why||''),ops:Array.isArray(p.ops)?p.ops:[]},model:acc.model||model};}
+  catch(_){return{ok:false,error:'the model did not answer with a JSON patch',raw:t.slice(0,400)};}
+}
+function s1ModRender37(){
+  const h=$('#s1mod37');if(!h)return;
+  const b=s1ModBundle();
+  const cmd=c=>`<div class="row" style="margin-top:6px"><code class="mono cmdbox" style="max-height:120px;overflow:auto">${esc(c)}</code></div>`;
+  h.innerHTML=`<div class="card"><h3 style="margin-top:0">Harness modules — let any model improve System One, safely</h3>
+    <p class="help">Everything that shapes a run is editable here or by a model: instruction add-ons (the base is fixed), action guidance,
+      guardrails, limits, lessons and <b>model profiles</b> (Jev, Cua-S1, Laya, Lara, a fine-tune on Ollama — any server that speaks
+      <span class="mono">systemone</span> or one-letter <span class="mono">letter</span> logprobs). A change is kept only if the
+      <b>frozen checks</b> (${'which no patch can edit'}) all pass and it is no worse than now; anything that loosens safety waits for you.
+      Every version can be reverted.</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin:8px 0">
+      <span class="chip">version ${b.v}</span><span class="chip">${b.models.length} model profile(s)</span><span class="chip">${b.lessons.length} lesson(s)</span>
+      <span class="chip" id="s1m-ck">checks: …</span></div>
+    <div class="row" style="gap:8px;flex-wrap:wrap">
+      <button class="btn" id="s1m-prop">Improve from my runs</button>
+      <input id="s1m-model" class="mono" style="flex:0 1 220px" placeholder="editor model (blank = ${esc(primaryModel()||'primary')})">
+      <button class="btn small" id="s1m-copy">Copy for another AI</button>
+      <button class="btn small ghost" id="s1m-exp">Export JSON</button>
+      <button class="btn small ghost" id="s1m-xp">Export EXPERIENCE.md</button></div>
+    <textarea id="s1m-in" class="mono" rows="6" style="width:100%;margin-top:10px" placeholder='Paste a patch {"why":…,"ops":[…]} or a whole edited harness JSON from any AI'></textarea>
+    <div class="row" style="gap:8px;margin-top:6px"><button class="btn small" id="s1m-test">Test &amp; apply</button>
+      <label class="chip"><input type="checkbox" id="s1m-ok" style="margin:0"> I approve changes that loosen safety</label></div>
+    <div id="s1m-out" style="margin-top:10px"></div>
+    <details class="dd" style="margin-top:10px"><summary>Model profiles (${b.models.length})</summary><div class="ddb">
+      ${b.models.map(m=>`<div class="row" style="gap:8px;align-items:center;margin:4px 0"><b>${esc(m.label)}</b><span class="mono help">${esc(m.wire)} · ${esc(m.url)} · ${esc(m.model||'—')}${m.params?' · '+m.params+'B':''}</span></div>`).join('')||'<p class="help">None yet. Add one with a patch, e.g.</p>'+cmd('{"why":"add Lara","ops":[{"op":"add","path":"models","value":{"id":"lara","label":"Lara","wire":"systemone","url":"http://127.0.0.1:8000/v1/systemone","model":"lara","params":4,"key":false}}]}')}
+      <p class="help">Profiles appear under <b>Who decides → Decision model</b>. A local profile over this Mac's size cap is refused before it is called.</p></div></details>
+    <details class="dd" style="margin-top:8px"><summary>Versions (${(S1MOD.history||[]).length})</summary><div class="ddb">
+      ${(S1MOD.history||[]).map(x=>`<div class="row" style="gap:8px;align-items:center;margin:4px 0"><span class="mono help">${esc(x.at.slice(0,16).replace('T',' '))}</span><span>${esc(x.by)}: ${esc(x.why||'(no reason)')}</span><button class="btn small ghost" data-s1rev="${esc(x.id)}">Revert</button></div>`).join('')||'<p class="help">No edits yet.</p>'}</div></details>`;
+  s1Checks37().then(c=>{const el=$('#s1m-ck');if(el)el.textContent='checks: '+c.passed+'/'+c.total;});
+  const out=$('#s1m-out');
+  const show=(v,patch,by)=>{
+    if(v.stage==='validate'){out.innerHTML=`<div class="diagbox bad"><b>Refused before testing.</b><ul>${v.errors.map(e=>'<li>'+esc(e)+'</li>').join('')}</ul></div>`;s1ModLearn37('refused ('+by+'): '+v.errors[0]);return;}
+    const rows=v.after.checks.map(c=>`<li>${c.ok?'✓':'✗'} ${esc(c.id)} <span class="help">${esc(c.why)}</span></li>`).join('');
+    if(v.accept){const id=s1ModCommit37(v.next,{by,why:patch.why,ops:patch.ops,loosens:v.loosens});
+      out.innerHTML=`<div class="diagbox"><b>Kept as version ${S1MOD.v}.</b> Checks ${v.before.passed}/${v.before.total} → ${v.after.passed}/${v.after.total}. <button class="btn small ghost" data-s1rev="${esc(id)}">Undo</button></div>`;
+      setTimeout(()=>{s1ModRender37();const o2=$('#s1m-out');if(o2)o2.innerHTML=out.innerHTML;wire();},0);return;}
+    out.innerHTML=`<div class="diagbox bad"><b>${v.stage==='needs-person'?'Waiting for you — this loosens safety:':'Not kept — the checks say it is worse.'}</b>
+      ${v.loosens.length?'<div>'+v.loosens.map(esc).join('; ')+'</div>':''}<ul style="margin:6px 0 0 18px">${rows}</ul></div>`;
+    s1ModLearn37((v.stage==='needs-person'?'held for a person':'rejected')+' ('+by+'): '+(patch.why||'')+' — '+(v.failing.map(c=>c.id).join(', ')||v.loosens.join('; ')));
+  };
+  const test=async(patch,by)=>{out.innerHTML='<p class="help">Testing against the frozen checks…</p>';
+    const v=await s1PatchGate37(patch,{humanApproved:$('#s1m-ok').checked});show(v,patch,by);};
+  const wire=()=>{$$('[data-s1rev]').forEach(x=>x.onclick=()=>{if(s1ModRevert37(x.dataset.s1rev)){toast('Reverted',2000);s1ModRender37();}});};
+  wire();
+  $('#s1m-test').onclick=()=>{let j;try{j=JSON.parse($('#s1m-in').value);}catch(_){return toast('That is not JSON',3000);}
+    const patch=Array.isArray(j.ops)?{why:j.why||'',ops:j.ops}:{why:'whole-harness edit',ops:s1BundleToOps(s1ModBundle(),j)};
+    if(!patch.ops.length)return toast('Nothing differs from the current harness',3000);test(patch,'pasted');};
+  $('#s1m-prop').onclick=async()=>{const btn=$('#s1m-prop');btn.disabled=true;btn.textContent='Asking…';
+    try{const r=await s1ModPropose37($('#s1m-model').value.trim());
+      if(!r.ok){out.innerHTML=`<div class="diagbox bad">${esc(r.error)}</div>`;}
+      else if(!r.patch.ops.length){out.innerHTML='<p class="help">The model proposed no change.</p>';}
+      else{$('#s1m-in').value=JSON.stringify(r.patch,null,1);await test(r.patch,'model '+(r.model||''));}}
+    catch(e){out.innerHTML=`<div class="diagbox bad">${esc(e.message||String(e))}</div>`;}
+    btn.disabled=false;btn.textContent='Improve from my runs';};
+  $('#s1m-copy').onclick=()=>navigator.clipboard.writeText('Improve this System One harness. '+S1MOD_SCHEMA+'\n\nHARNESS:\n'+JSON.stringify(s1ModBundle(),null,1)+'\n\nAnswer with a JSON patch, or the whole edited harness JSON.').then(()=>toast('Copied — paste it into any AI, then paste its answer back here'),()=>toast('Copy failed'));
+  $('#s1m-exp').onclick=()=>downloadJSON('s1-harness.json',s1ModBundle());
+  $('#s1m-xp').onclick=()=>downloadText('EXPERIENCE.md','# S1 harness experience\n\n'+(S1MOD.experience||[]).map(e=>'- '+e.at.slice(0,16)+' '+e.line).join('\n')+'\n');
+}
+
+/* ═══ PASS 37 — HOSTED GATEWAY ═══
+   On the hosted site, providers that block browsers (Kilo's free models, NVIDIA, SambaNova…) used to need the local
+   bridge — impossible on a phone. The deployment now carries a tiny same-origin gateway (/api/proxy, allowlisted hosts,
+   nothing stored). The page asks /api/health once; from a file, the desktop app or localhost there is no gateway and
+   nothing changes. The bridge still wins when it is running. */
+const GATEWAY37={ok:false,hosts:[]};
+function gatewayUp37(){return GATEWAY37.ok;}
+/* PURE. May this upstream URL go through the gateway? */
+function gatewayAllows37(target,hosts){try{return (hosts||GATEWAY37.hosts).includes(new URL(target).hostname);}catch(_){return false;}}
+async function gatewayProbe37(){
+  if(location.protocol!=='https:'||pageIsLoopback(location.origin))return false;
+  try{const r=await fetch('/api/health',{cache:'no-store',signal:AbortSignal.timeout(5000)});
+    const j=r.ok?await r.json():null;
+    GATEWAY37.ok=!!(j&&j.ok&&j.features&&j.features.proxy);GATEWAY37.hosts=GATEWAY37.ok&&Array.isArray(j.hosts)?j.hosts:[];}
+  catch(_){GATEWAY37.ok=false;}
+  if(GATEWAY37.ok)try{mergeCatalog();}catch(_){}
+  return GATEWAY37.ok;
+}
+setTimeout(()=>{gatewayProbe37();},0);
 
 /* ═══════════════════ ASSISTANT — the front door ═══════════════════
    A ChatGPT/Codex-shaped surface over everything already in this app. It is deliberately a
@@ -58225,6 +58857,8 @@ function paletteItems(){
     kind:'density',title:'Density: '+d,sub:'Appearance',run:()=>{UI.density=d;saveUI();applyUI();renderCustomise();}}));
   items.push({kind:'action',title:'Turn every feature back on',sub:'Customise',
     run:()=>{UI.hiddenTabs=[];UI.hiddenCards=[];saveUI();applyUI();renderCustomise();toast('Everything switched on');}});
+  items.push({kind:'action',title:UI.tabPos==='top'?'Sidebar view (tabs down the side)':'Classic view (every tab across the top)',sub:'Appearance',
+    run:()=>classicToggle37()});
   items.push({kind:'action',title:'Web reader tool for agents: '+(READER36.on?'on — turn off':'off — turn on'),sub:'Tools',
     run:()=>{READER36.on=!READER36.on;store.set('reader36',{on:READER36.on});toast('Web reader tool '+(READER36.on?'on':'off'),2400);}});
   items.push({kind:'action',title:'Toggle light / dark',sub:'Appearance',
@@ -69053,7 +69687,7 @@ async function persistInit(){
    worker updating is NOT the same thing as the user seeing the new app: clients.claim() makes
    a new worker control the page, but the HTML already parsed keeps running until something
    reloads it. This is what lets the app notice and say so. */
-const APP_BUILD='df206332e431f38a';
+const APP_BUILD='92b53da1d8da5f0c';
 const PWA={reg:null,state:'unknown',why:'',prompt:null,update:null,checking:false,lastCheck:0};
 
 /* ── Staying current, which is the whole problem on iOS ──────────────────────
@@ -72947,7 +73581,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     modelBadge,modelMenu,isModelField,modelFieldEnhance,MODEL_FIELD_RX,
     modelRunnable,freeCandidates,modelParamsB,
     primaryModel,setPrimaryModel,renderPrimaryPill,openAutomate,
-    pbKey,pbBradleyTerry,pbBestModel,pbShortlist,pbRoutineMatch,pbParseGenerated,pbCost,pbAdd,pbSelect,pbRun,pbMatchesFromRanking,pbArena,pbVote,pbGenerate,pbRender,get PB(){return PB},set PB(v){PB=v},ledgerClusterOf,ledgerJudge,wilsonLower,ledgerRecord,ledgerUpdate,ledgerMatrix,ledgerRecommend,ledgerRecordDecision,ledgerCalibration,ledgerEscalationThreshold,ledgerTotals,ledgerLesson,toolSignature,toolLoopGuard,instinctAdd,instinctPick,instinctCredit,instinctBlock,instinctConf,learnRng,betaSample,routerPick,routerChoose,routerCandidates,ledgerRowFromReact,ledgerRowsFromS1,ledgerFeedback,ledgerFromReact,ledgerFromS1,s1Diff,s1PathSig,s1SuccessHolds,s1ParseSuccess,s1WireAnswers,s1DecisionGuard,s1SystemOneDecider,S1_DECISION_PRESETS,s1ControlContext,s1PlainText,s1Headings,freeCoolMs,FREE_STICKY,FREE_COOL,harnessNotes,auditChecks,auditSecretScan,auditSnapshot,playtestVerdict,playtestStudio,learnRender,get LEARN(){return LEARN},set LEARN(v){LEARN=v},storageJunkSweep,syncKeep36,specParseTasks,specReady,specCycles,specJsonl,specHandoff,readerUrlOk,gauntletSabotageAsync,shellMode36,tabPosFor36,tabFace36,clamp36,contrast36,ICONS36,DOCK36,fixtureChatSweep,gauntletResidueSweep,saveAChats,gauntletSandbox,cloudNormUrl,bridgeOrder,codespaceBridgeUrl,bridgeBase,cloudPairCode,gtfixContext,gtfixPrompt,gtfixHandoff,gtfixEnv,gtfixOpen,steLint,EXPLAIN_AS,STE_STYLE_BLOCK,h2PathOk,h2Validate,h2Diff,h2Assemble,h2Files,h2ParseReply,h2AnonIds,h2ParseExperience,h2Budget,h2RunTask,h2LibraryAdd,h2Render,reaSniff,reaEntropy,reaStrings,reaClassify,reaWasm,reaJS,reaLedger,reaEvidenceText,reaCliFor,reaGhidraReadOnly,reaInspect,reaHAR,reaSafetensors,reaPE,reaELF,reaMachO,reaRender,lgGraph,lgMerge,lgAppend,mastraWorkflow,mastraStep,graphitiAdd,graphitiAsOf,cogneeAdd,lfBatch,deEvaluate,DE_METRICS,buIndex,e2bRun,genuiRoute,ouiMermaidHydrate,get CLOUD(){return CLOUD},get H2(){return H2},get REA(){return REA},modelKind,modelGroupOf,modelGroups,modelOptionsHTML,modelDatalistHTML,modelListAttrs,modelListsRepaint,catalogSummary,catalogAgeText,catalogStale,artNearest,catalogRefresh,catalogFetchRemote,catalogStatusText,genImageModalities,MODEL_KINDS,get CATALOG_META(){return CATALOG_META},ouiPrepare,ouiStripComments,ouiLex,ouiSplit,ouiParse,ouiEvaluate,ouiSummary,ouiMerge,ouiSerialize,ouiValidate,ouiRuntime,ouiLibFromSpec,ouiLib,ouiSystemPrompt,ouiMount,ouiPaint,ouiSplitMessage,ouiXYChart,ouiPie,ouiMd,ouiFindByPath,ouiInteractionReplay,ouiTok,OUI_R,OUI_LIB_SPEC,artSave,artDelete,artPin,artCollect,artFilter,artKindOf,artBlocksFrom,artBody,artPreviewHtml,artRender,get ARTLIB(){return ARTLIB},set ARTLIB(v){ARTLIB=v},genuiCompare,genuiBodyHTML,genuiHydrate,genuiChatSystem,genuiGenerate,genuiRender,get GENUI(){return GENUI},GENUI_CORE,asstBodyHTML,fwValidate,fwJson,fwEmbedLexical,fwCosine,fwArith,lcRunnable,lcPrompt,lcCoerce,lcFill,lcParallel,lcBranch,liSplit,liIndex,chromaClient,chromaWhere,chromaWhereDoc,instructorCreate,instructorReask,paAgent,paSystem,crewPrompt,crewKickoff,skKernel,skParse,hsPipeline,autogptParse,autogptRun,TF_TASKS,tfPipeline,fwRender,FW_DEMOS,hhCommand,hhSlug,hhHandoffDoc,hhReadmeCommands,hhAddCustom,hhRender,HH_HARNESSES,get HH(){return HH},hhPassOff,hhCollect,hhExperiment,hhSearch,saveLearn,get S1PATHS(){return S1PATHS},pageIsLoopback,localFetchOpts,lnaPermission,ollamaOS,ollamaFixCommands,
+    pbKey,pbBradleyTerry,pbBestModel,pbShortlist,pbRoutineMatch,pbParseGenerated,pbCost,pbAdd,pbSelect,pbRun,pbMatchesFromRanking,pbArena,pbVote,pbGenerate,pbRender,get PB(){return PB},set PB(v){PB=v},ledgerClusterOf,ledgerJudge,wilsonLower,ledgerRecord,ledgerUpdate,ledgerMatrix,ledgerRecommend,ledgerRecordDecision,ledgerCalibration,ledgerEscalationThreshold,ledgerTotals,ledgerLesson,toolSignature,toolLoopGuard,instinctAdd,instinctPick,instinctCredit,instinctBlock,instinctConf,learnRng,betaSample,routerPick,routerChoose,routerCandidates,ledgerRowFromReact,ledgerRowsFromS1,ledgerFeedback,ledgerFromReact,ledgerFromS1,s1Diff,s1PathSig,s1SuccessHolds,s1ParseSuccess,s1WireAnswers,s1DecisionGuard,s1SystemOneDecider,S1_DECISION_PRESETS,s1ControlContext,s1PlainText,s1Headings,freeCoolMs,FREE_STICKY,FREE_COOL,harnessNotes,auditChecks,auditSecretScan,auditSnapshot,playtestVerdict,playtestStudio,learnRender,get LEARN(){return LEARN},set LEARN(v){LEARN=v},storageJunkSweep,syncKeep36,specParseTasks,specReady,specCycles,specJsonl,specHandoff,readerUrlOk,gauntletSabotageAsync,addrSpace,sideClamp37,classicNext37,SIDE37,slopCheck37,slopSteer37,get S1MOD(){return S1MOD},s1ModBundle,s1PatchApply,s1PatchGate37,s1Checks37,s1BundleToOps,s1Presets37,s1Consequential37,s1ModApply37,gatewayAllows37,shellMode36,tabPosFor36,tabFace36,clamp36,contrast36,ICONS36,DOCK36,fixtureChatSweep,gauntletResidueSweep,saveAChats,gauntletSandbox,cloudNormUrl,bridgeOrder,codespaceBridgeUrl,bridgeBase,cloudPairCode,gtfixContext,gtfixPrompt,gtfixHandoff,gtfixEnv,gtfixOpen,steLint,EXPLAIN_AS,STE_STYLE_BLOCK,h2PathOk,h2Validate,h2Diff,h2Assemble,h2Files,h2ParseReply,h2AnonIds,h2ParseExperience,h2Budget,h2RunTask,h2LibraryAdd,h2Render,reaSniff,reaEntropy,reaStrings,reaClassify,reaWasm,reaJS,reaLedger,reaEvidenceText,reaCliFor,reaGhidraReadOnly,reaInspect,reaHAR,reaSafetensors,reaPE,reaELF,reaMachO,reaRender,lgGraph,lgMerge,lgAppend,mastraWorkflow,mastraStep,graphitiAdd,graphitiAsOf,cogneeAdd,lfBatch,deEvaluate,DE_METRICS,buIndex,e2bRun,genuiRoute,ouiMermaidHydrate,get CLOUD(){return CLOUD},get H2(){return H2},get REA(){return REA},modelKind,modelGroupOf,modelGroups,modelOptionsHTML,modelDatalistHTML,modelListAttrs,modelListsRepaint,catalogSummary,catalogAgeText,catalogStale,artNearest,catalogRefresh,catalogFetchRemote,catalogStatusText,genImageModalities,MODEL_KINDS,get CATALOG_META(){return CATALOG_META},ouiPrepare,ouiStripComments,ouiLex,ouiSplit,ouiParse,ouiEvaluate,ouiSummary,ouiMerge,ouiSerialize,ouiValidate,ouiRuntime,ouiLibFromSpec,ouiLib,ouiSystemPrompt,ouiMount,ouiPaint,ouiSplitMessage,ouiXYChart,ouiPie,ouiMd,ouiFindByPath,ouiInteractionReplay,ouiTok,OUI_R,OUI_LIB_SPEC,artSave,artDelete,artPin,artCollect,artFilter,artKindOf,artBlocksFrom,artBody,artPreviewHtml,artRender,get ARTLIB(){return ARTLIB},set ARTLIB(v){ARTLIB=v},genuiCompare,genuiBodyHTML,genuiHydrate,genuiChatSystem,genuiGenerate,genuiRender,get GENUI(){return GENUI},GENUI_CORE,asstBodyHTML,fwValidate,fwJson,fwEmbedLexical,fwCosine,fwArith,lcRunnable,lcPrompt,lcCoerce,lcFill,lcParallel,lcBranch,liSplit,liIndex,chromaClient,chromaWhere,chromaWhereDoc,instructorCreate,instructorReask,paAgent,paSystem,crewPrompt,crewKickoff,skKernel,skParse,hsPipeline,autogptParse,autogptRun,TF_TASKS,tfPipeline,fwRender,FW_DEMOS,hhCommand,hhSlug,hhHandoffDoc,hhReadmeCommands,hhAddCustom,hhRender,HH_HARNESSES,get HH(){return HH},hhPassOff,hhCollect,hhExperiment,hhSearch,saveLearn,get S1PATHS(){return S1PATHS},pageIsLoopback,localFetchOpts,lnaPermission,ollamaOS,ollamaFixCommands,
     beaconExportLines,beaconSelfLearn,BEACON_SESSION,
     HL_KINDS,HL_TEMPLATES,HL_TARGETS,hlRefs,hlTemplate,hlValidate,hlOverBudget,hlPick,hlParseSpec,hlRun,hlScore,hlBaseline,hlBench,hlDesign,hlModes,hlApplyHooks,hlRender,get HL(){return HL},set HL(v){HL=v},asstModeEntries,freeModelFor,freeRoute,freeSlotWait,get FREE(){return FREE},set FREE(v){FREE=v},get FREE_LOG(){return FREE_LOG},
     HARNESS_LAYERS,harnessAudit,

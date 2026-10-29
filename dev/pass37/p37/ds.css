@@ -1,0 +1,29 @@
+/* ── Pass 37: resizable sidebar, icon rail, classic one-row tab strip ── */
+#side37-grip{display:none}
+:root[data-shell="side"] body[data-tabpos=left] #side37-grip{display:block;grid-area:nav;justify-self:end;align-self:stretch;
+  width:9px;margin-right:-5px;z-index:6;cursor:col-resize;touch-action:none;position:relative;outline:none}
+:root[data-shell="side"] body[data-tabpos=left] #side37-grip::after{content:'';position:absolute;top:0;bottom:0;left:4px;width:1px;
+  background:transparent;transition:background .15s,width .15s}
+:root[data-shell="side"] body[data-tabpos=left] #side37-grip:is(:hover,:focus-visible)::after,
+:root[data-resizing="1"] #side37-grip::after{background:var(--acc);width:2px;left:3.5px}
+:root[data-resizing="1"],:root[data-resizing="1"] *{cursor:col-resize!important;user-select:none!important}
+/* icon rail */
+:root[data-shell="side"][data-rail="1"] .tabs .tab{justify-content:center;padding:6px 0;gap:0}
+:root[data-shell="side"][data-rail="1"] .tabs .tab .tl36{display:none}
+:root[data-shell="side"][data-rail="1"] .tabs .tab .ic36{width:19px;height:19px}
+:root[data-shell="side"][data-rail="1"] .tabs .tabgroup{font-size:0;justify-content:center;padding:4px 0;margin:10px 0 2px;
+  border-top:1px solid color-mix(in srgb,var(--edge) 80%,transparent)!important;border-radius:0}
+:root[data-shell="side"][data-rail="1"] .tabs .tabgroup .tg-car{margin:0;font-size:12px}
+:root[data-shell="side"][data-rail="1"] .tabs .tabgroup .tg-n{display:none}
+:root[data-shell="side"][data-rail="1"] body[data-tabpos=left] .tabs{padding:10px 6px 24px}
+/* classic view: one row across the top, a real scrollbar, nothing wraps */
+:root[data-shell="classic"] body[data-tabpos=top] nav.tabs{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;
+  padding-bottom:6px;scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--ink) 30%,transparent) transparent}
+:root[data-shell="classic"] body[data-tabpos=top] nav.tabs::-webkit-scrollbar{height:8px;display:block}
+:root[data-shell="classic"] body[data-tabpos=top] nav.tabs::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--ink) 28%,transparent);border-radius:8px}
+:root[data-shell="classic"] body[data-tabpos=top] nav.tabs::-webkit-scrollbar-track{background:transparent}
+:root[data-shell="classic"] body[data-tabpos=top] nav.tabs>*{flex:0 0 auto;white-space:nowrap}
+:root[data-shell="classic"] body[data-tabpos=top] nav.tabs .tab{display:inline-flex;align-items:center;gap:7px}
+:root[data-shell="classic"] body[data-tabpos=top] nav.tabs .tab .ic36{width:16px;height:16px;flex:0 0 auto}
+#viewBtn .ic36{width:18px;height:18px}
+@media(min-width:641px){header.top>#viewBtn{display:none}}
