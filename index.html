@@ -2836,6 +2836,7 @@ header.top{background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(1
     <button class="tab" data-view="genui">✨ Generative UI</button>
     <button class="tab" data-view="artifacts">🗂 Artifacts</button>
     <button class="tab" data-view="frameworks">🧩 Frameworks</button>
+    <button class="tab" data-view="tutor">🎓 Tutor</button>
     <button class="tab" data-view="specs">📐 Specs</button>
     <button class="tab" data-view="harnesshub">🤝 Harness Hub</button>
     <button class="tab" data-view="hsq">♻️ Harness²</button>
@@ -5069,6 +5070,7 @@ header.top{background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(1
       <div class="asst-shell">
         <aside class="asst-side">
           <button class="btn small" id="asst-new">＋ New chat</button>
+          <div class="row" style="gap:6px"><button class="btn small ghost" id="asst-pin38">Pin</button><button class="btn small ghost" id="asst-dream38" title="Dream over this chat: propose lessons and ideas for the Brain">Dream</button></div>
           <div id="asst-list" class="asst-list"></div>
         </aside>
         <div class="asst-main">
@@ -5096,6 +5098,8 @@ header.top{background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(1
     </section>
 
     <section class="view" id="view-brain"><div class="wrap">
+      <div id="recall38"></div>
+      <div id="dream38"></div>
       <div id="bd-panel"></div>
       <div class="card">
         <h2>🧠 Brain console</h2>
@@ -5247,6 +5251,7 @@ header.top{background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(1
     </section>
 
     <section class="view" id="view-terminal"><div class="wrap">
+      <div id="term-sbx38"></div>
       <div id="term-cloud"></div>
       <div class="card">
         <h2>⌨️ Terminal</h2>
@@ -5902,8 +5907,9 @@ header.top{background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(1
     <section class="view" id="view-genui"><div class="wrap"><div id="genui-panel"></div></div></section>
     <section class="view" id="view-artifacts"><div class="wrap"><div id="art-panel"></div></div></section>
     <section class="view" id="view-frameworks"><div class="wrap"><div id="fw-panel"></div></div></section>
+    <section class="view" id="view-tutor"><div class="wrap"><div id="tutor-panel"></div></div></section>
     <section class="view" id="view-specs"><div class="wrap"><div id="specs-panel"></div></div></section>
-    <section class="view" id="view-harnesshub"><div class="wrap"><div id="hh-panel"></div></div></section>
+    <section class="view" id="view-harnesshub"><div class="wrap"><div id="hh-panel"></div><div id="stack38"></div></div></section>
     <section class="view" id="view-hsq"><div class="wrap"><div id="h2-panel"></div></div></section>
     <section class="view" id="view-rea"><div class="wrap"><div id="rea-panel"></div></div></section>
 
@@ -20350,6 +20356,9 @@ function toolCatalog(){
     out.push({name:'recall',description:'Restore a tool result that was offloaded to save context. '+
       'Input: {"handle":"h1234abcd"} — the handle is printed where the result used to be.',
       schema:{type:'object',properties:{handle:{type:'string'}},required:['handle']},source:'memory'});
+  out.push({name:'find_place',description:'System-1 recall: where a file, folder, repo, site, host or local server is — instant, no search. '+
+    'Answers "not known" rather than guessing; then look it up properly. Input: {"query":"ashfall repo"}.',
+    schema:{type:'object',properties:{query:{type:'string'}},required:['query']},source:'recall'});
   if(typeof READER36!=='undefined'&&READER36.on)
     out.push({name:'read_web_page',description:'Read a public web page as clean Markdown (title, text, links) — far fewer tokens than raw HTML. '+
       'Input: {"url":"https://…"}.',schema:{type:'object',properties:{url:{type:'string'}},required:['url']},source:'reader'});
@@ -20505,6 +20514,9 @@ async function toolInvoke(name,args){
       result=p;
     }
     else if(spec.source==='reader')  result=await readerFetch((args||{}).url);
+    else if(spec.source==='recall'){await recallLoad38();const hits=recallFind38((args||{}).query,RECALL38.places);
+      hits.forEach(h=>recallUse38(h.p.id));
+      result=hits.length?hits.map(h=>`${h.p.kind}: ${h.p.where}  (${h.p.name}; confidence ${h.score})`).join('\n'):'not known — no place clears the confidence floor; search for it and it will be remembered next time';}
     else if(spec.source==='ocr')     result=await ocrToolCall(name,args||{});
     else if(spec.source==='openbot') result=await openbotToolCall(name,args||{});
     else{
@@ -28872,6 +28884,12 @@ const LOCAL_RUNTIMES={
     chat:'/v1/chat/completions',list:'/api/tags',
     blurb:'Easiest to install. Silently truncates long prompts — see the truncation probe.',
     start:'ollama serve'},
+  mlxserve:{label:'mlx-serve',prefix:'mlxs/',port:11234,bases:['http://127.0.0.1:11234','http://localhost:11234'],
+    chat:'/v1/chat/completions',list:'/v1/models',blurb:'Native MLX server (Zig/Swift, no Python). OpenAI, Anthropic and Ollama APIs.',start:'mlx-serve run gemma4'},
+  locals:{label:'Locals',prefix:'locals/',port:8321,bases:['http://127.0.0.1:8321'],
+    chat:'/v1/chat/completions',list:'/v1/models',blurb:'MLX with continuous batching — many agents at once on one Mac.',start:'locals start'},
+  osaurus:{label:'Osaurus',prefix:'osaurus/',port:1337,bases:['http://127.0.0.1:1337'],
+    chat:'/v1/chat/completions',list:'/v1/models',blurb:'Native macOS harness and server; strict OpenAI semantics.',start:'open -a Osaurus'},
   mlx:{label:'MLX (mlx-lm)',prefix:'mlx/',port:8080,
     bases:['http://127.0.0.1:8080','http://localhost:8080'],
     chat:'/v1/chat/completions',list:'/v1/models',
@@ -33360,6 +33378,69 @@ function gauntletCases(g){
     antiWhat:'and another host, a look-alike host or garbage is refused',
     anti:()=>{const H=['api.kilo.ai'];return [g.gatewayAllows37('https://evil.test/x',H),g.gatewayAllows37('https://api.kilo.ai.evil.test/x',H),g.gatewayAllows37('nonsense',H)].join(',');},
     antiExpect:v=>v==='false,false,false'});
+
+  /* ── pass 38 ── */
+  add({id:'cloud-terminal-transports',sub:'terminal',uses:['ctTransports38','ctMinutesLeft38'],
+    what:'the cloud terminal tries Vercel’s PTY, then the sandbox’s own WebSocket, then SSE — and the token goes with each',
+    run:()=>{const t=g.ctTransports38({shell:{url:'wss://pty.x/1',token:'A'},bridge:'https://sb-8080.vercel.run/',bridgeToken:'B'});
+      return t.map(x=>x.kind+':'+(x.url||x.base)+':'+x.token).join(' | ')+' · '+g.ctMinutesLeft38(Date.now()+30*60000+500);},
+    expect:v=>v==='ws:wss://pty.x/1:A | ws:wss://sb-8080.vercel.run/pty:B | sse:https://sb-8080.vercel.run:B · 30',
+    antiWhat:'and with nothing to connect to there is nothing to try, and an ended session shows 0 minutes, not a negative',
+    anti:()=>g.ctTransports38(null).length+','+g.ctTransports38({bridge:'https://x'}).length+','+g.ctMinutesLeft38(Date.now()-60000),antiExpect:v=>v==='0,0,0'});
+  add({id:'tutor-next-step',sub:'tutor',uses:['tutorNext38','tutorPlan38'],
+    what:'the tutor teaches a shaky idea before a new one, never an idea whose prerequisite is not understood yet, and cleans a model’s plan',
+    run:()=>{const p=g.tutorPlan38({nodes:[{id:'a',title:'Vectors',deps:[],status:'known'},{id:'b',title:'Dot product',deps:['a']},
+        {id:'c',title:'Attention',deps:['b','zzz','c']},{id:'d',title:'Softmax',deps:['a'],status:'shaky'}],probes:[{node:'c',question:'Why scale by √d?'},{node:'nope',question:'x'}]});
+      return [g.tutorNext38(p).id,p.nodes[2].deps.join('+'),p.probes.length].join(',');},
+    expect:v=>v==='d,b,1',
+    antiWhat:'and a fully understood map has nothing left, while a dependency cycle still yields a step instead of stalling',
+    anti:()=>{const done=g.tutorPlan38({nodes:[{id:'a',title:'A',status:'known'}]});const cyc=g.tutorPlan38({nodes:[{id:'x',title:'X',deps:['y']},{id:'y',title:'Y',deps:['x']}]});
+      return (g.tutorNext38(done)===null)+','+!!g.tutorNext38(cyc);},antiExpect:v=>v==='true,true'});
+  add({id:'tutor-reads-json-replies',sub:'tutor',uses:['tutorJson38'],
+    what:'a model reply wrapped in prose and fences still yields its JSON',
+    run:()=>JSON.stringify(g.tutorJson38('Sure! ```json\n{"correct":true,"repair":""}\n``` hope that helps')),expect:v=>v==='{"correct":true,"repair":""}',
+    antiWhat:'and prose with no JSON gives nothing rather than a guess',anti:()=>g.tutorJson38('I think you got it right.'),antiExpect:v=>v===null});
+  add({id:'recall-extracts-places',sub:'memory',uses:['recallExtract38'],
+    what:'S1 recall files every location in a transcript — repo, local server, URL, home path, file, ssh host — with a usable name',
+    run:()=>{const f=g.recallExtract38('Cloned https://github.com/affaan-m/ECC.git into ~/code/ecc, served on http://localhost:5173/app, notes in /Users/chris/Notes/plan.md; logs at ~/.ollama/logs/server.log and the rest; work in /Users/c/All Finished Apps/gb-repo/index.html; deploy: ssh deploy@build.example.com; docs https://docs.vercel.com/sandbox.');
+      return f.map(x=>x.kind+':'+x.name).sort().join(' | ');},
+    expect:v=>['dir:ecc','file:plan.md','file:server.log','file:index.html','host:deploy@build.example.com','local:localhost:5173/app','repo:affaan-m/ECC','url:docs.vercel.com/sandbox'].every(k=>v.includes(k)),
+    antiWhat:'and ordinary prose with no locations yields none (no invented paths)',
+    anti:()=>g.recallExtract38('We talked about the plan and agreed to ship on Tuesday, maybe 3/4 of it.').length,antiExpect:v=>v===0});
+  add({id:'recall-find-floor',sub:'memory',uses:['recallFind38','recallMerge38','recallUnion38'],
+    what:'recall finds a place by a few words, ranks the used one first, and syncing twice never inflates its strength',
+    run:()=>{let P=g.recallMerge38([],[{where:'/Users/c/ashfall',kind:'dir',name:'ashfall',source:'chat'},{where:'/Users/c/ashfall-old',kind:'dir',name:'ashfall-old'}]).places;
+      P[0].uses=5;const hit=g.recallFind38('ashfall folder',P,Date.now())[0];
+      const twice=g.recallUnion38(g.recallUnion38(P,P),P);
+      return hit.p.where+'|'+twice.length+'|'+twice.find(p=>p.where==='/Users/c/ashfall').seen;},
+    expect:v=>v==='/Users/c/ashfall|2|1',
+    antiWhat:'and a query matching nothing answers “not known” instead of the strongest place',
+    anti:()=>{const P=g.recallMerge38([],[{where:'/Users/c/ashfall',kind:'dir',name:'ashfall'}]).places;P[0].uses=50;return g.recallFind38('kubernetes billing dashboard',P).length;},antiExpect:v=>v===0});
+  add({id:'skill-pack-paths',sub:'skills',uses:['stackSkillPaths38','STACK38'],
+    what:'a skill pack import finds exactly the SKILL.md files in a repo tree, and every catalog entry that has an install line names its repo',
+    run:()=>{const t={tree:[{path:'skills/review/SKILL.md',type:'blob'},{path:'README.md',type:'blob'},{path:'skills/x',type:'tree'},{path:'a/b/skill.md',type:'blob'},{path:'SKILL.md.bak',type:'blob'}]};
+      return g.stackSkillPaths38(t).join(',')+'|'+g.STACK38.filter(x=>x.cmd&&!x.r).length;},
+    expect:v=>v==='skills/review/SKILL.md,a/b/skill.md|0',
+    antiWhat:'and an empty or failed listing imports nothing',anti:()=>g.stackSkillPaths38(null).length+g.stackSkillPaths38({message:'Not Found'}).length,antiExpect:v=>v===0});
+  add({id:'dream-catcher-items',sub:'memory',uses:['dreamItems38'],
+    what:'the dreaming pass keeps specific lessons and ideas and drops empty, duplicate and already-known ones',
+    run:()=>{const it=g.dreamItems38({lessons:[{name:'Declare loopback only implicitly',body:'Chrome fails a mismatched targetAddressSpace'},{name:'ok'},{name:'Declare loopback only implicitly'}],
+        ideas:[{name:'Already in the Brain',body:'x'},{name:'Add a reconnect button to the cloud terminal',body:'sessions survive reloads'}]},['already in the brain'],'chat');
+      return it.map(x=>x.kind+':'+x.name).join(' | ');},
+    expect:v=>v==='lesson:Declare loopback only implicitly | idea:Add a reconnect button to the cloud terminal',
+    antiWhat:'and a reply that is not JSON proposes nothing',anti:()=>g.dreamItems38(null,[],'x').length,antiExpect:v=>v===0});
+  add({id:'chat-pin-and-rewind',sub:'assistant',uses:['achatOrder38','achatRewind38'],
+    what:'pinned chats list first, and rewinding cuts the chat back to before a message while keeping the full chat as a copy',
+    run:()=>{const keep=g.ACHATS.slice();
+      try{const c={id:'rw1',title:'T',msgs:[{role:'user',content:'one'},{role:'assistant',content:'a'},{role:'user',content:'two'},{role:'assistant',content:'b'}]};
+        g.ACHATS=[{id:'x',title:'X'},c,{id:'p',title:'P',pinned:true}];
+        const order=g.achatOrder38(g.ACHATS).map(x=>x.id).join('');const r=g.achatRewind38('rw1',2);
+        const copy=g.ACHATS.find(x=>x.id===r.copyId);
+        return [order,r.text,c.msgs.length,copy&&copy.msgs.length].join(',');}finally{g.ACHATS=keep;g.saveAChats();}},
+    expect:v=>v==='pxrw1,two,2,4',
+    antiWhat:'and rewinding a message that does not exist changes nothing',
+    anti:()=>{const keep=g.ACHATS.slice();try{g.ACHATS=[{id:'rw2',msgs:[{role:'user',content:'a'}]}];const r=g.achatRewind38('rw2',9);return r.ok+':'+g.ACHATS.length+':'+g.ACHATS[0].msgs.length;}finally{g.ACHATS=keep;g.saveAChats();}},
+    antiExpect:v=>v==='false:1:1'});
 
   add({id:'fixture-chat-sweep',sub:'resilience',uses:['fixtureChatSweep'],
     what:'chats left behind by the old fork self-test are removed, and nothing else is',
@@ -39778,6 +39859,14 @@ const GAUNTLET_SABOTAGE=[
   {id:'s1-roundtrip-drops',export:'s1BundleToOps',why:'an edited harness imported from another AI silently changes nothing',broken:()=>()=>[]},
   {id:'gateway-any-host',export:'gatewayAllows37',why:'the hosted gateway would be asked to fetch any address',broken:()=>()=>true},
 
+  {id:'cloud-terminal-no-fallback',export:'ctTransports38',why:'when Vercel’s PTY socket fails the cloud terminal gives up instead of falling back',broken:()=>s=>s&&s.shell?[{kind:'ws',url:s.shell.url,token:s.shell.token}]:[]},
+  {id:'tutor-ignores-prereqs',export:'tutorNext38',why:'the tutor teaches ideas before the ones they depend on',broken:()=>p=>((p&&p.nodes)||[]).find(n=>n.status!=='known')||null},
+  {id:'recall-always-answers',export:'recallFind38',why:'S1 recall returns a confident wrong path instead of “not known”',broken:()=>(q,P)=>(P||[]).slice(0,1).map(p=>({p,score:1}))},
+  {id:'recall-sync-inflates',export:'recallUnion38',why:'every sync makes stale places look stronger',broken:()=>(a,b)=>(a||[]).concat(b||[])},
+  {id:'skill-pack-takes-everything',export:'stackSkillPaths38',why:'a skill pack import pulls every file in the repo into the skill library',broken:()=>t=>((t&&t.tree)||[]).map(x=>x.path)},
+  {id:'dream-keeps-duplicates',export:'dreamItems38',why:'the dreaming pass floods the inbox with repeats of what the Brain already knows',broken:()=>j=>((j&&j.lessons)||[]).concat((j&&j.ideas)||[]).map((x,i)=>({id:'d'+i,kind:'lesson',name:String(x.name||x),body:''}))},
+  {id:'rewind-loses-chat',export:'achatRewind38',why:'rewinding a chat throws away the turns after it with no copy',broken:()=>(id,i)=>{const c=(window.__gb.ACHATS||[]).find(x=>x.id===id);if(!c||!c.msgs[i])return{ok:false};const t=c.msgs[i].content;c.msgs=c.msgs.slice(0,i);return{ok:true,text:t,copyId:null};}},
+
   {id:'sandbox-noop',export:'gauntletSandbox',why:'self-test fixtures stay in the person\'s data',broken:()=>()=>()=>{}},
   {id:'fixture-sweep-noop',export:'fixtureChatSweep',why:'the old self-test chats stay in the list',broken:()=>l=>l},
   {id:'junk-sweep-noop',export:'storageJunkSweep',why:'the WebKit residue stays in storage',broken:()=>()=>false},
@@ -44148,9 +44237,11 @@ let MEM_REV=store.get('memrev',0);
 async function memoryPush(){
   if(!BRIDGE_INFO)return{ok:false,error:'bridge not running'};
   try{
+    await recallLoad38();
     const r=await bridgePost('/memory',{op:'push',baseRev:MEM_REV,
-      docs:brainLive(),graphs:GRAPHS});
+      docs:brainLive(),graphs:GRAPHS,places:RECALL38.places});
     if(r.conflict){
+      if(r.memory&&Array.isArray(r.memory.places)){RECALL38.places=recallUnion38(RECALL38.places,r.memory.places);await recallSave38();}
       /* Someone else wrote. Merge THEIR new items in rather than clobbering them, then retry
          once — losing an agent's memory to a race is the worst outcome available here. */
       const theirs=r.memory||{docs:[],graphs:[]};
@@ -44165,7 +44256,7 @@ async function memoryPush(){
       if(merged){await brainSave();saveGraphs();}
       MEM_REV=r.theirRev;store.set('memrev',MEM_REV);
       const retry=await bridgePost('/memory',{op:'push',baseRev:MEM_REV,
-        docs:brainLive(),graphs:GRAPHS});
+        docs:brainLive(),graphs:GRAPHS,places:RECALL38.places});
       if(retry.ok){MEM_REV=retry.rev;store.set('memrev',MEM_REV);}
       paneEvent('agent','memory-sync',{label:'push',note:`merged ${merged} external item(s)`});
       return{ok:!!retry.ok,merged,rev:MEM_REV};
@@ -44181,6 +44272,7 @@ async function memoryPull(){
     const r=await bridgePost('/memory',{op:'pull'});
     if(!r.ok)return r;
     const m=r.memory||{docs:[],graphs:[]};
+    if(Array.isArray(m.places)&&m.places.length){await recallLoad38();RECALL38.places=recallUnion38(RECALL38.places,m.places);await recallSave38();}
     const have=new Set(BRAIN.docs.map(d=>String(d.name).toLowerCase()));
     let added=0;
     (m.docs||[]).forEach(d=>{
@@ -51964,6 +52056,7 @@ async function cloudWake(){
   return{ok:false,error:'the Codespace started but its bridge did not answer within two minutes'};
 }
 function cloudRender(){
+  try{ctRender38();}catch(e){console.warn('cloud terminal',e);}
   const host=$('#term-cloud');if(!host)return;
   const on=BRIDGE_INFO&&BRIDGE_KIND==='cloud',local=BRIDGE_INFO&&BRIDGE_KIND==='local';
   const cs='https://codespaces.new/'+encodeURIComponent(CLOUD.repo||'CartyChris/glassbox').replace('%2F','/')+'?quickstart=1';
@@ -53582,6 +53675,7 @@ FW_DEMOS.push(
 
 /* Line icons — Lucide v0.469.0 (ISC, lucide.dev). Inner SVG only; ic36() wraps them. */
 const ICONS36={"modelhub":"<svg class=\"lucide lucide-sliders-horizontal\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <line x1=\"21\" x2=\"14\" y1=\"4\" y2=\"4\"/> <line x1=\"10\" x2=\"3\" y1=\"4\" y2=\"4\"/> <line x1=\"21\" x2=\"12\" y1=\"12\" y2=\"12\"/> <line x1=\"8\" x2=\"3\" y1=\"12\" y2=\"12\"/> <line x1=\"21\" x2=\"16\" y1=\"20\" y2=\"20\"/> <line x1=\"12\" x2=\"3\" y1=\"20\" y2=\"20\"/> <line x1=\"14\" x2=\"14\" y1=\"2\" y2=\"6\"/> <line x1=\"8\" x2=\"8\" y1=\"10\" y2=\"14\"/> <line x1=\"16\" x2=\"16\" y1=\"18\" y2=\"22\"/>","assistant":"<svg class=\"lucide lucide-message-circle\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M7.9 20A9 9 0 1 0 4 16.1L2 22Z\"/>","vo":"<svg class=\"lucide lucide-building-2\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z\"/> <path d=\"M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2\"/> <path d=\"M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2\"/> <path d=\"M10 6h4\"/> <path d=\"M10 10h4\"/> <path d=\"M10 14h4\"/> <path d=\"M10 18h4\"/>","bots":"<svg class=\"lucide lucide-bot\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M12 8V4H8\"/> <rect width=\"16\" height=\"12\" x=\"4\" y=\"8\" rx=\"2\"/> <path d=\"M2 14h2\"/> <path d=\"M20 14h2\"/> <path d=\"M15 13v2\"/> <path d=\"M9 13v2\"/>","study":"<svg class=\"lucide lucide-graduation-cap\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z\"/> <path d=\"M22 10v6\"/> <path d=\"M6 12.5V16a6 3 0 0 0 12 0v-3.5\"/>","lab":"<svg class=\"lucide lucide-flask-conical\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2\"/> <path d=\"M6.453 15h11.094\"/> <path d=\"M8.5 2h7\"/>","relay":"<svg class=\"lucide lucide-repeat\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m17 2 4 4-4 4\"/> <path d=\"M3 11v-1a4 4 0 0 1 4-4h14\"/> <path d=\"m7 22-4-4 4-4\"/> <path d=\"M21 13v1a4 4 0 0 1-4 4H3\"/>","ops":"<svg class=\"lucide lucide-gauge\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m12 14 4-4\"/> <path d=\"M3.34 19a10 10 0 1 1 17.32 0\"/>","library":"<svg class=\"lucide lucide-library\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m16 6 4 14\"/> <path d=\"M12 6v14\"/> <path d=\"M8 8v12\"/> <path d=\"M4 4v16\"/>","mission":"<svg class=\"lucide lucide-satellite\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M13 7 9 3 5 7l4 4\"/> <path d=\"m17 11 4 4-4 4-4-4\"/> <path d=\"m8 12 4 4 6-6-4-4Z\"/> <path d=\"m16 8 3-3\"/> <path d=\"M9 21a6 6 0 0 0-6-6\"/>","pane":"<svg class=\"lucide lucide-scan-eye\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M3 7V5a2 2 0 0 1 2-2h2\"/> <path d=\"M17 3h2a2 2 0 0 1 2 2v2\"/> <path d=\"M21 17v2a2 2 0 0 1-2 2h-2\"/> <path d=\"M7 21H5a2 2 0 0 1-2-2v-2\"/> <circle cx=\"12\" cy=\"12\" r=\"1\"/> <path d=\"M18.944 12.33a1 1 0 0 0 0-.66 7.5 7.5 0 0 0-13.888 0 1 1 0 0 0 0 .66 7.5 7.5 0 0 0 13.888 0\"/>","terminal":"<svg class=\"lucide lucide-square-terminal\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m7 11 2-2-2-2\"/> <path d=\"M11 13h4\"/> <rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" ry=\"2\"/>","metrics":"<svg class=\"lucide lucide-chart-column\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M3 3v16a2 2 0 0 0 2 2h16\"/> <path d=\"M18 17V9\"/> <path d=\"M13 17V5\"/> <path d=\"M8 17v-3\"/>","creations":"<svg class=\"lucide lucide-shapes\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z\"/> <rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/> <circle cx=\"17.5\" cy=\"17.5\" r=\"3.5\"/>","customise":"<svg class=\"lucide lucide-palette\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <circle cx=\"13.5\" cy=\"6.5\" r=\".5\" fill=\"currentColor\"/> <circle cx=\"17.5\" cy=\"10.5\" r=\".5\" fill=\"currentColor\"/> <circle cx=\"8.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\"/> <circle cx=\"6.5\" cy=\"12.5\" r=\".5\" fill=\"currentColor\"/> <path d=\"M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z\"/>","forge":"<svg class=\"lucide lucide-hammer\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m15 12-8.373 8.373a1 1 0 1 1-3-3L12 9\"/> <path d=\"m18 15 4-4\"/> <path d=\"m21.5 11.5-1.914-1.914A2 2 0 0 1 19 8.172V7l-2.26-2.26a6 6 0 0 0-4.202-1.756L9 2.96l.92.82A6.18 6.18 0 0 1 12 8.4V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5\"/>","brain":"<svg class=\"lucide lucide-brain\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z\"/> <path d=\"M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z\"/> <path d=\"M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4\"/> <path d=\"M17.599 6.5a3 3 0 0 0 .399-1.375\"/> <path d=\"M6.003 5.125A3 3 0 0 0 6.401 6.5\"/> <path d=\"M3.477 10.896a4 4 0 0 1 .585-.396\"/> <path d=\"M19.938 10.5a4 4 0 0 1 .585.396\"/> <path d=\"M6 18a4 4 0 0 1-1.967-.516\"/> <path d=\"M19.967 17.484A4 4 0 0 1 18 18\"/>","factory":"<svg class=\"lucide lucide-factory\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z\"/> <path d=\"M17 18h1\"/> <path d=\"M12 18h1\"/> <path d=\"M7 18h1\"/>","viz":"<svg class=\"lucide lucide-orbit\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <circle cx=\"12\" cy=\"12\" r=\"3\"/> <circle cx=\"19\" cy=\"5\" r=\"2\"/> <circle cx=\"5\" cy=\"19\" r=\"2\"/> <path d=\"M10.4 21.9a10 10 0 0 0 9.941-15.416\"/> <path d=\"M13.5 2.1a10 10 0 0 0-9.841 15.416\"/>","gen":"<svg class=\"lucide lucide-clapperboard\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z\"/> <path d=\"m6.2 5.3 3.1 3.9\"/> <path d=\"m12.4 3.4 3.1 4\"/> <path d=\"M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z\"/>","design":"<svg class=\"lucide lucide-pen-tool\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M15.707 21.293a1 1 0 0 1-1.414 0l-1.586-1.586a1 1 0 0 1 0-1.414l5.586-5.586a1 1 0 0 1 1.414 0l1.586 1.586a1 1 0 0 1 0 1.414z\"/> <path d=\"m18 13-1.375-6.874a1 1 0 0 0-.746-.776L3.235 2.028a1 1 0 0 0-1.207 1.207L5.35 15.879a1 1 0 0 0 .776.746L13 18\"/> <path d=\"m2.3 2.3 7.286 7.286\"/> <circle cx=\"11\" cy=\"11\" r=\"2\"/>","local":"<svg class=\"lucide lucide-cpu\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <rect width=\"16\" height=\"16\" x=\"4\" y=\"4\" rx=\"2\"/> <rect width=\"6\" height=\"6\" x=\"9\" y=\"9\" rx=\"1\"/> <path d=\"M15 2v2\"/> <path d=\"M15 20v2\"/> <path d=\"M2 15h2\"/> <path d=\"M2 9h2\"/> <path d=\"M20 15h2\"/> <path d=\"M20 9h2\"/> <path d=\"M9 2v2\"/> <path d=\"M9 20v2\"/>","graphs":"<svg class=\"lucide lucide-waypoints\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <circle cx=\"12\" cy=\"4.5\" r=\"2.5\"/> <path d=\"m10.2 6.3-3.9 3.9\"/> <circle cx=\"4.5\" cy=\"12\" r=\"2.5\"/> <path d=\"M7 12h10\"/> <circle cx=\"19.5\" cy=\"12\" r=\"2.5\"/> <path d=\"m13.8 17.7 3.9-3.9\"/> <circle cx=\"12\" cy=\"19.5\" r=\"2.5\"/>","guards":"<svg class=\"lucide lucide-shield-check\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\"/> <path d=\"m9 12 2 2 4-4\"/>","office":"<svg class=\"lucide lucide-file-text\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\"/> <path d=\"M14 2v4a2 2 0 0 0 2 2h4\"/> <path d=\"M10 9H8\"/> <path d=\"M16 13H8\"/> <path d=\"M16 17H8\"/>","reverse":"<svg class=\"lucide lucide-wrench\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\"/>","devices":"<svg class=\"lucide lucide-smartphone\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <rect width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\"/> <path d=\"M12 18h.01\"/>","handoff":"<svg class=\"lucide lucide-send\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z\"/> <path d=\"m21.854 2.147-10.94 10.939\"/>","spline":"<svg class=\"lucide lucide-spline\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <circle cx=\"19\" cy=\"5\" r=\"2\"/> <circle cx=\"5\" cy=\"19\" r=\"2\"/> <path d=\"M5 17A12 12 0 0 1 17 5\"/>","three":"<svg class=\"lucide lucide-box\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z\"/> <path d=\"m3.3 7 8.7 5 8.7-5\"/> <path d=\"M12 22V12\"/>","studio":"<svg class=\"lucide lucide-code-xml\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m18 16 4-4-4-4\"/> <path d=\"m6 8-4 4 4 4\"/> <path d=\"m14.5 4-5 16\"/>","council":"<svg class=\"lucide lucide-landmark\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <line x1=\"3\" x2=\"21\" y1=\"22\" y2=\"22\"/> <line x1=\"6\" x2=\"6\" y1=\"18\" y2=\"11\"/> <line x1=\"10\" x2=\"10\" y1=\"18\" y2=\"11\"/> <line x1=\"14\" x2=\"14\" y1=\"18\" y2=\"11\"/> <line x1=\"18\" x2=\"18\" y1=\"18\" y2=\"11\"/> <polygon points=\"12 2 20 7 4 7\"/>","compare":"<svg class=\"lucide lucide-scale\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z\"/> <path d=\"m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z\"/> <path d=\"M7 21h10\"/> <path d=\"M12 3v18\"/> <path d=\"M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2\"/>","transplant":"<svg class=\"lucide lucide-dna\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m10 16 1.5 1.5\"/> <path d=\"m14 8-1.5-1.5\"/> <path d=\"M15 2c-1.798 1.998-2.518 3.995-2.807 5.993\"/> <path d=\"m16.5 10.5 1 1\"/> <path d=\"m17 6-2.891-2.891\"/> <path d=\"M2 15c6.667-6 13.333 0 20-6\"/> <path d=\"m20 9 .891.891\"/> <path d=\"M3.109 14.109 4 15\"/> <path d=\"m6.5 12.5 1 1\"/> <path d=\"m7 18 2.891 2.891\"/> <path d=\"M9 22c1.798-1.998 2.518-3.995 2.807-5.993\"/>","models":"<svg class=\"lucide lucide-book-open\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M12 7v14\"/> <path d=\"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z\"/>","history":"<svg class=\"lucide lucide-history\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8\"/> <path d=\"M3 3v5h5\"/> <path d=\"M12 7v5l4 2\"/>","awards":"<svg class=\"lucide lucide-trophy\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M6 9H4.5a2.5 2.5 0 0 1 0-5H6\"/> <path d=\"M18 9h1.5a2.5 2.5 0 0 0 0-5H18\"/> <path d=\"M4 22h16\"/> <path d=\"M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22\"/> <path d=\"M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22\"/> <path d=\"M18 2H6v7a6 6 0 0 0 12 0V2Z\"/>","jev":"<svg class=\"lucide lucide-zap\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z\"/>","systemone":"<svg class=\"lucide lucide-target\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <circle cx=\"12\" cy=\"12\" r=\"10\"/> <circle cx=\"12\" cy=\"12\" r=\"6\"/> <circle cx=\"12\" cy=\"12\" r=\"2\"/>","router":"<svg class=\"lucide lucide-split\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M16 3h5v5\"/> <path d=\"M8 3H3v5\"/> <path d=\"M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3\"/> <path d=\"m15 9 6-6\"/>","analysis":"<svg class=\"lucide lucide-chart-pie\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M21 12c.552 0 1.005-.449.95-.998a10 10 0 0 0-8.953-8.951c-.55-.055-.998.398-.998.95v8a1 1 0 0 0 1 1z\"/> <path d=\"M21.21 15.89A10 10 0 1 1 8 2.83\"/>","evolve":"<svg class=\"lucide lucide-trending-up\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <polyline points=\"22 7 13.5 15.5 8.5 10.5 2 17\"/> <polyline points=\"16 7 22 7 22 13\"/>","hlab":"<svg class=\"lucide lucide-test-tube\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M14.5 2v17.5c0 1.4-1.1 2.5-2.5 2.5c-1.4 0-2.5-1.1-2.5-2.5V2\"/> <path d=\"M8.5 2h7\"/> <path d=\"M14.5 16h-5\"/>","playbooks":"<svg class=\"lucide lucide-compass\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z\"/> <circle cx=\"12\" cy=\"12\" r=\"10\"/>","learn":"<svg class=\"lucide lucide-lightbulb\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\"/> <path d=\"M9 18h6\"/> <path d=\"M10 22h4\"/>","genui":"<svg class=\"lucide lucide-wand-sparkles\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72\"/> <path d=\"m14 7 3 3\"/> <path d=\"M5 6v4\"/> <path d=\"M19 14v4\"/> <path d=\"M10 2v2\"/> <path d=\"M7 8H3\"/> <path d=\"M21 16h-4\"/> <path d=\"M11 3H9\"/>","artifacts":"<svg class=\"lucide lucide-archive\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <rect width=\"20\" height=\"5\" x=\"2\" y=\"3\" rx=\"1\"/> <path d=\"M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8\"/> <path d=\"M10 12h4\"/>","frameworks":"<svg class=\"lucide lucide-puzzle\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M15.39 4.39a1 1 0 0 0 1.68-.474 2.5 2.5 0 1 1 3.014 3.015 1 1 0 0 0-.474 1.68l1.683 1.682a2.414 2.414 0 0 1 0 3.414L19.61 15.39a1 1 0 0 1-1.68-.474 2.5 2.5 0 1 0-3.014 3.015 1 1 0 0 1 .474 1.68l-1.683 1.682a2.414 2.414 0 0 1-3.414 0L8.61 19.61a1 1 0 0 0-1.68.474 2.5 2.5 0 1 1-3.014-3.015 1 1 0 0 0 .474-1.68l-1.683-1.682a2.414 2.414 0 0 1 0-3.414L4.39 8.61a1 1 0 0 1 1.68.474 2.5 2.5 0 1 0 3.014-3.015 1 1 0 0 1-.474-1.68l1.683-1.682a2.414 2.414 0 0 1 3.414 0z\"/>","harnesshub":"<svg class=\"lucide lucide-plug\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M12 22v-5\"/> <path d=\"M9 8V2\"/> <path d=\"M15 8V2\"/> <path d=\"M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z\"/>","hsq":"<svg class=\"lucide lucide-refresh-ccw-dot\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M3 2v6h6\"/> <path d=\"M21 12A9 9 0 0 0 6 5.3L3 8\"/> <path d=\"M21 22v-6h-6\"/> <path d=\"M3 12a9 9 0 0 0 15 6.7l3-2.7\"/> <circle cx=\"12\" cy=\"12\" r=\"1\"/>","rea":"<svg class=\"lucide lucide-microscope\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M6 18h8\"/> <path d=\"M3 22h18\"/> <path d=\"M14 22a7 7 0 1 0 0-14h-1\"/> <path d=\"M9 14h2\"/> <path d=\"M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z\"/> <path d=\"M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3\"/>","evidence":"<svg class=\"lucide lucide-search-check\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m8 11 2 2 4-4\"/> <circle cx=\"11\" cy=\"11\" r=\"8\"/> <path d=\"m21 21-4.3-4.3\"/>","launch":"<svg class=\"lucide lucide-rocket\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z\"/> <path d=\"m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z\"/> <path d=\"M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0\"/> <path d=\"M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5\"/>","webos":"<svg class=\"lucide lucide-app-window\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <rect x=\"2\" y=\"4\" width=\"20\" height=\"16\" rx=\"2\"/> <path d=\"M10 4v4\"/> <path d=\"M2 8h20\"/> <path d=\"M6 4v4\"/>","connect":"<svg class=\"lucide lucide-link\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71\"/> <path d=\"M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71\"/>","help":"<svg class=\"lucide lucide-circle-help\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <circle cx=\"12\" cy=\"12\" r=\"10\"/> <path d=\"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3\"/> <path d=\"M12 17h.01\"/>","settings":"<svg class=\"lucide lucide-settings\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z\"/> <circle cx=\"12\" cy=\"12\" r=\"3\"/>","g:talk":"<svg class=\"lucide lucide-message-square\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z\"/>","g:make":"<svg class=\"lucide lucide-sparkles\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z\"/> <path d=\"M20 3v4\"/> <path d=\"M22 5h-4\"/> <path d=\"M4 17v2\"/> <path d=\"M5 18H3\"/>","g:build":"<svg class=\"lucide lucide-blocks\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <rect width=\"7\" height=\"7\" x=\"14\" y=\"3\" rx=\"1\"/> <path d=\"M10 21V8a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H3\"/>","g:models":"<svg class=\"lucide lucide-cpu\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <rect width=\"16\" height=\"16\" x=\"4\" y=\"4\" rx=\"2\"/> <rect width=\"6\" height=\"6\" x=\"9\" y=\"9\" rx=\"1\"/> <path d=\"M15 2v2\"/> <path d=\"M15 20v2\"/> <path d=\"M2 15h2\"/> <path d=\"M2 9h2\"/> <path d=\"M20 15h2\"/> <path d=\"M20 9h2\"/> <path d=\"M9 2v2\"/> <path d=\"M9 20v2\"/>","g:agents":"<svg class=\"lucide lucide-users\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/> <circle cx=\"9\" cy=\"7\" r=\"4\"/> <path d=\"M22 21v-2a4 4 0 0 0-3-3.87\"/> <path d=\"M16 3.13a4 4 0 0 1 0 7.75\"/>","g:know":"<svg class=\"lucide lucide-book-marked\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M10 2v8l3-3 3 3V2\"/> <path d=\"M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20\"/>","g:setup":"<svg class=\"lucide lucide-settings-2\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M20 7h-9\"/> <path d=\"M14 17H5\"/> <circle cx=\"17\" cy=\"17\" r=\"3\"/> <circle cx=\"7\" cy=\"7\" r=\"3\"/>","ui:grid":"<svg class=\"lucide lucide-layout-grid\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <rect width=\"7\" height=\"7\" x=\"3\" y=\"3\" rx=\"1\"/> <rect width=\"7\" height=\"7\" x=\"14\" y=\"3\" rx=\"1\"/> <rect width=\"7\" height=\"7\" x=\"14\" y=\"14\" rx=\"1\"/> <rect width=\"7\" height=\"7\" x=\"3\" y=\"14\" rx=\"1\"/>","ui:search":"<svg class=\"lucide lucide-search\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <circle cx=\"11\" cy=\"11\" r=\"8\"/> <path d=\"m21 21-4.3-4.3\"/>","ui:chev":"<svg class=\"lucide lucide-chevron-down\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m6 9 6 6 6-6\"/>","ui:more":"<svg class=\"lucide lucide-ellipsis\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <circle cx=\"12\" cy=\"12\" r=\"1\"/> <circle cx=\"19\" cy=\"12\" r=\"1\"/> <circle cx=\"5\" cy=\"12\" r=\"1\"/>","ui:side":"<svg class=\"lucide lucide-panel-left\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\"/> <path d=\"M9 3v18\"/>","ui:x":"<svg class=\"lucide lucide-x\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M18 6 6 18\"/> <path d=\"m6 6 12 12\"/>","ui:cmd":"<svg class=\"lucide lucide-command\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3\"/>","ui:sun":"<svg class=\"lucide lucide-sun\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <circle cx=\"12\" cy=\"12\" r=\"4\"/> <path d=\"M12 2v2\"/> <path d=\"M12 20v2\"/> <path d=\"m4.93 4.93 1.41 1.41\"/> <path d=\"m17.66 17.66 1.41 1.41\"/> <path d=\"M2 12h2\"/> <path d=\"M20 12h2\"/> <path d=\"m6.34 17.66-1.41 1.41\"/> <path d=\"m19.07 4.93-1.41 1.41\"/>","ui:moon":"<svg class=\"lucide lucide-moon\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z\"/>"};
+ICONS36.tutor="<path d=\"M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z\"/><path d=\"M22 10v6\"/><path d=\"M6 12.5V16a6 3 0 0 0 12 0v-3.5\"/>";
 ICONS36.specs="<svg class=\"lucide lucide-list-checks\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"m3 17 2 2 4-4\"/> <path d=\"m3 7 2 2 4-4\"/> <path d=\"M13 6h8\"/> <path d=\"M13 12h8\"/> <path d=\"M13 18h8\"/>";
 
 /* ═══════════════════ PASS 36 — SHELL ═══════════════════
@@ -54494,6 +54588,594 @@ async function gatewayProbe37(){
 }
 setTimeout(()=>{gatewayProbe37();},0);
 
+/* ═══════════════════ PASS 38 — CLOUD TERMINAL (any device, no bridge) ═══════════════════
+   A real Linux PTY from a phone: /api/terminal (this deployment) creates a Vercel Sandbox running pfterm, and the page
+   connects STRAIGHT to it — Vercel's own PTY WebSocket first, then pfterm's WebSocket, then pfterm's SSE. Claude Code,
+   Codex, Gemini CLI, OpenCode, Oh My Pi, Qwen, Kimi and Aider are one tap away. Any other pfterm host (your Mac behind a
+   tunnel, a VPS, a Codespace) connects the same way with its URL and token. The existing bridge terminal is unchanged. */
+const CT38={sess:null,term:null,fit:null,io:null,ro:null,timer:null,status:null};
+const CT38_PRESETS=[
+  ['Claude Code','npm i -g @anthropic-ai/claude-code && claude'],['Codex','npm i -g @openai/codex && codex'],
+  ['Gemini CLI','npm i -g @google/gemini-cli && gemini'],['OpenCode','npm i -g opencode-ai && opencode'],
+  ['Oh My Pi','npm i -g @oh-my-pi/pi-coding-agent && omp'],['Qwen Code','npm i -g @qwen-code/qwen-code && qwen'],
+  ['Kimi','curl -LsSf https://astral.sh/uv/install.sh | sh && . $HOME/.local/bin/env && uv tool install --python 3.13 kimi-cli && kimi'],
+  ['Aider','curl -LsSf https://astral.sh/uv/install.sh | sh && . $HOME/.local/bin/env && uv tool install --python 3.12 aider-chat && aider']];
+const CT38_KEYS=[['Esc','\x1b','Escape'],['Tab','\t','Tab'],['Ctrl-C','\x03','Control C'],['Ctrl-D','\x04','Control D'],['↑','\x1b[A','Up arrow'],['↓','\x1b[B','Down arrow'],['←','\x1b[D','Left arrow'],['→','\x1b[C','Right arrow'],['|','|','Pipe'],['~','~','Tilde'],['/','/','Slash']];
+/* PURE. Which transports to try, best first. */
+function ctTransports38(s){
+  const out=[];if(!s)return out;
+  if(s.shell&&s.shell.url)out.push({kind:'ws',url:s.shell.url,token:s.shell.token});
+  if(s.bridge&&s.bridgeToken){out.push({kind:'ws',url:s.bridge.replace(/^http/,'ws').replace(/\/$/,'')+'/pty',token:s.bridgeToken});
+    out.push({kind:'sse',base:s.bridge.replace(/\/$/,''),token:s.bridgeToken});}
+  return out;
+}
+/* PURE. Minutes left on a session, never negative. */
+function ctMinutesLeft38(until,now){return Math.max(0,Math.floor(((+until||0)-(now||Date.now()))/60000));}
+const ctApi38=(action,extra)=>fetch('/api/terminal',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',signal:deadline(DL_API),
+  body:JSON.stringify(Object.assign({action},extra||{}))}).then(async r=>{let j={};try{j=await r.json();}catch(_){j={ok:false,error:'HTTP '+r.status};}return j;});
+async function ctLoadXterm38(){
+  if(window.Terminal&&(window.Terminal.Terminal||typeof window.Terminal==='function')&&window.FitAddon)return;
+  const js=u=>new Promise((res,rej)=>{const s=document.createElement('script');s.src=u;s.onload=res;s.onerror=()=>rej(new Error('could not load '+u));document.head.appendChild(s);});
+  const B='https://cdn.jsdelivr.net/npm/';
+  await js(B+'@xterm/xterm@6.0.0/lib/xterm.js');await js(B+'@xterm/addon-fit@0.11.0/lib/addon-fit.js');
+  if(!document.getElementById('xterm-css38'))try{const css=await (await fetch(B+'@xterm/xterm@6.0.0/css/xterm.css',{signal:deadline(DL_API)})).text();
+    const st=document.createElement('style');st.id='xterm-css38';st.textContent=css;document.head.appendChild(st);}catch(_){}
+}
+const ctEnc38=new TextEncoder();
+function ctWs38(ep,start,h,ms){return new Promise((resolve,reject)=>{
+  const ws=new WebSocket(ep.url+(ep.url.includes('?')?'&':'?')+'token='+encodeURIComponent(ep.token));
+  ws.binaryType='arraybuffer';let opened=false,exited=false;
+  const t=setTimeout(()=>{if(!opened){try{ws.close();}catch(_){}reject(new Error('WebSocket timed out'));}},ms||8000);
+  ws.onopen=()=>{opened=true;clearTimeout(t);
+    ws.send(JSON.stringify({type:'start',command:start.command||'bash',args:start.args||['-l'],env:Object.entries(Object.assign({TERM:'xterm-256color'},start.env||{})).map(([k,v])=>k+'='+v),cwd:start.cwd,cols:start.cols,rows:start.rows}));
+    resolve({transport:'websocket',send:d=>ws.readyState===1&&ws.send(typeof d==='string'?ctEnc38.encode(d):d),
+      resize:(c,r)=>ws.readyState===1&&ws.send(JSON.stringify({type:'resize',cols:c,rows:r})),close:()=>{try{ws.close();}catch(_){}}});};
+  ws.onmessage=ev=>{if(ev.data instanceof ArrayBuffer)return h.onData(new Uint8Array(ev.data));
+    try{const m=JSON.parse(ev.data);if(m&&m.type==='exit'){exited=true;return h.onExit(m.code==null?null:m.code);}}catch(_){}
+    h.onData(ctEnc38.encode(String(ev.data)));};
+  ws.onerror=()=>{if(!opened){clearTimeout(t);reject(new Error('WebSocket failed'));}};
+  ws.onclose=()=>{if(opened&&!exited)h.onExit(null);};
+});}
+async function ctSse38(ep,start,h){
+  const q='?token='+encodeURIComponent(ep.token);
+  const r=await fetch(ep.base+'/s'+q,{method:'POST',signal:deadline(DL_API),headers:{'Content-Type':'application/json'},body:JSON.stringify({command:start.command||'bash',args:start.args||['-l'],
+    env:Object.entries(Object.assign({TERM:'xterm-256color'},start.env||{})).map(([k,v])=>k+'='+v),cols:start.cols,rows:start.rows})});
+  if(!r.ok)throw new Error('SSE start HTTP '+r.status);
+  const {id}=await r.json();const es=new EventSource(ep.base+'/s/'+id+'/out'+q);
+  es.onmessage=e=>{const b=atob(e.data),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);h.onData(u);};
+  es.addEventListener('exit',e=>{let c=null;try{c=JSON.parse(e.data).code;}catch(_){}es.close();h.onExit(c);});
+  /* Keystrokes are batched per frame and posted one batch at a time, so fast typing arrives in order. */
+  let pend='',busy=false;
+  const flush=async()=>{if(busy||!pend)return;busy=true;const d=pend;pend='';
+    try{await fetch(ep.base+'/s/'+id+'/in'+q,{method:'POST',body:d,signal:deadline(DL_API)});}catch(_){}busy=false;if(pend)flush();};
+  return{transport:'sse',send:d=>{pend+=typeof d==='string'?d:new TextDecoder().decode(d);requestAnimationFrame?requestAnimationFrame(flush):setTimeout(flush,16);},
+    resize:(c,rw)=>fetch(ep.base+'/s/'+id+'/resize'+q,{method:'POST',signal:deadline(DL_API),body:JSON.stringify({cols:c,rows:rw})}).catch(()=>{}),
+    close:()=>{es.close();fetch(ep.base+'/s/'+id+q,{method:'DELETE',signal:deadline(DL_API)}).catch(()=>{});}};
+}
+async function ctConnect38(sess,host){
+  await ctLoadXterm38();
+  const T=window.Terminal.Terminal||window.Terminal,F=(window.FitAddon&&window.FitAddon.FitAddon)||window.FitAddon;
+  if(CT38.io)try{CT38.io.close();}catch(_){}
+  if(CT38.term)try{CT38.term.dispose();}catch(_){}
+  host.innerHTML='';
+  const cs=getComputedStyle(document.documentElement),v=k=>(cs.getPropertyValue(k)||'').trim();
+  const term=new T({cursorBlink:true,fontSize:innerWidth<600?12:13,fontFamily:'ui-monospace,SFMono-Regular,Menlo,monospace',
+    theme:{background:v('--bg')||'#0e0f13',foreground:v('--ink')||'#e8e8ec',cursor:v('--acc')||'#4c8dff'}});
+  const fit=new F();term.loadAddon(fit);term.open(host);try{fit.fit();}catch(_){}
+  CT38.term=term;CT38.fit=fit;
+  const h={onData:d=>term.write(d),onExit:c=>{term.write('\r\n\x1b[2m[session ended'+(c!=null?' — exit '+c:'')+']\x1b[0m\r\n');CT38.io=null;ctStatus38('ended');}};
+  const start={command:'bash',args:['-l'],cols:term.cols,rows:term.rows,cwd:'/vercel/sandbox/project',env:{__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS:'.vercel.run'}};
+  let io=null,errs=[];
+  for(const ep of ctTransports38(sess)){
+    try{io=ep.kind==='ws'?await ctWs38(ep,start,h):await ctSse38(ep,start,h);break;}catch(e){errs.push(ep.kind+': '+(e.message||e));}
+  }
+  if(!io){term.write('\x1b[31mCould not connect: '+errs.join('; ')+'\x1b[0m\r\n');ctStatus38('failed');return null;}
+  CT38.io=io;term.onData(d=>io.send(d));term.onResize(({cols,rows})=>io.resize(cols,rows));
+  if(CT38.ro)CT38.ro.disconnect();CT38.ro=new ResizeObserver(()=>{try{fit.fit();}catch(_){}});CT38.ro.observe(host);
+  ctStatus38('connected over '+io.transport);term.focus();
+  return io;
+}
+function ctStatus38(s){CT38.status=s;const el=document.getElementById('ct38-st');if(!el)return;
+  const left=CT38.sess&&CT38.sess.until?ctMinutesLeft38(CT38.sess.until)+' min left':'';
+  el.textContent=[s,left].filter(Boolean).join(' · ');}
+function ctSave38(){try{CT38.sess?sessionStorage.setItem('gbterm38',JSON.stringify(CT38.sess)):sessionStorage.removeItem('gbterm38');}catch(_){}}
+async function ctRender38(){
+  const box=document.getElementById('term-sbx38');if(!box)return;
+  if(CT38.io&&box.querySelector('#ct38-term .xterm'))return;   // never tear down a live terminal on a re-render
+  try{if(!CT38.sess)CT38.sess=JSON.parse(sessionStorage.getItem('gbterm38')||'null');}catch(_){}
+  if(CT38.sess&&CT38.sess.until&&CT38.sess.until<Date.now()){CT38.sess=null;ctSave38();}
+  const hosted=location.protocol==='https:'&&!pageIsLoopback(location.origin);
+  const st=hosted?await ctApi38('status').catch(()=>({ok:false})):{ok:false};
+  const enabled=st&&st.ok&&st.enabled,unl=st&&st.unlocked;
+  const presets=CT38_PRESETS.map(([l,c],i)=>`<button class="btn small" data-ct38p="${i}">${esc(l)}</button>`).join('');
+  box.innerHTML=`<div class="card"><h2 style="margin-top:0">Cloud terminal</h2>
+    <p class="help">A real Linux shell from any device — this phone included — with nothing running on your computer. Each session is a fresh
+      sandbox on this site's Vercel account (it bills the account owner, so it needs the access code), up to 45 minutes, and it
+      disappears when it ends. Or connect any machine running <a href="/cloud/pfterm.py" download>pfterm.py</a> (your Mac, a VPS, a Codespace).</p>
+    ${!hosted?`<p class="help"><b>Open the hosted site</b> (glassbox-jet.vercel.app) to start a cloud sandbox, or connect your own pfterm host below.</p>`:
+      !enabled?`<div class="diagbox">The cloud terminal is <b>off</b> on this deployment. The owner turns it on once by setting an access code (8+ characters):</div>
+        <div class="row" style="margin-top:6px"><code class="mono cmdbox">vercel env add GLASSBOX_TERMINAL_CODE production</code></div>
+        <p class="help">then redeploys. Until then, connect your own pfterm host below.</p>`:
+      !unl?`<div class="row" style="gap:8px;flex-wrap:wrap"><input id="ct38-code" type="password" autocomplete="current-password" placeholder="access code" style="flex:0 1 220px">
+        <button class="btn" id="ct38-unlock">Unlock</button></div>`:
+      `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn" id="ct38-start">${CT38.sess?'Reconnect':'Start a cloud terminal'}</button>
+        <select id="ct38-min" aria-label="Minutes"><option value="15">15 min</option><option value="30" selected>30 min</option><option value="45">45 min</option></select>
+        ${CT38.sess?'<button class="btn small" id="ct38-more">+15 min</button><button class="btn small ghost" id="ct38-stop">Stop</button>':''}</div>`}
+    <details class="dd" style="margin-top:8px"><summary>Connect your own pfterm host</summary><div class="ddb">
+      <p class="help">On the machine: <span class="mono">PFTERM_TOKEN=&lt;16+ random characters&gt; python3 pfterm.py --port 8080 --root .</span> behind HTTPS
+        (for example <span class="mono">cloudflared tunnel --url http://localhost:8080</span>). Then:</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><input id="ct38-url" class="mono" placeholder="https://your-host" style="flex:2 1 220px">
+        <input id="ct38-tok" type="password" placeholder="token" style="flex:1 1 140px"><button class="btn small" id="ct38-own">Connect</button></div></div></details>
+    <div id="ct38-st" class="help" style="margin-top:8px"></div>
+    <div class="row" id="ct38-presets" style="gap:6px;flex-wrap:wrap;margin:8px 0">${presets}</div>
+    <div id="ct38-term" style="height:min(60vh,520px);border-radius:10px;overflow:hidden;background:var(--bg);border:1px solid var(--edge)"></div>
+    <div class="row" style="gap:4px;flex-wrap:wrap;margin-top:6px">${CT38_KEYS.map(([l,,n],i)=>`<button class="btn small ghost" data-ct38k="${i}" aria-label="${esc(n)}">${esc(l)}</button>`).join('')}</div>
+    <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px">
+      <button class="btn small ghost" id="ct38-push">Send latest creation to /project</button><button class="btn small ghost" id="ct38-pull">Pull /project into Creations</button>
+      ${CT38.sess&&CT38.sess.ports&&CT38.sess.ports[3000]?`<a class="btn small ghost" href="${esc(CT38.sess.ports[3000])}" target="_blank" rel="noopener">Open port 3000</a>`:''}</div></div>`;
+  const $id=i=>document.getElementById(i),termHost=$id('ct38-term');
+  box.querySelectorAll('[data-ct38k]').forEach(b=>{b.onmousedown=e=>e.preventDefault();b.onclick=()=>{if(CT38.io)CT38.io.send(CT38_KEYS[+b.dataset.ct38k][1]);};});
+  box.querySelectorAll('[data-ct38p]').forEach(b=>b.onclick=()=>{if(!CT38.io)return toast('Start or connect a terminal first',2500);CT38.io.send(CT38_PRESETS[+b.dataset.ct38p][1]+'\r');CT38.term&&CT38.term.focus();});
+  if($id('ct38-unlock'))$id('ct38-unlock').onclick=async()=>{const r=await ctApi38('unlock',{code:$id('ct38-code').value});if(r.ok){toast('Unlocked for 12 hours',2000);ctRender38();}else toast(r.error||'Refused',4000);};
+  if($id('ct38-start'))$id('ct38-start').onclick=async()=>{
+    const btn=$id('ct38-start');btn.disabled=true;
+    try{if(!CT38.sess){ctStatus38('starting a sandbox (about 20 seconds)…');const r=await ctApi38('create',{minutes:+$id('ct38-min').value});
+        if(!r.ok)throw new Error(r.error||'could not start');CT38.sess={name:r.name,bridge:r.bridge,bridgeToken:r.bridgeToken,ports:r.ports,until:r.until};ctSave38();}
+      const sh=await ctApi38('shell',{name:CT38.sess.name});CT38.sess.shell=sh.ok?{url:sh.url,token:sh.token}:null;
+      await ctRender38();await ctConnect38(CT38.sess,document.getElementById('ct38-term'));}
+    catch(e){toast('Cloud terminal: '+(e.message||e),5000);ctStatus38('failed');}finally{const b=$id('ct38-start');if(b)b.disabled=false;}};
+  if($id('ct38-more'))$id('ct38-more').onclick=async()=>{const r=await ctApi38('extend',{name:CT38.sess.name,minutes:15});
+    if(r.ok){CT38.sess.until+=r.addedMinutes*60000;ctSave38();ctStatus38(CT38.status||'');}else toast(r.error,4000);};
+  if($id('ct38-stop'))$id('ct38-stop').onclick=async()=>{if(CT38.io)CT38.io.close();await ctApi38('stop',{name:CT38.sess.name});CT38.sess=null;ctSave38();ctRender38();};
+  $id('ct38-own').onclick=async()=>{const u=$id('ct38-url').value.trim(),t=$id('ct38-tok').value;
+    if(!/^https?:\/\//.test(u)||t.length<16)return toast('A URL and a token of 16+ characters',3000);
+    CT38.sess={own:true,bridge:u.replace(/\/$/,''),bridgeToken:t};await ctConnect38(CT38.sess,termHost);};
+  $id('ct38-push').onclick=async()=>{const s=CT38.sess,c=(CREATIONS||[])[0];if(!s||!s.bridge)return toast('Connect a terminal first',2500);if(!c)return toast('No creation yet',2500);
+    const files=Object.entries(c.files||{}).map(([p,t])=>({path:p,b64:btoa(unescape(encodeURIComponent(String(t))))}));
+    const r=await fetch(s.bridge+'/fs/write?token='+encodeURIComponent(s.bridgeToken),{method:'POST',headers:{'Content-Type':'application/json'},signal:deadline(DL_API),body:JSON.stringify({files})}).then(r=>r.json()).catch(e=>({error:e.message}));
+    toast(r.written!=null?r.written+' file(s) written to /project':'Write failed: '+(r.error||''),3500);};
+  $id('ct38-pull').onclick=async()=>{const s=CT38.sess;if(!s||!s.bridge)return toast('Connect a terminal first',2500);
+    const q='?token='+encodeURIComponent(s.bridgeToken);
+    try{const l=await (await fetch(s.bridge+'/fs/list'+q,{signal:deadline(DL_API)})).json();const paths=(l.files||[]).filter(f=>f.size<2e6).slice(0,200).map(f=>f.path);
+      const rd=await (await fetch(s.bridge+'/fs/read'+q,{method:'POST',signal:deadline(DL_API),headers:{'Content-Type':'application/json'},body:JSON.stringify({paths})})).json();
+      const files={};(rd.files||[]).forEach(f=>{try{files[f.path]=decodeURIComponent(escape(atob(f.b64)));}catch(_){}});
+      if(!Object.keys(files).length)return toast('Nothing to pull',2500);
+      creationSave({title:'From the cloud terminal',files,entry:Object.keys(files).find(n=>/index\.html?$/i.test(n))||''});toast(Object.keys(files).length+' file(s) saved as a creation',3500);}
+    catch(e){toast('Pull failed: '+(e.message||e),4000);}};
+  clearInterval(CT38.timer);CT38.timer=setInterval(()=>{if(CT38.sess&&CT38.sess.until)ctStatus38(CT38.status||'');},30000);
+  ctStatus38(CT38.status||(CT38.sess?'session ready — press '+(CT38.io?'a preset':'Reconnect'):''));
+}
+
+/* ═══════════════════ PASS 38 — TUTOR (learn hard things) ═══════════════════
+   This app's own MIT implementation of the learning loop popularised by LearnHarness (amosblomqvist/learnharness, AGPL —
+   ideas only, no code): MEASURE where your understanding ends → PLAN a prerequisite map to the goal → TEACH one reasoning
+   step at a time (you predict first, then the explanation, an interactive illustration drawn in generative UI, and a check;
+   a wrong answer gets a repair before anything builds on it) → PRACTISE with varied problems that need what you learned
+   without naming it. What you learn is stored as PROPOSITIONS with the PREMISES that lead to them — ideas and their
+   connections, never ratings of you — and every later lesson reads that graph. Stored in IndexedDB; works with any model. */
+const TUTOR38_DEF={subjects:[],cur:null};
+let TUTOR38=JSON.parse(JSON.stringify(TUTOR38_DEF)),TUTOR38_LOADED=false,TUTOR38_STEP=null;
+async function tutorLoad38(){if(TUTOR38_LOADED)return;
+  try{const v=await IDB.getStrict('tutor38');if(v&&typeof v==='object')TUTOR38=Object.assign(JSON.parse(JSON.stringify(TUTOR38_DEF)),v);}
+  catch(e){toast('Tutor could not read its notebook: '+(e&&e.message||e),5000);}
+  TUTOR38_LOADED=true;}
+async function tutorSave38(){try{await IDB.set('tutor38',TUTOR38);}catch(e){toast('Tutor could not save: '+(e&&e.message||e),5000);}}
+const tutorCur38=()=>TUTOR38.subjects.find(s=>s.id===TUTOR38.cur)||null;
+/* PURE. The first JSON object or array in a model reply (fences and prose tolerated). */
+function tutorJson38(t){
+  const s=String(t||'').replace(/```(?:json)?/gi,'');
+  for(const [o,c] of [['{','}'],['[',']']]){const i=s.indexOf(o),j=s.lastIndexOf(c);if(i>=0&&j>i){try{return JSON.parse(s.slice(i,j+1));}catch(_){}}}
+  return null;
+}
+/* PURE. Normalise a plan: unique ids, deps that exist, no self-deps, status in the known set. */
+function tutorPlan38(raw){
+  const nodes=(raw&&Array.isArray(raw.nodes)?raw.nodes:[]).filter(n=>n&&n.title).slice(0,24);
+  const ids=new Set();const out=nodes.map((n,i)=>{let id=String(n.id||('n'+(i+1))).replace(/[^\w-]/g,'').slice(0,24)||('n'+(i+1));while(ids.has(id))id+='x';ids.add(id);
+    return{id,title:String(n.title).slice(0,120),why:String(n.why||'').slice(0,240),deps:[],status:['known','shaky','unknown'].includes(n.status)?n.status:'unknown',_deps:n.deps||[]};});
+  out.forEach(n=>{n.deps=(Array.isArray(n._deps)?n._deps:[]).map(String).filter(d=>ids.has(d)&&d!==n.id);delete n._deps;});
+  return{nodes:out,probes:(raw&&Array.isArray(raw.probes)?raw.probes:[]).filter(p=>p&&p.question&&ids.has(String(p.node))).slice(0,8).map(p=>({node:String(p.node),question:String(p.question).slice(0,300)}))};
+}
+/* PURE. What to teach next: the first node not yet known whose prerequisites are all known. Cycles never deadlock —
+   if nothing is ready but something is unknown, the least-blocked node is taught (and the plan says why). */
+function tutorNext38(plan){
+  const N=(plan&&plan.nodes)||[],st=Object.fromEntries(N.map(n=>[n.id,n.status]));
+  const open=N.filter(n=>st[n.id]!=='known');if(!open.length)return null;
+  const ready=open.filter(n=>n.deps.every(d=>st[d]==='known'));
+  if(ready.length)return ready.sort((a,b)=>(a.status==='shaky'?0:1)-(b.status==='shaky'?0:1))[0];
+  return open.slice().sort((a,b)=>a.deps.filter(d=>st[d]!=='known').length-b.deps.filter(d=>st[d]!=='known').length)[0];
+}
+const TUTOR38_SYS='You are a patient expert tutor. You teach ONE reasoning step at a time, check understanding before building on it, '+
+  'repair misconceptions immediately, and never pad. Use what the learner already knows (the GRAPH) and their own words.';
+async function tutorAsk38(user,maxT,label){
+  const acc=await streamComplete({model:primaryModel(),temperature:0.4,maxTokens:maxT||2500,messages:[{role:'system',content:TUTOR38_SYS},{role:'user',content:user}]},null,null,label||'tutor');
+  return String(acc.content||'');
+}
+const tutorGraphText38=s=>(s.props||[]).slice(-40).map(p=>'- '+p.text+(p.premises&&p.premises.length?' (because: '+p.premises.join('; ')+')':'')).join('\n')||'(empty)';
+async function tutorMakePlan38(goal,start){
+  const t=await tutorAsk38(`GOAL: ${goal}\nWHERE I AM STARTING FROM (my words): ${start||'(not said)'}\n\n`+
+    'Build the prerequisite map from where I start to the goal: 4–12 nodes, each one idea, with deps (ids of nodes it needs). Mark nodes I clearly already know as "known". '+
+    'Also write up to 5 diagnostic probes — short questions whose answers show where my understanding ends (never yes/no). '+
+    'Reply with JSON only: {"nodes":[{"id":"n1","title":"…","why":"…","deps":[],"status":"unknown"}],"probes":[{"node":"n1","question":"…"}]}',3000,'tutor plan');
+  return tutorPlan38(tutorJson38(t)||{});
+}
+async function tutorEstimate38(s,answers){
+  const t=await tutorAsk38(`PLAN:\n${s.plan.nodes.map(n=>n.id+': '+n.title).join('\n')}\n\nMY ANSWERS TO THE PROBES (answer, confidence 1-5, reasoning):\n`+
+    answers.map(a=>`- [${a.node}] Q: ${a.question}\n  A: ${a.answer}\n  confidence ${a.conf}; reasoning: ${a.reason||'—'}`).join('\n')+
+    '\n\nJudge each probed node: known / shaky / unknown, from the reasoning more than the answer. JSON only: {"status":{"n1":"known"},"notes":"one sentence"}',1200,'tutor measure');
+  const j=tutorJson38(t)||{};const m=j.status||{};
+  s.plan.nodes.forEach(n=>{if(['known','shaky','unknown'].includes(m[n.id]))n.status=m[n.id];});
+  return j.notes||'';
+}
+async function tutorTeach38(s,node,illustrate){
+  const ui='';
+  const t=await tutorAsk38(`GOAL: ${s.goal}\nTEACH THIS NODE NOW: ${node.title} (${node.why})\nWHAT I ALREADY UNDERSTAND (graph):\n${tutorGraphText38(s)}\n`+
+    (s.lastRepair?'LAST TIME I GOT THIS WRONG: '+s.lastRepair+'\n':'')+
+    '\nGive the NEXT single reasoning step only. First a line "PREDICT: <a question asking me to predict an outcome before you explain>". '+
+    'Then "EXPLAIN:" with the step (short, concrete, one idea). Then "CHECK: <one question that tests the step without repeating its wording>" and "ANSWER: <the expected answer>". '+
+    'Then "PROPOSITION: <the one claim I will have learned>" and "PREMISES: <the earlier claims it rests on, separated by ;>".'+ui,2500,'tutor teach');
+  const f=k=>{const m=t.match(new RegExp('^\\s*'+k+':\\s*([\\s\\S]*?)(?=^\\s*(?:PREDICT|EXPLAIN|CHECK|ANSWER|PROPOSITION|PREMISES):|```openui|$(?![\\s\\S]))','im'));return m?m[1].trim():'';};
+  const ou=(t.match(/```openui\s*([\s\S]*?)```/i)||[])[1]||'';
+  return{predict:f('PREDICT'),explain:f('EXPLAIN'),check:f('CHECK'),answer:f('ANSWER'),prop:f('PROPOSITION'),premises:f('PREMISES').split(';').map(x=>x.trim()).filter(Boolean),ui:ou.trim()};
+}
+/* A separate call for the picture: a weak model asked for "an optional illustration" at the end of a lesson skips it, so the
+   illustration is its own request, drawn while the learner reads, in the app's generative-UI language. */
+async function tutorIllustrate38(s,node,step){
+  const acc=await streamComplete({model:primaryModel(),temperature:0.3,maxTokens:5000,messages:[
+    {role:'system',content:ouiSystemPrompt(ouiLib(),{})},
+    {role:'user',content:'Draw ONE small interactive teaching illustration for this lesson step — something the learner can play with (a slider that '+
+      'changes a value and shows the effect, a chart, a step-by-step diagram). Concrete numbers, short labels, no prose paragraphs.\n'+
+      'SUBJECT: '+s.goal+'\nIDEA: '+(node?node.title:'practice')+'\nSTEP: '+String(step.explain||step.check).slice(0,1200)}]},null,null,'tutor illustration');
+  return String(acc.content||'').replace(/^```(?:openui)?\s*/i,'').replace(/```\s*$/,'').trim();
+}
+async function tutorGrade38(step,reply,reason){
+  const t=await tutorAsk38(`CHECK QUESTION: ${step.check}\nEXPECTED: ${step.answer}\nMY ANSWER: ${reply}\nMY REASONING: ${reason||'—'}\n`+
+    'Is my understanding right? Judge the reasoning, not wording. JSON only: {"correct":true|false,"misconception":"…if wrong","repair":"2-4 sentences that fix it, if wrong"}',800,'tutor check');
+  const j=tutorJson38(t)||{};return{correct:!!j.correct,misconception:String(j.misconception||''),repair:String(j.repair||'')};
+}
+async function tutorPractice38(s){
+  const pool=(s.props||[]).slice(-30);if(pool.length<2)return null;
+  const t=await tutorAsk38(`THINGS I HAVE LEARNED:\n${pool.map(p=>'- '+p.text).join('\n')}\n\nWrite ONE practice problem that needs at least two of these WITHOUT naming them or saying which. `+
+    'Vary the surface from how they were taught. JSON only: {"problem":"…","answer":"…","uses":["…"]}',1000,'tutor practice');
+  const j=tutorJson38(t);return j&&j.problem?{check:String(j.problem),answer:String(j.answer||''),practice:true}:null;
+}
+function tutorRender38(){
+  const host=$('#tutor-panel');if(!host)return;
+  if(!TUTOR38_LOADED){tutorLoad38().then(tutorRender38);host.innerHTML='<p class="help">Opening your notebook…</p>';return;}
+  const s=tutorCur38();
+  const subj=TUTOR38.subjects.map(x=>`<option value="${esc(x.id)}"${x.id===TUTOR38.cur?' selected':''}>${esc(x.goal.slice(0,60))}</option>`).join('');
+  const nodeChip=n=>`<span class="chip${n.status==='known'?' on':''}" title="${esc(n.why)}">${n.status==='known'?'✓ ':n.status==='shaky'?'~ ':''}${esc(n.title)}</span>`;
+  host.innerHTML=`<div class="card"><h2 style="margin-top:0">Tutor</h2>
+    <p class="help">Learn something difficult, properly. It finds where your understanding ends, maps the prerequisites to your goal, then
+      teaches one step at a time: you predict first, see the explanation and an interactive illustration, and answer a check — a wrong
+      answer is repaired before anything builds on it. What you learn is kept as ideas and the reasons behind them, and every later
+      lesson uses it. Works with any model, including the free ones.</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px">
+      ${subj?`<select id="tu-pick" aria-label="Subject" style="flex:1 1 220px">${subj}</select>`:''}
+      <button class="btn small ghost" id="tu-new">New subject</button></div></div>
+    <div class="card" id="tu-newbox" style="display:${s?'none':'block'}">
+      <label class="field">What do you want to understand?<input id="tu-goal" placeholder="e.g. why attention in transformers scales quadratically, and how FlashAttention avoids it"></label>
+      <label class="field">Where are you starting from? (your own words)<textarea id="tu-start" rows="3" placeholder="what you already know, what confuses you"></textarea></label>
+      <button class="btn" id="tu-plan">Map it</button></div>
+    ${s?`<div class="card"><h3 style="margin-top:0">${esc(s.goal)}</h3>
+      <div class="row" style="gap:6px;flex-wrap:wrap">${s.plan.nodes.map(nodeChip).join('')}</div>
+      <p class="help" style="margin-top:6px">${s.plan.nodes.filter(n=>n.status==='known').length} of ${s.plan.nodes.length} understood · ${(s.props||[]).length} idea(s) in your graph</p>
+      ${s.plan.probes&&s.plan.probes.length&&!s.measured?`<h4>First, where does your understanding end?</h4>${s.plan.probes.map((p,i)=>`<div class="diagbox" style="margin-top:8px"><b>${esc(p.question)}</b>
+        <textarea data-tup="${i}" rows="2" placeholder="your answer" style="width:100%;margin-top:6px"></textarea>
+        <textarea data-tur="${i}" rows="2" placeholder="think out loud — why you think so, what you are unsure about" style="width:100%;margin-top:4px"></textarea>
+        <label class="help">confidence <input type="range" min="1" max="5" value="3" data-tuc="${i}" aria-label="confidence"></label></div>`).join('')}
+        <div class="row" style="gap:8px;margin-top:8px"><button class="btn" id="tu-measure">Check my starting point</button><button class="btn small ghost" id="tu-skip">Skip</button></div>`:
+      `<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn" id="tu-teach">${tutorNext38(s.plan)?'Teach me the next step':'Everything is mapped as understood'}</button>
+        <button class="btn small" id="tu-practice"${(s.props||[]).length<2?' disabled':''}>Practice</button>
+        <label class="chip"><input type="checkbox" id="tu-ill"${s.illustrate!==false?' checked':''} style="margin:0"> interactive illustrations</label>
+        <button class="btn small ghost" id="tu-export">Export graph (Markdown)</button></div>`}
+      <div id="tu-step" style="margin-top:12px"></div></div>
+    <details class="card dd"><summary>Your graph — ideas and their reasons (${(s.props||[]).length})</summary><div class="ddb">
+      ${(s.props||[]).slice().reverse().map(p=>`<div style="margin:6px 0"><b>${esc(p.text)}</b>${p.premises&&p.premises.length?`<div class="help">because ${esc(p.premises.join(' · '))}</div>`:''}</div>`).join('')||'<p class="help">Nothing yet.</p>'}
+      <label class="field" style="margin-top:8px">Add your own notes (one idea per line)<textarea id="tu-notes" rows="3"></textarea></label><button class="btn small" id="tu-addnotes">Add to graph</button></div></details>`:''}`;
+  const busy=(b,l)=>{if(b){b.disabled=true;b.dataset.l=b.textContent;b.textContent=l;}};
+  const done=b=>{if(b){b.disabled=false;b.textContent=b.dataset.l||b.textContent;}};
+  if($('#tu-pick'))$('#tu-pick').onchange=e=>{TUTOR38.cur=e.target.value;tutorSave38();tutorRender38();};
+  $('#tu-new').onclick=()=>{$('#tu-newbox').style.display='block';$('#tu-goal').focus();};
+  $('#tu-plan').onclick=async()=>{const g=$('#tu-goal').value.trim();if(!g)return toast('Say what you want to understand',2500);
+    const b=$('#tu-plan');busy(b,'Mapping…');
+    try{const plan=await tutorMakePlan38(g,$('#tu-start').value.trim());if(!plan.nodes.length)throw new Error('the model did not return a map — try again or pick another model');
+      const sj={id:uid(),goal:g,start:$('#tu-start').value.trim(),plan,props:[],sessions:[],illustrate:true,measured:!plan.probes.length,at:nowISO()};
+      TUTOR38.subjects.unshift(sj);TUTOR38.subjects=TUTOR38.subjects.slice(0,30);TUTOR38.cur=sj.id;await tutorSave38();tutorRender38();}
+    catch(e){toast('Tutor: '+(e.message||e),5000);done(b);}};
+  if(!s)return;
+  if($('#tu-skip'))$('#tu-skip').onclick=async()=>{s.measured=true;await tutorSave38();tutorRender38();};
+  if($('#tu-measure'))$('#tu-measure').onclick=async()=>{const b=$('#tu-measure');busy(b,'Reading your reasoning…');
+    const ans=s.plan.probes.map((p,i)=>({node:p.node,question:p.question,answer:(host.querySelector(`[data-tup="${i}"]`)||{}).value||'',
+      reason:(host.querySelector(`[data-tur="${i}"]`)||{}).value||'',conf:+(host.querySelector(`[data-tuc="${i}"]`)||{}).value||3}));
+    try{const note=await tutorEstimate38(s,ans);s.measured=true;await tutorSave38();tutorRender38();if(note)toast(note,5000);}catch(e){toast('Tutor: '+(e.message||e),5000);done(b);}};
+  if($('#tu-ill'))$('#tu-ill').onchange=e=>{s.illustrate=e.target.checked;tutorSave38();};
+  if($('#tu-export'))$('#tu-export').onclick=()=>downloadText('tutor-'+s.goal.slice(0,30).replace(/\W+/g,'-')+'.md','# '+s.goal+'\n\n## Map\n'+
+    s.plan.nodes.map(n=>'- ['+(n.status==='known'?'x':' ')+'] '+n.title+(n.deps.length?' (needs '+n.deps.join(', ')+')':'')).join('\n')+'\n\n## What I learned\n'+
+    (s.props||[]).map(p=>'- '+p.text+(p.premises&&p.premises.length?'\n  - because: '+p.premises.join('; '):'')).join('\n')+'\n');
+  if($('#tu-addnotes'))$('#tu-addnotes').onclick=async()=>{const lines=$('#tu-notes').value.split('\n').map(x=>x.trim()).filter(Boolean);
+    lines.forEach(l=>s.props.push({id:uid(),text:l.slice(0,300),premises:[],node:null,from:'notes',at:nowISO()}));await tutorSave38();tutorRender38();};
+  const stepBox=$('#tu-step');
+  const showStep=(step,node)=>{
+    TUTOR38_STEP={step,node};
+    stepBox.innerHTML=`${step.practice?'<h4>Practice</h4>':`<h4>${esc(node.title)}</h4>`}
+      ${step.predict?`<div class="diagbox"><b>Predict first:</b> ${esc(step.predict)}<textarea id="tu-pred" rows="2" style="width:100%;margin-top:6px" placeholder="your prediction"></textarea>
+        <button class="btn small" id="tu-reveal" style="margin-top:6px">Show me</button></div>`:''}
+      <div id="tu-body" style="display:${step.predict?'none':'block'}">
+        ${step.explain?`<div class="md" style="margin-top:10px">${ouiMd(step.explain)}</div>`:''}
+        <div id="tu-ui" style="margin-top:10px"></div>
+        <div class="diagbox" style="margin-top:10px"><b>Check:</b> ${esc(step.check)}
+          <textarea id="tu-ans" rows="2" style="width:100%;margin-top:6px" placeholder="your answer"></textarea>
+          <textarea id="tu-why" rows="2" style="width:100%;margin-top:4px" placeholder="think out loud (optional)"></textarea>
+          <button class="btn" id="tu-grade" style="margin-top:6px">Check my answer</button></div>
+        <div id="tu-verdict" style="margin-top:8px"></div></div>`;
+    const reveal=()=>{$('#tu-body').style.display='block';const r=$('#tu-reveal');if(r)r.disabled=true;
+      const box=$('#tu-ui');
+      const draw=t=>{try{ouiMount(box,{}).set(t,true);}catch(e){box.innerHTML='<p class="help">The illustration could not be drawn.</p>';}};
+      if(step.ui)draw(step.ui);
+      else if(s.illustrate!==false&&!step.practice){box.innerHTML='<p class="help">Drawing an illustration…</p>';
+        tutorIllustrate38(s,node,step).then(t=>{step.ui=t;if(t&&document.body.contains(box))draw(t);else if(document.body.contains(box))box.innerHTML='';})
+          .catch(()=>{if(document.body.contains(box))box.innerHTML='';});}};
+    if($('#tu-reveal'))$('#tu-reveal').onclick=reveal;else reveal();
+    $('#tu-grade').onclick=async()=>{const b=$('#tu-grade');busy(b,'Checking…');
+      try{const v=await tutorGrade38(step,$('#tu-ans').value,$('#tu-why').value);
+        if(v.correct){
+          if(!step.practice&&step.prop){s.props.push({id:uid(),text:step.prop.slice(0,300),premises:step.premises.slice(0,6),node:node&&node.id,from:'lesson',at:nowISO()});
+            node.done=(node.done||0)+1;if(node.done>=2||node.status==='shaky')node.status='known';else node.status='shaky';}
+          s.lastRepair='';await tutorSave38();
+          $('#tu-verdict').innerHTML=`<div class="diagbox"><b>Right.</b> ${step.practice?'':`Added to your graph: “${esc(step.prop)}”.`}</div><button class="btn small" data-tuagain="1" style="margin-top:6px">${step.practice?'Another problem':'Next step'}</button>`;
+        }else{s.lastRepair=v.misconception;await tutorSave38();
+          $('#tu-verdict').innerHTML=`<div class="diagbox bad"><b>Not yet.</b> ${esc(v.misconception)}<p style="margin:6px 0 0">${esc(v.repair)}</p></div><button class="btn small" data-tuagain="1" style="margin-top:6px">Try the step again</button>`;}
+        $('[data-tuagain]').onclick=()=>step.practice?$('#tu-practice').click():$('#tu-teach').click();
+      }catch(e){toast('Tutor: '+(e.message||e),5000);}done(b);};
+  };
+  if($('#tu-teach'))$('#tu-teach').onclick=async()=>{const node=tutorNext38(s.plan);if(!node)return toast('All mapped ideas are understood — practise, or start a new subject',3500);
+    const b=$('#tu-teach');busy(b,'Preparing the step…');
+    try{const st=await tutorTeach38(s,node,s.illustrate!==false);if(!st.check)throw new Error('the model did not return a step — try again');showStep(st,node);}catch(e){toast('Tutor: '+(e.message||e),5000);}
+    done(b);};
+  if($('#tu-practice'))$('#tu-practice').onclick=async()=>{const b=$('#tu-practice');busy(b,'Writing a problem…');
+    try{const st=await tutorPractice38(s);if(!st)throw new Error('learn at least two ideas first');showStep(st,null);}catch(e){toast('Tutor: '+(e.message||e),5000);}done(b);};
+}
+
+/* ═══════════════════ PASS 38 — S1 RECALL (places) ═══════════════════
+   System 1 memory for agents: WHERE things are — files, folders, repos, sites, hosts, ports, commands — recalled instantly,
+   with no model call, the way a person just knows where the keys are. System 2 work (reasoning runs, chats, terminals) is
+   "dreamed" over afterwards: a mechanical extractor (no model to hallucinate a path) pulls every location it sees and files
+   it with where it was seen. Use strengthens a place; age without use fades it. Recall below the confidence floor answers
+   "not known" rather than a guess — that is the S1/S2 router: S1 answers when it is sure, otherwise S2 (a model, a search)
+   has to look. Shared with every harness: the find_place agent tool, the MCP server (glassbox-memory.mjs places_find /
+   places_remember / places_dream), its command line over SSH, and the bridge's memory sync. */
+let RECALL38={places:[]},RECALL38_LOADED=false;
+const RECALL38_FLOOR=0.34,RECALL38_CAP=800;
+/* The words people use for each kind, so "the openshell repo" or "ollama logs folder" match on kind as well as name. */
+const RECALL38_KINDS={dir:'dir folder directory',file:'file',repo:'repo repository github',url:'url site website link page docs',local:'local server localhost port',host:'host server ssh machine',command:'command cmd run'};
+async function recallLoad38(){if(RECALL38_LOADED)return;try{const v=await IDB.getStrict('recall38');if(v&&Array.isArray(v.places))RECALL38=v;}catch(_){}RECALL38_LOADED=true;}
+async function recallSave38(){RECALL38.places=RECALL38.places.slice(0,RECALL38_CAP);try{await IDB.set('recall38',RECALL38);}catch(e){toast('Recall could not save: '+(e&&e.message||e),4000);}}
+/* PURE. Every location mentioned in a text: absolute and home paths, URLs, GitHub repos, localhost ports, ssh targets. */
+function recallExtract38(text,source){
+  const t=String(text||'').slice(0,400000),out=new Map(),add=(where,kind)=>{
+    where=where.replace(/[)\].,;:'"`>]+$/,'');if(where.length<4||where.length>300||out.has(where))return;
+    const name=kind==='repo'?where.replace(/^https?:\/\/github\.com\//,'').replace(/\.git$/,''):(kind==='url'||kind==='local')?where.replace(/^https?:\/\//,'').replace(/\/$/,''):where.split(/[\\/]/).filter(Boolean).pop()||where;
+    out.set(where,{where,kind,name:name.slice(0,80),source:source||''});};
+  (t.match(/https?:\/\/github\.com\/[\w.-]+\/[\w.-]+/g)||[]).forEach(u=>add(u,'repo'));
+  (t.match(/https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\]):\d{2,5}[^\s'"<>)]*/g)||[]).forEach(u=>add(u,'local'));
+  (t.match(/https?:\/\/[^\s'"<>()]+/g)||[]).forEach(u=>{if(!out.has(u.replace(/[)\].,;:'"`>]+$/,'')))add(u,/github\.com\/[\w.-]+\/[\w.-]+/.test(u)?'repo':'url');});
+  (t.match(/(?:^|[\s'"`(=])((?:~|\/Users|\/home|\/opt|\/var|\/etc|\/private|\/Volumes|\/tmp)(?:\/[\w .@+~-]*[\w@+~-](?=\/))*\/[\w.@+~-]*[\w@+~-])/g)||[])
+    .forEach(m=>{const p=m.replace(/^[\s'"`(=]/,'');add(p,/\.[\w]{1,6}$/.test(p)?'file':'dir');});
+  (t.match(/\b[A-Za-z]:\\(?:[\w .-]+\\)*[\w .-]+/g)||[]).forEach(p=>add(p,'file'));
+  (t.match(/\bssh\s+(?:-\w+\s+\S+\s+)*([\w.-]+@[\w.-]+)/g)||[]).forEach(m=>add(m.split(/\s+/).pop(),'host'));
+  return [...out.values()];
+}
+/* PURE. File new sightings: same `where` merges (sightings add up, the best name wins), new ones start weak. */
+function recallMerge38(places,found,now){
+  const by=new Map((places||[]).map(p=>[p.where,p]));const T=now||Date.now();let added=0;
+  (found||[]).forEach(f=>{const p=by.get(f.where);
+    if(p){p.seen=(p.seen||1)+1;p.last=T;if(f.source&&!(p.sources||[]).includes(f.source))p.sources=(p.sources||[]).concat([f.source]).slice(-5);}
+    else{by.set(f.where,{id:'p'+Math.random().toString(36).slice(2,9),where:f.where,kind:f.kind,name:f.name,tags:f.tags||[],seen:1,uses:0,
+      first:T,last:T,sources:f.source?[f.source]:[],prov:f.prov||'dream'});added++;}});
+  return{places:[...by.values()],added};
+}
+/* PURE. Union two copies of the store (this browser and the shared file): same place → the larger counts and the
+   later time win, so syncing back and forth never inflates a place's strength. */
+function recallUnion38(a,b){
+  const by=new Map((a||[]).map(p=>[p.where,Object.assign({},p)]));
+  (b||[]).forEach(q=>{if(!q||!q.where)return;const p=by.get(q.where);
+    if(!p)by.set(q.where,Object.assign({},q));
+    else{p.seen=Math.max(p.seen||1,q.seen||1);p.uses=Math.max(p.uses||0,q.uses||0);p.last=Math.max(p.last||0,q.last||0);
+      if(q.prov==='person')p.prov='person';p.tags=[...new Set((p.tags||[]).concat(q.tags||[]))].slice(0,12);}});
+  return[...by.values()];
+}
+/* PURE. S1 lookup: words of the query against name, where, tags and sources, weighted by use and freshness.
+   Below the floor it returns nothing — "not known" is an answer; a confident wrong path is not. */
+function recallFind38(q,places,now,limit){
+  const qs=String(q||'').toLowerCase().match(/[a-z0-9]{2,}/g)||[];if(!qs.length)return[];
+  const T=now||Date.now();
+  return (places||[]).map(p=>{
+    const hay=(p.name+' '+p.where+' '+(RECALL38_KINDS[p.kind]||p.kind||'')+' '+(p.tags||[]).join(' ')+' '+(p.sources||[]).join(' ')).toLowerCase();
+    const hits=qs.filter(w=>hay.includes(w)).length/qs.length;
+    const strength=Math.min(1,0.55+0.12*Math.log2(1+(p.uses||0)*2+(p.seen||1)));
+    const fresh=Math.max(0.6,1-((T-(p.last||T))/864e5)/180);
+    return{p,score:+(hits*strength*fresh*(p.prov==='person'?1.1:1)).toFixed(3)};})
+    .filter(x=>x.score>=RECALL38_FLOOR).sort((a,b)=>b.score-a.score).slice(0,limit||6);
+}
+async function recallUse38(id){const p=RECALL38.places.find(x=>x.id===id);if(p){p.uses=(p.uses||0)+1;p.last=Date.now();await recallSave38();}}
+/* The dreaming pass: read back what System 2 produced and file every location in it. Mechanical, so it cannot invent one. */
+async function recallDream38(){
+  await recallLoad38();const found=[];
+  const scan=(txt,src)=>recallExtract38(txt,src).forEach(f=>found.push(f));
+  try{(BRAIN.docs||[]).slice(0,400).forEach(d=>scan(d.name+' '+d.body,'brain: '+String(d.name).slice(0,40)));}catch(_){}
+  try{(ACHATS||[]).slice(0,40).forEach(c=>(c.msgs||[]).slice(-40).forEach(m=>scan(typeof m.content==='string'?m.content:'', 'chat: '+String(c.title||'').slice(0,40))));}catch(_){}
+  try{(CREATIONS||[]).slice(0,30).forEach(c=>scan(JSON.stringify(c.files||{}).slice(0,60000),'creation: '+String(c.title).slice(0,40)));}catch(_){}
+  try{(S1CFG.runs||[]).forEach(r=>scan(r.goal,'system one'));}catch(_){}
+  try{(HH&&HH.jobs||[]).slice(0,40).forEach(j=>scan(JSON.stringify(j).slice(0,4000),'handoff'));}catch(_){}
+  try{scan(JSON.stringify({o:settings.ollama,b:typeof bridgeBase==='function'?bridgeBase():''}),'settings');}catch(_){}
+  const r=recallMerge38(RECALL38.places,found);RECALL38.places=r.places;await recallSave38();
+  try{logEvent('recall-dream',{seen:found.length,added:r.added});}catch(_){}
+  return{seen:found.length,added:r.added,total:RECALL38.places.length};
+}
+function recallRender38(){
+  const h=$('#recall38');if(!h)return;
+  if(!RECALL38_LOADED){recallLoad38().then(recallRender38);return;}
+  const P=RECALL38.places,by=k=>P.filter(p=>p.kind===k).length;
+  h.innerHTML=`<div class="card"><h3 style="margin-top:0">S1 recall — where things are</h3>
+    <p class="help">Instant memory of locations — files, folders, repos, sites, hosts, local servers — for you and every agent, with no model call.
+      “Dream” reads back your chats, notes, creations and runs and files every location it finds; using one makes it stronger. Agents ask it
+      through the <span class="mono">find_place</span> tool, and any harness can through MCP or SSH (<span class="mono">glassbox-memory.mjs find …</span>).</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><input id="rc-q" placeholder="where is… (e.g. ashfall repo, ollama logs)" style="flex:1 1 240px">
+      <button class="btn" id="rc-dream">Dream now</button></div>
+    <div class="help" style="margin:6px 0">${P.length} place(s) · ${by('repo')} repos · ${by('dir')+by('file')} paths · ${by('url')+by('local')} sites · ${by('host')} hosts</div>
+    <div id="rc-out"></div>
+    <details class="dd"><summary>Add a place yourself</summary><div class="ddb"><div class="row" style="gap:6px;flex-wrap:wrap">
+      <input id="rc-n" placeholder="name" style="flex:1 1 140px"><input id="rc-w" class="mono" placeholder="path, URL, repo or host" style="flex:2 1 240px">
+      <button class="btn small" id="rc-add">Remember</button></div></div></details></div>`;
+  const show=()=>{const q=$('#rc-q').value.trim(),res=q?recallFind38(q,P):P.slice().sort((a,b)=>(b.uses||0)-(a.uses||0)||(b.last||0)-(a.last||0)).slice(0,8).map(p=>({p,score:null}));
+    $('#rc-out').innerHTML=res.length?res.map(({p,score})=>`<div class="row" style="gap:8px;align-items:center;margin:4px 0;flex-wrap:wrap"><span class="chip">${esc(p.kind)}</span><b>${esc(p.name)}</b>
+      <code class="mono" style="flex:1 1 200px;overflow:hidden;text-overflow:ellipsis">${esc(p.where)}</code>${score!=null?`<span class="help">${score}</span>`:''}
+      <button class="btn small ghost" data-rcuse="${esc(p.id)}">Copy</button></div>`).join(''):`<p class="help">${q?'Not known — nothing clears the confidence floor. Try Dream now, or add it.':'Nothing yet — press Dream now.'}</p>`;
+    $$('[data-rcuse]').forEach(b=>b.onclick=()=>{const p=P.find(x=>x.id===b.dataset.rcuse);if(!p)return;navigator.clipboard.writeText(p.where).then(()=>toast('Copied'),()=>{});recallUse38(p.id);});};
+  $('#rc-q').oninput=show;show();
+  $('#rc-dream').onclick=async()=>{const b=$('#rc-dream');b.disabled=true;const r=await recallDream38();b.disabled=false;toast(`Dreamed over ${r.seen} sighting(s): ${r.added} new place(s), ${r.total} in all`,4000);recallRender38();};
+  $('#rc-add').onclick=async()=>{const w=$('#rc-w').value.trim();if(!w)return;
+    const r=recallMerge38(RECALL38.places,[{where:w,kind:/^https?:\/\/github\.com\//.test(w)?'repo':/^https?:/.test(w)?'url':/@/.test(w)?'host':/\.[\w]{1,6}$/.test(w)?'file':'dir',name:$('#rc-n').value.trim()||w.split(/[\\/]/).pop(),source:'you',prov:'person'}]);
+    RECALL38.places=r.places;await recallSave38();recallRender38();};
+}
+
+/* ═══════════════════ PASS 38 — STACK: skill packs + the agent ecosystem ═══════════════════
+   Skill packs come in for real: the importer lists every SKILL.md in a GitHub repo (git trees API — no key, answers browsers),
+   you pick, and they join the skill library switched OFF (so they cost nothing until chosen or auto-selected). The tool list
+   is the verified install line from each project's own README; "Run" types it into the cloud terminal, "Copy" is for your Mac. */
+const STACK38_PACKS=[['addyosmani/agent-skills','25 production engineering skills — review, testing, interviewing requirements'],
+  ['affaan-m/ECC','ECC — skills, instincts, memory and security for any coding harness'],
+  ['rohitg00/ai-engineering-from-scratch','AI engineering curriculum as skills — learn it, build it, ship it'],
+  ['NVIDIA/OpenShell','how to drive OpenShell sandboxes and write their policies'],['Nutlope/hallmark','the anti-AI-slop design skill']];
+const STACK38=[
+  {g:'Harness kits',n:'ECC',r:'affaan-m/ECC',cmd:'npx ecc-universal@2.2.3 setup',why:'Skills, hooks, memory and security for Claude Code, Codex, OpenCode and more.'},
+  {g:'Harness kits',n:'Agent Skills',r:'addyosmani/agent-skills',cmd:'npx skills add addyosmani/agent-skills',why:'25 engineering skills for any agent; also importable into GlassBox above.'},
+  {g:'Harness kits',n:'AI engineering from scratch',r:'rohitg00/ai-engineering-from-scratch',cmd:'npx skills add rohitg00/ai-engineering-from-scratch',why:'A full curriculum as skills — pair with the Tutor tab to learn it step by step.'},
+  {g:'Sandboxes',n:'NVIDIA OpenShell',r:'NVIDIA/OpenShell',cmd:'curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh && openshell sandbox create --name glassbox',why:'Policy-checked sandbox for any agent: filesystem, network and process rules; credentials never visible to the agent. Needs Docker, Podman or host virtualisation.',mac:true},
+  {g:'Sandboxes',n:'Cloud terminal',r:'',cmd:'',why:'Already here: Terminal tab → Cloud terminal (a Vercel Sandbox per session).'},
+  {g:'Coding agents',n:'OpenHands Agent Canvas',r:'OpenHands/OpenHands',cmd:'npm install -g @openhands/agent-canvas',why:'Multi-step build/test/fix with orchestration.'},
+  {g:'Coding agents',n:'Aider',r:'Aider-AI/aider',cmd:'curl -LsSf https://astral.sh/uv/install.sh | sh && . $HOME/.local/bin/env && uv tool install --python 3.12 aider-chat',why:'Git-native pair programmer: maps the repo, edits, commits.'},
+  {g:'Coding agents',n:'Letta Code',r:'letta-ai/letta',cmd:'npm install -g @letta-ai/letta-code',why:'Stateful agent with self-editing memory.'},
+  {g:'Memory',n:'mem0 CLI',r:'mem0ai/mem0',cmd:'npm install -g @mem0/cli',why:'A memory layer; GlassBox’s own MCP memory (glassbox-memory.mjs) already gives every harness Brain + S1 places — run one, not both, for the same facts.'},
+  {g:'Mac inference (also in Settings → Local)',n:'Locals',r:'Generated-Computers/Locals',cmd:'uv tool install --python 3.12 locals && locals start',why:'Many agents at once on one Mac (continuous batching) at 127.0.0.1:8321.',mac:true},
+  {g:'Mac inference (also in Settings → Local)',n:'mlx-serve',r:'ddalcu/mlx-serve',cmd:'brew install mlx-serve && mlx-serve run gemma4',why:'Native MLX server, no Python, OpenAI + Anthropic + Ollama APIs at :11234.',mac:true},
+  {g:'Mac inference (also in Settings → Local)',n:'Osaurus',r:'osaurus-ai/osaurus',cmd:'brew install --cask osaurus',why:'Native macOS harness and server at 127.0.0.1:1337.',mac:true},
+  {g:'Mac inference (also in Settings → Local)',n:'MLX LM',r:'ml-explore/mlx-lm',cmd:'pip install mlx-lm && mlx_lm.server --model mlx-community/Qwen3-8B-4bit',why:'Apple’s own: inference, quantisation, LoRA; Model Forge writes its training configs.',mac:true},
+  {g:'Agent OS research',n:'Octopus SI OS',r:'miuuyy/Octopus-SI-OS',cmd:'',why:'Agent execution on OS principles: artifacts, runs that park and wake, per-arrival policy, marks after a verifier passes. Research preview (Rust kernel).'},
+  {g:'Agent OS research',n:'DeepSeek superagent',r:'deepseek-ai/dsh-superagent-prototype',cmd:'',why:'Proactive repo agent for DeepSeek Harness: work items from GitHub, own session per item, a panel for what needs a person.'},
+  {g:'3D',n:'Hi3D v1.0',r:'hi3d-official/Hi3Dv1.0',cmd:'',why:'Open refinement model (Sparc3D lineage): reference image + coarse mesh → high-res mesh. Needs a CUDA 12.4 GPU and a coarse mesh (e.g. Hunyuan3D-2 mini); no hosted endpoint. Run it on a GPU box, bring the GLB into the 3D Editor.'},
+  {g:'3D',n:'Hyper3D (Rodin)',r:'',url:'https://hyper3d.ai',cmd:'',why:'Hosted text/image → 3D, GLB out — opens straight in Godot and in the 3D Editor here.'},
+  {g:'Factories',n:'addyosmani/factory',r:'addyosmani/factory',cmd:'',why:'Reference software factory for Claude Code and Codex — the Factory tab runs the same stations in-app.'},
+  {g:'Factories',n:'Awesome software factories',r:'varun1505/awesome-software-factories',cmd:'',why:'Index of factory patterns and harnesses.'}];
+/* PURE. Which repo paths are skills. */
+function stackSkillPaths38(tree){return((tree&&tree.tree)||[]).filter(x=>x.type==='blob'&&/(^|\/)SKILL\.md$/i.test(x.path)).map(x=>x.path).slice(0,300);}
+function stackRun38(cmd){
+  if(typeof CT38!=='undefined'&&CT38.io){CT38.io.send(cmd+'\r');go('terminal');toast('Typed into the cloud terminal',2000);return;}
+  navigator.clipboard.writeText(cmd).then(()=>toast('Copied — no cloud terminal is connected (Terminal tab → Cloud terminal)',3500),()=>toast('Copy failed',2000));
+}
+function stackRender38(){
+  const h=$('#stack38');if(!h)return;
+  const groups=[...new Set(STACK38.map(x=>x.g))];
+  h.innerHTML=`<div class="card"><h3 style="margin-top:0">Import a skill pack</h3>
+    <p class="help">Skills from any GitHub repo, in one step. They arrive switched off — the skill selector loads one only when a task matches it.</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><select id="st-pack" style="flex:1 1 260px" aria-label="Skill pack">${STACK38_PACKS.map(([r,d])=>`<option value="${esc(r)}">${esc(r)} — ${esc(d)}</option>`).join('')}</select>
+      <input id="st-repo" class="mono" placeholder="or owner/repo" style="flex:0 1 200px"><button class="btn" id="st-list">List skills</button></div>
+    <div id="st-out" style="margin-top:8px"></div></div>
+    <div class="card"><h3 style="margin-top:0">Agent stack</h3><p class="help">Install lines are the ones in each project's own README. <b>Run</b> types it into the cloud terminal; Mac-only tools are copy-only.</p>
+    ${groups.map(gr=>`<h4 style="margin:12px 0 6px">${esc(gr)}</h4>${STACK38.filter(x=>x.g===gr).map((x,i)=>{const k=STACK38.indexOf(x);return`<div class="row" style="gap:8px;align-items:flex-start;margin:6px 0;flex-wrap:wrap">
+      <div style="flex:1 1 260px"><b>${esc(x.n)}</b>${x.r||x.url?` <a class="help" href="${esc(x.url||'https://github.com/'+x.r)}" target="_blank" rel="noopener">${esc(x.r||x.url)}</a>`:''}<div class="help">${esc(x.why)}</div></div>
+      ${x.cmd?`<button class="btn small" data-st38="${k}">${x.mac?'Copy':'Run'}</button>`:''}</div>`;}).join('')}`).join('')}</div>`;
+  $$('[data-st38]').forEach(b=>b.onclick=()=>{const x=STACK38[+b.dataset.st38];if(x.mac)navigator.clipboard.writeText(x.cmd).then(()=>toast('Copied — run it on your Mac',2500),()=>{});else stackRun38(x.cmd);});
+  $('#st-list').onclick=async()=>{const repo=($('#st-repo').value.trim()||$('#st-pack').value).replace(/^https?:\/\/github\.com\//,'').replace(/\/$/,'');
+    if(!/^[\w.-]+\/[\w.-]+$/.test(repo))return toast('owner/repo',2000);
+    const out=$('#st-out');out.innerHTML='<p class="help">Listing…</p>';
+    try{const r=await fetch('https://api.github.com/repos/'+repo+'/git/trees/HEAD?recursive=1',{signal:deadline(DL_API)});
+      if(!r.ok)throw new Error('GitHub answered '+r.status+(r.status===403?' (rate limit — try again in an hour)':''));
+      const paths=stackSkillPaths38(await r.json());if(!paths.length)throw new Error('no SKILL.md files in that repo');
+      const have=new Set(SKILLS.map(s=>s.name));
+      out.innerHTML=`<div class="row" style="gap:6px;flex-wrap:wrap;max-height:240px;overflow:auto">${paths.map((p,i)=>{const nm=p.split('/').slice(-2,-1)[0]||p;
+        return`<label class="chip"><input type="checkbox" data-stp="${i}" ${i<12&&!have.has(nm)?'checked':''} style="margin:0"> ${esc(nm)}</label>`;}).join('')}</div>
+        <button class="btn small" id="st-imp" style="margin-top:8px">Import selected</button>`;
+      $('#st-imp').onclick=async()=>{const pick=[...out.querySelectorAll('[data-stp]:checked')].map(c=>paths[+c.dataset.stp]);let n=0,chars=0,skipped=0;
+        for(const p of pick){if(chars>300000){skipped++;continue;}
+          try{const t=await (await fetch('https://raw.githubusercontent.com/'+repo+'/HEAD/'+p.split('/').map(encodeURIComponent).join('/'),{signal:deadline(DL_API)})).text();
+            const k=parseSkillMd(t,p.split('/').slice(-2,-1)[0]||'skill');if(SKILLS.some(s=>s.name===k.name)){skipped++;continue;}
+            SKILLS.push({id:uid(),name:k.name,desc:k.desc,body:k.body.slice(0,40000),tags:['pack',repo],on:false,chars:Math.min(k.body.length,40000),source:'https://github.com/'+repo+'/blob/HEAD/'+p});n++;chars+=k.body.length;}
+          catch(_){skipped++;}}
+        saveSkills();toast(`${n} skill(s) imported from ${repo}${skipped?', '+skipped+' skipped':''} — switched off until selected`,5000);};
+    }catch(e){out.innerHTML=`<div class="diagbox bad">${esc(e.message||String(e))}</div>`;}};
+}
+
+/* ═══════════════════ PASS 38 — DREAM CATCHER + chat rewind/pin ═══════════════════
+   From the Dreaming Factory: after work is done, a "dreaming" pass reads it back and proposes reusable LESSONS and next
+   IDEAS. They wait in an inbox; only what a person accepts reaches the Brain (auto-accept exists and is off — "not
+   recommended" in the original too: a model grading its own run is the self-judging loop the research warns about).
+   Locations seen in the same pass are filed in S1 recall at once — those are copied, not invented, so need no review. */
+let DREAM38=Object.assign({inbox:[],auto:false,afterReply:false},store.get('dream38',{}));
+const saveDream38=()=>{DREAM38.inbox=DREAM38.inbox.slice(0,60);store.set('dream38',DREAM38);};
+/* PURE. Model output → inbox items, dropping anything empty, overlong, duplicate or already in the Brain. */
+function dreamItems38(j,have,source){
+  const seen=new Set((have||[]).map(x=>String(x).toLowerCase().trim()));
+  const out=[];
+  const take=(arr,kind)=>(Array.isArray(arr)?arr:[]).forEach(x=>{
+    const name=String((x&&x.name)||x||'').trim().slice(0,90),body=String((x&&(x.body||x.why))||'').trim().slice(0,600);
+    if(name.length<6||seen.has(name.toLowerCase()))return;seen.add(name.toLowerCase());
+    out.push({id:'d'+Math.random().toString(36).slice(2,9),kind,name,body,source:source||'',at:new Date().toISOString()});});
+  take(j&&j.lessons,'lesson');take(j&&j.ideas,'idea');
+  return out.slice(0,6);
+}
+async function dreamCatch38(text,source){
+  const t=String(text||'').slice(-24000);if(t.length<200)return{added:0,places:0,note:'not enough to dream over'};
+  let places=0;try{await recallLoad38();const r=recallMerge38(RECALL38.places,recallExtract38(t,source));RECALL38.places=r.places;places=r.added;await recallSave38();}catch(_){}
+  const acc=await streamComplete({model:primaryModel(),temperature:0.3,maxTokens:1500,messages:[
+    {role:'system',content:'You are the dreaming pass of an agent workspace. You read finished work and keep only what is worth remembering.'},
+    {role:'user',content:'FINISHED WORK:\n'+t+'\n\nPropose up to 3 LESSONS (reusable, specific, checkable — what to do or avoid next time, with the reason) and up to 2 next IDEAS '+
+      '(concrete follow-ups the person might want). Nothing generic. JSON only: {"lessons":[{"name":"…","body":"…"}],"ideas":[{"name":"…","body":"…"}]}'}]},null,null,'dream catcher');
+  const items=dreamItems38(tutorJson38(acc.content)||{},(BRAIN.docs||[]).map(d=>d.name).concat(DREAM38.inbox.map(i=>i.name)),source);
+  if(DREAM38.auto){for(const it of items)await dreamAccept38(it,true);}else{DREAM38.inbox=items.concat(DREAM38.inbox);saveDream38();}
+  try{logEvent('dream-catch',{items:items.length,places,source});}catch(_){}
+  return{added:items.length,places};
+}
+async function dreamAccept38(it,auto){
+  await brainAdd({name:it.name,body:it.body+(it.source?'\n\nFrom: '+it.source:''),kind:it.kind==='idea'?'research':'insight',
+    tags:['dream',auto?'auto-accepted':'accepted'],source:'dream catcher'});
+  DREAM38.inbox=DREAM38.inbox.filter(x=>x.id!==it.id);saveDream38();
+}
+function dreamRender38(){
+  const h=$('#dream38');if(!h)return;
+  h.innerHTML=`<div class="card"><h3 style="margin-top:0">Dream Catcher</h3>
+    <p class="help">After work is done, a dreaming pass proposes lessons and next ideas. They wait here; what you accept joins the Brain and shapes later runs.
+      Locations it sees go straight into S1 recall. Run it from a chat (Assistant → Dream) or below on recent work.</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn small" id="dr-recent">Dream over recent chats</button>
+      <label class="chip"><input type="checkbox" id="dr-after"${DREAM38.afterReply?' checked':''} style="margin:0"> dream after each finished chat reply</label>
+      <label class="chip"><input type="checkbox" id="dr-auto"${DREAM38.auto?' checked':''} style="margin:0"> auto-accept (not recommended)</label></div>
+    <div style="margin-top:8px">${DREAM38.inbox.map(it=>`<div class="diagbox" style="margin-top:6px"><span class="chip">${it.kind}</span> <b>${esc(it.name)}</b>
+      <div class="help">${esc(it.body)}</div><div class="row" style="gap:6px;margin-top:6px"><button class="btn small" data-dra="${esc(it.id)}">Keep</button>
+      <button class="btn small ghost" data-drr="${esc(it.id)}">Discard</button></div></div>`).join('')||'<p class="help">Inbox empty.</p>'}</div></div>`;
+  $$('[data-dra]').forEach(b=>b.onclick=async()=>{const it=DREAM38.inbox.find(x=>x.id===b.dataset.dra);if(it){await dreamAccept38(it,false);toast('Kept in the Brain',1800);dreamRender38();}});
+  $$('[data-drr]').forEach(b=>b.onclick=()=>{DREAM38.inbox=DREAM38.inbox.filter(x=>x.id!==b.dataset.drr);saveDream38();dreamRender38();});
+  $('#dr-after').onchange=e=>{DREAM38.afterReply=e.target.checked;saveDream38();};
+  $('#dr-auto').onchange=e=>{DREAM38.auto=e.target.checked;saveDream38();};
+  $('#dr-recent').onclick=async()=>{const b=$('#dr-recent');b.disabled=true;
+    const txt=(ACHATS||[]).slice(0,5).map(c=>(c.msgs||[]).slice(-12).map(m=>m.role+': '+(typeof m.content==='string'?m.content:'')).join('\n')).join('\n\n');
+    try{const r=await dreamCatch38(txt,'recent chats');toast(`${r.added} proposal(s), ${r.places} new place(s)`,3500);}catch(e){toast('Dream: '+(e.message||e),4000);}
+    b.disabled=false;dreamRender38();recallRender38();};
+}
+/* ── chat: pin + rewind ── */
+/* PURE. Pinned chats first, otherwise the existing order. */
+function achatOrder38(list){return (list||[]).filter(c=>c&&c.pinned).concat((list||[]).filter(c=>c&&!c.pinned));}
+/* Rewind to before message i: the full chat is kept as a copy first (nothing is lost), then this chat is cut back and
+   the message goes back into the composer to be edited and resent. */
+function achatRewind38(chatId,i){
+  const c=ACHATS.find(x=>x.id===chatId);if(!c||!c.msgs||!c.msgs[i])return{ok:false,error:'nothing to rewind'};
+  const copy=JSON.parse(JSON.stringify(c));copy.id=uid();copy.title=(c.title||'Chat')+' (before rewind)';copy.pinned=false;
+  ACHATS.splice(ACHATS.indexOf(c)+1,0,copy);
+  const text=typeof c.msgs[i].content==='string'?c.msgs[i].content:'';
+  c.msgs=c.msgs.slice(0,i);saveAChats();
+  return{ok:true,text,copyId:copy.id};
+}
+
 /* ═══════════════════ ASSISTANT — the front door ═══════════════════
    A ChatGPT/Codex-shaped surface over everything already in this app. It is deliberately a
    FRONT END, not a new engine: every message runs through the same streamComplete, the same
@@ -54874,6 +55556,9 @@ async function asstSend(text){
     paneEvent('agent','assistant',{label:ASST.mode,ok:false,note:e.message});
   }
   slot.streaming=false;saveAChats();renderAsst();
+  /* Opt-in: dream over the last exchange once it is finished (one extra model call per reply, so off by default). */
+  if(DREAM38.afterReply&&!slot.error&&String(slot.content||'').length>200)
+    dreamCatch38(c.msgs.slice(-4).map(m=>m.role+': '+(typeof m.content==='string'?m.content:'')).join('\n'),'chat: '+c.title).catch(()=>{});
   return slot;
 }
 
@@ -55364,7 +56049,7 @@ function asstMsgHTML(m,i){
   const fork=(typeof i==='number')
     ? `<button class="am-fork" data-fork="${i}" title="Copy this chat up to here into a new one — the original is untouched">⑂</button>`
     : '';
-  if(m.role==='user')return `<div class="am user"><div class="am-body">${esc(m.content)}</div>${fork}</div>`;
+  if(m.role==='user')return `<div class="am user"><div class="am-body">${esc(m.content)}</div>${fork}${typeof i==='number'?`<button class="am-fork" data-rewind38="${i}" style="right:38px" title="Rewind to before this message — it goes back into the composer; the full chat is kept as a copy" aria-label="Rewind to before this message">↶</button>`:''}</div>`;
   /* A bot turn is an assistant turn with a face and a name on it. Rendered here rather than in
      a parallel renderer so replies, tool notes, costs and the hand-off offers all keep working
      exactly as they do for a normal answer. */
@@ -55422,9 +56107,10 @@ function renderAsst(){
        skills and Brain already wired in.</p></div>`;
   try{genuiHydrate(th);}catch(_){}
   th.scrollTop=th.scrollHeight;
-  $('#asst-list').innerHTML=ACHATS.map(x=>
+  {const pb=$('#asst-pin38'),cc=achat();if(pb)pb.textContent=cc&&cc.pinned?'Unpin':'Pin';}
+  $('#asst-list').innerHTML=achatOrder38(ACHATS).map(x=>
     `<button class="asst-chat ${x.id===ACHAT?'on':''}" data-id="${x.id}">
-       <span>${esc(x.title)}</span><small>${esc((x.mode||'chat'))}${x.model?' · '+esc(x.model.split('/').pop()):''}${x.cost?' · '+money(x.cost):''}</small></button>`).join('')
+       <span>${x.pinned?'📌 ':''}${esc(x.title)}</span><small>${esc((x.mode||'chat'))}${x.model?' · '+esc(x.model.split('/').pop()):''}${x.cost?' · '+money(x.cost):''}</small></button>`).join('')
     ||'<p class="help" style="padding:8px">No chats yet.</p>';
   $$('#asst-modes .chip').forEach(b=>b.classList.toggle('on',b.dataset.mode===ASST.mode));
   $('#asst-auto').textContent=ASST.auto?'⚡ Auto':'🔒 Ask first';
@@ -55436,10 +56122,19 @@ function initAsst(){
   $('#asst-modes').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;
     ASST.mode=b.dataset.mode;saveASST();renderAsst();renderAsstSettings();};
   $('#asst-new').onclick=()=>{achatNew();renderAsst();};
+  if($('#asst-pin38'))$('#asst-pin38').onclick=()=>{const c=achat();if(!c)return;c.pinned=!c.pinned;saveAChats();renderAsst();};
+  if($('#asst-dream38'))$('#asst-dream38').onclick=async()=>{const c=achat();if(!c||!(c.msgs||[]).length)return toast('Nothing to dream over yet',2500);
+    const b=$('#asst-dream38');b.disabled=true;
+    try{const r=await dreamCatch38(c.msgs.map(m=>m.role+': '+(typeof m.content==='string'?m.content:'')).join('\n'),'chat: '+c.title);
+      toast(r.note||`${r.added} proposal(s) in Brain → Dream Catcher${r.places?', '+r.places+' new place(s)':''}`,4500);}
+    catch(e){toast('Dream: '+(e.message||e),4000);}b.disabled=false;};
   /* Offers are delegated on the thread, so they keep working across re-renders. */
   /* Delegated, like the offers below — the thread is re-rendered on every token and a
      handler bound to a button would be discarded with it. */
   $('#asst-thread').addEventListener('click',e=>{
+    const rw=e.target.closest('[data-rewind38]');
+    if(rw){const c=achat();if(!c)return;const r=achatRewind38(c.id,+rw.dataset.rewind38);if(!r.ok)return toast(r.error,3000);
+      renderAsst();const inp=$('#asst-input');if(inp){inp.value=r.text;inp.focus();}toast('Rewound — edit and send again. The full chat is kept as “(before rewind)”.',4200);return;}
     const f=e.target.closest('[data-fork]');
     if(f){
       const c=achat();if(!c)return;
@@ -62123,7 +62818,7 @@ function renderSpline(){
    switching density silently discarded a configuration someone had built by hand. */
 const TAB_GROUPS=[
   {id:'talk',  label:'Chat & reasoning', icon:'💬',
-   views:['assistant','genui','lab','council','compare','relay','transplant','pane','history']},
+   views:['assistant','genui','tutor','lab','council','compare','relay','transplant','pane','history']},
   {id:'make',  label:'Create',           icon:'🎨',
    views:['gen','design','studio','three','spline','office','creations','artifacts']},
   {id:'build', label:'Build & ship',     icon:'🏗',
@@ -69687,7 +70382,7 @@ async function persistInit(){
    worker updating is NOT the same thing as the user seeing the new app: clients.claim() makes
    a new worker control the page, but the HTML already parsed keeps running until something
    reloads it. This is what lets the app notice and say so. */
-const APP_BUILD='92b53da1d8da5f0c';
+const APP_BUILD='2d318cdbda8c7a22';
 const PWA={reg:null,state:'unknown',why:'',prompt:null,update:null,checking:false,lastCheck:0};
 
 /* ── Staying current, which is the whole problem on iOS ──────────────────────
@@ -73215,7 +73910,7 @@ function go(view){
   if(view==='pane')panelGuard(view,()=>{renderPane();renderPaneLive();});
   if(view==='terminal')panelGuard(view,()=>{renderTerm();cloudRender();});
   if(view==='assistant')panelGuard(view,()=>renderAsst());
-  if(view==='brain')panelGuard(view,()=>{renderBrainDomains();renderBrainConsole();renderTraces();});
+  if(view==='brain')panelGuard(view,()=>{recallRender38();dreamRender38();renderBrainDomains();renderBrainConsole();renderTraces();});
   if(view==='settings')panelGuard(view,()=>renderProjects());
   if(view==='graphs')panelGuard(view,()=>renderGraphs());
   if(view==='factory')panelGuard(view,()=>renderFactory());
@@ -73266,8 +73961,9 @@ function go(view){
   if(view==='genui')panelGuard(view,()=>genuiRender());
   if(view==='artifacts')panelGuard(view,()=>artRender());
   if(view==='frameworks')panelGuard(view,()=>fwRender());
-  if(view==='harnesshub')panelGuard(view,()=>hhRender());
+  if(view==='harnesshub')panelGuard(view,()=>{hhRender();stackRender38();});
   if(view==='specs')panelGuard(view,()=>specsRender());
+  if(view==='tutor')panelGuard(view,()=>tutorRender38());
   if(view==='hsq')panelGuard(view,()=>h2Render());
   if(view==='rea')panelGuard(view,()=>reaRender());
   if(view==='webos')panelGuard(view,()=>{wosInit();wosRender();wosFillFolders();wosClockTick();});
@@ -73581,7 +74277,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     modelBadge,modelMenu,isModelField,modelFieldEnhance,MODEL_FIELD_RX,
     modelRunnable,freeCandidates,modelParamsB,
     primaryModel,setPrimaryModel,renderPrimaryPill,openAutomate,
-    pbKey,pbBradleyTerry,pbBestModel,pbShortlist,pbRoutineMatch,pbParseGenerated,pbCost,pbAdd,pbSelect,pbRun,pbMatchesFromRanking,pbArena,pbVote,pbGenerate,pbRender,get PB(){return PB},set PB(v){PB=v},ledgerClusterOf,ledgerJudge,wilsonLower,ledgerRecord,ledgerUpdate,ledgerMatrix,ledgerRecommend,ledgerRecordDecision,ledgerCalibration,ledgerEscalationThreshold,ledgerTotals,ledgerLesson,toolSignature,toolLoopGuard,instinctAdd,instinctPick,instinctCredit,instinctBlock,instinctConf,learnRng,betaSample,routerPick,routerChoose,routerCandidates,ledgerRowFromReact,ledgerRowsFromS1,ledgerFeedback,ledgerFromReact,ledgerFromS1,s1Diff,s1PathSig,s1SuccessHolds,s1ParseSuccess,s1WireAnswers,s1DecisionGuard,s1SystemOneDecider,S1_DECISION_PRESETS,s1ControlContext,s1PlainText,s1Headings,freeCoolMs,FREE_STICKY,FREE_COOL,harnessNotes,auditChecks,auditSecretScan,auditSnapshot,playtestVerdict,playtestStudio,learnRender,get LEARN(){return LEARN},set LEARN(v){LEARN=v},storageJunkSweep,syncKeep36,specParseTasks,specReady,specCycles,specJsonl,specHandoff,readerUrlOk,gauntletSabotageAsync,addrSpace,sideClamp37,classicNext37,SIDE37,slopCheck37,slopSteer37,get S1MOD(){return S1MOD},s1ModBundle,s1PatchApply,s1PatchGate37,s1Checks37,s1BundleToOps,s1Presets37,s1Consequential37,s1ModApply37,gatewayAllows37,shellMode36,tabPosFor36,tabFace36,clamp36,contrast36,ICONS36,DOCK36,fixtureChatSweep,gauntletResidueSweep,saveAChats,gauntletSandbox,cloudNormUrl,bridgeOrder,codespaceBridgeUrl,bridgeBase,cloudPairCode,gtfixContext,gtfixPrompt,gtfixHandoff,gtfixEnv,gtfixOpen,steLint,EXPLAIN_AS,STE_STYLE_BLOCK,h2PathOk,h2Validate,h2Diff,h2Assemble,h2Files,h2ParseReply,h2AnonIds,h2ParseExperience,h2Budget,h2RunTask,h2LibraryAdd,h2Render,reaSniff,reaEntropy,reaStrings,reaClassify,reaWasm,reaJS,reaLedger,reaEvidenceText,reaCliFor,reaGhidraReadOnly,reaInspect,reaHAR,reaSafetensors,reaPE,reaELF,reaMachO,reaRender,lgGraph,lgMerge,lgAppend,mastraWorkflow,mastraStep,graphitiAdd,graphitiAsOf,cogneeAdd,lfBatch,deEvaluate,DE_METRICS,buIndex,e2bRun,genuiRoute,ouiMermaidHydrate,get CLOUD(){return CLOUD},get H2(){return H2},get REA(){return REA},modelKind,modelGroupOf,modelGroups,modelOptionsHTML,modelDatalistHTML,modelListAttrs,modelListsRepaint,catalogSummary,catalogAgeText,catalogStale,artNearest,catalogRefresh,catalogFetchRemote,catalogStatusText,genImageModalities,MODEL_KINDS,get CATALOG_META(){return CATALOG_META},ouiPrepare,ouiStripComments,ouiLex,ouiSplit,ouiParse,ouiEvaluate,ouiSummary,ouiMerge,ouiSerialize,ouiValidate,ouiRuntime,ouiLibFromSpec,ouiLib,ouiSystemPrompt,ouiMount,ouiPaint,ouiSplitMessage,ouiXYChart,ouiPie,ouiMd,ouiFindByPath,ouiInteractionReplay,ouiTok,OUI_R,OUI_LIB_SPEC,artSave,artDelete,artPin,artCollect,artFilter,artKindOf,artBlocksFrom,artBody,artPreviewHtml,artRender,get ARTLIB(){return ARTLIB},set ARTLIB(v){ARTLIB=v},genuiCompare,genuiBodyHTML,genuiHydrate,genuiChatSystem,genuiGenerate,genuiRender,get GENUI(){return GENUI},GENUI_CORE,asstBodyHTML,fwValidate,fwJson,fwEmbedLexical,fwCosine,fwArith,lcRunnable,lcPrompt,lcCoerce,lcFill,lcParallel,lcBranch,liSplit,liIndex,chromaClient,chromaWhere,chromaWhereDoc,instructorCreate,instructorReask,paAgent,paSystem,crewPrompt,crewKickoff,skKernel,skParse,hsPipeline,autogptParse,autogptRun,TF_TASKS,tfPipeline,fwRender,FW_DEMOS,hhCommand,hhSlug,hhHandoffDoc,hhReadmeCommands,hhAddCustom,hhRender,HH_HARNESSES,get HH(){return HH},hhPassOff,hhCollect,hhExperiment,hhSearch,saveLearn,get S1PATHS(){return S1PATHS},pageIsLoopback,localFetchOpts,lnaPermission,ollamaOS,ollamaFixCommands,
+    pbKey,pbBradleyTerry,pbBestModel,pbShortlist,pbRoutineMatch,pbParseGenerated,pbCost,pbAdd,pbSelect,pbRun,pbMatchesFromRanking,pbArena,pbVote,pbGenerate,pbRender,get PB(){return PB},set PB(v){PB=v},ledgerClusterOf,ledgerJudge,wilsonLower,ledgerRecord,ledgerUpdate,ledgerMatrix,ledgerRecommend,ledgerRecordDecision,ledgerCalibration,ledgerEscalationThreshold,ledgerTotals,ledgerLesson,toolSignature,toolLoopGuard,instinctAdd,instinctPick,instinctCredit,instinctBlock,instinctConf,learnRng,betaSample,routerPick,routerChoose,routerCandidates,ledgerRowFromReact,ledgerRowsFromS1,ledgerFeedback,ledgerFromReact,ledgerFromS1,s1Diff,s1PathSig,s1SuccessHolds,s1ParseSuccess,s1WireAnswers,s1DecisionGuard,s1SystemOneDecider,S1_DECISION_PRESETS,s1ControlContext,s1PlainText,s1Headings,freeCoolMs,FREE_STICKY,FREE_COOL,harnessNotes,auditChecks,auditSecretScan,auditSnapshot,playtestVerdict,playtestStudio,learnRender,get LEARN(){return LEARN},set LEARN(v){LEARN=v},storageJunkSweep,syncKeep36,specParseTasks,specReady,specCycles,specJsonl,specHandoff,readerUrlOk,gauntletSabotageAsync,addrSpace,sideClamp37,classicNext37,SIDE37,slopCheck37,slopSteer37,get S1MOD(){return S1MOD},s1ModBundle,s1PatchApply,s1PatchGate37,s1Checks37,s1BundleToOps,s1Presets37,s1Consequential37,s1ModApply37,gatewayAllows37,ctTransports38,ctMinutesLeft38,CT38_PRESETS,tutorNext38,tutorPlan38,tutorJson38,recallExtract38,recallMerge38,recallUnion38,recallFind38,RECALL38_FLOOR,stackSkillPaths38,STACK38,dreamItems38,achatOrder38,achatRewind38,shellMode36,tabPosFor36,tabFace36,clamp36,contrast36,ICONS36,DOCK36,fixtureChatSweep,gauntletResidueSweep,saveAChats,gauntletSandbox,cloudNormUrl,bridgeOrder,codespaceBridgeUrl,bridgeBase,cloudPairCode,gtfixContext,gtfixPrompt,gtfixHandoff,gtfixEnv,gtfixOpen,steLint,EXPLAIN_AS,STE_STYLE_BLOCK,h2PathOk,h2Validate,h2Diff,h2Assemble,h2Files,h2ParseReply,h2AnonIds,h2ParseExperience,h2Budget,h2RunTask,h2LibraryAdd,h2Render,reaSniff,reaEntropy,reaStrings,reaClassify,reaWasm,reaJS,reaLedger,reaEvidenceText,reaCliFor,reaGhidraReadOnly,reaInspect,reaHAR,reaSafetensors,reaPE,reaELF,reaMachO,reaRender,lgGraph,lgMerge,lgAppend,mastraWorkflow,mastraStep,graphitiAdd,graphitiAsOf,cogneeAdd,lfBatch,deEvaluate,DE_METRICS,buIndex,e2bRun,genuiRoute,ouiMermaidHydrate,get CLOUD(){return CLOUD},get H2(){return H2},get REA(){return REA},modelKind,modelGroupOf,modelGroups,modelOptionsHTML,modelDatalistHTML,modelListAttrs,modelListsRepaint,catalogSummary,catalogAgeText,catalogStale,artNearest,catalogRefresh,catalogFetchRemote,catalogStatusText,genImageModalities,MODEL_KINDS,get CATALOG_META(){return CATALOG_META},ouiPrepare,ouiStripComments,ouiLex,ouiSplit,ouiParse,ouiEvaluate,ouiSummary,ouiMerge,ouiSerialize,ouiValidate,ouiRuntime,ouiLibFromSpec,ouiLib,ouiSystemPrompt,ouiMount,ouiPaint,ouiSplitMessage,ouiXYChart,ouiPie,ouiMd,ouiFindByPath,ouiInteractionReplay,ouiTok,OUI_R,OUI_LIB_SPEC,artSave,artDelete,artPin,artCollect,artFilter,artKindOf,artBlocksFrom,artBody,artPreviewHtml,artRender,get ARTLIB(){return ARTLIB},set ARTLIB(v){ARTLIB=v},genuiCompare,genuiBodyHTML,genuiHydrate,genuiChatSystem,genuiGenerate,genuiRender,get GENUI(){return GENUI},GENUI_CORE,asstBodyHTML,fwValidate,fwJson,fwEmbedLexical,fwCosine,fwArith,lcRunnable,lcPrompt,lcCoerce,lcFill,lcParallel,lcBranch,liSplit,liIndex,chromaClient,chromaWhere,chromaWhereDoc,instructorCreate,instructorReask,paAgent,paSystem,crewPrompt,crewKickoff,skKernel,skParse,hsPipeline,autogptParse,autogptRun,TF_TASKS,tfPipeline,fwRender,FW_DEMOS,hhCommand,hhSlug,hhHandoffDoc,hhReadmeCommands,hhAddCustom,hhRender,HH_HARNESSES,get HH(){return HH},hhPassOff,hhCollect,hhExperiment,hhSearch,saveLearn,get S1PATHS(){return S1PATHS},pageIsLoopback,localFetchOpts,lnaPermission,ollamaOS,ollamaFixCommands,
     beaconExportLines,beaconSelfLearn,BEACON_SESSION,
     HL_KINDS,HL_TEMPLATES,HL_TARGETS,hlRefs,hlTemplate,hlValidate,hlOverBudget,hlPick,hlParseSpec,hlRun,hlScore,hlBaseline,hlBench,hlDesign,hlModes,hlApplyHooks,hlRender,get HL(){return HL},set HL(v){HL=v},asstModeEntries,freeModelFor,freeRoute,freeSlotWait,get FREE(){return FREE},set FREE(v){FREE=v},get FREE_LOG(){return FREE_LOG},
     HARNESS_LAYERS,harnessAudit,

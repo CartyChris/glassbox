@@ -821,7 +821,7 @@ function memHandle(res, body) {
       return reply({ok: false, conflict: true, theirRev: cur.rev, memory: cur,
         error: 'memory moved on since your last sync — merge and push again'}, 409);
     const next = Object.assign({}, cur, {docs: body.docs || cur.docs,
-      graphs: body.graphs || cur.graphs});
+      graphs: body.graphs || cur.graphs, places: Array.isArray(body.places) ? body.places : (cur.places || [])});
     memWrite(next);
     return reply({ok: true, rev: next.rev, docs: next.docs.length, graphs: next.graphs.length});
   }

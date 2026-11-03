@@ -1,0 +1,7 @@
+  {id:'cloud-terminal-no-fallback',export:'ctTransports38',why:'when Vercel’s PTY socket fails the cloud terminal gives up instead of falling back',broken:()=>s=>s&&s.shell?[{kind:'ws',url:s.shell.url,token:s.shell.token}]:[]},
+  {id:'tutor-ignores-prereqs',export:'tutorNext38',why:'the tutor teaches ideas before the ones they depend on',broken:()=>p=>((p&&p.nodes)||[]).find(n=>n.status!=='known')||null},
+  {id:'recall-always-answers',export:'recallFind38',why:'S1 recall returns a confident wrong path instead of “not known”',broken:()=>(q,P)=>(P||[]).slice(0,1).map(p=>({p,score:1}))},
+  {id:'recall-sync-inflates',export:'recallUnion38',why:'every sync makes stale places look stronger',broken:()=>(a,b)=>(a||[]).concat(b||[])},
+  {id:'skill-pack-takes-everything',export:'stackSkillPaths38',why:'a skill pack import pulls every file in the repo into the skill library',broken:()=>t=>((t&&t.tree)||[]).map(x=>x.path)},
+  {id:'dream-keeps-duplicates',export:'dreamItems38',why:'the dreaming pass floods the inbox with repeats of what the Brain already knows',broken:()=>j=>((j&&j.lessons)||[]).concat((j&&j.ideas)||[]).map((x,i)=>({id:'d'+i,kind:'lesson',name:String(x.name||x),body:''}))},
+  {id:'rewind-loses-chat',export:'achatRewind38',why:'rewinding a chat throws away the turns after it with no copy',broken:()=>(id,i)=>{const c=(window.__gb.ACHATS||[]).find(x=>x.id===id);if(!c||!c.msgs[i])return{ok:false};const t=c.msgs[i].content;c.msgs=c.msgs.slice(0,i);return{ok:true,text:t,copyId:null};}},

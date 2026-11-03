@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "buildCommand": "",
-  "installCommand": "",
+  "installCommand": "npm install --omit=dev --no-audit --no-fund",
   "outputDirectory": ".",
   "headers": [
     {
@@ -18,7 +18,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; img-src * data: blob:; media-src * blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://unpkg.com https://cdn.jsdelivr.net; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src *; frame-src 'self' blob: data: https://app.spline.design https://my.spline.design https://www.openstreetmap.org"
+          "value": "default-src 'self'; img-src * data: blob:; media-src * blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://unpkg.com https://cdn.jsdelivr.net; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src * wss: https:; frame-src 'self' blob: data: https://*.vercel.run https://app.spline.design https://my.spline.design https://www.openstreetmap.org"
         }
       ]
     },
@@ -65,5 +65,10 @@
         }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/terminal.mjs": {
+      "maxDuration": 60
+    }
+  }
 }

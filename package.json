@@ -6,5 +6,8 @@
   "license": "MIT",
   "scripts": {
     "bridge": "node glassbox-bridge.mjs"
+  },
+  "dependencies": {
+    "@vercel/sandbox": "3.9.1"
   }
 }
