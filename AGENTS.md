@@ -37,6 +37,12 @@ One file is the app: `GlassBox.html` (`index.html` is a byte-identical copy). No
   scouts, playbooks, harnesses). A turn records `t0/t1`, `th0/th1`, `meta` (`turn40Meta` + `turn40Merge` per tool round,
   `turn40Estimate` when a provider sends no usage — shown with ≈) and full tool records `{name,status,args,result,ms}`.
   Answers are Markdown via `md40` (escape first; http(s) links only). Open/closed UI state lives in `T40` WeakMaps.
+- Tools (pass 41, dev/pass41): every loop parses calls with `tc41Parse` (block, <tool_call>, gpt-oss harmony, fenced/bare JSON,
+  name(args)), resolves names with `tc41Resolve`, shapes args with `tc41Coerce` (inside toolInvoke) and lists tools with
+  `tc41Block`. Native tool_calls a model streams unasked are converted in streamChat's finish (`tc41FromNative`).
+  API connectors are CONNECTORS of kind `api` (`api41*`): host-locked, read-only and ask-first by default.
+  `delegate` (orch41) has depth 1. Agent mode = `swe41Run`; the self-improvement loop (`evolve41`) edits only the H41
+  harness — never the core protocol, tasks, verifiers or gate. E2E: start dev/pass41/pw/servers.mjs, run e2e41.mjs.
 
 ## Deploy
 `vercel --prod --yes --scope cloud-ops-game-time` from this folder, then confirm the live `GlassBox.html` hash equals the local one.

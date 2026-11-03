@@ -1,0 +1,15 @@
+/* ═══ PASS 41 — self-improvement card ═══ */
+.evo41 h3{margin:16px 0 8px;font-size:15px}
+.evo41-ver{padding:10px 12px;border-radius:14px;background:color-mix(in srgb,var(--ink) 5%,transparent);margin:8px 0 10px}
+.evo41-tasks{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.evo41-t{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:14px;background:color-mix(in srgb,var(--ink) 4.5%,transparent);cursor:pointer;min-height:52px}
+.evo41-t>span:nth-child(2){flex:1;min-width:0}
+.evo41-t b{display:block;font-size:14px}
+.evo41-t small{display:block;color:var(--ink3);font-size:12px}
+.evo41-s{font:600 13px var(--mono,ui-monospace,monospace);color:var(--ink3)}
+.evo41-s.ok{color:var(--good)}.evo41-s.mid{color:var(--warn)}.evo41-s.bad{color:var(--bad)}
+.evo41-q{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 12px;border-radius:14px;margin-bottom:8px;
+  background:color-mix(in srgb,var(--good) 9%,transparent)}
+.evo41-vr{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:.5px solid color-mix(in srgb,var(--ink) 8%,transparent)}
+.evo41-log{font:12px/1.5 var(--mono,ui-monospace,monospace);max-height:320px;overflow:auto}
+.evo41-log .g{color:var(--good)}.evo41-log .w{color:var(--warn)}.evo41-log .i{color:var(--acc)}
