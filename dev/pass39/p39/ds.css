@@ -1,0 +1,191 @@
+/* ═══════════════════ PASS 39 — APPLE-STYLE PHONE SHELL + LIQUID GLASS ═══════════════════
+   Follows Apple's own split (HIG, iOS 26): Liquid Glass is the NAVIGATION layer, floating over content: the
+   title bar, the tab bar, sheets, menus, toasts. Content cards stay solid surfaces, which is both what the
+   platform does and what a phone can afford (a backdrop blur on every card is a GPU cost per card per frame).
+   Patterns taken from shipped iOS apps (Mobbin's iOS tab-bar and segmented-control collections): one tab bar of
+   at most five places, icon above a short label, the selected place tinted and set on a lens; a segmented row
+   for the views inside a place; controls never shrink below their label; 44pt targets; content scrolls under
+   translucent bars instead of stopping at their edge. */
+
+:root{--dock-h:62px;--vgap39:0px;--seg39-h:38px}
+:root:not([data-theme="light"]){
+  --bg:#000000;--bg2:#0c0c0e;--panel:#0f0f11;--panel2:#1c1c1e;--edge:#2c2c2e;--edge2:#3a3a3c;
+  --ink:#f5f5f7;--ink2:#aeaeb2;--ink3:#8e8e93;
+  --glass:color-mix(in srgb,#1c1c1e 74%,transparent);
+  --glass-rim:inset 0 1px 0 rgba(255,255,255,.16),inset 0 0 0 .5px rgba(255,255,255,.1);
+}
+:root[data-theme="light"]{
+  --bg:#f2f2f7;--bg2:#f7f7fa;--panel:#f2f2f7;--panel2:#ffffff;--edge:#e5e5ea;--edge2:#d1d1d6;
+  --glass:color-mix(in srgb,#ffffff 76%,transparent);
+  --glass-rim:inset 0 1px 0 rgba(255,255,255,.95),inset 0 0 0 .5px rgba(0,0,0,.06);
+}
+/* Line icons converted from emoji: text size, text colour, never a colour glyph */
+.emo39{display:inline-flex;vertical-align:-.16em;margin-right:.32em}
+.emo39:last-child{margin-right:0}
+.ic39{width:1.08em;height:1.08em;flex:0 0 auto;stroke-width:2}
+h1 .ic39,h2 .ic39,h3 .ic39{stroke-width:1.9}
+
+/* ── Controls never shrink under their own label ─────────────────────────
+   The overlap in the chat toolbar: buttons in a one-line scrolling row were flex-shrunk to the 44pt touch floor
+   while their text kept its width, so the text drew over the neighbours. Applies to every row. */
+:is(.row,.btnrow,.toolbar,.tb)>:is(.btn,button,.chip,select){flex-shrink:0}
+.btn,.chip{white-space:nowrap}
+.btn.wrap-ok{white-space:normal}
+/* An input inside a sentence ("confirm on [2] looks") is taller than the line it sits on at the touch floor —
+   laid out as a line of its own items it cannot spill onto the next one. */
+label.chk:has(>input:not([type=checkbox]):not([type=radio])),label.chk:has(>select),
+label:has(>input[type=number]),label:has(>select):not(.chk){display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;row-gap:4px}
+
+/* ── Liquid Glass: navigation layer ───────────────────────────────────── */
+:root[data-fx="glass"]{--glass-blur:blur(28px) saturate(185%)}
+:root[data-fx="glass"] :is(header.top,#dock36,#toast,.palbox,#tb-sheet,#subnav39,#sheet39){
+  background:var(--glass);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur)}
+:root[data-fx="glass"] body{background:
+  radial-gradient(70vw 50vh at 8% -8%,color-mix(in srgb,var(--acc) 16%,transparent),transparent 62%),
+  radial-gradient(60vw 45vh at 100% 4%,color-mix(in srgb,var(--acc2) 13%,transparent),transparent 60%),
+  radial-gradient(80vw 50vh at 50% 108%,color-mix(in srgb,var(--acc) 10%,transparent),transparent 60%),var(--bg);
+  background-attachment:fixed}
+/* content layer: solid, rounded like an iOS inset-grouped list — no blur behind every card */
+:root[data-fx="glass"] :is(.card,.advrow,.crcard,.kpi,.featrow){
+  background:color-mix(in srgb,var(--panel2) 92%,transparent);-webkit-backdrop-filter:none;backdrop-filter:none;
+  border:.5px solid color-mix(in srgb,var(--ink) 9%,transparent);border-radius:22px;
+  box-shadow:0 1px 0 color-mix(in srgb,#fff 5%,transparent) inset,0 10px 30px -18px rgba(0,0,0,.45)}
+:root[data-fx="glass"][data-theme="light"] :is(.card,.advrow,.crcard,.kpi,.featrow){
+  background:#ffffff;border-color:rgba(0,0,0,.05);box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px -16px rgba(0,0,0,.18)}
+:root[data-fx="glass"] .btn{border-radius:999px}
+:root[data-fx="glass"] .btn.small{border-radius:999px}
+:root[data-fx="glass"] :is(input,select,textarea){border-radius:12px}
+:root[data-fx="glass"] .palbox{border-radius:26px}
+:root[data-fxreduce="on"] :is(header.top,#dock36,#toast,#subnav39,#sheet39){transition:none}
+@media (prefers-reduced-transparency:reduce){
+  :root :is(header.top,#dock36,#toast,.palbox,#tb-sheet,#subnav39,#sheet39){background:var(--panel2)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}}
+
+/* ── Title bar (phone) with the hub's sections under it ───────────────── */
+:root[data-shell="dock"] header.top{border-bottom:.5px solid color-mix(in srgb,var(--ink) 10%,transparent)}
+:root[data-shell="dock"] .brand .s36-title{font-size:17px;letter-spacing:-.01em}
+#subnav39{display:none}
+:root[data-shell="dock"] #subnav39:not([hidden]){display:flex;flex:0 0 auto;gap:4px;overflow-x:auto;scrollbar-width:none;
+  position:relative;z-index:85;padding:2px 10px 8px;margin-top:-1px;border-bottom:.5px solid color-mix(in srgb,var(--ink) 10%,transparent);
+  scroll-snap-type:x proximity}
+:root[data-shell="dock"]:not([data-fx="glass"]) #subnav39{background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(170%);backdrop-filter:blur(22px) saturate(170%)}
+:root[data-shell="dock"][data-sub39="1"] header.top{border-bottom:0}
+#subnav39::-webkit-scrollbar{display:none}
+#subnav39 button{flex:0 0 auto;height:32px;min-height:32px;padding:0 13px;border-radius:999px;border:0;background:transparent;
+  color:var(--ink2);font:600 13.5px/1 var(--sans);letter-spacing:-.005em;scroll-snap-align:center;cursor:pointer}
+#subnav39 button.on{color:var(--ink);background:color-mix(in srgb,var(--ink) 12%,transparent);
+  box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 14%,transparent)}
+:root[data-theme="light"] #subnav39 button.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1),0 0 0 .5px rgba(0,0,0,.05)}
+:root[data-touchfloor="1"] #subnav39 button{min-height:36px;height:36px}
+
+/* ── Tab bar: a floating glass capsule, icon over label, selected on a lens ── */
+:root[data-shell="dock"] #dock36{left:12px;right:12px;height:var(--dock-h);border-radius:31px;padding:5px;gap:0;
+  bottom:calc(8px + env(safe-area-inset-bottom));
+  box-shadow:0 12px 34px -10px rgba(0,0,0,.45),var(--glass-rim);border:0}
+#dock36 button{border-radius:26px;gap:2px;font:600 10.5px/1.1 var(--sans);letter-spacing:.005em;color:var(--ink2);
+  transition:background .2s var(--ease),color .2s var(--ease),transform .15s var(--ease)}
+#dock36 button .ic36{width:23px;height:23px;stroke-width:1.75}
+#dock36 button.on{color:var(--acc);background:color-mix(in srgb,var(--ink) 11%,transparent);
+  box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 12%,transparent)}
+:root[data-theme="light"] #dock36 button.on{background:color-mix(in srgb,var(--acc) 11%,#fff 40%)}
+#dock36 button:active{transform:scale(.94)}
+:root[data-motion="off"] #dock36 button{transition:none}
+
+/* Content runs under the glass; only the scroll padding keeps the last item above the bar. */
+:root[data-shell="dock"] main{padding-bottom:0}
+:root[data-shell="dock"] .view{padding-bottom:calc(var(--dock-h) + 30px + env(safe-area-inset-bottom))}
+:root[data-shell="dock"] #view-assistant{padding-bottom:calc(var(--dock-h) + 18px + env(safe-area-inset-bottom))}
+
+/* ── Home Screen app ──────────────────────────────────────────────────── */
+:root[data-standalone="1"][data-shell="dock"] #dock36{bottom:calc(max(6px,env(safe-area-inset-bottom) - 16px) - var(--vgap39))}
+/* the page is made as tall as the screen (body only — #app is 100% of it), so content padding needs no correction */
+:root[data-standalone="1"][data-shell="dock"] .view{padding-bottom:calc(var(--dock-h) + 22px + max(6px,env(safe-area-inset-bottom) - 16px))}
+:root[data-standalone="1"][data-shell="dock"] #view-assistant{padding-bottom:calc(var(--dock-h) + 12px + max(6px,env(safe-area-inset-bottom) - 16px))}
+:root[data-standalone="1"] body{height:calc(100% + var(--vgap39))}
+:root[data-standalone="1"][data-shell="dock"] #toast{bottom:calc(var(--dock-h) + 18px + max(6px,env(safe-area-inset-bottom) - 16px) - var(--vgap39))}
+:root[data-standalone="1"][data-shell="dock"][data-navsheet="1"] nav.tabs{bottom:calc(0px - var(--vgap39))}
+
+/* ── All sheet: the two switches at its top ───────────────────────────── */
+#sheet39{display:none}
+:root[data-shell="dock"][data-navsheet="1"] #sheet39{display:flex;position:fixed;z-index:85;left:12px;right:12px;
+  top:calc(var(--head-h) + env(safe-area-inset-top) + 6px);align-items:center;gap:8px;padding:6px;border-radius:20px;
+  box-shadow:var(--shadow-pop),var(--glass-rim);background:var(--panel2)}
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs{padding-top:calc(var(--head-h) + env(safe-area-inset-top) + 72px)!important}
+#sheet39 .seg39{flex:1 1 auto}
+#sheet39 #sheet39-edit{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px}
+#sheet39 .ic36{width:17px;height:17px}
+
+/* iOS segmented control */
+.seg39:not(#subnav39){display:flex;gap:2px;padding:2px;border-radius:11px;background:color-mix(in srgb,var(--ink3) 22%,transparent)}
+.seg39:not(#subnav39) button{flex:1 1 0;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:34px;
+  border:0;border-radius:9px;background:transparent;color:var(--ink);font:600 13px/1 var(--sans);cursor:pointer;padding:0 10px}
+.seg39:not(#subnav39) button.on{background:var(--panel2);box-shadow:0 3px 8px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04)}
+:root:not([data-theme="light"]) .seg39:not(#subnav39) button.on{background:#636366}
+.seg39-big{margin:4px 0 10px}
+
+/* ── Tab bar editor ───────────────────────────────────────────────────── */
+.hub39-list{display:grid;gap:10px}
+.hub39-card{border-radius:18px;background:color-mix(in srgb,var(--ink) 5%,transparent);padding:10px 12px}
+.hub39-top{display:flex;align-items:center;gap:8px}
+.hub39-name{flex:1 1 auto;min-width:0;font-weight:650}
+.hub39-move{display:inline-flex;gap:4px}
+.hub39-icons{position:relative}
+.hub39-icons>summary{list-style:none;display:grid;place-items:center;width:40px;height:40px;border-radius:12px;cursor:pointer;
+  background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc)}
+.hub39-icons>summary::-webkit-details-marker{display:none}
+.hub39-icons>summary .ic36{width:21px;height:21px}
+.hub39-iconpick{position:absolute;z-index:5;top:46px;left:0;width:min(296px,72vw);display:grid;grid-template-columns:repeat(7,1fr);gap:4px;
+  padding:8px;border-radius:16px;background:var(--panel2);box-shadow:var(--shadow-pop)}
+.hub39-iconpick button{display:grid;place-items:center;aspect-ratio:1;border:0;border-radius:10px;background:transparent;color:var(--ink2);cursor:pointer;min-width:0;min-height:0;padding:0}
+.hub39-iconpick button.on{background:color-mix(in srgb,var(--acc) 18%,transparent);color:var(--acc)}
+.hub39-iconpick .ic36{width:19px;height:19px}
+.hub39-views{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.hub39-v{position:relative;display:inline-flex;align-items:center;gap:6px;padding:0 10px 0 12px;min-height:36px;border-radius:999px;font-size:13.5px;
+  background:var(--panel2);border:.5px solid var(--edge);white-space:nowrap}
+.hub39-v .ic36{width:15px;height:15px;color:var(--acc)}
+/* the whole chip opens the native "move to" picker */
+.hub39-v select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;min-height:0}
+.hub39-v:focus-within{outline:2px solid var(--acc);outline-offset:1px}
+.hub39-diag{margin-top:14px}
+
+/* ── Chat toolbar on a phone: modes scroll, the four switches stay put as icons ── */
+:root:is([data-shell="dock"],[data-phone39="1"]) .asst-main>.row:first-child{overflow:visible;flex-wrap:nowrap;gap:6px!important}
+:root:is([data-shell="dock"],[data-phone39="1"]) #asst-modes{flex:1 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent)}
+:root:is([data-shell="dock"],[data-phone39="1"]) #asst-modes::-webkit-scrollbar{display:none}
+:root:is([data-shell="dock"],[data-phone39="1"]) .asst-main>.row:first-child>span[style*="flex:1"]{display:none}
+:root:is([data-shell="dock"],[data-phone39="1"]) :is(#asst-genui,#asst-auto,#asst-settings-btn,#asst-pop){flex:0 0 auto;width:40px;min-width:40px;height:40px;
+  padding:0;font-size:0;display:inline-grid;place-items:center;border-radius:999px}
+:root:is([data-shell="dock"],[data-phone39="1"]) :is(#asst-genui,#asst-auto,#asst-settings-btn,#asst-pop) :is(.emo39,.emo36){display:inline-flex!important;margin:0;font-size:19px;vertical-align:middle}
+:root:is([data-shell="dock"],[data-phone39="1"]) :is(#asst-genui,#asst-auto) .ic39{width:19px;height:19px}
+:root:is([data-shell="dock"],[data-phone39="1"]) :is(#asst-genui,#asst-auto)[aria-pressed="true"]{color:var(--acc);background:color-mix(in srgb,var(--acc) 16%,transparent)}
+:root[data-shell="dock"] :is(#asst-settings-btn,#asst-pop) .ic39{width:19px;height:19px}
+:root:is([data-shell="dock"],[data-phone39="1"]) #asst-pop{display:none}
+:root:is([data-shell="dock"],[data-phone39="1"]) .asst-side{overflow-x:auto;scrollbar-width:none}
+:root:is([data-shell="dock"],[data-phone39="1"]) .asst-side>:is(.btn,button){flex:0 0 auto}
+
+/* Classic view on a phone: one tidy scrolling row with the active tab on a lens */
+:root[data-shell="classic"] body[data-tabpos="top"] nav.tabs{scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 8px,#000 calc(100% - 16px),transparent)}
+@media (max-width:899px){
+  :root[data-shell="classic"] body[data-tabpos="top"] nav.tabs .tab{border-radius:999px}
+  :root[data-shell="classic"] body[data-tabpos="top"] nav.tabs .tab.active{background:color-mix(in srgb,var(--ink) 12%,transparent);color:var(--ink)}
+  :root[data-shell="classic"] .view{padding-bottom:calc(28px + env(safe-area-inset-bottom))}
+}
+
+/* Phone type scale: iOS reads at 17pt; 15px keeps dense panels workable while lifting body text */
+@media (max-width:899px){
+  :root[data-shell="dock"] body,:root[data-shell="classic"] body{font-size:15px}
+  :root[data-shell="dock"] .view h2{font-size:26px;font-weight:700;letter-spacing:-.022em}
+  :root[data-shell="dock"] .card{padding:16px}
+}
+
+/* the All sheet is a place you read, so it is a nearly solid sheet, not a pane of glass */
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs{background:color-mix(in srgb,var(--bg) 94%,transparent)!important;
+  -webkit-backdrop-filter:blur(30px) saturate(160%);backdrop-filter:blur(30px) saturate(160%)}
+/* model field + its picker button: the field shrinks, the button never slides out over the next control */
+.mp.mp-field{min-width:0;max-width:100%}
+.mp.mp-field>input{min-width:0;flex-shrink:1!important}
+.mp.mp-field>.mp-btn{flex:0 0 auto}
+
+/* Classic on a phone: section names in sentence case, no dashed outline */
+:root[data-phone39="1"][data-shell="classic"] nav.tabs .tabgroup{text-transform:none;letter-spacing:0;border:0!important;font-weight:650;color:var(--ink3)}
+:root[data-fx="glass"] #toast{background:color-mix(in srgb,var(--panel2) 94%,transparent)}

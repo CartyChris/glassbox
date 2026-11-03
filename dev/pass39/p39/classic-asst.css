@@ -1,0 +1,14 @@
+/* the phone chat layout in Classic view too (copied from the pass-36 dock rules) */
+:root[data-phone39="1"][data-shell="classic"] #view-assistant{display:none;overflow:hidden;padding-bottom:10px}
+:root[data-phone39="1"][data-shell="classic"] #view-assistant.active{display:flex;flex-direction:column}
+:root[data-phone39="1"][data-shell="classic"] #view-assistant>.wrap{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;width:100%}
+:root[data-phone39="1"][data-shell="classic"] #view-assistant .asst-shell{flex:1 1 auto;height:auto;min-height:0;display:flex;flex-direction:column;gap:8px}
+:root[data-phone39="1"][data-shell="classic"] .asst-side{display:flex;flex-direction:row;align-items:center;gap:8px;border:0!important;padding:0!important;flex:0 0 auto}
+:root[data-phone39="1"][data-shell="classic"] #asst-new{flex:0 0 auto;width:auto;white-space:nowrap}
+:root[data-phone39="1"][data-shell="classic"] .asst-list{flex:1 1 auto;display:flex;flex-direction:row;gap:6px;overflow-x:auto;max-height:none;scrollbar-width:none}
+:root[data-phone39="1"][data-shell="classic"] .asst-list>p.help{margin:0;white-space:nowrap}
+:root[data-phone39="1"][data-shell="classic"] .asst-main{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+:root[data-phone39="1"][data-shell="classic"] .asst-main>.row:first-child{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;flex:0 0 auto}
+:root[data-phone39="1"][data-shell="classic"] #asst-modes{flex-wrap:nowrap}
+:root[data-phone39="1"][data-shell="classic"] #asst-modes>*{flex:0 0 auto}
+:root[data-phone39="1"][data-shell="classic"] .asst-thread{flex:1 1 auto;min-height:0;overflow:auto}

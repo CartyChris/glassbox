@@ -27,6 +27,12 @@ One file is the app: `GlassBox.html` (`index.html` is a byte-identical copy). No
 - `api/terminal.mjs` is the cloud terminal (Node, @vercel/sandbox). Off unless GLASSBOX_TERMINAL_CODE is set. Test: `node dev/pass38/terminal-test.mjs`.
 - S1 recall functions are shared with `glassbox-memory.mjs` — regenerate it with `dev/pass38/dev38-memory.py`, never edit its generated block.
 - `api/` holds the hosted gateway (Vercel Edge). Its allowlist is the only thing it forwards to; test: `node dev/pass37/gateway-test.mjs`.
+- Phone navigation (pass 39, `nav.js` in dev/pass39): the dock is FOUR HUBS + All from `hub39Slots()`. Every switched-on
+  section must be in exactly one hub (`hub39Auto`/`hub39Complete`, cases `hub-tabs-hold-everything`, `hub-custom-stays-complete`).
+  Phone layout (`HUB39.mode`: tabs|classic) is separate from the desktop `UI.tabPos` — read it through `navPos39()`.
+- No emoji in the interface: `emo39.js` swaps them for Lucide icons at the DOM (MutationObserver, before paint). Do not add an
+  emoji to `EMO39_SKIP` zones' chrome; new emoji need an entry in `dev/pass39/p39/emomap.py` (regenerate emo-data.js).
+- Phone layout check: `node dev/pass39/pw/overlap39.mjs <url>` (and `ENG=chromium … 375 812`) must report TOTAL 0.
 
 ## Deploy
 `vercel --prod --yes --scope cloud-ops-game-time` from this folder, then confirm the live `GlassBox.html` hash equals the local one.

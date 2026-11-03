@@ -2748,6 +2748,213 @@ header.top{background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(1
 #viewBtn .ic36{width:18px;height:18px}
 @media(min-width:641px){header.top>#viewBtn{display:none}}
 </style>
+<style id="ds39">
+/* ═══════════════════ PASS 39 — APPLE-STYLE PHONE SHELL + LIQUID GLASS ═══════════════════
+   Follows Apple's own split (HIG, iOS 26): Liquid Glass is the NAVIGATION layer, floating over content: the
+   title bar, the tab bar, sheets, menus, toasts. Content cards stay solid surfaces, which is both what the
+   platform does and what a phone can afford (a backdrop blur on every card is a GPU cost per card per frame).
+   Patterns taken from shipped iOS apps (Mobbin's iOS tab-bar and segmented-control collections): one tab bar of
+   at most five places, icon above a short label, the selected place tinted and set on a lens; a segmented row
+   for the views inside a place; controls never shrink below their label; 44pt targets; content scrolls under
+   translucent bars instead of stopping at their edge. */
+
+:root{--dock-h:62px;--vgap39:0px;--seg39-h:38px}
+:root:not([data-theme="light"]){
+  --bg:#000000;--bg2:#0c0c0e;--panel:#0f0f11;--panel2:#1c1c1e;--edge:#2c2c2e;--edge2:#3a3a3c;
+  --ink:#f5f5f7;--ink2:#aeaeb2;--ink3:#8e8e93;
+  --glass:color-mix(in srgb,#1c1c1e 74%,transparent);
+  --glass-rim:inset 0 1px 0 rgba(255,255,255,.16),inset 0 0 0 .5px rgba(255,255,255,.1);
+}
+:root[data-theme="light"]{
+  --bg:#f2f2f7;--bg2:#f7f7fa;--panel:#f2f2f7;--panel2:#ffffff;--edge:#e5e5ea;--edge2:#d1d1d6;
+  --glass:color-mix(in srgb,#ffffff 76%,transparent);
+  --glass-rim:inset 0 1px 0 rgba(255,255,255,.95),inset 0 0 0 .5px rgba(0,0,0,.06);
+}
+/* Line icons converted from emoji: text size, text colour, never a colour glyph */
+.emo39{display:inline-flex;vertical-align:-.16em;margin-right:.32em}
+.emo39:last-child{margin-right:0}
+.ic39{width:1.08em;height:1.08em;flex:0 0 auto;stroke-width:2}
+h1 .ic39,h2 .ic39,h3 .ic39{stroke-width:1.9}
+
+/* ── Controls never shrink under their own label ─────────────────────────
+   The overlap in the chat toolbar: buttons in a one-line scrolling row were flex-shrunk to the 44pt touch floor
+   while their text kept its width, so the text drew over the neighbours. Applies to every row. */
+:is(.row,.btnrow,.toolbar,.tb)>:is(.btn,button,.chip,select){flex-shrink:0}
+.btn,.chip{white-space:nowrap}
+.btn.wrap-ok{white-space:normal}
+/* An input inside a sentence ("confirm on [2] looks") is taller than the line it sits on at the touch floor —
+   laid out as a line of its own items it cannot spill onto the next one. */
+label.chk:has(>input:not([type=checkbox]):not([type=radio])),label.chk:has(>select),
+label:has(>input[type=number]),label:has(>select):not(.chk){display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;row-gap:4px}
+
+/* ── Liquid Glass: navigation layer ───────────────────────────────────── */
+:root[data-fx="glass"]{--glass-blur:blur(28px) saturate(185%)}
+:root[data-fx="glass"] :is(header.top,#dock36,#toast,.palbox,#tb-sheet,#subnav39,#sheet39){
+  background:var(--glass);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur)}
+:root[data-fx="glass"] body{background:
+  radial-gradient(70vw 50vh at 8% -8%,color-mix(in srgb,var(--acc) 16%,transparent),transparent 62%),
+  radial-gradient(60vw 45vh at 100% 4%,color-mix(in srgb,var(--acc2) 13%,transparent),transparent 60%),
+  radial-gradient(80vw 50vh at 50% 108%,color-mix(in srgb,var(--acc) 10%,transparent),transparent 60%),var(--bg);
+  background-attachment:fixed}
+/* content layer: solid, rounded like an iOS inset-grouped list — no blur behind every card */
+:root[data-fx="glass"] :is(.card,.advrow,.crcard,.kpi,.featrow){
+  background:color-mix(in srgb,var(--panel2) 92%,transparent);-webkit-backdrop-filter:none;backdrop-filter:none;
+  border:.5px solid color-mix(in srgb,var(--ink) 9%,transparent);border-radius:22px;
+  box-shadow:0 1px 0 color-mix(in srgb,#fff 5%,transparent) inset,0 10px 30px -18px rgba(0,0,0,.45)}
+:root[data-fx="glass"][data-theme="light"] :is(.card,.advrow,.crcard,.kpi,.featrow){
+  background:#ffffff;border-color:rgba(0,0,0,.05);box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px -16px rgba(0,0,0,.18)}
+:root[data-fx="glass"] .btn{border-radius:999px}
+:root[data-fx="glass"] .btn.small{border-radius:999px}
+:root[data-fx="glass"] :is(input,select,textarea){border-radius:12px}
+:root[data-fx="glass"] .palbox{border-radius:26px}
+:root[data-fxreduce="on"] :is(header.top,#dock36,#toast,#subnav39,#sheet39){transition:none}
+@media (prefers-reduced-transparency:reduce){
+  :root :is(header.top,#dock36,#toast,.palbox,#tb-sheet,#subnav39,#sheet39){background:var(--panel2)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}}
+
+/* ── Title bar (phone) with the hub's sections under it ───────────────── */
+:root[data-shell="dock"] header.top{border-bottom:.5px solid color-mix(in srgb,var(--ink) 10%,transparent)}
+:root[data-shell="dock"] .brand .s36-title{font-size:17px;letter-spacing:-.01em}
+#subnav39{display:none}
+:root[data-shell="dock"] #subnav39:not([hidden]){display:flex;flex:0 0 auto;gap:4px;overflow-x:auto;scrollbar-width:none;
+  position:relative;z-index:85;padding:2px 10px 8px;margin-top:-1px;border-bottom:.5px solid color-mix(in srgb,var(--ink) 10%,transparent);
+  scroll-snap-type:x proximity}
+:root[data-shell="dock"]:not([data-fx="glass"]) #subnav39{background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(170%);backdrop-filter:blur(22px) saturate(170%)}
+:root[data-shell="dock"][data-sub39="1"] header.top{border-bottom:0}
+#subnav39::-webkit-scrollbar{display:none}
+#subnav39 button{flex:0 0 auto;height:32px;min-height:32px;padding:0 13px;border-radius:999px;border:0;background:transparent;
+  color:var(--ink2);font:600 13.5px/1 var(--sans);letter-spacing:-.005em;scroll-snap-align:center;cursor:pointer}
+#subnav39 button.on{color:var(--ink);background:color-mix(in srgb,var(--ink) 12%,transparent);
+  box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 14%,transparent)}
+:root[data-theme="light"] #subnav39 button.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1),0 0 0 .5px rgba(0,0,0,.05)}
+:root[data-touchfloor="1"] #subnav39 button{min-height:36px;height:36px}
+
+/* ── Tab bar: a floating glass capsule, icon over label, selected on a lens ── */
+:root[data-shell="dock"] #dock36{left:12px;right:12px;height:var(--dock-h);border-radius:31px;padding:5px;gap:0;
+  bottom:calc(8px + env(safe-area-inset-bottom));
+  box-shadow:0 12px 34px -10px rgba(0,0,0,.45),var(--glass-rim);border:0}
+#dock36 button{border-radius:26px;gap:2px;font:600 10.5px/1.1 var(--sans);letter-spacing:.005em;color:var(--ink2);
+  transition:background .2s var(--ease),color .2s var(--ease),transform .15s var(--ease)}
+#dock36 button .ic36{width:23px;height:23px;stroke-width:1.75}
+#dock36 button.on{color:var(--acc);background:color-mix(in srgb,var(--ink) 11%,transparent);
+  box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 12%,transparent)}
+:root[data-theme="light"] #dock36 button.on{background:color-mix(in srgb,var(--acc) 11%,#fff 40%)}
+#dock36 button:active{transform:scale(.94)}
+:root[data-motion="off"] #dock36 button{transition:none}
+
+/* Content runs under the glass; only the scroll padding keeps the last item above the bar. */
+:root[data-shell="dock"] main{padding-bottom:0}
+:root[data-shell="dock"] .view{padding-bottom:calc(var(--dock-h) + 30px + env(safe-area-inset-bottom))}
+:root[data-shell="dock"] #view-assistant{padding-bottom:calc(var(--dock-h) + 18px + env(safe-area-inset-bottom))}
+
+/* ── Home Screen app ──────────────────────────────────────────────────── */
+:root[data-standalone="1"][data-shell="dock"] #dock36{bottom:calc(max(6px,env(safe-area-inset-bottom) - 16px) - var(--vgap39))}
+/* the page is made as tall as the screen (body only — #app is 100% of it), so content padding needs no correction */
+:root[data-standalone="1"][data-shell="dock"] .view{padding-bottom:calc(var(--dock-h) + 22px + max(6px,env(safe-area-inset-bottom) - 16px))}
+:root[data-standalone="1"][data-shell="dock"] #view-assistant{padding-bottom:calc(var(--dock-h) + 12px + max(6px,env(safe-area-inset-bottom) - 16px))}
+:root[data-standalone="1"] body{height:calc(100% + var(--vgap39))}
+:root[data-standalone="1"][data-shell="dock"] #toast{bottom:calc(var(--dock-h) + 18px + max(6px,env(safe-area-inset-bottom) - 16px) - var(--vgap39))}
+:root[data-standalone="1"][data-shell="dock"][data-navsheet="1"] nav.tabs{bottom:calc(0px - var(--vgap39))}
+
+/* ── All sheet: the two switches at its top ───────────────────────────── */
+#sheet39{display:none}
+:root[data-shell="dock"][data-navsheet="1"] #sheet39{display:flex;position:fixed;z-index:85;left:12px;right:12px;
+  top:calc(var(--head-h) + env(safe-area-inset-top) + 6px);align-items:center;gap:8px;padding:6px;border-radius:20px;
+  box-shadow:var(--shadow-pop),var(--glass-rim);background:var(--panel2)}
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs{padding-top:calc(var(--head-h) + env(safe-area-inset-top) + 72px)!important}
+#sheet39 .seg39{flex:1 1 auto}
+#sheet39 #sheet39-edit{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px}
+#sheet39 .ic36{width:17px;height:17px}
+
+/* iOS segmented control */
+.seg39:not(#subnav39){display:flex;gap:2px;padding:2px;border-radius:11px;background:color-mix(in srgb,var(--ink3) 22%,transparent)}
+.seg39:not(#subnav39) button{flex:1 1 0;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:34px;
+  border:0;border-radius:9px;background:transparent;color:var(--ink);font:600 13px/1 var(--sans);cursor:pointer;padding:0 10px}
+.seg39:not(#subnav39) button.on{background:var(--panel2);box-shadow:0 3px 8px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04)}
+:root:not([data-theme="light"]) .seg39:not(#subnav39) button.on{background:#636366}
+.seg39-big{margin:4px 0 10px}
+
+/* ── Tab bar editor ───────────────────────────────────────────────────── */
+.hub39-list{display:grid;gap:10px}
+.hub39-card{border-radius:18px;background:color-mix(in srgb,var(--ink) 5%,transparent);padding:10px 12px}
+.hub39-top{display:flex;align-items:center;gap:8px}
+.hub39-name{flex:1 1 auto;min-width:0;font-weight:650}
+.hub39-move{display:inline-flex;gap:4px}
+.hub39-icons{position:relative}
+.hub39-icons>summary{list-style:none;display:grid;place-items:center;width:40px;height:40px;border-radius:12px;cursor:pointer;
+  background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc)}
+.hub39-icons>summary::-webkit-details-marker{display:none}
+.hub39-icons>summary .ic36{width:21px;height:21px}
+.hub39-iconpick{position:absolute;z-index:5;top:46px;left:0;width:min(296px,72vw);display:grid;grid-template-columns:repeat(7,1fr);gap:4px;
+  padding:8px;border-radius:16px;background:var(--panel2);box-shadow:var(--shadow-pop)}
+.hub39-iconpick button{display:grid;place-items:center;aspect-ratio:1;border:0;border-radius:10px;background:transparent;color:var(--ink2);cursor:pointer;min-width:0;min-height:0;padding:0}
+.hub39-iconpick button.on{background:color-mix(in srgb,var(--acc) 18%,transparent);color:var(--acc)}
+.hub39-iconpick .ic36{width:19px;height:19px}
+.hub39-views{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.hub39-v{position:relative;display:inline-flex;align-items:center;gap:6px;padding:0 10px 0 12px;min-height:36px;border-radius:999px;font-size:13.5px;
+  background:var(--panel2);border:.5px solid var(--edge);white-space:nowrap}
+.hub39-v .ic36{width:15px;height:15px;color:var(--acc)}
+/* the whole chip opens the native "move to" picker */
+.hub39-v select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;min-height:0}
+.hub39-v:focus-within{outline:2px solid var(--acc);outline-offset:1px}
+.hub39-diag{margin-top:14px}
+
+/* ── Chat toolbar on a phone: modes scroll, the four switches stay put as icons ── */
+:root:is([data-shell="dock"],[data-phone39="1"]) .asst-main>.row:first-child{overflow:visible;flex-wrap:nowrap;gap:6px!important}
+:root:is([data-shell="dock"],[data-phone39="1"]) #asst-modes{flex:1 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent)}
+:root:is([data-shell="dock"],[data-phone39="1"]) #asst-modes::-webkit-scrollbar{display:none}
+:root:is([data-shell="dock"],[data-phone39="1"]) .asst-main>.row:first-child>span[style*="flex:1"]{display:none}
+:root:is([data-shell="dock"],[data-phone39="1"]) :is(#asst-genui,#asst-auto,#asst-settings-btn,#asst-pop){flex:0 0 auto;width:40px;min-width:40px;height:40px;
+  padding:0;font-size:0;display:inline-grid;place-items:center;border-radius:999px}
+:root:is([data-shell="dock"],[data-phone39="1"]) :is(#asst-genui,#asst-auto,#asst-settings-btn,#asst-pop) :is(.emo39,.emo36){display:inline-flex!important;margin:0;font-size:19px;vertical-align:middle}
+:root:is([data-shell="dock"],[data-phone39="1"]) :is(#asst-genui,#asst-auto) .ic39{width:19px;height:19px}
+:root:is([data-shell="dock"],[data-phone39="1"]) :is(#asst-genui,#asst-auto)[aria-pressed="true"]{color:var(--acc);background:color-mix(in srgb,var(--acc) 16%,transparent)}
+:root[data-shell="dock"] :is(#asst-settings-btn,#asst-pop) .ic39{width:19px;height:19px}
+:root:is([data-shell="dock"],[data-phone39="1"]) #asst-pop{display:none}
+:root:is([data-shell="dock"],[data-phone39="1"]) .asst-side{overflow-x:auto;scrollbar-width:none}
+:root:is([data-shell="dock"],[data-phone39="1"]) .asst-side>:is(.btn,button){flex:0 0 auto}
+
+/* Classic view on a phone: one tidy scrolling row with the active tab on a lens */
+:root[data-shell="classic"] body[data-tabpos="top"] nav.tabs{scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 8px,#000 calc(100% - 16px),transparent)}
+@media (max-width:899px){
+  :root[data-shell="classic"] body[data-tabpos="top"] nav.tabs .tab{border-radius:999px}
+  :root[data-shell="classic"] body[data-tabpos="top"] nav.tabs .tab.active{background:color-mix(in srgb,var(--ink) 12%,transparent);color:var(--ink)}
+  :root[data-shell="classic"] .view{padding-bottom:calc(28px + env(safe-area-inset-bottom))}
+}
+
+/* Phone type scale: iOS reads at 17pt; 15px keeps dense panels workable while lifting body text */
+@media (max-width:899px){
+  :root[data-shell="dock"] body,:root[data-shell="classic"] body{font-size:15px}
+  :root[data-shell="dock"] .view h2{font-size:26px;font-weight:700;letter-spacing:-.022em}
+  :root[data-shell="dock"] .card{padding:16px}
+}
+
+/* the All sheet is a place you read, so it is a nearly solid sheet, not a pane of glass */
+:root[data-shell="dock"][data-navsheet="1"] nav.tabs{background:color-mix(in srgb,var(--bg) 94%,transparent)!important;
+  -webkit-backdrop-filter:blur(30px) saturate(160%);backdrop-filter:blur(30px) saturate(160%)}
+/* model field + its picker button: the field shrinks, the button never slides out over the next control */
+.mp.mp-field{min-width:0;max-width:100%}
+.mp.mp-field>input{min-width:0;flex-shrink:1!important}
+.mp.mp-field>.mp-btn{flex:0 0 auto}
+
+/* Classic on a phone: section names in sentence case, no dashed outline */
+:root[data-phone39="1"][data-shell="classic"] nav.tabs .tabgroup{text-transform:none;letter-spacing:0;border:0!important;font-weight:650;color:var(--ink3)}
+:root[data-fx="glass"] #toast{background:color-mix(in srgb,var(--panel2) 94%,transparent)}
+/* the phone chat layout in Classic view too (copied from the pass-36 dock rules) */
+:root[data-phone39="1"][data-shell="classic"] #view-assistant{display:none;overflow:hidden;padding-bottom:10px}
+:root[data-phone39="1"][data-shell="classic"] #view-assistant.active{display:flex;flex-direction:column}
+:root[data-phone39="1"][data-shell="classic"] #view-assistant>.wrap{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;width:100%}
+:root[data-phone39="1"][data-shell="classic"] #view-assistant .asst-shell{flex:1 1 auto;height:auto;min-height:0;display:flex;flex-direction:column;gap:8px}
+:root[data-phone39="1"][data-shell="classic"] .asst-side{display:flex;flex-direction:row;align-items:center;gap:8px;border:0!important;padding:0!important;flex:0 0 auto}
+:root[data-phone39="1"][data-shell="classic"] #asst-new{flex:0 0 auto;width:auto;white-space:nowrap}
+:root[data-phone39="1"][data-shell="classic"] .asst-list{flex:1 1 auto;display:flex;flex-direction:row;gap:6px;overflow-x:auto;max-height:none;scrollbar-width:none}
+:root[data-phone39="1"][data-shell="classic"] .asst-list>p.help{margin:0;white-space:nowrap}
+:root[data-phone39="1"][data-shell="classic"] .asst-main{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+:root[data-phone39="1"][data-shell="classic"] .asst-main>.row:first-child{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;flex:0 0 auto}
+:root[data-phone39="1"][data-shell="classic"] #asst-modes{flex-wrap:nowrap}
+:root[data-phone39="1"][data-shell="classic"] #asst-modes>*{flex:0 0 auto}
+:root[data-phone39="1"][data-shell="classic"] .asst-thread{flex:1 1 auto;min-height:0;overflow:auto}
+</style>
 </head>
 <body>
 <div id="app">
@@ -3614,7 +3821,6 @@ header.top{background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(1
           <div class="row" style="margin-bottom:10px">
             <label class="chip"><input type="checkbox" id="cz-icons" style="margin:0"> show icons</label>
             <label class="chip"><input type="checkbox" id="cz-labels" style="margin:0"> show labels</label>
-            <label class="chip"><input type="checkbox" id="cz-lineicons" style="margin:0"> line icons (off = emoji)</label>
           </div>
           <div id="cz-tabs"></div>
         </div>
@@ -33212,13 +33418,13 @@ function gauntletCases(g){
     anti:()=>g.shellMode36(900,'auto')+','+g.shellMode36(899,'auto'),antiExpect:v=>v==='side,dock'});
 
   add({id:'tab-face-line-icons',sub:'ui',uses:['tabFace36','ICONS36'],
-    what:'a tab shows a drawn icon and its name, keeps an accessible name without a label, and emoji style still works',
+    what:'a tab shows a drawn icon and its name, keeps an accessible name without a label, and is never drawn as an emoji',
     run:()=>{const keep={s:g.UI.iconStyle,i:g.UI.showTabIcons,l:g.UI.showTabLabels,ti:g.UI.tabIcons};
       try{const t={id:'lab',text:'Reason Lab',icon:'🔬',el:document.createElement('button')};
         g.UI.iconStyle='line';g.UI.showTabIcons=true;g.UI.showTabLabels=true;g.UI.tabIcons={};
         g.tabFace36(t);const line=!!t.el.querySelector('svg')&&t.el.textContent.trim()==='Reason Lab';
         g.UI.showTabLabels=false;g.tabFace36(t);const named=t.el.getAttribute('aria-label')==='Reason Lab'&&!t.el.textContent.trim();
-        g.UI.showTabLabels=true;g.UI.iconStyle='emoji';g.tabFace36(t);const emoji=t.el.textContent.includes('🔬')&&!t.el.querySelector('svg');
+        g.UI.showTabLabels=true;g.UI.iconStyle='emoji';g.UI.tabIcons={lab:'🧪'};g.tabFace36(t);const emoji=!!t.el.querySelector('svg')&&!t.el.textContent.includes('🧪');
         return [line,named,emoji].join(',');
       }finally{g.UI.iconStyle=keep.s;g.UI.showTabIcons=keep.i;g.UI.showTabLabels=keep.l;g.UI.tabIcons=keep.ti;}},
     expect:v=>v==='true,true,true',
@@ -33256,11 +33462,11 @@ function gauntletCases(g){
       box.innerHTML=`<div class="card"><p>${'word '.repeat(60)}</p></div>`;document.body.appendChild(box);
       try{g.clamp36(box);return box.querySelectorAll('.more36').length;}finally{box.remove();}},antiExpect:v=>v===0});
 
-  add({id:'dock-targets-real',sub:'ui',uses:['DOCK36'],
-    what:'every dock button points at a tab that exists, so the phone dock cannot lead nowhere',
-    run:()=>{const ids=new Set((g.REGISTRY||{tabs:[]}).tabs.map(t=>t.id));
-      const miss=g.DOCK36.filter(([id])=>id!=='__all'&&!ids.has(id)).map(([id])=>id);
-      return g.DOCK36.length===5&&!miss.length?'ok':'missing:'+miss.join(',');},
+  add({id:'dock-targets-real',sub:'ui',uses:['hub39Slots'],
+    what:'every phone hub points at sections that exist, there are at most four, and Chat is one of them',
+    run:()=>{const ids=new Set((g.REGISTRY||{tabs:[]}).tabs.map(t=>t.id));const s=g.hub39Slots();
+      const miss=s.flatMap(x=>x.views).filter(v=>!ids.has(v));
+      return s.length<=4&&s.some(x=>x.views.includes('assistant'))&&!miss.length?'ok':'missing:'+miss.join(',');},
     expect:v=>v==='ok',
     antiWhat:'and a renamed tab would be caught',
     anti:()=>{const ids=new Set((g.REGISTRY||{tabs:[]}).tabs.map(t=>t.id));return ids.has('no-such-tab-36');},antiExpect:v=>v===false});
@@ -33441,6 +33647,74 @@ function gauntletCases(g){
     antiWhat:'and rewinding a message that does not exist changes nothing',
     anti:()=>{const keep=g.ACHATS.slice();try{g.ACHATS=[{id:'rw2',msgs:[{role:'user',content:'a'}]}];const r=g.achatRewind38('rw2',9);return r.ok+':'+g.ACHATS.length+':'+g.ACHATS[0].msgs.length;}finally{g.ACHATS=keep;g.saveAChats();}},
     antiExpect:v=>v==='false:1:1'});
+
+  /* ── pass 39 ── */
+  add({id:'hub-tabs-hold-everything',sub:'ui',uses:['hub39Auto'],
+    what:'the four phone hubs hold every section that is on, exactly once, with Chat first and the hubs the setup answers asked for next',
+    run:()=>{const vis=['assistant','lab','gen','three','spline','studio','factory','vo','bots','modelhub','brain','settings','help'];
+      const gof=v=>({assistant:'talk',lab:'talk',gen:'make',three:'make',spline:'make',studio:'make',factory:'build',vo:'agents',bots:'agents',modelhub:'models',brain:'know',settings:'setup',help:'setup'})[v];
+      const s=g.hub39Auto(vis,['three','spline','gen','studio','factory','vo'],gof);
+      const all=s.flatMap(x=>x.views);
+      return s.map(x=>x.id).join(',')+' · '+(all.length===vis.length&&new Set(all).size===vis.length&&vis.every(v=>all.includes(v)));},
+    expect:v=>v==='chat,make,agents,build · true',
+    antiWhat:'and with no setup answers the bar is Chat, Create, Agents, Brain — still holding everything',
+    anti:()=>{const vis=['assistant','gen','vo','brain','modelhub','factory'];const gof=v=>({assistant:'talk',gen:'make',vo:'agents',brain:'know',modelhub:'models',factory:'build'})[v];
+      const s=g.hub39Auto(vis,[],gof);return s.map(x=>x.label).join(',')+' · '+s.flatMap(x=>x.views).length;},
+    antiExpect:v=>v==='Chat,Create,Agents,Brain · 6'});
+  add({id:'hub-custom-stays-complete',sub:'ui',uses:['hub39Complete'],
+    what:'a hand-made tab bar drops sections that were switched off, never shows one twice, and takes in a newly switched-on section',
+    run:()=>{const auto=[{id:'chat',label:'Chat',views:['assistant','lab']},{id:'make',label:'Create',views:['gen','three']}];
+      const saved=[{id:'make',label:'Studio',icon:'gen',views:['gen','gen','gone']},{id:'chat',label:'Talk',icon:'assistant',views:['assistant']}];
+      const s=g.hub39Complete(saved,auto,['assistant','lab','gen','three']);
+      return s.map(x=>x.label+':'+x.views.join('+')).join(' | ');},
+    expect:v=>v==='Studio:gen+three | Talk:assistant+lab',
+    antiWhat:'and nothing saved means the setup-built layout',
+    anti:()=>g.hub39Complete([],[{id:'chat',label:'Chat',views:['assistant']}],['assistant']).map(x=>x.label).join(),antiExpect:v=>v==='Chat'});
+  add({id:'phone-has-its-own-layout',sub:'ui',uses:['navTabPos39'],
+    what:'a phone uses its own choice (tab bar or classic) and a wide screen keeps the desktop setting',
+    run:()=>[g.navTabPos39(390,'classic','auto'),g.navTabPos39(390,'tabs','top'),g.navTabPos39(1440,'classic','auto'),g.navTabPos39(1440,'tabs','right')].join(','),
+    expect:v=>v==='top,auto,auto,right',
+    antiWhat:'and the boundary is the sidebar width, not one pixel off',
+    anti:()=>g.navTabPos39(899,'classic','left')+','+g.navTabPos39(900,'classic','left'),antiExpect:v=>v==='top,left'});
+  add({id:'home-screen-gap-measured',sub:'ui',uses:['vgap39'],
+    what:'in a Home Screen app the bottom gap is measured from the screen and closed; a manual value and Off are honoured',
+    run:()=>[g.vgap39(956,882,true,'auto'),g.vgap39(956,956,true,'auto'),g.vgap39(956,882,true,'40'),g.vgap39(956,882,true,'off')].join(','),
+    expect:v=>v==='74,0,40,0',
+    antiWhat:'and nothing is corrected in the browser, nor for a keyboard-sized shrink',
+    anti:()=>g.vgap39(956,882,false,'auto')+','+g.vgap39(956,520,true,'auto'),antiExpect:v=>v==='0,0'});
+  add({id:'emoji-become-line-icons',sub:'ui',uses:['emo39Scan','emo39Strip','emo39Split'],
+    what:'emoji in the interface become line icons (an icon-only button keeps a name), attributes lose them, arrows stay as text',
+    run:()=>{const box=document.createElement('div');box.style.cssText='position:fixed;left:-4000px;top:0';
+      box.innerHTML='<button id="emo39-a">✨ UI on</button><button id="emo39-b">⚙️</button><select><option>🔒 Ask first</option></select>';
+      document.body.appendChild(box);
+      try{g.emo39Scan(box);const a=box.querySelector('#emo39-a'),b=box.querySelector('#emo39-b');
+        return [a.querySelector('svg')?.dataset.ic39,a.textContent.trim(),b.querySelector('svg')?.dataset.ic39,b.getAttribute('aria-label'),
+          box.querySelector('option').textContent,g.emo39Strip('Open ↗')==='Open ↗︎'].join(',');}
+      finally{box.remove();}},
+    expect:v=>v==='sparkles,UI on,settings,Settings,Ask first,true',
+    antiWhat:'and what a model or a person wrote (markdown, code) keeps its emoji',
+    anti:()=>{const box=document.createElement('div');box.innerHTML='<div class="md">Party 🎉</div><pre>✅ ok</pre>';
+      document.body.appendChild(box);try{g.emo39Scan(box);return box.textContent;}finally{box.remove();}},antiExpect:v=>v==='Party 🎉✅ ok'});
+  add({id:'no-emoji-left-in-chrome',sub:'ui',uses:['emo39Left'],
+    what:'the header, the tab bar and the sidebar draw no emoji at all once the page has settled',
+    run:()=>{
+      return ['header.top','#dock36','#tabs'].map(s=>document.querySelector(s)).filter(Boolean).flatMap(el=>g.emo39Left(el)).join(' | ')||'none';},
+    expect:v=>v==='none',
+    antiWhat:'and the checker does see an emoji when one is there',
+    anti:()=>{const box=document.createElement('div');box.innerHTML='<span>🚀 go</span>';document.body.appendChild(box);
+      try{return g.emo39Left(box).length;}finally{box.remove();}},antiExpect:v=>v===1});
+  add({id:'layout-audit-finds-overlap',sub:'ui',uses:['layoutAudit39'],
+    what:'the layout check reports two controls drawn on top of each other and a label spilling out of its button',
+    run:()=>{const box=document.createElement('div');box.style.cssText='position:fixed;left:0;top:0;width:300px;height:120px;z-index:-1;opacity:.01';
+      box.innerHTML='<button style="position:absolute;left:0;top:0;width:100px;height:40px">A</button><button style="position:absolute;left:50px;top:10px;width:100px;height:40px">B</button>'+
+        '<button style="position:absolute;left:0;top:60px;width:40px;height:40px;white-space:nowrap;overflow:visible;padding:0">a long label here</button>';
+      document.body.appendChild(box);box.style.opacity='1';
+      try{return g.layoutAudit39(box).map(x=>x.split(':')[0]).sort().join(',');}finally{box.remove();}},
+    expect:v=>v.includes('overlap')&&v.includes('spills'),
+    antiWhat:'and a clean row of buttons reports nothing',
+    anti:()=>{const box=document.createElement('div');box.style.cssText='position:fixed;left:0;top:0;width:400px;display:flex;gap:8px;z-index:-1';
+      box.innerHTML='<button>One</button><button>Two</button><button>Three</button>';document.body.appendChild(box);
+      try{return g.layoutAudit39(box).length;}finally{box.remove();}},antiExpect:v=>v===0});
 
   add({id:'fixture-chat-sweep',sub:'resilience',uses:['fixtureChatSweep'],
     what:'chats left behind by the old fork self-test are removed, and nothing else is',
@@ -39846,7 +40120,7 @@ const GAUNTLET_SABOTAGE=[
   {id:'tabface-no-icon',export:'tabFace36',why:'tabs lose their icons and icon-only tabs lose their names',broken:()=>t=>{t.el.textContent=t.text;}},
   {id:'contrast-always-passes',export:'contrast36',why:'the AA check approves any colour pair',broken:()=>()=>21},
   {id:'clamp-noop',export:'clamp36',why:'long descriptions are never folded',broken:()=>()=>{}},
-  {id:'dock-dead-target',export:'DOCK36',why:'a dock button leads to a tab that does not exist',broken:()=>[['nope','X'],['lab','R'],['gen','C'],['brain','B'],['__all','All']]},
+  {id:'dock-dead-target',export:'hub39Slots',why:'a dock button leads to a tab that does not exist',broken:()=>()=>[{id:'chat',label:'Chat',views:['assistant','nope']}]},
 
   {id:'lna-declares-local',export:'localFetchOpts',why:'every Ollama and bridge request from the hosted site is rejected by Chrome before it is sent',broken:()=>()=>({targetAddressSpace:'local'})},
   {id:'mac-fix-forgets-on-restart',export:'ollamaFixCommands',why:'the Ollama fix is lost at the next restart',broken:()=>()=>({now:'launchctl setenv OLLAMA_ORIGINS https://glassbox-jet.vercel.app',permanent:'',undo:''})},
@@ -39866,6 +40140,14 @@ const GAUNTLET_SABOTAGE=[
   {id:'skill-pack-takes-everything',export:'stackSkillPaths38',why:'a skill pack import pulls every file in the repo into the skill library',broken:()=>t=>((t&&t.tree)||[]).map(x=>x.path)},
   {id:'dream-keeps-duplicates',export:'dreamItems38',why:'the dreaming pass floods the inbox with repeats of what the Brain already knows',broken:()=>j=>((j&&j.lessons)||[]).concat((j&&j.ideas)||[]).map((x,i)=>({id:'d'+i,kind:'lesson',name:String(x.name||x),body:''}))},
   {id:'rewind-loses-chat',export:'achatRewind38',why:'rewinding a chat throws away the turns after it with no copy',broken:()=>(id,i)=>{const c=(window.__gb.ACHATS||[]).find(x=>x.id===id);if(!c||!c.msgs[i])return{ok:false};const t=c.msgs[i].content;c.msgs=c.msgs.slice(0,i);return{ok:true,text:t,copyId:null};}},
+
+  /* ── pass 39 ── */
+  {id:'hubs-drop-sections',export:'hub39Auto',why:'sections outside the three chosen hubs vanish from the phone tab bar',broken:()=>(vis,want,gof)=>[{id:'chat',label:'Chat',icon:'assistant',views:(vis||[]).filter(v=>gof(v)==='talk')}]},
+  {id:'hub-custom-strands-new',export:'hub39Complete',why:'a section switched on after customising the tab bar is in no hub',broken:()=>(saved)=>(saved||[]).map(s=>({...s,views:(s.views||[]).slice()}))},
+  {id:'phone-follows-desktop',export:'navTabPos39',why:'choosing Classic on a phone also moves the desktop layout',broken:()=>(w,mode,pos)=>mode==='classic'?'top':(pos||'auto')},
+  {id:'home-gap-in-browser',export:'vgap39',why:'the bottom correction fires in the browser too and lifts the tab bar off the toolbar',broken:()=>(s,i)=>Math.max(0,Math.round(s-i))},
+  {id:'emoji-left-alone',export:'emo39Scan',why:'emoji in buttons and headings are drawn as colour emoji',broken:()=>()=>{}},
+  {id:'layout-audit-blind',export:'layoutAudit39',why:'the layout check never reports an overlap',broken:()=>()=>[]},
 
   {id:'sandbox-noop',export:'gauntletSandbox',why:'self-test fixtures stay in the person\'s data',broken:()=>()=>()=>{}},
   {id:'fixture-sweep-noop',export:'fixtureChatSweep',why:'the old self-test chats stay in the list',broken:()=>l=>l},
@@ -53706,7 +53988,7 @@ function tabPosFor36(width,tabPos){
 function tabFace36(t){
   const lab=(UI.tabLabels&&UI.tabLabels[t.id])||t.text;
   const custom=UI.tabIcons&&UI.tabIcons[t.id];
-  if(UI.iconStyle==='emoji'||custom||!ICONS36[t.id]){
+  if(!ICONS36[t.id]){
     t.el.textContent=(UI.showTabIcons&&(custom||t.icon)?(custom||t.icon)+'\u00a0\u00a0':'')+(UI.showTabLabels?lab:((custom||t.icon)?'':lab));
   }else{
     t.el.innerHTML=(UI.showTabIcons?ic36(t.id):'')+((UI.showTabLabels||!UI.showTabIcons)?`<span class="tl36">${esc(lab)}</span>`:'');
@@ -53724,15 +54006,8 @@ function shellNavSheet36(on){
   if(open){const a=document.querySelector('#tabs .tab.active');if(a)a.scrollIntoView({block:'nearest'});}
 }
 function shellDock36(){
-  const d=document.getElementById('dock36');if(!d)return;
-  const v=shellCurrent36(),sheet=document.documentElement.getAttribute('data-navsheet')==='1';
-  const inDock=DOCK36.some(([id])=>id===v);
-  d.querySelectorAll('button').forEach(b=>{
-    const id=b.dataset.d36;
-    const on=id==='__all'?(sheet||!inDock):(!sheet&&id===v);
-    b.classList.toggle('on',on);
-    if(id!=='__all')b.setAttribute('aria-current',on?'page':'false');
-  });
+  /* pass 39: the dock is four hubs built from the setup answers (nav.js) */
+  try{dock39Sync();sheet39Sync();}catch(e){console.warn('dock',e);}
 }
 function shellBuild36(){
   setTimeout(()=>{try{applyUI();}catch(_){}},0);
@@ -53781,13 +54056,16 @@ function shellBuild36(){
   });
   clampObserve36();
   try{shell37Build();}catch(_){}
+  try{nav39Boot();}catch(e){console.warn('nav39',e);}
+  try{emo39Start();}catch(e){console.warn('emo39',e);}
 }
 /* Called at the end of applyUI — which go(), resize and every setting change already run. */
 function shellApply36(){
   const de=document.documentElement;
-  const mode=shellMode36(innerWidth,UI.tabPos);
+  const mode=shellMode36(innerWidth,navPos39());
   de.setAttribute('data-shell',mode);
-  de.setAttribute('data-icons',UI.iconStyle==='emoji'?'emoji':'line');
+  de.setAttribute('data-phone39',innerWidth<SHELL36_WIDE?'1':'0');
+  de.setAttribute('data-icons','line');
   if(mode!=='dock'&&de.getAttribute('data-navsheet')==='1')de.setAttribute('data-navsheet','0');
   const v=shellCurrent36();
   const t=(REGISTRY.tabs||[]).find(x=>x.id===v);
@@ -54155,6 +54433,7 @@ function sideSet37(w,save){
 /* PURE. Classic view is the "top" tab position; leaving it goes back to automatic (sidebar or dock by width). */
 function classicNext37(tabPos){return tabPos==='top'?'auto':'top';}
 function classicToggle37(on){
+  if(innerWidth<SHELL36_WIDE){const c=on==null?HUB39.mode!=='classic':!!on;hub39SetMode(c?'classic':'tabs');return c?'top':'auto';}
   UI.tabPos=on==null?classicNext37(UI.tabPos):(on?'top':'auto');
   saveUI();applyUI();
   toast(UI.tabPos==='top'?'Classic view — every tab across the top. Scroll the row, or ⋯ → Sidebar view to go back.':'Sidebar view',3200);
@@ -54209,7 +54488,10 @@ function shell37Build(){
 }
 function shell37Apply(){
   const b=document.getElementById('viewBtn');
-  if(b){const l=UI.tabPos==='top'?'Sidebar view':'Classic view (tabs on top)';
+  const narrow=innerWidth<SHELL36_WIDE,classic=narrow?HUB39.mode==='classic':UI.tabPos==='top';
+  if(b&&narrow){const l=classic?'Tab bar at the bottom':'Classic view (tabs on top)';
+    b.setAttribute('data-l36',l);b.title=l;b.setAttribute('aria-label',l);b.setAttribute('aria-pressed',classic?'true':'false');}
+  else if(b){const l=UI.tabPos==='top'?'Sidebar view':'Classic view (tabs on top)';
     b.setAttribute('data-l36',l);b.title=l;b.setAttribute('aria-label',l);b.setAttribute('aria-pressed',UI.tabPos==='top'?'true':'false');}
   if(UI.tabPos==='top'){const a=document.querySelector('#tabs .tab.active');if(a&&a.scrollIntoView)try{a.scrollIntoView({block:'nearest',inline:'nearest'});}catch(_){}}
 }
@@ -55176,6 +55458,457 @@ function achatRewind38(chatId,i){
   return{ok:true,text,copyId:copy.id};
 }
 
+/* Emoji → line icon. Icons: Lucide v0.469.0 (ISC, lucide.dev). Generated by dev/pass39/emomap.py. */
+const EMO39_SVG={"brain":"<path d=\"M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z\" /><path d=\"M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z\" /><path d=\"M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4\" /><path d=\"M17.599 6.5a3 3 0 0 0 .399-1.375\" /><path d=\"M6.003 5.125A3 3 0 0 0 6.401 6.5\" /><path d=\"M3.477 10.896a4 4 0 0 1 .585-.396\" /><path d=\"M19.938 10.5a4 4 0 0 1 .585.396\" /><path d=\"M6 18a4 4 0 0 1-1.967-.516\" /><path d=\"M19.967 17.484A4 4 0 0 1 18 18\" />","package":"<path d=\"M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z\" /><path d=\"M12 22V12\" /><path d=\"m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7\" /><path d=\"m7.5 4.27 9 5.15\" />","circle-check":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"m9 12 2 2 4-4\" />","sparkles":"<path d=\"M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z\" /><path d=\"M20 3v4\" /><path d=\"M22 5h-4\" /><path d=\"M4 17v2\" /><path d=\"M5 18H3\" />","zap":"<path d=\"M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z\" />","puzzle":"<path d=\"M15.39 4.39a1 1 0 0 0 1.68-.474 2.5 2.5 0 1 1 3.014 3.015 1 1 0 0 0-.474 1.68l1.683 1.682a2.414 2.414 0 0 1 0 3.414L19.61 15.39a1 1 0 0 1-1.68-.474 2.5 2.5 0 1 0-3.014 3.015 1 1 0 0 1 .474 1.68l-1.683 1.682a2.414 2.414 0 0 1-3.414 0L8.61 19.61a1 1 0 0 0-1.68.474 2.5 2.5 0 1 1-3.014-3.015 1 1 0 0 0 .474-1.68l-1.683-1.682a2.414 2.414 0 0 1 0-3.414L4.39 8.61a1 1 0 0 1 1.68.474 2.5 2.5 0 1 0 3.014-3.015 1 1 0 0 1-.474-1.68l1.683-1.682a2.414 2.414 0 0 1 3.414 0z\" />","microscope":"<path d=\"M6 18h8\" /><path d=\"M3 22h18\" /><path d=\"M14 22a7 7 0 1 0 0-14h-1\" /><path d=\"M9 14h2\" /><path d=\"M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z\" /><path d=\"M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3\" />","message-circle":"<path d=\"M7.9 20A9 9 0 1 0 4 16.1L2 22Z\" />","flask-conical":"<path d=\"M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2\" /><path d=\"M6.453 15h11.094\" /><path d=\"M8.5 2h7\" />","bot":"<path d=\"M12 8V4H8\" /><rect width=\"16\" height=\"12\" x=\"4\" y=\"8\" rx=\"2\" /><path d=\"M2 14h2\" /><path d=\"M20 14h2\" /><path d=\"M15 13v2\" /><path d=\"M9 13v2\" />","palette":"<circle cx=\"13.5\" cy=\"6.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"17.5\" cy=\"10.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"8.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"6.5\" cy=\"12.5\" r=\".5\" fill=\"currentColor\" /><path d=\"M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z\" />","clipboard-list":"<rect width=\"8\" height=\"4\" x=\"8\" y=\"2\" rx=\"1\" ry=\"1\" /><path d=\"M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2\" /><path d=\"M12 11h4\" /><path d=\"M12 16h4\" /><path d=\"M8 11h.01\" /><path d=\"M8 16h.01\" />","save":"<path d=\"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z\" /><path d=\"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7\" /><path d=\"M7 3v4a1 1 0 0 0 1 1h7\" />","target":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><circle cx=\"12\" cy=\"12\" r=\"6\" /><circle cx=\"12\" cy=\"12\" r=\"2\" />","search":"<circle cx=\"11\" cy=\"11\" r=\"8\" /><path d=\"m21 21-4.3-4.3\" />","rocket":"<path d=\"M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z\" /><path d=\"m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z\" /><path d=\"M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0\" /><path d=\"M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5\" />","compass":"<path d=\"m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z\" /><circle cx=\"12\" cy=\"12\" r=\"10\" />","notebook-pen":"<path d=\"M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4\" /><path d=\"M2 6h4\" /><path d=\"M2 10h4\" /><path d=\"M2 14h4\" /><path d=\"M2 18h4\" /><path d=\"M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z\" />","bell":"<path d=\"M10.268 21a2 2 0 0 0 3.464 0\" /><path d=\"M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326\" />","trophy":"<path d=\"M6 9H4.5a2.5 2.5 0 0 1 0-5H6\" /><path d=\"M18 9h1.5a2.5 2.5 0 0 0 0-5H18\" /><path d=\"M4 22h16\" /><path d=\"M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22\" /><path d=\"M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22\" /><path d=\"M18 2H6v7a6 6 0 0 0 12 0V2Z\" />","plug":"<path d=\"M12 22v-5\" /><path d=\"M9 8V2\" /><path d=\"M15 8V2\" /><path d=\"M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z\" />","folder":"<path d=\"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z\" />","link":"<path d=\"M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71\" /><path d=\"M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71\" />","globe":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20\" /><path d=\"M2 12h20\" />","clapperboard":"<path d=\"M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z\" /><path d=\"m6.2 5.3 3.1 3.9\" /><path d=\"m12.4 3.4 3.1 4\" /><path d=\"M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z\" />","smartphone":"<rect width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /><path d=\"M12 18h.01\" />","telescope":"<path d=\"m10.065 12.493-6.18 1.318a.934.934 0 0 1-1.108-.702l-.537-2.15a1.07 1.07 0 0 1 .691-1.265l13.504-4.44\" /><path d=\"m13.56 11.747 4.332-.924\" /><path d=\"m16 21-3.105-6.21\" /><path d=\"M16.485 5.94a2 2 0 0 1 1.455-2.425l1.09-.272a1 1 0 0 1 1.212.727l1.515 6.06a1 1 0 0 1-.727 1.213l-1.09.272a2 2 0 0 1-2.425-1.455z\" /><path d=\"m6.158 8.633 1.114 4.456\" /><path d=\"m8 21 3.105-6.21\" /><circle cx=\"12\" cy=\"13\" r=\"2\" />","file-text":"<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\" /><path d=\"M14 2v4a2 2 0 0 0 2 2h4\" /><path d=\"M10 9H8\" /><path d=\"M16 13H8\" /><path d=\"M16 17H8\" />","box":"<path d=\"M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z\" /><path d=\"m3.3 7 8.7 5 8.7-5\" /><path d=\"M12 22V12\" />","wrench":"<path d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\" />","dices":"<rect width=\"12\" height=\"12\" x=\"2\" y=\"10\" rx=\"2\" ry=\"2\" /><path d=\"m17.92 14 3.5-3.5a2.24 2.24 0 0 0 0-3l-5-4.92a2.24 2.24 0 0 0-3 0L10 6\" /><path d=\"M6 18h.01\" /><path d=\"M10 14h.01\" /><path d=\"M15 6h.01\" /><path d=\"M18 9h.01\" />","lightbulb":"<path d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\" /><path d=\"M9 18h6\" /><path d=\"M10 22h4\" />","library":"<path d=\"m16 6 4 14\" /><path d=\"M12 6v14\" /><path d=\"M8 8v12\" /><path d=\"M4 4v16\" />","app-window":"<rect x=\"2\" y=\"4\" width=\"20\" height=\"16\" rx=\"2\" /><path d=\"M10 4v4\" /><path d=\"M2 8h20\" /><path d=\"M6 4v4\" />","dna":"<path d=\"m10 16 1.5 1.5\" /><path d=\"m14 8-1.5-1.5\" /><path d=\"M15 2c-1.798 1.998-2.518 3.995-2.807 5.993\" /><path d=\"m16.5 10.5 1 1\" /><path d=\"m17 6-2.891-2.891\" /><path d=\"M2 15c6.667-6 13.333 0 20-6\" /><path d=\"m20 9 .891.891\" /><path d=\"M3.109 14.109 4 15\" /><path d=\"m6.5 12.5 1 1\" /><path d=\"m7 18 2.891 2.891\" /><path d=\"M9 22c1.798-1.998 2.518-3.995 2.807-5.993\" />","chart-column":"<path d=\"M3 3v16a2 2 0 0 0 2 2h16\" /><path d=\"M18 17V9\" /><path d=\"M13 17V5\" /><path d=\"M8 17v-3\" />","pin":"<path d=\"M12 17v5\" /><path d=\"M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z\" />","circle-x":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"m15 9-6 6\" /><path d=\"m9 9 6 6\" />","graduation-cap":"<path d=\"M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z\" /><path d=\"M22 10v6\" /><path d=\"M6 12.5V16a6 3 0 0 0 12 0v-3.5\" />","repeat":"<path d=\"m17 2 4 4-4 4\" /><path d=\"M3 11v-1a4 4 0 0 1 4-4h14\" /><path d=\"m7 22-4-4 4-4\" /><path d=\"M21 13v1a4 4 0 0 1-4 4H3\" />","trending-up":"<polyline points=\"22 7 13.5 15.5 8.5 10.5 2 17\" /><polyline points=\"16 7 22 7 22 13\" />","handshake":"<path d=\"m11 17 2 2a1 1 0 1 0 3-3\" /><path d=\"m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4\" /><path d=\"m21 3 1 11h-2\" /><path d=\"M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3\" /><path d=\"M3 4h8\" />","star":"<path d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\" />","laptop":"<path d=\"M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16\" />","moon":"<path d=\"M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z\" />","gamepad-2":"<line x1=\"6\" x2=\"10\" y1=\"11\" y2=\"11\" /><line x1=\"8\" x2=\"8\" y1=\"9\" y2=\"13\" /><line x1=\"15\" x2=\"15.01\" y1=\"12\" y2=\"12\" /><line x1=\"18\" x2=\"18.01\" y1=\"10\" y2=\"10\" /><path d=\"M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z\" />","key-round":"<path d=\"M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z\" /><circle cx=\"16.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" />","swords":"<polyline points=\"14.5 17.5 3 6 3 3 6 3 17.5 14.5\" /><line x1=\"13\" x2=\"19\" y1=\"19\" y2=\"13\" /><line x1=\"16\" x2=\"20\" y1=\"16\" y2=\"20\" /><line x1=\"19\" x2=\"21\" y1=\"21\" y2=\"19\" /><polyline points=\"14.5 6.5 18 3 21 3 21 6 17.5 9.5\" /><line x1=\"5\" x2=\"9\" y1=\"14\" y2=\"18\" /><line x1=\"7\" x2=\"4\" y1=\"17\" y2=\"20\" /><line x1=\"3\" x2=\"5\" y1=\"19\" y2=\"21\" />","hexagon":"<path d=\"M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z\" />","thumbs-up":"<path d=\"M7 10v12\" /><path d=\"M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z\" />","folder-open":"<path d=\"m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2\" />","lock":"<rect width=\"18\" height=\"11\" x=\"3\" y=\"11\" rx=\"2\" ry=\"2\" /><path d=\"M7 11V7a5 5 0 0 1 10 0v4\" />","octagon-x":"<path d=\"m15 9-6 6\" /><path d=\"M2.586 16.726A2 2 0 0 1 2 15.312V8.688a2 2 0 0 1 .586-1.414l4.688-4.688A2 2 0 0 1 8.688 2h6.624a2 2 0 0 1 1.414.586l4.688 4.688A2 2 0 0 1 22 8.688v6.624a2 2 0 0 1-.586 1.414l-4.688 4.688a2 2 0 0 1-1.414.586H8.688a2 2 0 0 1-1.414-.586z\" /><path d=\"m9 9 6 6\" />","receipt":"<path d=\"M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z\" /><path d=\"M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8\" /><path d=\"M12 17.5v-11\" />","nut":"<path d=\"M12 4V2\" /><path d=\"M5 10v4a7.004 7.004 0 0 0 5.277 6.787c.412.104.802.292 1.102.592L12 22l.621-.621c.3-.3.69-.488 1.102-.592A7.003 7.003 0 0 0 19 14v-4\" /><path d=\"M12 4C8 4 4.5 6 4 8c-.243.97-.919 1.952-2 3 1.31-.082 1.972-.29 3-1 .54.92.982 1.356 2 2 1.452-.647 1.954-1.098 2.5-2 .595.995 1.151 1.427 2.5 2 1.31-.621 1.862-1.058 2.5-2 .629.977 1.162 1.423 2.5 2 1.209-.548 1.68-.967 2-2 1.032.916 1.683 1.157 3 1-1.297-1.036-1.758-2.03-2-3-.5-2-4-4-8-4Z\" />","shuffle":"<path d=\"m18 14 4 4-4 4\" /><path d=\"m18 2 4 4-4 4\" /><path d=\"M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22\" /><path d=\"M2 6h1.972a4 4 0 0 1 3.6 2.2\" /><path d=\"M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45\" />","stethoscope":"<path d=\"M11 2v2\" /><path d=\"M5 2v2\" /><path d=\"M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1\" /><path d=\"M8 15a6 6 0 0 0 12 0v-3\" /><circle cx=\"20\" cy=\"10\" r=\"2\" />","phone":"<path d=\"M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z\" />","brick-wall":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /><path d=\"M12 9v6\" /><path d=\"M16 15v6\" /><path d=\"M16 3v6\" /><path d=\"M3 15h18\" /><path d=\"M3 9h18\" /><path d=\"M8 15v6\" /><path d=\"M8 3v6\" />","calculator":"<rect width=\"16\" height=\"20\" x=\"4\" y=\"2\" rx=\"2\" /><line x1=\"8\" x2=\"16\" y1=\"6\" y2=\"6\" /><line x1=\"16\" x2=\"16\" y1=\"14\" y2=\"18\" /><path d=\"M16 10h.01\" /><path d=\"M12 10h.01\" /><path d=\"M8 10h.01\" /><path d=\"M12 14h.01\" /><path d=\"M8 14h.01\" /><path d=\"M12 18h.01\" /><path d=\"M8 18h.01\" />","coins":"<circle cx=\"8\" cy=\"8\" r=\"6\" /><path d=\"M18.09 10.37A6 6 0 1 1 10.34 18\" /><path d=\"M7 6h1v4\" /><path d=\"m16.71 13.88.7.71-2.82 2.82\" />","ruler":"<path d=\"M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z\" /><path d=\"m14.5 12.5 2-2\" /><path d=\"m11.5 9.5 2-2\" /><path d=\"m8.5 6.5 2-2\" /><path d=\"m17.5 15.5 2-2\" />","smartphone-nfc":"<rect width=\"7\" height=\"12\" x=\"2\" y=\"6\" rx=\"1\" /><path d=\"M13 8.32a7.43 7.43 0 0 1 0 7.36\" /><path d=\"M16.46 6.21a11.76 11.76 0 0 1 0 11.58\" /><path d=\"M19.91 4.1a15.91 15.91 0 0 1 .01 15.8\" />","sprout":"<path d=\"M7 20h10\" /><path d=\"M10 20c5.5-2.5.8-6.4 3-10\" /><path d=\"M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z\" /><path d=\"M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z\" />","thumbs-down":"<path d=\"M17 14V2\" /><path d=\"M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z\" />","drama":"<path d=\"M10 11h.01\" /><path d=\"M14 6h.01\" /><path d=\"M18 6h.01\" /><path d=\"M6.5 13.1h.01\" /><path d=\"M22 5c0 9-4 12-6 12s-6-3-6-12c0-2 2-3 6-3s6 1 6 3\" /><path d=\"M17.4 9.9c-.8.8-2 .8-2.8 0\" /><path d=\"M10.1 7.1C9 7.2 7.7 7.7 6 8.6c-3.5 2-4.7 3.9-3.7 5.6 4.5 7.8 9.5 8.4 11.2 7.4.9-.5 1.9-2.1 1.9-4.7\" /><path d=\"M9.1 16.5c.3-1.1 1.4-1.7 2.4-1.4\" />","workflow":"<rect width=\"8\" height=\"8\" x=\"3\" y=\"3\" rx=\"2\" /><path d=\"M7 11v4a2 2 0 0 0 2 2h4\" /><rect width=\"8\" height=\"8\" x=\"13\" y=\"13\" rx=\"2\" />","music":"<path d=\"M9 18V5l12-2v13\" /><circle cx=\"6\" cy=\"18\" r=\"3\" /><circle cx=\"18\" cy=\"16\" r=\"3\" />","building-2":"<path d=\"M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z\" /><path d=\"M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2\" /><path d=\"M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2\" /><path d=\"M10 6h4\" /><path d=\"M10 10h4\" /><path d=\"M10 14h4\" /><path d=\"M10 18h4\" />","tornado":"<path d=\"M21 4H3\" /><path d=\"M18 8H6\" /><path d=\"M19 12H9\" /><path d=\"M16 16h-6\" /><path d=\"M11 20H9\" />","trees":"<path d=\"M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z\" /><path d=\"M7 16v6\" /><path d=\"M13 19v3\" /><path d=\"M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7L13 3l-1.4 1.5\" />","inbox":"<polyline points=\"22 12 16 12 14 15 10 15 8 12 2 12\" /><path d=\"M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z\" />","lock-open":"<rect width=\"18\" height=\"11\" x=\"3\" y=\"11\" rx=\"2\" ry=\"2\" /><path d=\"M7 11V7a5 5 0 0 1 9.9-1\" />","user":"<path d=\"M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2\" /><circle cx=\"12\" cy=\"7\" r=\"4\" />","flame":"<path d=\"M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z\" />","scroll-text":"<path d=\"M15 12h-5\" /><path d=\"M15 8h-5\" /><path d=\"M19 17V5a2 2 0 0 0-2-2H4\" /><path d=\"M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3\" />","volume-2":"<path d=\"M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z\" /><path d=\"M16 9a5 5 0 0 1 0 6\" /><path d=\"M19.364 18.364a9 9 0 0 0 0-12.728\" />","coffee":"<path d=\"M10 2v2\" /><path d=\"M14 2v2\" /><path d=\"M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1\" /><path d=\"M6 2v2\" />","scan-face":"<path d=\"M3 7V5a2 2 0 0 1 2-2h2\" /><path d=\"M17 3h2a2 2 0 0 1 2 2v2\" /><path d=\"M21 17v2a2 2 0 0 1-2 2h-2\" /><path d=\"M7 21H5a2 2 0 0 1-2-2v-2\" /><path d=\"M8 14s1.5 2 4 2 4-2 4-2\" /><path d=\"M9 9h.01\" /><path d=\"M15 9h.01\" />","clock-3":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><polyline points=\"12 6 12 12 16.5 12\" />","map-pin":"<path d=\"M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0\" /><circle cx=\"12\" cy=\"10\" r=\"3\" />","message-square-more":"<path d=\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z\" /><path d=\"M8 10h.01\" /><path d=\"M12 10h.01\" /><path d=\"M16 10h.01\" />","factory":"<path d=\"M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z\" /><path d=\"M17 18h1\" /><path d=\"M12 18h1\" /><path d=\"M7 18h1\" />","wand-sparkles":"<path d=\"m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72\" /><path d=\"m14 7 3 3\" /><path d=\"M5 6v4\" /><path d=\"M19 14v4\" /><path d=\"M10 2v2\" /><path d=\"M7 8H3\" /><path d=\"M21 16h-4\" /><path d=\"M11 3H9\" />","radio-tower":"<path d=\"M4.9 16.1C1 12.2 1 5.8 4.9 1.9\" /><path d=\"M7.8 4.7a6.14 6.14 0 0 0-.8 7.5\" /><circle cx=\"12\" cy=\"9\" r=\"2\" /><path d=\"M16.2 4.8c2 2 2.26 5.11.8 7.47\" /><path d=\"M19.1 1.9a9.96 9.96 0 0 1 0 14.1\" /><path d=\"M9.5 18h5\" /><path d=\"m8 22 4-11 4 11\" />","octagon":"<path d=\"M2.586 16.726A2 2 0 0 1 2 15.312V8.688a2 2 0 0 1 .586-1.414l4.688-4.688A2 2 0 0 1 8.688 2h6.624a2 2 0 0 1 1.414.586l4.688 4.688A2 2 0 0 1 22 8.688v6.624a2 2 0 0 1-.586 1.414l-4.688 4.688a2 2 0 0 1-1.414.586H8.688a2 2 0 0 1-1.414-.586z\" />","banknote":"<rect width=\"20\" height=\"12\" x=\"2\" y=\"6\" rx=\"2\" /><circle cx=\"12\" cy=\"12\" r=\"2\" /><path d=\"M6 12h.01M18 12h.01\" />","eye":"<path d=\"M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0\" /><circle cx=\"12\" cy=\"12\" r=\"3\" />","lock-keyhole":"<circle cx=\"12\" cy=\"16\" r=\"1\" /><rect x=\"3\" y=\"10\" width=\"18\" height=\"12\" rx=\"2\" /><path d=\"M7 10V7a5 5 0 0 1 10 0v3\" />","calendar":"<path d=\"M8 2v4\" /><path d=\"M16 2v4\" /><rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\" /><path d=\"M3 10h18\" />","eraser":"<path d=\"m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21\" /><path d=\"M22 21H7\" /><path d=\"m5 11 9 9\" />","video":"<path d=\"m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5\" /><rect x=\"2\" y=\"6\" width=\"14\" height=\"12\" rx=\"2\" />","paperclip":"<path d=\"M13.234 20.252 21 12.3\" /><path d=\"m16 6-8.414 8.586a2 2 0 0 0 0 2.828 2 2 0 0 0 2.828 0l8.414-8.586a4 4 0 0 0 0-5.656 4 4 0 0 0-5.656 0l-8.415 8.585a6 6 0 1 0 8.486 8.486\" />","users":"<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\" /><circle cx=\"9\" cy=\"7\" r=\"4\" /><path d=\"M22 21v-2a4 4 0 0 0-3-3.87\" /><path d=\"M16 3.13a4 4 0 0 1 0 7.75\" />","newspaper":"<path d=\"M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2\" /><path d=\"M18 14h-8\" /><path d=\"M15 18h-5\" /><path d=\"M10 6h8v4h-8V6Z\" />","waves":"<path d=\"M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1\" /><path d=\"M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1\" /><path d=\"M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1\" />","earth":"<path d=\"M21.54 15H17a2 2 0 0 0-2 2v4.54\" /><path d=\"M7 3.34V5a3 3 0 0 0 3 3a2 2 0 0 1 2 2c0 1.1.9 2 2 2a2 2 0 0 0 2-2c0-1.1.9-2 2-2h3.17\" /><path d=\"M11 21.95V18a2 2 0 0 0-2-2a2 2 0 0 1-2-2v-1a2 2 0 0 0-2-2H2.05\" /><circle cx=\"12\" cy=\"12\" r=\"10\" />","badge-percent":"<path d=\"M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z\" /><path d=\"m15 9-6 6\" /><path d=\"M9 9h.01\" /><path d=\"M15 15h.01\" />","hourglass":"<path d=\"M5 22h14\" /><path d=\"M5 2h14\" /><path d=\"M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22\" /><path d=\"M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2\" />","bug":"<path d=\"m8 2 1.88 1.88\" /><path d=\"M14.12 3.88 16 2\" /><path d=\"M9 7.13v-1a3.003 3.003 0 1 1 6 0v1\" /><path d=\"M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6\" /><path d=\"M12 20v-9\" /><path d=\"M6.53 9C4.6 8.8 3 7.1 3 5\" /><path d=\"M6 13H2\" /><path d=\"M3 21c0-2.1 1.7-3.9 3.8-4\" /><path d=\"M20.97 5c0 2.1-1.6 3.8-3.5 4\" /><path d=\"M22 13h-4\" /><path d=\"M17.2 17c2.1.1 3.8 1.9 3.8 4\" />","refresh-cw":"<path d=\"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8\" /><path d=\"M21 3v5h-5\" /><path d=\"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16\" /><path d=\"M8 16H3v5\" />","briefcase":"<path d=\"M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16\" /><rect width=\"20\" height=\"14\" x=\"2\" y=\"6\" rx=\"2\" />","credit-card":"<rect width=\"20\" height=\"14\" x=\"2\" y=\"5\" rx=\"2\" /><line x1=\"2\" x2=\"22\" y1=\"10\" y2=\"10\" />","ticket":"<path d=\"M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z\" /><path d=\"M13 5v2\" /><path d=\"M13 17v2\" /><path d=\"M13 11v2\" />","circle-help":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3\" /><path d=\"M12 17h.01\" />","apple":"<path d=\"M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-2.22 0-4 1.44-5 2-1-.56-2.78-2-5-2a4.9 4.9 0 0 0-5 4.78C2 14 5 22 8 22c1.25 0 2.5-1.06 4-1.06Z\" /><path d=\"M10 2c1 .5 2 2 2 5\" />","clock-9":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><polyline points=\"12 6 12 12 7.5 12\" />","snail":"<path d=\"M2 13a6 6 0 1 0 12 0 4 4 0 1 0-8 0 2 2 0 0 0 4 0\" /><circle cx=\"10\" cy=\"13\" r=\"8\" /><path d=\"M2 21h12c4.4 0 8-3.6 8-8V7a2 2 0 1 0-4 0v6\" /><path d=\"M18 3 19.1 5.2\" /><path d=\"M22 3 20.9 5.2\" />","smile":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"M8 14s1.5 2 4 2 4-2 4-2\" /><line x1=\"9\" x2=\"9.01\" y1=\"9\" y2=\"9\" /><line x1=\"15\" x2=\"15.01\" y1=\"9\" y2=\"9\" />","bird":"<path d=\"M16 7h.01\" /><path d=\"M3.4 18H12a8 8 0 0 0 8-8V7a4 4 0 0 0-7.28-2.3L2 20\" /><path d=\"m20 7 2 .5-2 .5\" /><path d=\"M10 18v3\" /><path d=\"M14 17.75V21\" /><path d=\"M7 18a6 6 0 0 0 3.84-10.61\" />","megaphone":"<path d=\"m3 11 18-5v12L3 14v-3z\" /><path d=\"M11.6 16.8a3 3 0 1 1-5.8-1.6\" />","bean":"<path d=\"M10.165 6.598C9.954 7.478 9.64 8.36 9 9c-.64.64-1.521.954-2.402 1.165A6 6 0 0 0 8 22c7.732 0 14-6.268 14-14a6 6 0 0 0-11.835-1.402Z\" /><path d=\"M5.341 10.62a4 4 0 1 0 5.279-5.28\" />","tent-tree":"<circle cx=\"4\" cy=\"4\" r=\"2\" /><path d=\"m14 5 3-3 3 3\" /><path d=\"m14 10 3-3 3 3\" /><path d=\"M17 14V2\" /><path d=\"M17 14H7l-5 8h20Z\" /><path d=\"M8 14v8\" /><path d=\"m9 14 5 8\" />","circle-dot":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><circle cx=\"12\" cy=\"12\" r=\"1\" />","armchair":"<path d=\"M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3\" /><path d=\"M3 16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z\" /><path d=\"M5 18v2\" /><path d=\"M19 18v2\" />","leaf":"<path d=\"M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z\" /><path d=\"M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12\" />","bone":"<path d=\"M17 10c.7-.7 1.69 0 2.5 0a2.5 2.5 0 1 0 0-5 .5.5 0 0 1-.5-.5 2.5 2.5 0 1 0-5 0c0 .81.7 1.8 0 2.5l-7 7c-.7.7-1.69 0-2.5 0a2.5 2.5 0 0 0 0 5c.28 0 .5.22.5.5a2.5 2.5 0 1 0 5 0c0-.81-.7-1.8 0-2.5Z\" />","clock-4":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><polyline points=\"12 6 12 12 16 14\" />","hand":"<path d=\"M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2\" /><path d=\"M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2\" /><path d=\"M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8\" /><path d=\"M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15\" />","hammer":"<path d=\"m15 12-8.373 8.373a1 1 0 1 1-3-3L12 9\" /><path d=\"m18 15 4-4\" /><path d=\"m21.5 11.5-1.914-1.914A2 2 0 0 1 19 8.172V7l-2.26-2.26a6 6 0 0 0-4.202-1.756L9 2.96l.92.82A6.18 6.18 0 0 1 12 8.4V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5\" />","ghost":"<path d=\"M9 10h.01\" /><path d=\"M15 10h.01\" /><path d=\"M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z\" />","wand":"<path d=\"M15 4V2\" /><path d=\"M15 16v-2\" /><path d=\"M8 9h2\" /><path d=\"M20 9h2\" /><path d=\"M17.8 11.8 19 13\" /><path d=\"M15 9h.01\" /><path d=\"M17.8 6.2 19 5\" /><path d=\"m3 21 9-9\" /><path d=\"M12.2 6.2 11 5\" />","notebook":"<path d=\"M2 6h4\" /><path d=\"M2 10h4\" /><path d=\"M2 14h4\" /><path d=\"M2 18h4\" /><rect width=\"16\" height=\"20\" x=\"4\" y=\"2\" rx=\"2\" /><path d=\"M16 2v20\" />","house":"<path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\" /><path d=\"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\" />","plus":"<path d=\"M5 12h14\" /><path d=\"M12 5v14\" />","minus":"<path d=\"M5 12h14\" />","shopping-cart":"<circle cx=\"8\" cy=\"21\" r=\"1\" /><circle cx=\"19\" cy=\"21\" r=\"1\" /><path d=\"M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12\" />","dollar-sign":"<line x1=\"12\" x2=\"12\" y1=\"2\" y2=\"22\" /><path d=\"M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6\" />","trending-down":"<polyline points=\"22 17 13.5 8.5 8.5 13.5 2 7\" /><polyline points=\"16 17 22 17 22 11\" />","wind":"<path d=\"M12.8 19.6A2 2 0 1 0 14 16H2\" /><path d=\"M17.5 8a2.5 2.5 0 1 1 2 4H2\" /><path d=\"M9.8 4.4A2 2 0 1 1 11 8H2\" />","camera":"<path d=\"M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z\" /><circle cx=\"12\" cy=\"13\" r=\"3\" />","book":"<path d=\"M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20\" />","gift":"<rect x=\"3\" y=\"8\" width=\"18\" height=\"4\" rx=\"1\" /><path d=\"M12 8v13\" /><path d=\"M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7\" /><path d=\"M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5\" />","upload":"<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" /><polyline points=\"17 8 12 3 7 8\" /><line x1=\"12\" x2=\"12\" y1=\"3\" y2=\"15\" />","flag":"<path d=\"M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z\" /><line x1=\"4\" x2=\"4\" y1=\"22\" y2=\"15\" />","bookmark":"<path d=\"m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z\" />","car":"<path d=\"M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2\" /><circle cx=\"7\" cy=\"17\" r=\"2\" /><path d=\"M9 17h6\" /><circle cx=\"17\" cy=\"17\" r=\"2\" />","train-front":"<path d=\"M8 3.1V7a4 4 0 0 0 8 0V3.1\" /><path d=\"m9 15-1-1\" /><path d=\"m15 15 1-1\" /><path d=\"M9 19c-2.8 0-5-2.2-5-5v-4a8 8 0 0 1 16 0v4c0 2.8-2.2 5-5 5Z\" /><path d=\"m8 19-2 3\" /><path d=\"m16 19 2 3\" />","circle":"<circle cx=\"12\" cy=\"12\" r=\"10\" />","ban":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"m4.9 4.9 14.2 14.2\" />","mic":"<path d=\"M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z\" /><path d=\"M19 10v2a7 7 0 0 1-14 0v-2\" /><line x1=\"12\" x2=\"12\" y1=\"19\" y2=\"22\" />","id-card":"<path d=\"M16 10h2\" /><path d=\"M16 14h2\" /><path d=\"M6.17 15a3 3 0 0 1 5.66 0\" /><circle cx=\"9\" cy=\"11\" r=\"2\" /><rect x=\"2\" y=\"5\" width=\"20\" height=\"14\" rx=\"2\" />","car-front":"<path d=\"m21 8-2 2-1.5-3.7A2 2 0 0 0 15.646 5H8.4a2 2 0 0 0-1.903 1.257L5 10 3 8\" /><path d=\"M7 14h.01\" /><path d=\"M17 14h.01\" /><rect width=\"18\" height=\"8\" x=\"3\" y=\"10\" rx=\"2\" /><path d=\"M5 18v2\" /><path d=\"M19 18v2\" />","worm":"<path d=\"m19 12-1.5 3\" /><path d=\"M19.63 18.81 22 20\" /><path d=\"M6.47 8.23a1.68 1.68 0 0 1 2.44 1.93l-.64 2.08a6.76 6.76 0 0 0 10.16 7.67l.42-.27a1 1 0 1 0-2.73-4.21l-.42.27a1.76 1.76 0 0 1-2.63-1.99l.64-2.08A6.66 6.66 0 0 0 3.94 3.9l-.7.4a1 1 0 1 0 2.55 4.34z\" />","rabbit":"<path d=\"M13 16a3 3 0 0 1 2.24 5\" /><path d=\"M18 12h.01\" /><path d=\"M18 21h-8a4 4 0 0 1-4-4 7 7 0 0 1 7-7h.2L9.6 6.4a1 1 0 1 1 2.8-2.8L15.8 7h.2c3.3 0 6 2.7 6 6v1a2 2 0 0 1-2 2h-1a3 3 0 0 0-3 3\" /><path d=\"M20 8.54V4a2 2 0 1 0-4 0v3\" /><path d=\"M7.612 12.524a3 3 0 1 0-1.6 4.3\" />","case-sensitive":"<path d=\"m3 15 4-8 4 8\" /><path d=\"M4 13h6\" /><circle cx=\"18\" cy=\"12\" r=\"3\" /><path d=\"M21 9v6\" />","laugh":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"M18 13a6 6 0 0 1-6 5 6 6 0 0 1-6-5h12Z\" /><line x1=\"9\" x2=\"9.01\" y1=\"9\" y2=\"9\" /><line x1=\"15\" x2=\"15.01\" y1=\"9\" y2=\"9\" />","flower":"<circle cx=\"12\" cy=\"12\" r=\"3\" /><path d=\"M12 16.5A4.5 4.5 0 1 1 7.5 12 4.5 4.5 0 1 1 12 7.5a4.5 4.5 0 1 1 4.5 4.5 4.5 4.5 0 1 1-4.5 4.5\" /><path d=\"M12 7.5V9\" /><path d=\"M7.5 12H9\" /><path d=\"M16.5 12H15\" /><path d=\"M12 16.5V15\" /><path d=\"m8 8 1.88 1.88\" /><path d=\"M14.12 9.88 16 8\" /><path d=\"m8 16 1.88-1.88\" /><path d=\"M14.12 14.12 16 16\" />","bandage":"<path d=\"M10 10.01h.01\" /><path d=\"M10 14.01h.01\" /><path d=\"M14 10.01h.01\" /><path d=\"M14 14.01h.01\" /><path d=\"M18 6v11.5\" /><path d=\"M6 6v12\" /><rect x=\"2\" y=\"6\" width=\"20\" height=\"12\" rx=\"2\" />","paint-bucket":"<path d=\"m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11Z\" /><path d=\"m5 2 5 5\" /><path d=\"M2 13h15\" /><path d=\"M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4Z\" />","droplet":"<path d=\"M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z\" />","play":"<polygon points=\"6 3 20 12 6 21 6 3\" />","arrow-down":"<path d=\"M12 5v14\" /><path d=\"m19 12-7 7-7-7\" />","triangle-alert":"<path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\" /><path d=\"M12 9v4\" /><path d=\"M12 17h.01\" />","folders":"<path d=\"M20 17a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3.9a2 2 0 0 1-1.69-.9l-.81-1.2a2 2 0 0 0-1.67-.9H8a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2Z\" /><path d=\"M2 8v11a2 2 0 0 0 2 2h14\" />","arrow-up":"<path d=\"m5 12 7-7 7 7\" /><path d=\"M12 19V5\" />","shield":"<path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\" />","image":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" ry=\"2\" /><circle cx=\"9\" cy=\"9\" r=\"2\" /><path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\" />","monitor":"<rect width=\"20\" height=\"14\" x=\"2\" y=\"3\" rx=\"2\" /><line x1=\"8\" x2=\"16\" y1=\"21\" y2=\"21\" /><line x1=\"12\" x2=\"12\" y1=\"17\" y2=\"21\" />","scale":"<path d=\"m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z\" /><path d=\"m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z\" /><path d=\"M7 21h10\" /><path d=\"M12 3v18\" /><path d=\"M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2\" />","cloud":"<path d=\"M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z\" />","sliders-horizontal":"<line x1=\"21\" x2=\"14\" y1=\"4\" y2=\"4\" /><line x1=\"10\" x2=\"3\" y1=\"4\" y2=\"4\" /><line x1=\"21\" x2=\"12\" y1=\"12\" y2=\"12\" /><line x1=\"8\" x2=\"3\" y1=\"12\" y2=\"12\" /><line x1=\"21\" x2=\"16\" y1=\"20\" y2=\"20\" /><line x1=\"12\" x2=\"3\" y1=\"20\" y2=\"20\" /><line x1=\"14\" x2=\"14\" y1=\"2\" y2=\"6\" /><line x1=\"8\" x2=\"8\" y1=\"10\" y2=\"14\" /><line x1=\"16\" x2=\"16\" y1=\"18\" y2=\"22\" />","keyboard":"<path d=\"M10 8h.01\" /><path d=\"M12 12h.01\" /><path d=\"M14 8h.01\" /><path d=\"M16 12h.01\" /><path d=\"M18 8h.01\" /><path d=\"M6 8h.01\" /><path d=\"M7 16h10\" /><path d=\"M8 12h.01\" /><rect width=\"20\" height=\"16\" x=\"2\" y=\"4\" rx=\"2\" />","recycle":"<path d=\"M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5\" /><path d=\"M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12\" /><path d=\"m14 16-3 3 3 3\" /><path d=\"M8.293 13.596 7.196 9.5 3.1 10.598\" /><path d=\"m9.344 5.811 1.093-1.892A1.83 1.83 0 0 1 11.985 3a1.784 1.784 0 0 1 1.546.888l3.943 6.843\" /><path d=\"m13.378 9.633 4.096 1.098 1.097-4.096\" />","timer":"<line x1=\"10\" x2=\"14\" y1=\"2\" y2=\"2\" /><line x1=\"12\" x2=\"15\" y1=\"14\" y2=\"11\" /><circle cx=\"12\" cy=\"14\" r=\"8\" />","trash-2":"<path d=\"M3 6h18\" /><path d=\"M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6\" /><path d=\"M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2\" /><line x1=\"10\" x2=\"10\" y1=\"11\" y2=\"17\" /><line x1=\"14\" x2=\"14\" y1=\"11\" y2=\"17\" />","pause":"<rect x=\"14\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\" /><rect x=\"6\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\" />","mail":"<rect width=\"20\" height=\"16\" x=\"2\" y=\"4\" rx=\"2\" /><path d=\"m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7\" />","network":"<rect x=\"16\" y=\"16\" width=\"6\" height=\"6\" rx=\"1\" /><rect x=\"2\" y=\"16\" width=\"6\" height=\"6\" rx=\"1\" /><rect x=\"9\" y=\"2\" width=\"6\" height=\"6\" rx=\"1\" /><path d=\"M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3\" /><path d=\"M12 12V8\" />","flask-round":"<path d=\"M10 2v6.292a7 7 0 1 0 4 0V2\" /><path d=\"M5 15h14\" /><path d=\"M8.5 2h7\" />","settings":"<path d=\"M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z\" /><circle cx=\"12\" cy=\"12\" r=\"3\" />","pencil":"<path d=\"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z\" /><path d=\"m15 5 4 4\" />","landmark":"<line x1=\"3\" x2=\"21\" y1=\"22\" y2=\"22\" /><line x1=\"6\" x2=\"6\" y1=\"18\" y2=\"11\" /><line x1=\"10\" x2=\"10\" y1=\"18\" y2=\"11\" /><line x1=\"14\" x2=\"14\" y1=\"18\" y2=\"11\" /><line x1=\"18\" x2=\"18\" y1=\"18\" y2=\"11\" /><polygon points=\"12 2 20 7 4 7\" />","sliders-vertical":"<line x1=\"4\" x2=\"4\" y1=\"21\" y2=\"14\" /><line x1=\"4\" x2=\"4\" y1=\"10\" y2=\"3\" /><line x1=\"12\" x2=\"12\" y1=\"21\" y2=\"12\" /><line x1=\"12\" x2=\"12\" y1=\"8\" y2=\"3\" /><line x1=\"20\" x2=\"20\" y1=\"21\" y2=\"16\" /><line x1=\"20\" x2=\"20\" y1=\"12\" y2=\"3\" /><line x1=\"2\" x2=\"6\" y1=\"14\" y2=\"14\" /><line x1=\"10\" x2=\"14\" y1=\"8\" y2=\"8\" /><line x1=\"18\" x2=\"22\" y1=\"16\" y2=\"16\" />","satellite":"<path d=\"M13 7 9 3 5 7l4 4\" /><path d=\"m17 11 4 4-4 4-4-4\" /><path d=\"m8 12 4 4 6-6-4-4Z\" /><path d=\"m16 8 3-3\" /><path d=\"M9 21a6 6 0 0 0-6-6\" />","scissors":"<circle cx=\"6\" cy=\"6\" r=\"3\" /><path d=\"M8.12 8.12 12 12\" /><path d=\"M20 4 8.12 15.88\" /><circle cx=\"6\" cy=\"18\" r=\"3\" /><path d=\"M14.8 14.8 20 20\" />","fold-vertical":"<path d=\"M12 22v-6\" /><path d=\"M12 8V2\" /><path d=\"M4 12H2\" /><path d=\"M10 12H8\" /><path d=\"M16 12h-2\" /><path d=\"M22 12h-2\" /><path d=\"m15 19-3-3-3 3\" /><path d=\"m15 5-3 3-3-3\" />","vote":"<path d=\"m9 12 2 2 4-4\" /><path d=\"M5 7c0-1.1.9-2 2-2h10a2 2 0 0 1 2 2v12H5V7Z\" /><path d=\"M22 19H2\" />","joystick":"<path d=\"M21 17a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2Z\" /><path d=\"M6 15v-2\" /><path d=\"M12 15V9\" /><circle cx=\"12\" cy=\"6\" r=\"3\" />","archive":"<rect width=\"20\" height=\"5\" x=\"2\" y=\"3\" rx=\"1\" /><path d=\"M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8\" /><path d=\"M10 12h4\" />","atom":"<circle cx=\"12\" cy=\"12\" r=\"1\" /><path d=\"M20.2 20.2c2.04-2.03.02-7.36-4.5-11.9-4.54-4.52-9.87-6.54-11.9-4.5-2.04 2.03-.02 7.36 4.5 11.9 4.54 4.52 9.87 6.54 11.9 4.5Z\" /><path d=\"M15.7 15.7c4.52-4.54 6.54-9.87 4.5-11.9-2.03-2.04-7.36-.02-11.9 4.5-4.52 4.54-6.54 9.87-4.5 11.9 2.03 2.04 7.36.02 11.9-4.5Z\" />","map":"<path d=\"M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z\" /><path d=\"M15 5.764v15\" /><path d=\"M9 3.236v15\" />","check":"<path d=\"M20 6 9 17l-5-5\" />","film":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /><path d=\"M7 3v18\" /><path d=\"M3 7.5h4\" /><path d=\"M3 12h18\" /><path d=\"M3 16.5h4\" /><path d=\"M17 3v18\" /><path d=\"M17 7.5h4\" /><path d=\"M17 16.5h4\" />","paintbrush":"<path d=\"m14.622 17.897-10.68-2.913\" /><path d=\"M18.376 2.622a1 1 0 1 1 3.002 3.002L17.36 9.643a.5.5 0 0 0 0 .707l.944.944a2.41 2.41 0 0 1 0 3.408l-.944.944a.5.5 0 0 1-.707 0L8.354 7.348a.5.5 0 0 1 0-.707l.944-.944a2.41 2.41 0 0 1 3.408 0l.944.944a.5.5 0 0 0 .707 0z\" /><path d=\"M9 8c-1.804 2.71-3.97 3.46-6.583 3.948a.507.507 0 0 0-.302.819l7.32 8.883a1 1 0 0 0 1.185.204C12.735 20.405 16 16.792 16 15\" />","x":"<path d=\"M18 6 6 18\" /><path d=\"m6 6 12 12\" />","construction":"<rect x=\"2\" y=\"6\" width=\"20\" height=\"8\" rx=\"1\" /><path d=\"M17 14v7\" /><path d=\"M7 14v7\" /><path d=\"M17 3v3\" /><path d=\"M7 3v3\" /><path d=\"M10 14 2.3 6.3\" /><path d=\"m14 6 7.7 7.7\" /><path d=\"m8 6 8 8\" />","square-parking":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /><path d=\"M9 17V7h4a3 3 0 0 1 0 6H9\" />","pen-tool":"<path d=\"M15.707 21.293a1 1 0 0 1-1.414 0l-1.586-1.586a1 1 0 0 1 0-1.414l5.586-5.586a1 1 0 0 1 1.414 0l1.586 1.586a1 1 0 0 1 0 1.414z\" /><path d=\"m18 13-1.375-6.874a1 1 0 0 0-.746-.776L3.235 2.028a1 1 0 0 0-1.207 1.207L5.35 15.879a1 1 0 0 0 .776.746L13 18\" /><path d=\"m2.3 2.3 7.286 7.286\" /><circle cx=\"11\" cy=\"11\" r=\"2\" />","arrow-right":"<path d=\"M5 12h14\" /><path d=\"m12 5 7 7-7 7\" />","arrow-left":"<path d=\"m12 19-7-7 7-7\" /><path d=\"M19 12H5\" />","sun":"<circle cx=\"12\" cy=\"12\" r=\"4\" /><path d=\"M12 2v2\" /><path d=\"M12 20v2\" /><path d=\"m4.93 4.93 1.41 1.41\" /><path d=\"m17.66 17.66 1.41 1.41\" /><path d=\"M2 12h2\" /><path d=\"M20 12h2\" /><path d=\"m6.34 17.66-1.41 1.41\" /><path d=\"m19.07 4.93-1.41 1.41\" />","circle-play":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><polygon points=\"10 8 16 12 10 16 10 8\" />","skip-forward":"<polygon points=\"5 4 15 12 5 20 5 4\" /><line x1=\"19\" x2=\"19\" y1=\"5\" y2=\"19\" />","printer":"<path d=\"M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2\" /><path d=\"M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6\" /><rect x=\"6\" y=\"14\" width=\"12\" height=\"8\" rx=\"1\" />","heart":"<path d=\"M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z\" />","square-check":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /><path d=\"m9 12 2 2 4-4\" />","type":"<polyline points=\"4 7 4 4 20 4 20 7\" /><line x1=\"9\" x2=\"15\" y1=\"20\" y2=\"20\" /><line x1=\"12\" x2=\"12\" y1=\"4\" y2=\"20\" />","bold":"<path d=\"M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8\" />","shopping-bag":"<path d=\"M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z\" /><path d=\"M3 6h18\" /><path d=\"M16 10a4 4 0 0 1-8 0\" />","info":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"M12 16v-4\" /><path d=\"M12 8h.01\" />","cloud-rain":"<path d=\"M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242\" /><path d=\"M16 14v6\" /><path d=\"M8 14v6\" /><path d=\"M12 16v6\" />","snowflake":"<path d=\"m10 20-1.25-2.5L6 18\" /><path d=\"M10 4 8.75 6.5 6 6\" /><path d=\"m14 20 1.25-2.5L18 18\" /><path d=\"m14 4 1.25 2.5L18 6\" /><path d=\"m17 21-3-6h-4\" /><path d=\"m17 3-3 6 1.5 3\" /><path d=\"M2 12h6.5L10 9\" /><path d=\"m20 10-1.5 2 1.5 2\" /><path d=\"M22 12h-6.5L14 15\" /><path d=\"m4 10 1.5 2L4 14\" /><path d=\"m7 21 3-6-1.5-3\" /><path d=\"m7 3 3 6h4\" />","cloud-lightning":"<path d=\"M6 16.326A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 .5 8.973\" /><path d=\"m13 12-3 5h4l-3 5\" />","tag":"<path d=\"M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z\" /><circle cx=\"7.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" />","plane":"<path d=\"M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z\" />","utensils":"<path d=\"M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2\" /><path d=\"M7 2v20\" /><path d=\"M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7\" />","cloud-sun":"<path d=\"M12 2v2\" /><path d=\"m4.93 4.93 1.41 1.41\" /><path d=\"M20 12h2\" /><path d=\"m19.07 4.93-1.41 1.41\" /><path d=\"M15.947 12.65a4 4 0 0 0-5.925-4.128\" /><path d=\"M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6Z\" />","skip-back":"<polygon points=\"19 20 9 12 19 4 19 20\" /><line x1=\"5\" x2=\"5\" y1=\"19\" y2=\"5\" />","user-search":"<circle cx=\"10\" cy=\"7\" r=\"4\" /><path d=\"M10.3 15H7a4 4 0 0 0-4 4v2\" /><circle cx=\"17\" cy=\"17\" r=\"3\" /><path d=\"m21 21-1.9-1.9\" />","maximize":"<path d=\"M8 3H5a2 2 0 0 0-2 2v3\" /><path d=\"M21 8V5a2 2 0 0 0-2-2h-3\" /><path d=\"M3 16v3a2 2 0 0 0 2 2h3\" /><path d=\"M16 21h3a2 2 0 0 0 2-2v-3\" />","square":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" />","volume-x":"<path d=\"M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z\" /><line x1=\"22\" x2=\"16\" y1=\"9\" y2=\"15\" /><line x1=\"16\" x2=\"22\" y1=\"9\" y2=\"15\" />","volume-1":"<path d=\"M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z\" /><path d=\"M16 9a5 5 0 0 1 0 6\" />","mouse-pointer":"<path d=\"M12.586 12.586 19 19\" /><path d=\"M3.688 3.037a.497.497 0 0 0-.651.651l6.5 15.999a.501.501 0 0 0 .947-.062l1.569-6.083a2 2 0 0 1 1.448-1.479l6.124-1.579a.5.5 0 0 0 .063-.947z\" />","headphones":"<path d=\"M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3\" />","tv":"<rect width=\"20\" height=\"15\" x=\"2\" y=\"7\" rx=\"2\" ry=\"2\" /><polyline points=\"17 2 12 7 7 2\" />","radio":"<path d=\"M4.9 19.1C1 15.2 1 8.8 4.9 4.9\" /><path d=\"M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5\" /><circle cx=\"12\" cy=\"12\" r=\"2\" /><path d=\"M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5\" /><path d=\"M19.1 4.9C23 8.8 23 15.1 19.1 19\" />","fire-extinguisher":"<path d=\"M15 6.5V3a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v3.5\" /><path d=\"M9 18h8\" /><path d=\"M18 3h-3\" /><path d=\"M11 3a6 6 0 0 0-6 6v11\" /><path d=\"M5 13h4\" /><path d=\"M17 10a4 4 0 0 0-8 0v10a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2Z\" />","magnet":"<path d=\"m6 15-4-4 6.75-6.77a7.79 7.79 0 0 1 11 11L13 22l-4-4 6.39-6.36a2.14 2.14 0 0 0-3-3L6 15\" /><path d=\"m5 8 4 4\" /><path d=\"m12 15 4 4\" />","move-vertical":"<path d=\"M12 2v20\" /><path d=\"m8 18 4 4 4-4\" /><path d=\"m8 6 4-4 4 4\" />","heart-handshake":"<path d=\"M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z\" /><path d=\"M12 5 9.04 7.96a2.17 2.17 0 0 0 0 3.08c.82.82 2.13.85 3 .07l2.07-1.9a2.82 2.82 0 0 1 3.79 0l2.96 2.66\" /><path d=\"m18 15-2-2\" /><path d=\"m15 18-2-2\" />","party-popper":"<path d=\"M5.8 11.3 2 22l10.7-3.79\" /><path d=\"M4 3h.01\" /><path d=\"M22 8h.01\" /><path d=\"M15 2h.01\" /><path d=\"M22 20h.01\" /><path d=\"m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10\" /><path d=\"m22 13-.82-.33c-.86-.34-1.82.2-1.98 1.11c-.11.7-.72 1.22-1.43 1.22H17\" /><path d=\"m11 2 .33.82c.34.86-.2 1.82-1.11 1.98C9.52 4.9 9 5.52 9 6.23V7\" /><path d=\"M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z\" />","medal":"<path d=\"M7.21 15 2.66 7.14a2 2 0 0 1 .13-2.2L4.4 2.8A2 2 0 0 1 6 2h12a2 2 0 0 1 1.6.8l1.6 2.14a2 2 0 0 1 .14 2.2L16.79 15\" /><path d=\"M11 12 5.12 2.2\" /><path d=\"m13 12 5.88-9.8\" /><path d=\"M8 7h8\" /><circle cx=\"12\" cy=\"17\" r=\"5\" /><path d=\"M12 18v-2h-.5\" />","badge-check":"<path d=\"M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z\" /><path d=\"m9 12 2 2 4-4\" />","badge-plus":"<path d=\"M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z\" /><line x1=\"12\" x2=\"12\" y1=\"8\" y2=\"16\" /><line x1=\"8\" x2=\"16\" y1=\"12\" y2=\"12\" />"};
+const EMO39_MAP={"🧠":"brain","📦":"package","✅":"circle-check","✨":"sparkles","⚡":"zap","🧩":"puzzle","🔬":"microscope","💬":"message-circle","🧪":"flask-conical","🤖":"bot","🎨":"palette","📋":"clipboard-list","💾":"save","🎯":"target","🔎":"search","🔍":"search","🚀":"rocket","🧭":"compass","📝":"notebook-pen","🔔":"bell","🏆":"trophy","🔌":"plug","📁":"folder","🔗":"link","🌐":"globe","🎬":"clapperboard","📱":"smartphone","🔭":"telescope","📄":"file-text","🧊":"box","🔧":"wrench","🎲":"dices","💡":"lightbulb","📚":"library","🪟":"app-window","🧬":"dna","📊":"chart-column","📌":"pin","❌":"circle-x","🎓":"graduation-cap","🔁":"repeat","📈":"trending-up","🤝":"handshake","⭐":"star","💻":"laptop","🌙":"moon","🎮":"gamepad-2","🔑":"key-round","🥊":"swords","🐝":"hexagon","👍":"thumbs-up","📂":"folder-open","🔒":"lock","⛔":"octagon-x","🧾":"receipt","🔩":"nut","🔀":"shuffle","🩺":"stethoscope","📞":"phone","🧱":"brick-wall","🧮":"calculator","💰":"coins","📐":"ruler","📲":"smartphone-nfc","🌱":"sprout","👎":"thumbs-down","🎭":"drama","🐙":"workflow","🎵":"music","🏢":"building-2","🌀":"tornado","🌳":"trees","📥":"inbox","🔓":"lock-open","🧑":"user","🔥":"flame","📜":"scroll-text","🔊":"volume-2","☕":"coffee","🪞":"scan-face","🕒":"clock-3","📍":"map-pin","💭":"message-square-more","🏭":"factory","🔮":"wand-sparkles","📡":"radio-tower","🛑":"octagon","💸":"banknote","👀":"eye","🔐":"lock-keyhole","📅":"calendar","🧹":"eraser","📼":"video","📎":"paperclip","👤":"user","👥":"users","📰":"newspaper","🌊":"waves","🌍":"earth","🆓":"badge-percent","🪴":"sprout","⏳":"hourglass","🐛":"bug","🔄":"refresh-cw","🧰":"briefcase","💳":"credit-card","📏":"ruler","🎫":"ticket","❓":"circle-help","🍎":"apple","🕘":"clock-9","🍏":"apple","🦥":"snail","🤗":"smile","🐤":"bird","📢":"megaphone","💼":"briefcase","🫘":"bean","🛝":"tent-tree","🏓":"circle-dot","🪑":"armchair","🌿":"leaf","🦖":"bone","🕓":"clock-4","✋":"hand","🔨":"hammer","👻":"ghost","🪄":"wand","📒":"notebook","🏠":"house","➕":"plus","➖":"minus","🛒":"shopping-cart","💵":"banknote","💲":"dollar-sign","📉":"trending-down","💨":"wind","📷":"camera","📘":"book","🐞":"bug","🎁":"gift","📤":"upload","🚩":"flag","🔖":"bookmark","🚗":"car","🚆":"train-front","⚪":"circle","📓":"notebook","🚫":"ban","🎤":"mic","🪪":"id-card","📸":"camera","🍄":"sprout","🚘":"car-front","🐍":"worm","🐴":"rabbit","🦃":"bird","🔤":"case-sensitive","😂":"laugh","🌸":"flower","🩹":"bandage","🪣":"paint-bucket","💧":"droplet","▶":"play","⬇":"arrow-down","⚠":"triangle-alert","🗂":"folders","🛠":"wrench","⬆":"arrow-up","🛡":"shield","🖼":"image","🖥":"monitor","⚖":"scale","👁":"eye","☁":"cloud","🎛":"sliders-horizontal","⌨":"keyboard","♻":"recycle","⏱":"timer","🗑":"trash-2","⏸":"pause","✉":"mail","🕸":"network","⚗":"flask-round","⚙":"settings","✏":"pencil","⚔":"swords","🏛":"landmark","🎚":"sliders-vertical","🛰":"satellite","✂":"scissors","🗜":"fold-vertical","🗳":"vote","🕹":"joystick","🗄":"archive","⚛":"atom","⚒":"hammer","🗺":"map","✔":"check","🎞":"film","🖌":"paintbrush","✖":"x","🗣":"megaphone","🏗":"construction","🅿":"square-parking","✒":"pen-tool","➡":"arrow-right","⬅":"arrow-left","☀":"sun","⏯":"circle-play","⏭":"skip-forward","🖨":"printer","♥":"heart","☑":"square-check","🅰":"type","🅱":"bold","❤":"heart","🛍":"shopping-bag","ℹ":"info","🌧":"cloud-rain","❄":"snowflake","⛈":"cloud-lightning","🏷":"tag","✈":"plane","🍽":"utensils","🗃":"archive","🌤":"cloud-sun","⏮":"skip-back","🎙":"mic","🕵":"user-search","⛶":"maximize","⏹":"square","⏺":"circle-dot","🔇":"volume-x","🔈":"volume-1","🔉":"volume-1","🖱":"mouse-pointer","🎧":"headphones","📺":"tv","📻":"radio","🧯":"fire-extinguisher","🧲":"magnet","🧷":"paperclip","🧵":"scissors","🪛":"wrench","🪜":"move-vertical","🧑‍💻":"laptop","👋":"hand","🙏":"heart-handshake","🎉":"party-popper","🥇":"medal","🥈":"medal","🥉":"medal","🏁":"flag","💯":"badge-check","🆕":"badge-plus","🔝":"arrow-up","⬜":"square","⬛":"square","🟢":"circle","🟡":"circle","🔴":"circle","🟠":"circle","🔵":"circle","🟣":"circle","⚫":"circle"};
+
+/* ═══════════════════ PASS 39 — NO EMOJI IN THE INTERFACE ═══════════════════
+   Every emoji the app's own chrome prints (buttons, headings, chips, toasts, menus, tab faces) is drawn as a line
+   icon instead, in the text colour, at the text size. Done at the DOM, not in the 2,400 string literals that carry
+   them: those strings also feed prompts, exports, tests and generated apps, where an <svg> would be wrong.
+   A MutationObserver callback runs as a microtask BEFORE the browser paints, so an emoji written by any code path
+   is replaced before it is ever seen; no flash, no per-call-site edits.
+   Left alone on purpose: what a person or a model wrote (chat replies, markdown, code, editors, inputs). An emoji
+   someone asked a model for is content, and turning it into a monochrome glyph would change what it says.
+   Arrows that iOS would otherwise draw as colour emoji (↗ ↔ ↩) keep their character with the text-style selector. */
+const EMO39_TEXTSTYLE='↗↔↩↘↖↙↕↪⤴⤵▫▪©®™‼⁉';
+const EMO39_SKIP='pre,code,textarea,script,style,svg,[contenteditable="true"],[contenteditable=""],.md,.am-body,.am-text,'+
+  '.oui-root,.xterm,.term,.cm-editor,.CodeMirror,.ee-doc,.of-paper,iframe,[data-emo39="keep"]';
+/* one emoji: a pictograph, then any variation selector, skin tone or ZWJ-joined continuation */
+const EMO39_RE=/\p{Extended_Pictographic}(?:️|︎|[\u{1F3FB}-\u{1F3FF}]|‍\p{Extended_Pictographic}️?)*/gu;
+const EMO39={on:true,n:0,obs:null};
+const emo39Svg=name=>`<svg class="ic39" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-ic39="${name}">${EMO39_SVG[name]||'<circle cx="12" cy="12" r="2.5"/>'}</svg>`;
+/* PURE. Which icon an emoji becomes; '' = keep it as a text-style character; null = no icon (drop it). */
+function emo39Icon(e){
+  const base=String(e||'').replace(/[︎️]/g,'');
+  if(EMO39_MAP[base])return EMO39_MAP[base];
+  const first=[...base][0]||'';
+  if(EMO39_TEXTSTYLE.includes(first))return '';
+  if(EMO39_MAP[first])return EMO39_MAP[first];
+  return null;
+}
+/* PURE. Split text into plain runs and emoji: [{t:'text'}|{e:'⚙',icon:'settings'|''|null}]. */
+function emo39Split(text){
+  const out=[];let last=0;const s=String(text||'');
+  EMO39_RE.lastIndex=0;let m;
+  while((m=EMO39_RE.exec(s))){
+    if(m.index>last)out.push({t:s.slice(last,m.index)});
+    out.push({e:m[0],icon:emo39Icon(m[0])});last=m.index+m[0].length;
+  }
+  if(last<s.length)out.push({t:s.slice(last)});
+  return out;
+}
+/* PURE. Text with the emoji removed (attributes, <option>, document titles) — text-style arrows kept. */
+function emo39Strip(text){
+  return emo39Split(text).map(p=>p.t!=null?p.t:(p.icon===''?p.e.replace(/[︎️]/g,'')+'︎':'')).join('')
+    .replace(/^\s+(?=\S)/,'').replace(/ {2,}/g,' ');
+}
+const emo39Human=n=>String(n||'').replace(/-\d+$/,'').replace(/-/g,' ').replace(/^./,c=>c.toUpperCase());
+function emo39Skip(el){return !el||!el.closest||!!el.closest(EMO39_SKIP);}
+function emo39TextNode(node){
+  const t=node.nodeValue;if(!t)return;
+  EMO39_RE.lastIndex=0;if(!EMO39_RE.test(t))return;
+  const p=node.parentElement;if(!p||emo39Skip(p))return;
+  if(/^(OPTION|TITLE|OPTGROUP|TEXTAREA)$/.test(p.tagName)){node.nodeValue=emo39Strip(t);EMO39.n++;return;}
+  const parts=emo39Split(t);
+  const frag=document.createDocumentFragment();let firstIcon='';
+  parts.forEach((x,i)=>{
+    if(x.t!=null){frag.appendChild(document.createTextNode(x.t));return;}
+    if(x.icon===''){frag.appendChild(document.createTextNode(x.e.replace(/[︎️]/g,'')+'︎'));return;}
+    if(x.icon===null){
+      /* an emoji with no icon still leaves a mark if it was the whole label, so the control is not blank */
+      if(parts.length===1){const sp=document.createElement('span');sp.className='emo39';sp.innerHTML=emo39Svg('');frag.appendChild(sp);}
+      return;
+    }
+    const sp=document.createElement('span');sp.className='emo39';sp.innerHTML=emo39Svg(x.icon);frag.appendChild(sp);
+    if(!firstIcon)firstIcon=x.icon;
+  });
+  node.replaceWith(frag);EMO39.n++;
+  /* An icon-only control keeps an accessible name: its title, else the icon's own name. */
+  const ctl=p.closest('button,a,[role="button"],.chip,.tab');
+  if(ctl&&!ctl.getAttribute('aria-label')&&!(ctl.textContent||'').trim()){
+    ctl.setAttribute('aria-label',emo39Strip(ctl.getAttribute('title')||'')||emo39Human(firstIcon)||'Button');
+  }
+}
+const EMO39_ATTRS=['title','aria-label','placeholder','alt','data-l36'];
+function emo39Attrs(el){
+  if(emo39Skip(el)&&!el.matches('textarea,[contenteditable]'))return;
+  for(const a of EMO39_ATTRS){
+    const v=el.getAttribute&&el.getAttribute(a);if(!v)continue;
+    EMO39_RE.lastIndex=0;if(EMO39_RE.test(v)){const nv=emo39Strip(v);if(nv!==v)el.setAttribute(a,nv);}
+  }
+}
+function emo39Scan(root){
+  if(!EMO39.on||!root)return;
+  if(root.nodeType===3){emo39TextNode(root);return;}
+  if(root.nodeType!==1&&root.nodeType!==11)return;
+  if(root.nodeType===1){if(root.closest&&root.closest('svg'))return;emo39Attrs(root);}
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_ELEMENT|NodeFilter.SHOW_TEXT,{acceptNode:n=>{
+    if(n.nodeType===1)return n.matches(EMO39_SKIP)&&!n.matches('textarea')?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT;
+    return NodeFilter.FILTER_ACCEPT;}});
+  const texts=[];let n;
+  while((n=w.nextNode())){if(n.nodeType===3)texts.push(n);else emo39Attrs(n);}
+  texts.forEach(emo39TextNode);
+}
+function emo39Start(){
+  if(EMO39.obs)return;
+  emo39Scan(document.body);
+  if(document.title)document.title=emo39Strip(document.title);
+  EMO39.obs=new MutationObserver(recs=>{
+    if(!EMO39.on)return;
+    for(const r of recs){
+      if(r.type==='characterData')emo39TextNode(r.target);
+      else if(r.type==='attributes'){if(r.target.nodeType===1)emo39Attrs(r.target);}
+      else r.addedNodes.forEach(emo39Scan);
+    }
+    EMO39.obs.takeRecords();      // our own replacements are already clean
+  });
+  EMO39.obs.observe(document.documentElement,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:EMO39_ATTRS});
+}
+/* For the layout check and the gauntlet: emoji still drawn in the visible chrome of a root. */
+function emo39Left(root){
+  const out=[];const w=document.createTreeWalker(root||document.body,NodeFilter.SHOW_TEXT);let n;
+  while((n=w.nextNode())){
+    const p=n.parentElement;if(!p||emo39Skip(p))continue;
+    EMO39_RE.lastIndex=0;const m=n.nodeValue.match(EMO39_RE);if(!m)continue;
+    const real=m.filter(e=>emo39Icon(e)!=='');if(!real.length)continue;
+    const b=p.getBoundingClientRect();if(!b.width&&!b.height)continue;
+    out.push(real.join('')+' in '+(p.id?'#'+p.id:p.tagName.toLowerCase()+(p.className&&typeof p.className==='string'?'.'+p.className.split(' ')[0]:'')));
+  }
+  return out;
+}
+
+/* ═══════════════════ PASS 39 — PHONE NAVIGATION ═══════════════════
+   The phone tab bar is four HUBS and All. Together the four hold every section that is switched on, so nothing
+   the person picked at setup is more than two taps away. Each hub shows its sections as a scrolling segmented
+   row under the title (the iOS pattern: tab bar for places, segmented control for views of a place).
+     · Auto (default): the hubs come from the setup answers. Chat is always first; the three hubs with the most
+       of what the person picked come next; every other section joins its nearest hub, so the four stay complete.
+     · Custom: rename a hub, give it another icon, move sections between hubs, reorder, all on the phone.
+   Classic view on a phone is the one scrolling row of tabs across the top. Phone and desktop keep their own
+   choice, so picking Classic on a phone does not move the desktop sidebar.
+   Home Screen app (iOS standalone): the tab bar sits on the home indicator like a native one, content runs
+   under the glass, and a measured correction closes the bottom gap some iOS 26 builds leave (WebKit 158055568:
+   the layout viewport ends where Safari's toolbar would have been). The correction has an Off switch and a
+   manual knob, because only the phone itself can say what it measured. */
+const HUB39_CAND=[
+  {id:'chat',  label:'Chat',   icon:'assistant',groups:['talk','setup']},
+  {id:'make',  label:'Create', icon:'gen',      groups:['make']},
+  {id:'build', label:'Build',  icon:'studio',   groups:['build']},
+  {id:'agents',label:'Agents', icon:'vo',       groups:['agents']},
+  {id:'models',label:'Models', icon:'modelhub', groups:['models']},
+  {id:'know',  label:'Brain',  icon:'brain',    groups:['know']},
+];
+/* Where a hub that did not get a slot goes — the closest family first. */
+const HUB39_NEAR={make:['build','know','agents'],build:['make','agents','know'],agents:['know','build','make'],
+  models:['know','agents','build','make'],know:['models','agents','build','make']};
+const HUB39_DEFAULT=['make','agents','know'];
+const HUB39_SLOTS=4;
+let HUB39=Object.assign({mode:'',auto:true,slots:[],last:{},gap:'auto'},store.get('hub39',{}));
+const hub39Save=()=>store.set('hub39',HUB39);
+/* PURE. Hubs from what is switched on (in the person's order) and what their setup answers asked for.
+   Every id in `visible` lands in exactly one hub. */
+function hub39Auto(visible,wanted,groupOf){
+  const want=new Set(wanted||[]);
+  const views={};HUB39_CAND.forEach(c=>views[c.id]=[]);
+  (visible||[]).forEach(v=>{
+    const g=groupOf(v);
+    const c=HUB39_CAND.find(c=>c.groups.includes(g))||HUB39_CAND.find(c=>c.id==='know');
+    views[c.id].push(v);
+  });
+  const score=id=>views[id].filter(v=>want.has(v)).length;
+  const rest=HUB39_CAND.filter(c=>c.id!=='chat'&&views[c.id].length).map(c=>c.id);
+  const picked=want.size?rest.slice().sort((a,b)=>score(b)-score(a)||HUB39_DEFAULT.concat(rest).indexOf(a)-HUB39_DEFAULT.concat(rest).indexOf(b))
+    :HUB39_DEFAULT.filter(id=>rest.includes(id)).concat(rest.filter(id=>!HUB39_DEFAULT.includes(id)));
+  const chosen=['chat'].concat(picked.slice(0,HUB39_SLOTS-1));
+  const slots=chosen.map(id=>{const c=HUB39_CAND.find(x=>x.id===id);return{id,label:c.label,icon:c.icon,views:views[id].slice()};});
+  HUB39_CAND.forEach(c=>{
+    if(chosen.includes(c.id)||!views[c.id].length)return;
+    const to=(HUB39_NEAR[c.id]||[]).find(x=>chosen.includes(x))||'chat';
+    slots.find(s=>s.id===to).views.push(...views[c.id]);
+  });
+  /* keep the person's own order inside a hub */
+  const rank=new Map((visible||[]).map((v,i)=>[v,i]));
+  slots.forEach(s=>s.views.sort((a,b)=>rank.get(a)-rank.get(b)));
+  return slots.filter(s=>s.views.length||s.id==='chat');
+}
+/* PURE. A saved (custom) layout made complete again: drop what is switched off, de-duplicate, and put any section
+   that is on but in no hub into the hub auto mode would have used — a newly added section is never stranded. */
+function hub39Complete(saved,auto,visible){
+  const vis=new Set(visible||[]),seen=new Set();
+  const slots=(saved||[]).slice(0,HUB39_SLOTS).map(s=>({id:String(s.id||''),label:String(s.label||'Hub').slice(0,18),
+    icon:String(s.icon||''),views:(s.views||[]).filter(v=>vis.has(v)&&!seen.has(v)&&seen.add(v))}));
+  if(!slots.length)return auto;
+  (visible||[]).forEach(v=>{
+    if(seen.has(v))return;seen.add(v);
+    const home=(auto.find(a=>a.views.includes(v))||{}).id;
+    (slots.find(s=>s.id===home)||slots[slots.length-1]).views.push(v);
+  });
+  return slots;
+}
+function hub39Visible(){
+  return (typeof tabOrderedIds==='function'?tabOrderedIds():REGISTRY.tabs.map(t=>t.id)).filter(id=>!tabHidden(id));
+}
+function hub39Wanted(){
+  return (ONB.picks||[]).map(id=>ONB_INTERESTS.find(x=>x.id===id)).filter(Boolean).flatMap(i=>(i.core||[]).concat(i.more||[]));
+}
+function hub39Slots(){
+  const vis=hub39Visible();
+  const auto=hub39Auto(vis,hub39Wanted(),v=>(typeof tabGroupOf==='function'&&tabGroupOf(v))||'');
+  return HUB39.auto||!(HUB39.slots||[]).length?auto:hub39Complete(HUB39.slots,auto,vis);
+}
+const hub39Of=(slots,view)=>(slots||[]).find(s=>s.views.includes(view))||null;
+/* PURE. Which navigation a width gets. Phones have their own choice; wider screens keep the desktop setting. */
+function navTabPos39(width,mode,tabPos){
+  if(width<SHELL36_WIDE)return mode==='classic'?'top':'auto';
+  return tabPos||'auto';
+}
+const navPos39=()=>navTabPos39(innerWidth,HUB39.mode,UI.tabPos);
+function hub39SetMode(mode){
+  HUB39.mode=mode==='classic'?'classic':'tabs';hub39Save();
+  if(document.documentElement.getAttribute('data-navsheet')==='1')shellNavSheet36(false);
+  applyTabPos();applyUI();
+  toast(HUB39.mode==='classic'?'Classic view: every section in one row across the top':'Tab bar: four hubs at the bottom',2600);
+}
+const hub39Ic=k=>ic36(k)||ic36('ui:grid');
+function dock39Render(){
+  const d=document.getElementById('dock36');if(!d)return;
+  const slots=hub39Slots();
+  const key=JSON.stringify(slots.map(s=>[s.id,s.label,s.icon,s.views.length]));
+  if(d.dataset.k39!==key){
+    d.dataset.k39=key;
+    d.innerHTML=slots.map(s=>`<button type="button" data-hub39="${esc(s.id)}" aria-label="${esc(s.label)}, ${s.views.length} section${s.views.length===1?'':'s'}">${hub39Ic(s.icon)}<span>${esc(s.label)}</span></button>`).join('')+
+      `<button type="button" data-d36="__all" aria-expanded="false" aria-controls="tabs">${ic36('ui:grid')}<span>All</span></button>`;
+  }
+  return slots;
+}
+function dock39Sync(){
+  const d=document.getElementById('dock36');if(!d)return;
+  const slots=dock39Render()||[];
+  const v=shellCurrent36(),sheet=document.documentElement.getAttribute('data-navsheet')==='1';
+  const hub=hub39Of(slots,v);
+  if(hub&&HUB39.last[hub.id]!==v){HUB39.last[hub.id]=v;hub39Save();}
+  d.querySelectorAll('button').forEach(b=>{
+    const on=b.dataset.d36==='__all'?(sheet||!hub):(!sheet&&!!hub&&b.dataset.hub39===hub.id);
+    b.classList.toggle('on',on);
+    if(b.dataset.hub39)b.setAttribute('aria-current',on?'page':'false');
+    if(b.dataset.d36==='__all')b.setAttribute('aria-expanded',sheet?'true':'false');
+  });
+  subnav39(hub,v);
+}
+function dock39Tap(id){
+  const slots=hub39Slots(),s=slots.find(x=>x.id===id);if(!s||!s.views.length)return;
+  const cur=shellCurrent36();
+  shellNavSheet36(false);
+  if(s.views.includes(cur)){
+    /* tapping the hub you are in goes back to its first section, then to the top — the iOS "pop to root" */
+    const v=document.querySelector('.view.active');
+    if(cur!==s.views[0]&&(!v||v.scrollTop<8))return go(s.views[0]);
+    if(v)v.scrollTo({top:0,behavior:'smooth'});return;
+  }
+  const last=HUB39.last[id];
+  go(s.views.includes(last)?last:s.views[0]);
+}
+/* The hub's sections as a segmented row under the title. Hidden when a hub has one section or outside the tab bar. */
+function subnav39(hub,v){
+  let el=document.getElementById('subnav39');
+  const head=document.querySelector('header.top');if(!head)return;
+  const show=document.documentElement.getAttribute('data-shell')==='dock'&&hub&&hub.views.length>1;
+  document.documentElement.setAttribute('data-sub39',show?'1':'0');
+  if(!show){if(el)el.hidden=true;return;}
+  if(!el){
+    /* a bar of its own under the title bar: the phone title bar is one row by design (onerow) */
+    el=document.createElement('nav');el.id='subnav39';el.className='seg39';el.setAttribute('aria-label','Sections in this hub');
+    el.onclick=e=>{const b=e.target.closest('[data-sub39]');if(b)go(b.dataset.sub39);};
+    head.after(el);
+  }
+  el.hidden=false;
+  const key=hub.id+'|'+hub.views.join(',')+'|'+v;
+  if(el.dataset.k!==key){
+    el.dataset.k=key;
+    el.innerHTML=hub.views.map(id=>{
+      const t=REGISTRY.tabs.find(x=>x.id===id);const lab=(UI.tabLabels&&UI.tabLabels[id])||(t&&t.text)||id;
+      return `<button type="button" data-sub39="${esc(id)}"${id===v?' class="on" aria-current="page"':''}>${esc(lab)}</button>`;}).join('');
+    const a=el.querySelector('.on');
+    if(a)try{a.scrollIntoView({block:'nearest',inline:'center'});}catch(_){}
+  }
+}
+
+/* ── Home Screen app ───────────────────────────────────────────────────── */
+function standalone39(){
+  try{return matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches||navigator.standalone===true;}
+  catch(_){return false;}
+}
+/* PURE. The bottom gap to close: how far the app's area falls short of the screen, only in a Home Screen app,
+   only in a believable range (a keyboard or a split view is not a gap). */
+function vgap39(screenH,innerH,isStandalone,setting){
+  if(!isStandalone||setting==='off')return 0;
+  if(Number.isFinite(+setting)&&setting!==''&&setting!=='auto')return Math.max(0,Math.min(160,Math.round(+setting)));
+  const g=Math.round((+screenH||0)-(+innerH||0));
+  return g>2&&g<=160?g:0;
+}
+function screenH39(){
+  const a=screen.width||0,b=screen.height||0,land=innerWidth>innerHeight;
+  return land?Math.min(a,b):Math.max(a,b);
+}
+function safeArea39(){
+  const p=document.createElement('div');
+  p.style.cssText='position:fixed;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0';
+  document.body.appendChild(p);const s=getComputedStyle(p);const r={top:parseFloat(s.paddingTop)||0,bottom:parseFloat(s.paddingBottom)||0};p.remove();
+  return r;
+}
+function home39Apply(){
+  const de=document.documentElement,sa=standalone39();
+  de.setAttribute('data-standalone',sa?'1':'0');
+  /* A keyboard on screen shrinks the viewport too; never "correct" for it. */
+  const kb=window.visualViewport&&visualViewport.height<innerHeight-80;
+  const g=kb?0:vgap39(screenH39(),innerHeight,sa,HUB39.gap);
+  de.style.setProperty('--vgap39',g+'px');
+  return g;
+}
+function home39Report(){
+  const sa=safeArea39();
+  return {standalone:standalone39(),screen:screenH39(),inner:innerHeight,visual:window.visualViewport?Math.round(visualViewport.height):null,
+    safeTop:sa.top,safeBottom:sa.bottom,gap:parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--vgap39'))||0};
+}
+
+/* ── Customise the tab bar ─────────────────────────────────────────────── */
+const HUB39_ICONS=['assistant','lab','gen','studio','three','office','brain','vo','bots','modelhub','local','terminal','factory',
+  'design','creations','library','metrics','webos','settings','help','guards','graphs','spline','history','g:talk','g:make','g:build','g:know'];
+function hub39Edit(){
+  const slots=hub39Slots();
+  const r=home39Report();
+  const name=id=>{const t=REGISTRY.tabs.find(x=>x.id===id);return (UI.tabLabels&&UI.tabLabels[id])||(t&&t.text)||id;};
+  const rows=slots.map((s,i)=>`<div class="hub39-card" data-hubi="${i}">
+      <div class="hub39-top">
+        <details class="hub39-icons"><summary aria-label="Icon for ${esc(s.label)}">${hub39Ic(s.icon)}</summary>
+          <div class="hub39-iconpick">${HUB39_ICONS.map(k=>`<button type="button" data-hubicon="${i}:${esc(k)}" aria-label="${esc(k.replace('g:',''))} icon"${k===s.icon?' class="on"':''}>${hub39Ic(k)}</button>`).join('')}</div></details>
+        <input class="hub39-name" data-hubname="${i}" value="${esc(s.label)}" maxlength="18" aria-label="Hub ${i+1} name">
+        <span class="hub39-move">
+          <button type="button" class="btn ghost small" data-hubup="${i}"${i===0?' disabled':''} aria-label="Move ${esc(s.label)} left">${ic39u('chevron-left')}</button>
+          <button type="button" class="btn ghost small" data-hubdown="${i}"${i===slots.length-1?' disabled':''} aria-label="Move ${esc(s.label)} right">${ic39u('chevron-right')}</button>
+        </span>
+      </div>
+      <div class="hub39-views">${s.views.map(v=>`<label class="hub39-v">${esc(name(v))}${ic39u('move')}
+        <select data-hubmove="${esc(v)}" aria-label="Move ${esc(name(v))} to another hub">${slots.map((o,j)=>`<option value="${j}"${j===i?' selected':''}>${j===i?'Keep in ':'Move to '}${esc(o.label)}</option>`).join('')}</select></label>`).join('')||'<span class="help">No sections — move some here, or it is hidden from the bar.</span>'}</div>
+    </div>`).join('');
+  openModal(`<div class="hub39-edit">
+    <h3 style="margin-top:0">Phone navigation</h3>
+    <div class="seg39 seg39-big" role="radiogroup" aria-label="Layout on a phone">
+      <button type="button" role="radio" data-hubmode="tabs" aria-checked="${HUB39.mode!=='classic'}"${HUB39.mode!=='classic'?' class="on"':''}>Tab bar</button>
+      <button type="button" role="radio" data-hubmode="classic" aria-checked="${HUB39.mode==='classic'}"${HUB39.mode==='classic'?' class="on"':''}>Classic</button>
+    </div>
+    <p class="help">${HUB39.auto?'Built from your setup answers. Change anything below and it becomes yours; every section that is switched on stays in one of the four hubs.':'Your own layout. Sections you switch on later join the hub they belong to.'}</p>
+    <div class="hub39-list">${rows}</div>
+    <div class="row" style="gap:8px;margin-top:12px">
+      <button type="button" class="btn ghost small" id="hub39-auto"${HUB39.auto?' disabled':''}>Rebuild from my setup answers</button>
+      <button type="button" class="btn ghost small" id="hub39-sections">Switch sections on or off</button>
+      <button type="button" class="btn ghost small" id="hub39-redo">Re-run setup</button>
+    </div>
+    <details class="hub39-diag"><summary>Home Screen app fit</summary>
+      <p class="help">On a phone app added to the Home Screen, some iOS versions leave a strip under the tab bar. This closes it by measuring the screen.</p>
+      <div class="row" style="gap:8px;align-items:center">
+        <select id="hub39-gap" aria-label="Bottom gap correction">
+          <option value="auto"${HUB39.gap==='auto'?' selected':''}>Measure automatically</option>
+          <option value="off"${HUB39.gap==='off'?' selected':''}>Off</option>
+          ${[20,40,60,80,100].map(n=>`<option value="${n}"${String(HUB39.gap)===String(n)?' selected':''}>Lower by ${n}pt</option>`).join('')}
+        </select>
+      </div>
+      <p class="mini muted" id="hub39-diagtext">${r.standalone?'Home Screen app':'In the browser'} · screen ${r.screen}pt · app area ${r.inner}pt${r.visual!=null?' · visible '+r.visual+'pt':''} · safe area ${r.safeTop}/${r.safeBottom}pt · correction ${r.gap}pt</p>
+    </details>
+  </div>`);
+  const commit=next=>{HUB39.auto=false;HUB39.slots=next;hub39Save();applyUI();hub39Edit();};
+  const cur=()=>hub39Slots().map(s=>({...s,views:s.views.slice()}));
+  $$('[data-hubmode]').forEach(b=>b.onclick=()=>{hub39SetMode(b.dataset.hubmode);hub39Edit();});
+  $$('[data-hubname]').forEach(inp=>inp.onchange=()=>{const n=cur();n[+inp.dataset.hubname].label=inp.value.trim()||'Hub';commit(n);});
+  $$('[data-hubicon]').forEach(b=>b.onclick=()=>{const [i,k]=b.dataset.hubicon.split(/:(.+)/);const n=cur();n[+i].icon=k;commit(n);});
+  $$('[data-hubup]').forEach(b=>b.onclick=()=>{const i=+b.dataset.hubup,n=cur();[n[i-1],n[i]]=[n[i],n[i-1]];commit(n);});
+  $$('[data-hubdown]').forEach(b=>b.onclick=()=>{const i=+b.dataset.hubdown,n=cur();[n[i+1],n[i]]=[n[i],n[i+1]];commit(n);});
+  $$('[data-hubmove]').forEach(sel=>sel.onchange=()=>{const v=sel.dataset.hubmove,to=+sel.value,n=cur();
+    n.forEach(s=>s.views=s.views.filter(x=>x!==v));n[to].views.push(v);commit(n);});
+  const a=$('#hub39-auto');if(a)a.onclick=()=>{HUB39.auto=true;HUB39.slots=[];hub39Save();applyUI();hub39Edit();};
+  const t=$('#hub39-sections');if(t)t.onclick=()=>openTabManager();
+  const rd=$('#hub39-redo');if(rd)rd.onclick=()=>{ONB.done=false;ONB.step=0;saveOnb();closeModal();onbRender();};
+  const gp=$('#hub39-gap');if(gp)gp.onchange=()=>{HUB39.gap=gp.value;hub39Save();home39Apply();hub39Edit();};
+}
+/* a few UI icons not in the tab set */
+const IC39_UI={'chevron-left':'<path d="m15 18-6-6 6-6"/>','chevron-right':'<path d="m9 18 6-6-6-6"/>',
+  'pencil':'<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
+  'move':'<path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/>',
+  'rows':'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/>','dock':'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 15h18"/>'};
+const ic39u=k=>`<svg class="ic36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC39_UI[k]||''}</svg>`;
+/* The two switches every phone user needs, at the top of the All sheet. */
+function sheet39Build(){
+  if(document.getElementById('sheet39'))return;
+  const el=document.createElement('div');el.id='sheet39';
+  el.innerHTML=`<div class="seg39" role="radiogroup" aria-label="Layout on a phone">
+      <button type="button" role="radio" data-sheetmode="tabs">${ic39u('dock')}Tab bar</button>
+      <button type="button" role="radio" data-sheetmode="classic">${ic39u('rows')}Classic</button></div>
+    <button type="button" class="btn ghost small" id="sheet39-edit">${ic39u('pencil')}Edit tab bar</button>`;
+  el.onclick=e=>{
+    const m=e.target.closest('[data-sheetmode]');if(m)return hub39SetMode(m.dataset.sheetmode);
+    if(e.target.closest('#sheet39-edit')){shellNavSheet36(false);hub39Edit();}
+  };
+  document.getElementById('app').appendChild(el);
+}
+function sheet39Sync(){
+  const el=document.getElementById('sheet39');if(!el)return;
+  el.querySelectorAll('[data-sheetmode]').forEach(b=>{const on=(HUB39.mode==='classic')===(b.dataset.sheetmode==='classic');
+    b.classList.toggle('on',on);b.setAttribute('aria-checked',on?'true':'false');});
+}
+/* One-time moves: a phone that had chosen the top bar keeps it; Liquid Glass becomes the look for an
+   install that never picked an effect (the old default was "none", saved like any other value). */
+function nav39Boot(){
+  if(!HUB39.mode){HUB39.mode=UI.tabPos==='top'?'classic':'tabs';hub39Save();}
+  if(!store.get('fx39',false)){if(!UI.fx||UI.fx==='none'){UI.fx='glass';saveUI();}store.set('fx39',true);}
+  if(UI.iconStyle==='emoji'){UI.iconStyle='line';saveUI();}
+  sheet39Build();
+  const d=document.getElementById('dock36');
+  if(d)d.onclick=e=>{const b=e.target.closest('button');if(!b)return;
+    if(b.dataset.d36==='__all')return shellNavSheet36();
+    if(b.dataset.hub39)dock39Tap(b.dataset.hub39);};
+  home39Apply();
+  addEventListener('resize',()=>{home39Apply();});
+  if(window.visualViewport)visualViewport.addEventListener('resize',()=>home39Apply());
+  try{matchMedia('(display-mode: standalone)').addEventListener('change',()=>home39Apply());}catch(_){}
+  /* iOS leaves a Home Screen app's viewport short after the keyboard closes; re-seat and re-measure */
+  if(standalone39())document.addEventListener('focusout',()=>setTimeout(()=>{try{scrollTo(0,0);}catch(_){}home39Apply();},300));
+}
+
+/* ── Layout check: controls that sit on top of each other, or whose text spills out ──
+   Used by the gauntlet on a fixture, and by the phone crawl on every section. Content that scrolls is checked
+   as laid out (not as clipped), a closed disclosure is skipped, and the fixed tab bar is compared with nothing,
+   because content scrolling under it is the design. */
+function layoutAudit39(root){
+  const R=root||document.querySelector('.view.active');if(!R)return[];
+  const vis=e=>{const d=e.closest('details:not([open])');if(d&&!e.closest('summary'))return false;
+    const s=getComputedStyle(e);if(s.visibility==='hidden'||s.display==='none'||+s.opacity===0)return false;
+    const b=e.getBoundingClientRect();return b.width>2&&b.height>2;};
+  const clipOK=(e,b)=>{let a=e.parentElement;while(a&&a!==document.body){const s=getComputedStyle(a);const o=s.overflowX+s.overflowY;
+    if(/(auto|scroll)/.test(o))return true;
+    if(/(hidden|clip)/.test(o)){const c=a.getBoundingClientRect();if(b.right<=c.left+1||b.left>=c.right-1||b.bottom<=c.top+1||b.top>=c.bottom-1)return false;}
+    a=a.parentElement;}return true;};
+  const L=[...R.querySelectorAll('button,a.btn,.chip,input:not([type=hidden]),select')].filter(vis)
+    .map(e=>({e,b:e.getBoundingClientRect()})).filter(x=>clipOK(x.e,x.b));
+  const nm=e=>e.id||(e.getAttribute('aria-label')||e.textContent||e.tagName).trim().slice(0,22);
+  /* inside a scroller, a control is only drawn where the scroller is — clip to it when comparing with outside */
+  const scroller=e=>{let a=e.parentElement;while(a&&a!==R.parentElement){const s=getComputedStyle(a);if(/(auto|scroll)/.test(s.overflowX+s.overflowY))return a;a=a.parentElement;}return null;};
+  const clipTo=(b,c)=>{const r=c.getBoundingClientRect();return{left:Math.max(b.left,r.left),right:Math.min(b.right,r.right),top:Math.max(b.top,r.top),bottom:Math.min(b.bottom,r.bottom)};};
+  L.forEach(x=>x.s=scroller(x.e));
+  const out=[];
+  for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){
+    const A=L[i],B=L[j];if(A.e.contains(B.e)||B.e.contains(A.e))continue;
+    let a=A.b,b=B.b;
+    if(A.s!==B.s){if(A.s&&!A.s.contains(B.e))a=clipTo(a,A.s);if(B.s&&!B.s.contains(A.e))b=clipTo(b,B.s);}
+    const ox=Math.min(a.right,b.right)-Math.max(a.left,b.left),oy=Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top);
+    if(ox>4&&oy>4)out.push('overlap: '+nm(A.e)+' × '+nm(B.e));
+  }
+  L.forEach(x=>{if(x.e.tagName!=='BUTTON'||getComputedStyle(x.e).overflow!=='visible')return;
+    const rg=document.createRange();rg.selectNodeContents(x.e);const t=rg.getBoundingClientRect();
+    if(t.width>0&&(t.left<x.b.left-3||t.right>x.b.right+3||t.top<x.b.top-3||t.bottom>x.b.bottom+3))out.push('spills: '+nm(x.e));});
+  return out;
+}
+
 /* ═══════════════════ ASSISTANT — the front door ═══════════════════
    A ChatGPT/Codex-shaped surface over everything already in this app. It is deliberately a
    FRONT END, not a new engine: every message runs through the same streamComplete, the same
@@ -56116,6 +56849,7 @@ function renderAsst(){
   $('#asst-auto').textContent=ASST.auto?'⚡ Auto':'🔒 Ask first';
   const gb=$('#asst-genui');if(gb){gb.textContent=GENUI.chat?'✨ UI on':'✨ UI off';gb.setAttribute('aria-pressed',String(!!GENUI.chat));}
   $('#asst-auto').title=ASST.auto?'Tools run without asking':'Every tool call asks you first';
+  $('#asst-auto').setAttribute('aria-pressed',String(!!ASST.auto));$('#asst-auto').setAttribute('aria-label',ASST.auto?'Tools run without asking':'Tools ask first');
 }
 function initAsst(){
   initAsstModes();
@@ -60780,7 +61514,7 @@ function closeModal(){
 const UI_FX={
   none:{label:'Standard',hint:'Glass bars over a calm page. Turns solid with Reduce Transparency.'},
   living:{label:'Living',hint:'A slow light field behind the glass, drawn by one WebGL shader at a quarter resolution. Pauses when hidden or on 3D tabs.'},
-  glass:{label:'Liquid Glass',hint:'Translucent frosted panels with a specular edge and a lit backdrop.'},
+  glass:{label:'Liquid Glass',hint:'The default. Glass title bar, tab bar, sheets and menus over solid content, the way iOS does it.'},
   frost:{label:'Frosted',hint:'Heavier blur, no glow — quieter than glass.'},
   neon:{label:'Neon',hint:'Glowing accent edges and headings.'},
   soft:{label:'Soft',hint:'Borderless cards floating on layered shadows.'},
@@ -60788,7 +61522,7 @@ const UI_FX={
   crt:{label:'CRT',hint:'Scanlines and a monospaced interface.'},
 };
 const UI_DEFAULTS={
-  fx:'none',fxReduce:true,userCss:'',
+  fx:'glass',fxReduce:true,userCss:'',
   hiddenTabs:[],hiddenCards:[],tabOrder:[],foldedGroups:[],groupOrder:[],
   theme:'dark',tokens:{},density:'comfortable',scale:1,radius:14,
   font:'system',mono:'system',motion:true,
@@ -63809,7 +64543,7 @@ function onbApply(){
   const keep=new Set(onbTabsFor(ONB.picks,ONB.level));
   const all=REGISTRY.tabs.map(t=>t.id);
   UI.hiddenTabs=all.filter(id=>!keep.has(id));
-  ONB.done=true;saveOnb();saveUI();applyUI();
+  ONB.done=true;saveOnb();HUB39.auto=true;HUB39.slots=[];hub39Save();saveUI();applyUI();
   go(firstVisibleTab());
   closeModal();
   toast(`Set up with ${keep.size} sections — add any of the other ${UI.hiddenTabs.length} anytime from the ＋ button`,6000);
@@ -63860,8 +64594,10 @@ function onbRender(){
             <b>${esc(t)}</b><i>${esc(d)}</i></button>`).join('')}
       </div>
       <div class="onb-prev">
-        <p class="help" style="margin:0 0 6px"><b>Your top bar will be:</b></p>
+        <p class="help" style="margin:0 0 6px"><b>Your sections:</b></p>
         <div>${named}</div>
+        <p class="help" style="margin:10px 0 6px"><b>On a phone, the tab bar:</b> ${(()=>{try{const vis=tabs;const s=hub39Auto(vis,(ONB.picks||[]).map(id=>ONB_INTERESTS.find(x=>x.id===id)).filter(Boolean).flatMap(i=>(i.core||[]).concat(i.more||[])),v=>tabGroupOf(v)||'');
+          return s.map(x=>'<span class="onb-chip">'+esc(x.label)+' · '+x.views.length+'</span>').join('');}catch(_){return '';}})()}</p>
         ${hidden>0?`<p class="help" style="margin:8px 0 0">${hidden} other section${hidden===1?'':'s'} stay
           available — press <b>＋</b> at the end of the bar, or <span class="kbd">⌘K</span>, to bring any of them back.</p>`:''}
       </div>
@@ -63900,7 +64636,7 @@ function onbMaybe(){
    keeps its identity, its scroll position and its event handlers across a move. */
 const TABPOS=['auto','top','left','right','bottom'];
 function applyTabPos(){
-  const p=tabPosFor36(innerWidth,TABPOS.includes(UI.tabPos)?UI.tabPos:'auto');
+  const p=tabPosFor36(innerWidth,navPos39());
   document.body.setAttribute('data-tabpos',p);
   const n=$('#tabs');
   if(n)n.setAttribute('aria-orientation',(p==='left'||p==='right')?'vertical':'horizontal');
@@ -67460,9 +68196,10 @@ function wosApplyTheme(){
   root.classList.toggle('has-sky',!!pre.sky);   // NOT 'wos-sky' — that is the sky element's class
   root.classList.toggle('no-anim',WOS.animate===false);
 }
+let WOS_GRID39={rows:7,w:104};
 function wosIconPos(id,i){
   if(WOS.iconPos[id])return WOS.iconPos[id];
-  return{x:18+Math.floor(i/7)*104,y:16+(i%7)*92};
+  return{x:18+Math.floor(i/WOS_GRID39.rows)*WOS_GRID39.w,y:16+(i%WOS_GRID39.rows)*92};
 }
 function wosRender(){
   const root=$('#wos-root');if(!root)return;
@@ -67470,6 +68207,8 @@ function wosRender(){
   wosApplyTheme();
   const apps=wosAllApps();
   const sz=WOS.iconSize||84;
+  {const desk=root.querySelector('.wos-desk');const h=desk&&desk.clientHeight?desk.clientHeight:(root.clientHeight||0)-170;
+    WOS_GRID39={rows:h>0?Math.max(3,Math.min(7,Math.floor((h-sz-16)/92)+1)):7,w:innerWidth<500?Math.max(sz+4,88):104};}
   const icons=apps.map((a,i)=>{
     const p=wosIconPos(a.id,i);
     const folder=a.kind==='project';
@@ -70382,7 +71121,7 @@ async function persistInit(){
    worker updating is NOT the same thing as the user seeing the new app: clients.claim() makes
    a new worker control the page, but the HTML already parsed keeps running until something
    reloads it. This is what lets the app notice and say so. */
-const APP_BUILD='2d318cdbda8c7a22';
+const APP_BUILD='a6812b1214928d53';
 const PWA={reg:null,state:'unknown',why:'',prompt:null,update:null,checking:false,lastCheck:0};
 
 /* ── Staying current, which is the whole problem on iOS ──────────────────────
@@ -74020,7 +74759,7 @@ async function boot(){
   if(TABMODE!=='full'&&!store.get('tipFold',false)){
     setTimeout(()=>{
       if(TABMODE==='full')return;
-      toast('Tip: click a section name in the sidebar to fold it away',6000);
+      toast(innerWidth<SHELL36_WIDE&&HUB39.mode!=='classic'?'Tip: All shows every section; Edit tab bar there changes the four hubs':'Tip: click a section name in the sidebar to fold it away',6000);
       store.set('tipFold',true);
     },2500);
   }
@@ -74277,7 +75016,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     modelBadge,modelMenu,isModelField,modelFieldEnhance,MODEL_FIELD_RX,
     modelRunnable,freeCandidates,modelParamsB,
     primaryModel,setPrimaryModel,renderPrimaryPill,openAutomate,
-    pbKey,pbBradleyTerry,pbBestModel,pbShortlist,pbRoutineMatch,pbParseGenerated,pbCost,pbAdd,pbSelect,pbRun,pbMatchesFromRanking,pbArena,pbVote,pbGenerate,pbRender,get PB(){return PB},set PB(v){PB=v},ledgerClusterOf,ledgerJudge,wilsonLower,ledgerRecord,ledgerUpdate,ledgerMatrix,ledgerRecommend,ledgerRecordDecision,ledgerCalibration,ledgerEscalationThreshold,ledgerTotals,ledgerLesson,toolSignature,toolLoopGuard,instinctAdd,instinctPick,instinctCredit,instinctBlock,instinctConf,learnRng,betaSample,routerPick,routerChoose,routerCandidates,ledgerRowFromReact,ledgerRowsFromS1,ledgerFeedback,ledgerFromReact,ledgerFromS1,s1Diff,s1PathSig,s1SuccessHolds,s1ParseSuccess,s1WireAnswers,s1DecisionGuard,s1SystemOneDecider,S1_DECISION_PRESETS,s1ControlContext,s1PlainText,s1Headings,freeCoolMs,FREE_STICKY,FREE_COOL,harnessNotes,auditChecks,auditSecretScan,auditSnapshot,playtestVerdict,playtestStudio,learnRender,get LEARN(){return LEARN},set LEARN(v){LEARN=v},storageJunkSweep,syncKeep36,specParseTasks,specReady,specCycles,specJsonl,specHandoff,readerUrlOk,gauntletSabotageAsync,addrSpace,sideClamp37,classicNext37,SIDE37,slopCheck37,slopSteer37,get S1MOD(){return S1MOD},s1ModBundle,s1PatchApply,s1PatchGate37,s1Checks37,s1BundleToOps,s1Presets37,s1Consequential37,s1ModApply37,gatewayAllows37,ctTransports38,ctMinutesLeft38,CT38_PRESETS,tutorNext38,tutorPlan38,tutorJson38,recallExtract38,recallMerge38,recallUnion38,recallFind38,RECALL38_FLOOR,stackSkillPaths38,STACK38,dreamItems38,achatOrder38,achatRewind38,shellMode36,tabPosFor36,tabFace36,clamp36,contrast36,ICONS36,DOCK36,fixtureChatSweep,gauntletResidueSweep,saveAChats,gauntletSandbox,cloudNormUrl,bridgeOrder,codespaceBridgeUrl,bridgeBase,cloudPairCode,gtfixContext,gtfixPrompt,gtfixHandoff,gtfixEnv,gtfixOpen,steLint,EXPLAIN_AS,STE_STYLE_BLOCK,h2PathOk,h2Validate,h2Diff,h2Assemble,h2Files,h2ParseReply,h2AnonIds,h2ParseExperience,h2Budget,h2RunTask,h2LibraryAdd,h2Render,reaSniff,reaEntropy,reaStrings,reaClassify,reaWasm,reaJS,reaLedger,reaEvidenceText,reaCliFor,reaGhidraReadOnly,reaInspect,reaHAR,reaSafetensors,reaPE,reaELF,reaMachO,reaRender,lgGraph,lgMerge,lgAppend,mastraWorkflow,mastraStep,graphitiAdd,graphitiAsOf,cogneeAdd,lfBatch,deEvaluate,DE_METRICS,buIndex,e2bRun,genuiRoute,ouiMermaidHydrate,get CLOUD(){return CLOUD},get H2(){return H2},get REA(){return REA},modelKind,modelGroupOf,modelGroups,modelOptionsHTML,modelDatalistHTML,modelListAttrs,modelListsRepaint,catalogSummary,catalogAgeText,catalogStale,artNearest,catalogRefresh,catalogFetchRemote,catalogStatusText,genImageModalities,MODEL_KINDS,get CATALOG_META(){return CATALOG_META},ouiPrepare,ouiStripComments,ouiLex,ouiSplit,ouiParse,ouiEvaluate,ouiSummary,ouiMerge,ouiSerialize,ouiValidate,ouiRuntime,ouiLibFromSpec,ouiLib,ouiSystemPrompt,ouiMount,ouiPaint,ouiSplitMessage,ouiXYChart,ouiPie,ouiMd,ouiFindByPath,ouiInteractionReplay,ouiTok,OUI_R,OUI_LIB_SPEC,artSave,artDelete,artPin,artCollect,artFilter,artKindOf,artBlocksFrom,artBody,artPreviewHtml,artRender,get ARTLIB(){return ARTLIB},set ARTLIB(v){ARTLIB=v},genuiCompare,genuiBodyHTML,genuiHydrate,genuiChatSystem,genuiGenerate,genuiRender,get GENUI(){return GENUI},GENUI_CORE,asstBodyHTML,fwValidate,fwJson,fwEmbedLexical,fwCosine,fwArith,lcRunnable,lcPrompt,lcCoerce,lcFill,lcParallel,lcBranch,liSplit,liIndex,chromaClient,chromaWhere,chromaWhereDoc,instructorCreate,instructorReask,paAgent,paSystem,crewPrompt,crewKickoff,skKernel,skParse,hsPipeline,autogptParse,autogptRun,TF_TASKS,tfPipeline,fwRender,FW_DEMOS,hhCommand,hhSlug,hhHandoffDoc,hhReadmeCommands,hhAddCustom,hhRender,HH_HARNESSES,get HH(){return HH},hhPassOff,hhCollect,hhExperiment,hhSearch,saveLearn,get S1PATHS(){return S1PATHS},pageIsLoopback,localFetchOpts,lnaPermission,ollamaOS,ollamaFixCommands,
+    pbKey,pbBradleyTerry,pbBestModel,pbShortlist,pbRoutineMatch,pbParseGenerated,pbCost,pbAdd,pbSelect,pbRun,pbMatchesFromRanking,pbArena,pbVote,pbGenerate,pbRender,get PB(){return PB},set PB(v){PB=v},ledgerClusterOf,ledgerJudge,wilsonLower,ledgerRecord,ledgerUpdate,ledgerMatrix,ledgerRecommend,ledgerRecordDecision,ledgerCalibration,ledgerEscalationThreshold,ledgerTotals,ledgerLesson,toolSignature,toolLoopGuard,instinctAdd,instinctPick,instinctCredit,instinctBlock,instinctConf,learnRng,betaSample,routerPick,routerChoose,routerCandidates,ledgerRowFromReact,ledgerRowsFromS1,ledgerFeedback,ledgerFromReact,ledgerFromS1,s1Diff,s1PathSig,s1SuccessHolds,s1ParseSuccess,s1WireAnswers,s1DecisionGuard,s1SystemOneDecider,S1_DECISION_PRESETS,s1ControlContext,s1PlainText,s1Headings,freeCoolMs,FREE_STICKY,FREE_COOL,harnessNotes,auditChecks,auditSecretScan,auditSnapshot,playtestVerdict,playtestStudio,learnRender,get LEARN(){return LEARN},set LEARN(v){LEARN=v},storageJunkSweep,syncKeep36,specParseTasks,specReady,specCycles,specJsonl,specHandoff,readerUrlOk,gauntletSabotageAsync,addrSpace,sideClamp37,classicNext37,SIDE37,slopCheck37,slopSteer37,get S1MOD(){return S1MOD},s1ModBundle,s1PatchApply,s1PatchGate37,s1Checks37,s1BundleToOps,s1Presets37,s1Consequential37,s1ModApply37,gatewayAllows37,ctTransports38,ctMinutesLeft38,CT38_PRESETS,tutorNext38,tutorPlan38,tutorJson38,recallExtract38,recallMerge38,recallUnion38,recallFind38,RECALL38_FLOOR,stackSkillPaths38,STACK38,dreamItems38,achatOrder38,achatRewind38,hub39Auto,hub39Complete,hub39Slots,navTabPos39,vgap39,home39Report,emo39Scan,emo39Strip,emo39Split,emo39Icon,emo39Left,layoutAudit39,EMO39_MAP,HUB39_CAND,get HUB39(){return HUB39},shellMode36,tabPosFor36,tabFace36,clamp36,contrast36,ICONS36,DOCK36,fixtureChatSweep,gauntletResidueSweep,saveAChats,gauntletSandbox,cloudNormUrl,bridgeOrder,codespaceBridgeUrl,bridgeBase,cloudPairCode,gtfixContext,gtfixPrompt,gtfixHandoff,gtfixEnv,gtfixOpen,steLint,EXPLAIN_AS,STE_STYLE_BLOCK,h2PathOk,h2Validate,h2Diff,h2Assemble,h2Files,h2ParseReply,h2AnonIds,h2ParseExperience,h2Budget,h2RunTask,h2LibraryAdd,h2Render,reaSniff,reaEntropy,reaStrings,reaClassify,reaWasm,reaJS,reaLedger,reaEvidenceText,reaCliFor,reaGhidraReadOnly,reaInspect,reaHAR,reaSafetensors,reaPE,reaELF,reaMachO,reaRender,lgGraph,lgMerge,lgAppend,mastraWorkflow,mastraStep,graphitiAdd,graphitiAsOf,cogneeAdd,lfBatch,deEvaluate,DE_METRICS,buIndex,e2bRun,genuiRoute,ouiMermaidHydrate,get CLOUD(){return CLOUD},get H2(){return H2},get REA(){return REA},modelKind,modelGroupOf,modelGroups,modelOptionsHTML,modelDatalistHTML,modelListAttrs,modelListsRepaint,catalogSummary,catalogAgeText,catalogStale,artNearest,catalogRefresh,catalogFetchRemote,catalogStatusText,genImageModalities,MODEL_KINDS,get CATALOG_META(){return CATALOG_META},ouiPrepare,ouiStripComments,ouiLex,ouiSplit,ouiParse,ouiEvaluate,ouiSummary,ouiMerge,ouiSerialize,ouiValidate,ouiRuntime,ouiLibFromSpec,ouiLib,ouiSystemPrompt,ouiMount,ouiPaint,ouiSplitMessage,ouiXYChart,ouiPie,ouiMd,ouiFindByPath,ouiInteractionReplay,ouiTok,OUI_R,OUI_LIB_SPEC,artSave,artDelete,artPin,artCollect,artFilter,artKindOf,artBlocksFrom,artBody,artPreviewHtml,artRender,get ARTLIB(){return ARTLIB},set ARTLIB(v){ARTLIB=v},genuiCompare,genuiBodyHTML,genuiHydrate,genuiChatSystem,genuiGenerate,genuiRender,get GENUI(){return GENUI},GENUI_CORE,asstBodyHTML,fwValidate,fwJson,fwEmbedLexical,fwCosine,fwArith,lcRunnable,lcPrompt,lcCoerce,lcFill,lcParallel,lcBranch,liSplit,liIndex,chromaClient,chromaWhere,chromaWhereDoc,instructorCreate,instructorReask,paAgent,paSystem,crewPrompt,crewKickoff,skKernel,skParse,hsPipeline,autogptParse,autogptRun,TF_TASKS,tfPipeline,fwRender,FW_DEMOS,hhCommand,hhSlug,hhHandoffDoc,hhReadmeCommands,hhAddCustom,hhRender,HH_HARNESSES,get HH(){return HH},hhPassOff,hhCollect,hhExperiment,hhSearch,saveLearn,get S1PATHS(){return S1PATHS},pageIsLoopback,localFetchOpts,lnaPermission,ollamaOS,ollamaFixCommands,
     beaconExportLines,beaconSelfLearn,BEACON_SESSION,
     HL_KINDS,HL_TEMPLATES,HL_TARGETS,hlRefs,hlTemplate,hlValidate,hlOverBudget,hlPick,hlParseSpec,hlRun,hlScore,hlBaseline,hlBench,hlDesign,hlModes,hlApplyHooks,hlRender,get HL(){return HL},set HL(v){HL=v},asstModeEntries,freeModelFor,freeRoute,freeSlotWait,get FREE(){return FREE},set FREE(v){FREE=v},get FREE_LOG(){return FREE_LOG},
     HARNESS_LAYERS,harnessAudit,
