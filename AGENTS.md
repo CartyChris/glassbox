@@ -33,6 +33,10 @@ One file is the app: `GlassBox.html` (`index.html` is a byte-identical copy). No
 - No emoji in the interface: `emo39.js` swaps them for Lucide icons at the DOM (MutationObserver, before paint). Do not add an
   emoji to `EMO39_SKIP` zones' chrome; new emoji need an entry in `dev/pass39/p39/emomap.py` (regenerate emo-data.js).
 - Phone layout check: `node dev/pass39/pw/overlap39.mjs <url>` (and `ENG=chromium … 375 812`) must report TOTAL 0.
+- Chat (pass 40, dev/pass40): every Assistant turn renders through `turn40HTML` (all modes — chat, bots, MoA, cascade,
+  scouts, playbooks, harnesses). A turn records `t0/t1`, `th0/th1`, `meta` (`turn40Meta` + `turn40Merge` per tool round,
+  `turn40Estimate` when a provider sends no usage — shown with ≈) and full tool records `{name,status,args,result,ms}`.
+  Answers are Markdown via `md40` (escape first; http(s) links only). Open/closed UI state lives in `T40` WeakMaps.
 
 ## Deploy
 `vercel --prod --yes --scope cloud-ops-game-time` from this folder, then confirm the live `GlassBox.html` hash equals the local one.

@@ -2955,6 +2955,246 @@ label:has(>input[type=number]),label:has(>select):not(.chk){display:inline-flex;
 :root[data-phone39="1"][data-shell="classic"] #asst-modes>*{flex:0 0 auto}
 :root[data-phone39="1"][data-shell="classic"] .asst-thread{flex:1 1 auto;min-height:0;overflow:auto}
 </style>
+<style id="ds40">
+/* ═══════════════════ PASS 40 — CHAT ═══════════════════
+   Answers read like a document (no bubble, full measure); your messages are bubbles on the right. Working detail
+   (steps, thinking, tools) is quiet by default and one tap away; the footer is a row of icon actions and a row of
+   facts. Same tokens as ds39, so light, dark and Liquid Glass all follow. */
+.ic40{width:16px;height:16px;flex:0 0 auto;stroke-width:2}
+.spin40{animation:spin40 1s linear infinite}
+@keyframes spin40{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin40{animation:none}}
+:root[data-motion="off"] .spin40{animation:none}
+
+.asst-thread{gap:18px;scroll-behavior:auto}
+.asst-thread .am.t40{align-self:stretch;max-width:min(100%,820px);background:transparent;border:0;padding:2px 2px 0;font-size:15px;line-height:1.62}
+.asst-thread .am.t40.bot-turn{border-left:2px solid color-mix(in srgb,var(--acc) 40%,transparent);padding-left:12px}
+.asst-thread .am.t40u{position:relative;align-self:flex-end;max-width:min(82%,62ch);padding:10px 14px;border-radius:20px 20px 6px 20px;
+  background:color-mix(in srgb,var(--acc) 16%,var(--panel2));border:0;font-size:15px}
+:root[data-theme="light"] .asst-thread .am.t40u{background:color-mix(in srgb,var(--acc) 10%,#fff);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.t40-att{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink3);margin-bottom:4px}
+.t40-att .ic40{width:13px;height:13px}
+.asst-thread .am.t40u{margin-bottom:30px}
+.t40-uact{position:absolute;right:6px;bottom:-32px;display:flex;gap:2px;opacity:0;transition:opacity .15s}
+.am.t40u:hover .t40-uact,.am.t40u:focus-within .t40-uact{opacity:1}
+@media (hover:none){.t40-uact{opacity:.9}}
+.t40-uact button,.t40-act button{display:inline-grid;place-items:center;width:32px;height:32px;min-width:32px;min-height:32px;padding:0;border:0;border-radius:9px;
+  background:transparent;color:var(--ink3);cursor:pointer}
+.t40-uact button:hover,.t40-act button:hover{background:color-mix(in srgb,var(--ink) 9%,transparent);color:var(--ink)}
+.t40-act button[aria-expanded="true"],.t40-act button[aria-pressed="true"]{color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent)}
+
+/* "Worked for 12s · 3 steps" */
+.t40-wk{display:flex;align-items:center;gap:8px;width:100%;background:transparent;border:0;padding:4px 0;margin:0 0 4px;color:var(--ink3);
+  font:500 13px/1.3 var(--sans);cursor:pointer;text-align:left;min-height:32px}
+.t40-wk i{flex:1;height:1px;background:color-mix(in srgb,var(--ink) 10%,transparent)}
+.t40-wk:hover{color:var(--ink)}
+.t40-chev{transition:transform .18s var(--ease);width:15px;height:15px}
+[aria-expanded="true"]>.t40-chev,.t40-tool.open .t40-chev{transform:rotate(180deg)}
+.t40-steps{display:grid;gap:6px;margin:2px 0 10px;padding-left:10px;border-left:1.5px solid color-mix(in srgb,var(--ink) 10%,transparent)}
+.t40-tool{border-radius:12px;background:color-mix(in srgb,var(--ink) 4.5%,transparent);overflow:hidden}
+.t40-th{display:flex;align-items:center;gap:8px;width:100%;padding:7px 10px;background:transparent;border:0;color:var(--ink);font:500 13px/1.35 var(--sans);
+  cursor:pointer;text-align:left;min-height:36px}
+.t40-th[tabindex="-1"]{cursor:default}
+.t40-st{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;flex:0 0 auto}
+.t40-st .ic40{width:13px;height:13px;stroke-width:2.6}
+.st-ok .t40-st{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
+.st-err .t40-st,.st-declined .t40-st{color:var(--bad);background:color-mix(in srgb,var(--bad) 15%,transparent)}
+.st-blocked .t40-st{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}
+.st-run .t40-st{color:var(--acc)}
+.t40-nm{font-weight:650;white-space:nowrap}
+.t40-sm{flex:1 1 auto;min-width:0;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t40-ms{color:var(--ink3);font:12px var(--mono,ui-monospace,monospace)}
+.t40-warn{font-size:11px;color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);border-radius:999px;padding:1px 7px;white-space:nowrap}
+.t40-tb{padding:0 10px 10px}
+.t40-tb pre{margin:0 0 6px;max-height:260px;overflow:auto;padding:9px 10px;border-radius:9px;background:color-mix(in srgb,var(--bg) 70%,transparent);
+  font:12px/1.5 var(--mono,ui-monospace,monospace);white-space:pre-wrap;word-break:break-word}
+.t40-lbl{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:650;color:var(--ink3);margin:6px 0 4px}
+.t40-lbl .ic40{width:13px;height:13px}
+
+/* Thinking */
+.t40-think{margin:0 0 8px}
+.t40-ts{display:inline-flex;align-items:center;gap:7px;padding:5px 11px 5px 9px;border-radius:999px;border:0;cursor:pointer;min-height:32px;
+  background:color-mix(in srgb,var(--acc2,var(--acc)) 10%,transparent);color:var(--ink2);font:500 13px/1.2 var(--sans)}
+.t40-think.live .t40-ts{color:var(--acc)}
+.t40-tt{margin:8px 0 2px;padding:2px 0 2px 13px;border-left:2px solid color-mix(in srgb,var(--acc2,var(--acc)) 35%,transparent);
+  color:var(--ink3);font-size:13.5px;line-height:1.55;white-space:pre-wrap;max-height:300px;overflow:auto}
+.t40-typing{display:inline-flex;gap:5px;padding:10px 2px}
+.t40-typing i{width:7px;height:7px;border-radius:50%;background:var(--ink3);animation:typ40 1.2s infinite ease-in-out}
+.t40-typing i:nth-child(2){animation-delay:.15s}.t40-typing i:nth-child(3){animation-delay:.3s}
+@keyframes typ40{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
+.t40-err{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 12px;border-radius:12px;margin:4px 0 8px;
+  background:color-mix(in srgb,var(--bad) 12%,transparent);color:var(--ink)}
+.t40-err>.ic40{color:var(--bad)}
+.t40-err span{flex:1 1 200px}
+.t40-err .btn{display:inline-flex;align-items:center;gap:5px}
+
+/* Explain-as row only when asked for */
+.am.t40 .gu-explain{display:none}
+.am.t40.explain-open .gu-explain{display:flex}
+.am.t40 .am-body{white-space:pre-wrap}
+.am.t40 .am-body.am-rich{white-space:normal}
+
+/* Sources */
+.t40-cites{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0 2px}
+.t40-cite{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 4px;border-radius:999px;font-size:12.5px;text-decoration:none;
+  color:var(--ink2);background:color-mix(in srgb,var(--ink) 6%,transparent);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t40-cite b{display:inline-grid;place-items:center;min-width:19px;height:19px;border-radius:50%;font-size:11px;background:color-mix(in srgb,var(--acc) 18%,transparent);color:var(--acc)}
+
+/* Footer */
+.t40-foot{margin-top:8px}
+.t40-act{display:flex;align-items:center;gap:2px;flex-wrap:wrap;margin-left:-6px}
+.t40-audit{font-size:12px;margin-left:6px}
+.t40-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.t40-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font:500 12px/1.35 var(--sans);color:var(--ink3);
+  background:color-mix(in srgb,var(--ink) 5.5%,transparent);border:0;white-space:nowrap;min-height:26px}
+.t40-chip .ic40{width:13px;height:13px}
+.t40-chip i{font-style:normal;opacity:.8}
+.t40-chip.strong{color:var(--ink2)}
+.t40-chip.flag{color:var(--warn);background:color-mix(in srgb,var(--warn) 12%,transparent)}
+button.t40-chip{cursor:pointer}
+button.t40-chip:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 10%,transparent)}
+button.t40-chip.on{color:var(--acc);background:color-mix(in srgb,var(--acc) 13%,transparent)}
+.t40-info{margin-top:8px;border-collapse:collapse;font-size:12.5px;min-width:min(100%,360px)}
+.t40-info th{text-align:left;font-weight:600;color:var(--ink3);padding:3px 14px 3px 0;white-space:nowrap}
+.t40-info td{padding:3px 0;color:var(--ink2);word-break:break-word}
+
+/* Empty state */
+.t40-empty{margin:auto;max-width:720px;width:100%;text-align:center;padding:28px 8px}
+.t40-mark{display:inline-grid;place-items:center;width:58px;height:58px;border-radius:18px;margin-bottom:12px;color:var(--acc);
+  background:color-mix(in srgb,var(--acc) 14%,transparent);box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 18%,transparent)}
+.t40-mark .ic40{width:28px;height:28px}
+.t40-empty h2{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+.t40-conn{font-size:13px;color:var(--ink3);margin:6px 0 18px}
+.t40-sugg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;text-align:left}
+.t40-sugg button{display:flex;gap:11px;align-items:flex-start;padding:13px 14px;border-radius:16px;border:0;cursor:pointer;color:var(--ink);
+  background:color-mix(in srgb,var(--ink) 5%,transparent);font:inherit;min-height:64px;transition:background .15s,transform .15s}
+.t40-sugg button:hover{background:color-mix(in srgb,var(--acc) 11%,transparent)}
+.t40-sugg button:active{transform:scale(.98)}
+.t40-sugg .ic40{width:19px;height:19px;color:var(--acc);margin-top:1px}
+.t40-sugg b{display:block;font-size:14px}
+.t40-sugg small{display:block;color:var(--ink3);font-size:12.5px;margin-top:2px}
+
+/* Thread wrapper + jump to latest */
+.t40-threadwrap{position:relative;flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+.t40-threadwrap>.asst-thread{flex:1 1 auto;min-height:0}
+#asst-jump40{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:3;display:inline-flex;align-items:center;gap:6px;
+  padding:7px 14px;border-radius:999px;border:0;cursor:pointer;font:600 13px var(--sans);color:var(--ink);
+  background:var(--glass,var(--panel2));-webkit-backdrop-filter:blur(18px) saturate(170%);backdrop-filter:blur(18px) saturate(170%);
+  box-shadow:0 8px 24px -8px rgba(0,0,0,.45),var(--glass-rim,none)}
+#asst-jump40[hidden]{display:none}
+
+/* Status strip */
+.t40-status{display:flex;gap:6px;flex:0 0 auto;overflow-x:auto;scrollbar-width:none;padding:2px 0;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent)}
+.t40-status::-webkit-scrollbar{display:none}
+.t40-bar{display:inline-block;width:38px;height:5px;border-radius:3px;background:color-mix(in srgb,var(--ink) 14%,transparent);overflow:hidden}
+.t40-bar i{display:block;height:100%;border-radius:3px;background:var(--good)}
+.ctx-over .t40-bar i{background:var(--bad)}
+.ctx-over{color:var(--bad)!important}
+
+/* Composer */
+.cmp40{flex:0 0 auto;display:flex;flex-direction:column;gap:4px;padding:8px 8px 6px 12px;border-radius:24px;
+  background:color-mix(in srgb,var(--panel2) 92%,transparent);border:.5px solid color-mix(in srgb,var(--ink) 12%,transparent);
+  box-shadow:0 10px 30px -18px rgba(0,0,0,.5);transition:border-color .15s,box-shadow .15s}
+.cmp40:focus-within{border-color:color-mix(in srgb,var(--acc) 55%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 16%,transparent),0 10px 30px -18px rgba(0,0,0,.5)}
+:root[data-theme="light"] .cmp40{background:#fff}
+.cmp40 #asst-input{min-height:44px;max-height:34vh;resize:none;border:0!important;background:transparent!important;box-shadow:none!important;outline:none;
+  padding:8px 2px 4px;font:16px/1.45 var(--sans);color:var(--ink);width:100%}
+.cmp40 #asst-input:focus-visible{outline:none}
+.cmp40-bar{display:flex;align-items:center;gap:6px}
+.cmp40-sp{flex:1}
+.cmp40-hint{font-size:11.5px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (pointer:coarse){.cmp40-hint{display:none}}
+.cmp40-ib{display:inline-grid;place-items:center;width:36px;height:36px;min-width:36px;padding:0;border-radius:50%;border:0;cursor:pointer;
+  color:var(--ink2);background:color-mix(in srgb,var(--ink) 7%,transparent)}
+.cmp40-ib:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 12%,transparent)}
+.cmp40-ib .ic40{width:19px;height:19px}
+.cmp40-send{display:inline-grid;place-items:center;width:38px;height:38px;min-width:38px;padding:0;border-radius:50%;border:0;cursor:pointer;
+  color:var(--on-acc,#fff);background:var(--acc-fill,var(--acc));transition:transform .12s,opacity .15s}
+.cmp40-send .ic40{width:19px;height:19px;stroke-width:2.4}
+.cmp40-send:disabled{opacity:.35;cursor:default}
+.cmp40-send:not(:disabled):active{transform:scale(.92)}
+.cmp40-send.stop{background:var(--ink);color:var(--bg)}
+.cmp40-send.stop .ic40{width:15px;height:15px;fill:currentColor}
+#asst-stop[hidden]{display:none}
+.t40-ctx{display:flex;flex-wrap:wrap;gap:6px;padding-top:2px}
+.t40-ctx[hidden]{display:none}
+.t40-ctxchip{display:inline-flex;align-items:center;gap:6px;padding:4px 4px 4px 9px;border-radius:10px;font-size:12.5px;
+  background:color-mix(in srgb,var(--acc) 11%,transparent);color:var(--ink)}
+.t40-ctxchip small{color:var(--ink3)}
+.t40-ctxchip button{display:inline-grid;place-items:center;width:22px;height:22px;min-width:22px;min-height:22px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--ink3);cursor:pointer}
+.t40-ctxchip .ic40{width:13px;height:13px}
+
+/* + menu and pick lists */
+.t40-menu{position:fixed;z-index:120;min-width:250px;max-width:min(320px,92vw);padding:6px;border-radius:18px;background:var(--glass,var(--panel2));
+  -webkit-backdrop-filter:blur(28px) saturate(180%);backdrop-filter:blur(28px) saturate(180%);box-shadow:var(--shadow-pop),var(--glass-rim,none)}
+.t40-menu button{display:flex;align-items:center;gap:11px;width:100%;padding:9px 10px;border:0;border-radius:12px;background:transparent;color:var(--ink);cursor:pointer;text-align:left;font:inherit;min-height:44px}
+.t40-menu button:hover,.t40-menu button:focus-visible{background:color-mix(in srgb,var(--ink) 9%,transparent)}
+.t40-menu .ic40{width:19px;height:19px;color:var(--acc)}
+.t40-menu b{display:block;font-size:14px;font-weight:600}
+.t40-menu small{display:block;font-size:12px;color:var(--ink3)}
+.t40-pick{display:grid;gap:6px}
+.t40-pick .btn{display:flex;align-items:center;gap:8px;justify-content:flex-start}
+.t40-pick .btn.bad{color:var(--bad)}
+
+/* Chat list */
+#asst-search40{width:100%;min-height:36px;border-radius:10px}
+.asst-chat .t40-pin{width:12px;height:12px;margin-right:4px}
+
+/* Phone */
+@media (max-width:899px){
+  .asst-thread .am.t40{font-size:15.5px}
+  .asst-thread .am.t40u{max-width:88%}
+  #asst-search40{display:none}
+  :root:is([data-shell="dock"],[data-phone39="1"]) :is(#asst-pin38,#asst-dream38){display:none}
+  .cmp40{border-radius:22px}
+  .t40-sugg{grid-template-columns:1fr 1fr;gap:8px}
+  .t40-sugg button{padding:11px 12px;min-height:58px}
+  .t40-sugg small{display:none}
+  .t40-empty{padding:12px 2px}
+  .t40-empty h2{font-size:23px}
+  .t40-empty>.help{display:none}
+}
+
+/* The toolbar never wraps: modes scroll, the switches stay on the right (every width, not only phones) */
+.asst-main>.row:first-child{flex-wrap:nowrap!important;gap:6px!important}
+.asst-main>.row:first-child>#asst-modes{flex:1 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent)}
+.asst-main>.row:first-child>#asst-modes::-webkit-scrollbar{display:none}
+.asst-main>.row:first-child>#asst-modes>*{flex:0 0 auto}
+.asst-main>.row:first-child>span[style*="flex:1"]{display:none}
+.asst-side>.row{flex-wrap:nowrap}
+/* the chat fills the window on a wide screen */
+@media (min-width:900px){:root[data-shell="side"]{--asst-chrome:150px}:root[data-shell="classic"]{--asst-chrome:200px}}
+
+/* Markdown answers */
+.am.t40 .am-body.am-md{white-space:normal}
+.am-md>*:first-child{margin-top:0}.am-md>*:last-child{margin-bottom:0}
+.am-md p{margin:0 0 .75em}
+.am-md h3,.am-md h4,.am-md h5,.am-md h6{margin:1.1em 0 .45em;line-height:1.3;letter-spacing:-.01em}
+.am-md h3{font-size:1.2em}.am-md h4{font-size:1.07em}.am-md h5,.am-md h6{font-size:1em}
+.am-md ul,.am-md ol{margin:0 0 .75em;padding-left:1.35em}
+.am-md li{margin:.2em 0}
+.am-md li.t40-task{list-style:none;margin-left:-1.2em}
+.am-md blockquote{margin:0 0 .75em;padding:2px 0 2px 12px;border-left:3px solid color-mix(in srgb,var(--acc) 45%,transparent);color:var(--ink2)}
+.am-md hr{border:0;border-top:1px solid color-mix(in srgb,var(--ink) 12%,transparent);margin:1em 0}
+.am-md code{font:.88em/1.4 var(--mono,ui-monospace,monospace);padding:.1em .35em;border-radius:6px;background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.am-md a{word-break:break-word}
+.t40-code{margin:0 0 .85em;border-radius:12px;overflow:hidden;background:color-mix(in srgb,var(--bg) 82%,#000 6%);border:.5px solid color-mix(in srgb,var(--ink) 10%,transparent)}
+:root[data-theme="light"] .t40-code{background:#f6f6f8}
+.t40-codeh{display:flex;align-items:center;justify-content:space-between;padding:4px 6px 4px 12px;font:600 11.5px var(--sans);color:var(--ink3);
+  border-bottom:.5px solid color-mix(in srgb,var(--ink) 9%,transparent)}
+.t40-codeh button{display:inline-grid;place-items:center;width:30px;height:30px;min-width:30px;min-height:30px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--ink3);cursor:pointer}
+.t40-codeh button:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 9%,transparent)}
+.t40-code pre{margin:0;padding:11px 13px;overflow:auto;max-height:480px}
+.t40-code code{padding:0;background:none;font:12.5px/1.55 var(--mono,ui-monospace,monospace);white-space:pre}
+.t40-table{overflow-x:auto;margin:0 0 .85em}
+.t40-table table{border-collapse:collapse;font-size:.92em;min-width:100%}
+.t40-table th,.t40-table td{padding:6px 10px;border-bottom:.5px solid color-mix(in srgb,var(--ink) 12%,transparent);text-align:left;vertical-align:top}
+.t40-table th{font-weight:650;color:var(--ink2)}
+/* suggestion cards: text reads left to right */
+.t40-sugg button span{text-align:left}
+</style>
 </head>
 <body>
 <div id="app">
@@ -5276,7 +5516,8 @@ label:has(>input[type=number]),label:has(>select):not(.chk){display:inline-flex;
       <div class="asst-shell">
         <aside class="asst-side">
           <button class="btn small" id="asst-new">＋ New chat</button>
-          <div class="row" style="gap:6px"><button class="btn small ghost" id="asst-pin38">Pin</button><button class="btn small ghost" id="asst-dream38" title="Dream over this chat: propose lessons and ideas for the Brain">Dream</button></div>
+          <div class="row" style="gap:6px"><button class="btn small ghost" id="asst-pin38">Pin</button><button class="btn small ghost" id="asst-dream38" title="Dream over this chat: propose lessons and ideas for the Brain">Dream</button><button class="btn small ghost" id="asst-more40" title="Rename, export, fork or delete this chat" aria-label="Chat actions">⋯</button></div>
+          <input id="asst-search40" type="search" placeholder="Search chats" aria-label="Search chats" autocomplete="off">
           <div id="asst-list" class="asst-list"></div>
         </aside>
         <div class="asst-main">
@@ -5289,14 +5530,20 @@ label:has(>input[type=number]),label:has(>select):not(.chk){display:inline-flex;
             <button class="btn small" id="asst-pop" title="Open in its own window">⤢</button>
           </div>
           <div id="asst-settings" class="asst-settings"></div>
-          <div id="asst-thread" class="asst-thread"></div>
+          <div class="t40-threadwrap"><div id="asst-thread" class="asst-thread" aria-live="polite"></div>
+            <button type="button" id="asst-jump40" data-float hidden>Jump to latest</button></div>
           <div id="asst-slash" class="slash-pop"></div>
-          <div class="row" style="gap:8px;align-items:flex-end">
-            <textarea id="asst-input" rows="3" style="flex:1"
-              placeholder="Ask anything — ⌘/Ctrl+Enter to send. Type / to load a skill."></textarea>
-            <div style="display:flex;flex-direction:column;gap:6px">
-              <button class="btn" id="asst-send">Send</button>
-              <button class="btn small" id="asst-stop">Stop</button>
+          <div id="asst-status40" class="t40-status" role="group" aria-label="Chat status"></div>
+          <div class="cmp40">
+            <div id="asst-ctx40" class="t40-ctx" hidden></div>
+            <textarea id="asst-input" rows="1" aria-label="Message"
+              placeholder="Message the assistant · / for skills"></textarea>
+            <div class="cmp40-bar">
+              <button type="button" class="cmp40-ib" id="asst-plus40" aria-label="Add files, notes, a skill or dictation" title="Add"><svg class="ic40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+              <span class="cmp40-hint">Enter to send · Shift+Enter for a new line · drop files to attach</span>
+              <span class="cmp40-sp"></span>
+              <button class="btn small ghost" id="asst-stop" hidden>Stop</button>
+              <button type="button" class="cmp40-send" id="asst-send" aria-label="Send" disabled></button>
             </div>
           </div>
         </div>
@@ -33716,6 +33963,55 @@ function gauntletCases(g){
       box.innerHTML='<button>One</button><button>Two</button><button>Three</button>';document.body.appendChild(box);
       try{return g.layoutAudit39(box).length;}finally{box.remove();}},antiExpect:v=>v===0});
 
+  /* ── pass 40: chat ── */
+  add({id:'chat-turn-accounting',sub:'assistant',uses:['turn40Meta','turn40Merge','turn40Estimate'],
+    what:'a turn keeps its tokens (in, out, thinking, cached), timing, route and sources from either provider shape, and a tool loop adds its rounds up',
+    run:()=>{const a=g.turn40Meta({model:'ovh/gpt-oss-20b',ttft:412.4,elapsed:2300,cost:0.001,finishReason:'stop',freeFrom:'anthropic/x',
+        usage:{prompt_tokens:1200,completion_tokens:300,completion_tokens_details:{reasoning_tokens:120},prompt_tokens_details:{cached_tokens:800}},
+        annotations:[{type:'url_citation',url_citation:{url:'https://a.example/x',title:'A'}}]},'anthropic/x');
+      const b=g.turn40Meta({usage:{input_tokens:50,output_tokens:20,cache_read_input_tokens:10},elapsed:700,cost:0.0005,annotations:[{type:'url_citation',url_citation:{url:'https://a.example/x'}},{type:'url_citation',url_citation:{url:'https://b.example/'}}]},'anthropic/x');
+      const m=g.turn40Merge(a,b);
+      return [a.tin,a.tout,a.tthink,a.tcache,a.ttft,a.freeFrom?'free':'',m.tin,m.tout,m.tcache,m.ms,m.rounds,m.cites.length,Math.round(m.cost*1e4)].join(',');},
+    expect:v=>v==='1200,300,120,800,412,free,1250,320,810,3000,2,2,15',
+    antiWhat:'and a reply with no usage reports zeros and no cost — an estimate only when asked for, and marked as one',
+    anti:()=>{const x=g.turn40Meta({},'m');const e=g.turn40Estimate(g.turn40Meta({content:'abcdefgh',ctxChars:400},'m'),{content:'abcdefgh',ctxChars:400});
+      return [x.tin,x.tout,x.cost,x.ttft,x.cites.length,e.est,e.tin,e.tout].join(',');},antiExpect:v=>v==='0,0,,,0,true,100,2'});
+  add({id:'chat-turn-labels',sub:'assistant',uses:['turn40Summary','think40Label','tool40Status','fmtDur40','fmtTok40'],
+    what:'a turn that used tools says how long it worked and how many steps; thinking says live seconds, then how long and how many tokens',
+    run:()=>{const m={role:'assistant',t0:1000,t1:13400,tools:[{name:'a',ok:true},{name:'b',ok:false,note:'blocked — not allowed'},{name:'(declined)',ok:false}],
+        reasoning:'hmm',content:'answer',th0:1000,th1:9900,meta:{tthink:1234}};
+      const live={role:'assistant',t0:1000,streaming:true,reasoning:'r',content:'',th0:1000};
+      return [g.turn40Summary(m),g.think40Label(m),g.think40Label(live,5200),m.tools.map(g.tool40Status).join('+'),g.fmtTok40(12345),g.fmtDur40(75000)].join(' | ');},
+    expect:v=>v==='Worked for 12s · 3 steps | Thought for 9s · 1.2k tokens | Thinking… 4s | ok+blocked+declined | 12k | 1m 15s',
+    antiWhat:'and a turn with no tools or no reasoning gets no header at all',
+    anti:()=>g.turn40Summary({tools:[]})+'|'+g.think40Label({reasoning:'  '}),antiExpect:v=>v==='|'});
+  add({id:'chat-turn-renders-everything',sub:'assistant',uses:['turn40HTML'],
+    what:'a finished turn shows its steps header, thinking, every tool, the provider · model chip, tokens, sources and the action row',
+    run:()=>{const m={role:'assistant',content:'Done.',reasoning:'thought',t0:1,t1:4001,th0:1,th1:2001,
+        tools:[{name:'read_web_page',ok:true,status:'ok',args:{url:'https://x'},result:'page',note:'read 1 page'}],
+        meta:{model:'ovh/gpt-oss-20b',requested:'ovh/gpt-oss-20b',tin:900,tout:120,tthink:60,tcache:0,ttft:300,ms:4000,rounds:2,cites:[{url:'https://src.example/a',title:'S'}]}};
+      const h=g.turn40HTML(m,-1);
+      return ['Worked for 4s · 1 step','Thought for 2s','read_web_page','gpt-oss-20b','900 in · 120 out','src.example','data-t40info','2 rounds'].map(k=>h.includes(k)?1:0).join('');},
+    expect:v=>v==='11111111',
+    antiWhat:'and a user message is a bubble with copy / edit / fork, never an assistant footer',
+    anti:()=>{const h=g.turn40HTML({role:'user',content:'hi <b>',shown:'hi <b>'},3);return [h.includes('data-rewind38="3"'),h.includes('&lt;b&gt;'),h.includes('t40-foot')].join(',');},antiExpect:v=>v==='true,true,false'});
+  add({id:'chat-totals-and-search',sub:'assistant',uses:['chatTotals40','chatFind40','att40Block'],
+    what:'the status strip totals a chat, chat search matches titles and what was said, and attachments travel as labelled blocks',
+    run:()=>{const c={cost:0.02,msgs:[{role:'user',content:'q'},{role:'assistant',meta:{tin:100,tout:40,tthink:5}},{role:'assistant',meta:{tin:10,tout:2}}]};
+      const t=g.chatTotals40(c);
+      const L=[{title:'Trip plan',msgs:[{content:'flights to Lisbon'}]},{title:'Code',msgs:[{content:'debounce function'}]}];
+      return [t.tin,t.tout,t.turns,g.chatFind40(L,'lisbon').map(x=>x.title).join(),g.chatFind40(L,'').length,g.att40Block([{name:'a.txt',text:'hello'}])].join('|');},
+    expect:v=>v==='110|42|2|Trip plan|2|### Attached: a.txt\n```\nhello\n```',
+    antiWhat:'and a query that matches nothing finds nothing',
+    anti:()=>g.chatFind40([{title:'x',msgs:[]}],'zzz qqq').length,antiExpect:v=>v===0});
+  add({id:'chat-markdown-safe',sub:'assistant',uses:['md40'],
+    what:'answers render Markdown — code with its language, tables, nested and task lists, quotes, http links — and nothing executable',
+    run:()=>{const h=g.md40('# Title\n\nSome **bold** and `x<y`.\n\n```js\nlet a=1<2;\n```\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n- one\n  - nested\n- [x] done\n\n> quoted\n\nSee https://example.com/a.');
+      return ['<h3>Title</h3>','<b>bold</b>','<code>x&lt;y</code>','<span>js</span>','let a=1&lt;2;','<th>a</th>','<td>2</td>','<ul><li>one<ul><li>nested','checked','<blockquote><p>quoted','href="https://example.com/a"'].map(k=>h.includes(k)?1:0).join('');},
+    expect:v=>v==='11111111111',
+    antiWhat:'and script, javascript: links and raw HTML stay text',
+    anti:()=>{const h=g.md40('<scr'+'ipt>alert(1)</scr'+'ipt> [x](javascript:alert(1)) <img src=x onerror=1>');return /<scr(?=ipt)|href="javascript|<img/i.test(h);},antiExpect:v=>v===false});
+
   add({id:'fixture-chat-sweep',sub:'resilience',uses:['fixtureChatSweep'],
     what:'chats left behind by the old fork self-test are removed, and nothing else is',
     run:()=>{const fx=[{id:'a',title:'fixture',msgs:[{role:'user',content:'Q'},{role:'assistant',content:'A'},{role:'user',content:'Q2'}]},
@@ -40148,6 +40444,13 @@ const GAUNTLET_SABOTAGE=[
   {id:'home-gap-in-browser',export:'vgap39',why:'the bottom correction fires in the browser too and lifts the tab bar off the toolbar',broken:()=>(s,i)=>Math.max(0,Math.round(s-i))},
   {id:'emoji-left-alone',export:'emo39Scan',why:'emoji in buttons and headings are drawn as colour emoji',broken:()=>()=>{}},
   {id:'layout-audit-blind',export:'layoutAudit39',why:'the layout check never reports an overlap',broken:()=>()=>[]},
+
+  /* ── pass 40 ── */
+  {id:'chat-drops-thinking-tokens',export:'turn40Meta',why:'the chat footer never shows thinking or cached tokens',broken:()=>(a,r)=>{const u=(a&&a.usage)||{};return{model:r,requested:r,tin:u.prompt_tokens||0,tout:u.completion_tokens||0,tthink:0,tcache:0,ttft:null,ms:0,finish:'',cites:[],rounds:1,cost:null};}},
+  {id:'chat-tool-loop-forgets-rounds',export:'turn40Merge',why:'a tool loop shows only its last round’s tokens',broken:()=>(a,b)=>b||a},
+  {id:'chat-hides-steps',export:'turn40HTML',why:'the chat shows only the answer, not what the turn did',broken:()=>m=>'<div class="am">'+String(m.content||'')+'</div>'},
+  {id:'chat-search-title-only',export:'chatFind40',why:'chat search ignores what was said in a chat',broken:()=>(L,q)=>(L||[]).filter(c=>!q||String(c.title||'').toLowerCase().includes(String(q).toLowerCase()))},
+  {id:'chat-markdown-raw',export:'md40',why:'answers show raw Markdown asterisks and fences',broken:()=>t=>'<p>'+esc(String(t||''))+'</p>'},
 
   {id:'sandbox-noop',export:'gauntletSandbox',why:'self-test fixtures stay in the person\'s data',broken:()=>()=>()=>{}},
   {id:'fixture-sweep-noop',export:'fixtureChatSweep',why:'the old self-test chats stay in the list',broken:()=>l=>l},
@@ -51306,7 +51609,8 @@ function genuiBodyHTML(content,key){
     if(GENUI.html)t=t.replace(/```(html|svg)[^\n]*\n([\s\S]*?)```/gi,(m,lang,body)=>{const raw=body.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&');
       return `<details class="gu-htmlprev" open><summary>${lang.toLowerCase()==='svg'?'🖼 SVG':'🌐 HTML'} preview <button class="oui-mini" data-gu-saveblock="${esc(lang)}" aria-label="Save this block as an artifact">💾 Save</button></summary>${
         lang.toLowerCase()==='svg'?`<img class="art-img" alt="SVG" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(raw)}">`:artFrame(raw,360)}<textarea hidden class="gu-blk">${esc(raw)}</textarea></details>`;});
-    return t.trim()?'<div class="gu-prose">'+t.replace(/^\n+|\n+$/g,'')+'</div>':'';
+    const sp40=GENUI.html&&/```(mermaid|html|svg)\b/i.test(p.text);
+    return t.trim()?'<div class="gu-prose'+(sp40?'':' am-md')+'">'+(sp40?t.replace(/^\n+|\n+$/g,''):md40(p.text))+'</div>':'';
   }).join('');
 }
 function genuiHydrate(root){
@@ -51348,7 +51652,7 @@ function asstBodyHTML(m){
   const chip=m.route?`<div class="gu-route"><span class="chip-sm" title="${esc(m.route.why)}">🧭 ${esc(m.route.kind)}${m.route.cue?' · “'+esc(m.route.cue)+'”':''}</span></div>`:'';
   const acts=!m.streaming&&m.content&&m.role!=='user'?`<div class="gu-explain" data-gk="${esc(k)}"><span class="help">Explain as</span>${Object.keys(EXPLAIN_AS).map(x=>
     `<button class="oui-mini" data-explain="${x}">${EXPLAIN_AS[x].label}</button>`).join('')}<button class="oui-mini" data-ste-check="1" title="Check this answer against the ASD-STE100 writing rules">✓ STE check</button></div>`:'';
-  return chip+`<div class="am-body${g?' am-rich':''}">${g||esc(m.content)||(m.streaming?'<span class="help">…</span>':'')}</div>`+acts;
+  return chip+`<div class="am-body${g?' am-rich':m.role!=='user'&&m.content?' am-md':''}">${g||(m.role!=='user'&&m.content?md40(m.content):esc(m.content))||(m.streaming?'<span class="help">…</span>':'')}</div>`+acts;
 }
 function steCheckHTML(text){
   const r=steLint(text);
@@ -55888,7 +56192,7 @@ function layoutAudit39(root){
     if(/(auto|scroll)/.test(o))return true;
     if(/(hidden|clip)/.test(o)){const c=a.getBoundingClientRect();if(b.right<=c.left+1||b.left>=c.right-1||b.bottom<=c.top+1||b.top>=c.bottom-1)return false;}
     a=a.parentElement;}return true;};
-  const L=[...R.querySelectorAll('button,a.btn,.chip,input:not([type=hidden]),select')].filter(vis)
+  const L=[...R.querySelectorAll('button,a.btn,.chip,input:not([type=hidden]),select')].filter(e=>!e.closest('[data-float]')).filter(vis)
     .map(e=>({e,b:e.getBoundingClientRect()})).filter(x=>clipOK(x.e,x.b));
   const nm=e=>e.id||(e.getAttribute('aria-label')||e.textContent||e.tagName).trim().slice(0,22);
   /* inside a scroller, a control is only drawn where the scroller is — clip to it when comparing with outside */
@@ -55903,10 +56207,480 @@ function layoutAudit39(root){
     const ox=Math.min(a.right,b.right)-Math.max(a.left,b.left),oy=Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top);
     if(ox>4&&oy>4)out.push('overlap: '+nm(A.e)+' × '+nm(B.e));
   }
-  L.forEach(x=>{if(x.e.tagName!=='BUTTON'||getComputedStyle(x.e).overflow!=='visible')return;
+  L.forEach(x=>{if(x.e.tagName!=='BUTTON'||x.e.querySelector('.spin40')||getComputedStyle(x.e).overflow!=='visible')return;
     const rg=document.createRange();rg.selectNodeContents(x.e);const t=rg.getBoundingClientRect();
     if(t.width>0&&(t.left<x.b.left-3||t.right>x.b.right+3||t.top<x.b.top-3||t.bottom>x.b.bottom+3))out.push('spills: '+nm(x.e));});
   return out;
+}
+
+/* Chat icons — Lucide v0.469.0 (ISC). */
+const IC40={"check":"<path d=\"M20 6 9 17l-5-5\" />","x":"<path d=\"M18 6 6 18\" /><path d=\"m6 6 12 12\" />","loader-circle":"<path d=\"M21 12a9 9 0 1 1-6.219-8.56\" />","shield-alert":"<path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\" /><path d=\"M12 8v4\" /><path d=\"M12 16h.01\" />","chevron-down":"<path d=\"m6 9 6 6 6-6\" />","copy":"<rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\" ry=\"2\" /><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\" />","rotate-ccw":"<path d=\"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8\" /><path d=\"M3 3v5h5\" />","git-fork":"<circle cx=\"12\" cy=\"18\" r=\"3\" /><circle cx=\"6\" cy=\"6\" r=\"3\" /><circle cx=\"18\" cy=\"6\" r=\"3\" /><path d=\"M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9\" /><path d=\"M12 12v3\" />","volume-2":"<path d=\"M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z\" /><path d=\"M16 9a5 5 0 0 1 0 6\" /><path d=\"M19.364 18.364a9 9 0 0 0 0-12.728\" />","brain":"<path d=\"M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z\" /><path d=\"M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z\" /><path d=\"M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4\" /><path d=\"M17.599 6.5a3 3 0 0 0 .399-1.375\" /><path d=\"M6.003 5.125A3 3 0 0 0 6.401 6.5\" /><path d=\"M3.477 10.896a4 4 0 0 1 .585-.396\" /><path d=\"M19.938 10.5a4 4 0 0 1 .585.396\" /><path d=\"M6 18a4 4 0 0 1-1.967-.516\" /><path d=\"M19.967 17.484A4 4 0 0 1 18 18\" />","info":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"M12 16v-4\" /><path d=\"M12 8h.01\" />","link":"<path d=\"M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71\" /><path d=\"M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71\" />","atom":"<circle cx=\"12\" cy=\"12\" r=\"1\" /><path d=\"M20.2 20.2c2.04-2.03.02-7.36-4.5-11.9-4.54-4.52-9.87-6.54-11.9-4.5-2.04 2.03-.02 7.36 4.5 11.9 4.54 4.52 9.87 6.54 11.9 4.5Z\" /><path d=\"M15.7 15.7c4.52-4.54 6.54-9.87 4.5-11.9-2.03-2.04-7.36-.02-11.9 4.5-4.52 4.54-6.54 9.87-4.5 11.9 2.03 2.04 7.36.02 11.9-4.5Z\" />","arrow-up":"<path d=\"m5 12 7-7 7 7\" /><path d=\"M12 19V5\" />","square":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" />","plus":"<path d=\"M5 12h14\" /><path d=\"M12 5v14\" />","paperclip":"<path d=\"M13.234 20.252 21 12.3\" /><path d=\"m16 6-8.414 8.586a2 2 0 0 0 0 2.828 2 2 0 0 0 2.828 0l8.414-8.586a4 4 0 0 0 0-5.656 4 4 0 0 0-5.656 0l-8.415 8.585a6 6 0 1 0 8.486 8.486\" />","mic":"<path d=\"M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z\" /><path d=\"M19 10v2a7 7 0 0 1-14 0v-2\" /><line x1=\"12\" x2=\"12\" y1=\"19\" y2=\"22\" />","globe":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20\" /><path d=\"M2 12h20\" />","zap":"<path d=\"M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z\" />","search":"<circle cx=\"11\" cy=\"11\" r=\"8\" /><path d=\"m21 21-4.3-4.3\" />","ellipsis":"<circle cx=\"12\" cy=\"12\" r=\"1\" /><circle cx=\"19\" cy=\"12\" r=\"1\" /><circle cx=\"5\" cy=\"12\" r=\"1\" />","download":"<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" /><polyline points=\"7 10 12 15 17 10\" /><line x1=\"12\" x2=\"12\" y1=\"15\" y2=\"3\" />","pencil":"<path d=\"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z\" /><path d=\"m15 5 4 4\" />","trash-2":"<path d=\"M3 6h18\" /><path d=\"M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6\" /><path d=\"M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2\" /><line x1=\"10\" x2=\"10\" y1=\"11\" y2=\"17\" /><line x1=\"14\" x2=\"14\" y1=\"11\" y2=\"17\" />","arrow-down":"<path d=\"M12 5v14\" /><path d=\"m19 12-7 7-7-7\" />","sparkles":"<path d=\"M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z\" /><path d=\"M20 3v4\" /><path d=\"M22 5h-4\" /><path d=\"M4 17v2\" /><path d=\"M5 18H3\" />","wrench":"<path d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\" />","clock":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><polyline points=\"12 6 12 12 16 14\" />","coins":"<circle cx=\"8\" cy=\"8\" r=\"6\" /><path d=\"M18.09 10.37A6 6 0 1 1 10.34 18\" /><path d=\"M7 6h1v4\" /><path d=\"m16.71 13.88.7.71-2.82 2.82\" />","layers":"<path d=\"M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z\" /><path d=\"M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12\" /><path d=\"M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17\" />","gauge":"<path d=\"m12 14 4-4\" /><path d=\"M3.34 19a10 10 0 1 1 17.32 0\" />","message-circle":"<path d=\"M7.9 20A9 9 0 1 0 4 16.1L2 22Z\" />","lightbulb":"<path d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\" /><path d=\"M9 18h6\" /><path d=\"M10 22h4\" />","code":"<polyline points=\"16 18 22 12 16 6\" /><polyline points=\"8 6 2 12 8 18\" />","file-text":"<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\" /><path d=\"M14 2v4a2 2 0 0 0 2 2h4\" /><path d=\"M10 9H8\" /><path d=\"M16 13H8\" /><path d=\"M16 17H8\" />","pen-line":"<path d=\"M12 20h9\" /><path d=\"M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z\" />","cpu":"<rect width=\"16\" height=\"16\" x=\"4\" y=\"4\" rx=\"2\" /><rect width=\"6\" height=\"6\" x=\"9\" y=\"9\" rx=\"1\" /><path d=\"M15 2v2\" /><path d=\"M15 20v2\" /><path d=\"M2 15h2\" /><path d=\"M2 9h2\" /><path d=\"M20 15h2\" /><path d=\"M20 9h2\" /><path d=\"M9 2v2\" /><path d=\"M9 20v2\" />","circle-alert":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><line x1=\"12\" x2=\"12\" y1=\"8\" y2=\"12\" /><line x1=\"12\" x2=\"12.01\" y1=\"16\" y2=\"16\" />","flask-conical":"<path d=\"M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2\" /><path d=\"M6.453 15h11.094\" /><path d=\"M8.5 2h7\" />","users":"<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\" /><circle cx=\"9\" cy=\"7\" r=\"4\" /><path d=\"M22 21v-2a4 4 0 0 0-3-3.87\" /><path d=\"M16 3.13a4 4 0 0 1 0 7.75\" />","compass":"<path d=\"m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z\" /><circle cx=\"12\" cy=\"12\" r=\"10\" />","book-open":"<path d=\"M12 7v14\" /><path d=\"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z\" />","square-pen":"<path d=\"M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7\" /><path d=\"M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z\" />","undo-2":"<path d=\"M9 14 4 9l5-5\" /><path d=\"M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11\" />","list-checks":"<path d=\"m3 17 2 2 4-4\" /><path d=\"m3 7 2 2 4-4\" /><path d=\"M13 6h8\" /><path d=\"M13 12h8\" /><path d=\"M13 18h8\" />","pin":"<path d=\"M12 17v5\" /><path d=\"M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z\" />"};
+const ic40=(k,c)=>`<svg class="ic40${c?' '+c:''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC40[k]||''}</svg>`;
+
+/* ═══ PASS 40 — Markdown for answers ═══
+   Escape first, then add only the structure Markdown names: fenced code (with its language and a copy button),
+   headings, lists (nested, numbered, task), quotes, tables, rules, emphasis, inline code, and http(s) links only.
+   An unclosed fence while streaming renders as code to the end, so a half-written block never shows as prose. */
+function md40Inline(s){
+  const codes=[];
+  s=String(s).replace(/`([^`\n]+)`/g,(m,c)=>{codes.push(c);return '\u0000'+(codes.length-1)+'\u0000';});
+  s=esc(s)
+    .replace(/\*\*([^*\n]+?)\*\*/g,'<b>$1</b>').replace(/__([^_\n]+?)__/g,'<b>$1</b>')
+    .replace(/(^|[^*\w])\*([^*\s][^*\n]*?)\*(?!\w)/g,'$1<i>$2</i>').replace(/(^|[^_\w])_([^_\s][^_\n]*?)_(?!\w)/g,'$1<i>$2</i>')
+    .replace(/~~([^~\n]+)~~/g,'<s>$1</s>')
+    .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g,(m,t,u)=>'<a href="'+u+'" target="_blank" rel="noopener noreferrer">'+t+'</a>')
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+[^\s<).,;:!?'"])/g,'$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>');
+  return s.replace(/\u0000(\d+)\u0000/g,(m,k)=>'<code>'+esc(codes[+k])+'</code>');
+}
+function md40(src){
+  const L=String(src==null?'':src).replace(/\r\n?/g,'\n').split('\n');const out=[];let i=0;
+  const isList=l=>/^(\s*)([-*+]|\d+[.)])\s+/.test(l);
+  const tableSep=l=>/^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l);
+  const cells=l=>l.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+  while(i<L.length){
+    const l=L[i];let m;
+    if((m=l.match(/^\s*(```|~~~)\s*([\w+#.-]*)/))){
+      const fence=m[1],lang=m[2]||'';const body=[];i++;
+      while(i<L.length&&!L[i].trim().startsWith(fence)){body.push(L[i]);i++;}
+      i++;
+      out.push(`<div class="t40-code"><div class="t40-codeh"><span>${esc(lang||'code')}</span><button type="button" data-t40code aria-label="Copy code" title="Copy">${ic40('copy')}</button></div><pre><code>${esc(body.join('\n'))}</code></pre></div>`);
+      continue;
+    }
+    if(!l.trim()){i++;continue;}
+    if((m=l.match(/^(#{1,6})\s+(.*)$/))){const n=Math.min(6,m[1].length+2);out.push(`<h${n}>${md40Inline(m[2].replace(/\s#+\s*$/,''))}</h${n}>`);i++;continue;}
+    if(/^\s*([-*_])(\s*\1){2,}\s*$/.test(l)){out.push('<hr>');i++;continue;}
+    if(/^\s*>/.test(l)){const q=[];while(i<L.length&&/^\s*>/.test(L[i])){q.push(L[i].replace(/^\s*>\s?/,''));i++;}out.push('<blockquote>'+md40(q.join('\n'))+'</blockquote>');continue;}
+    if(l.includes('|')&&i+1<L.length&&tableSep(L[i+1])){
+      const head=cells(l);i+=2;const rows=[];
+      while(i<L.length&&L[i].includes('|')&&L[i].trim()){rows.push(cells(L[i]));i++;}
+      out.push('<div class="t40-table"><table><thead><tr>'+head.map(c=>'<th>'+md40Inline(c)+'</th>').join('')+'</tr></thead><tbody>'+
+        rows.map(r=>'<tr>'+head.map((_,k)=>'<td>'+md40Inline(r[k]||'')+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>');
+      continue;
+    }
+    if(isList(l)){
+      /* a stack of open lists by indent: deeper indent opens a nested list inside the last item */
+      let h='';const st=[];
+      while(i<L.length&&(isList(L[i])||(L[i].trim()&&/^\s{2,}\S/.test(L[i])&&st.length))){
+        const x=L[i].match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);
+        if(!x){h+=' '+md40Inline(L[i].trim());i++;continue;}
+        const ind=x[1].replace(/\t/g,'    ').length,tag=/\d/.test(x[2])?'ol':'ul';
+        while(st.length&&ind<st[st.length-1].ind){h+='</li></'+st.pop().tag+'>';}
+        if(!st.length||ind>st[st.length-1].ind){h+='<'+tag+(tag==='ol'&&/^\d+/.test(x[2])&&parseInt(x[2])!==1?' start="'+parseInt(x[2])+'"':'')+'>';st.push({ind,tag});}
+        else h+='</li>';
+        let t=x[3];const task=t.match(/^\[([ xX])\]\s+(.*)$/);
+        h+='<li'+(task?' class="t40-task"':'')+'>'+(task?`<input type="checkbox" disabled${task[1]!==' '?' checked':''} aria-label="${task[1]!==' '?'done':'not done'}"> `+md40Inline(task[2]):md40Inline(t));
+        i++;
+      }
+      while(st.length)h+='</li></'+st.pop().tag+'>';
+      out.push(h);continue;
+    }
+    const p=[];
+    while(i<L.length&&L[i].trim()&&!/^\s*(```|~~~|#{1,6}\s|>)/.test(L[i])&&!isList(L[i])&&!(L[i].includes('|')&&i+1<L.length&&tableSep(L[i+1]))){p.push(md40Inline(L[i]));i++;}
+    if(p.length)out.push('<p>'+p.join('<br>')+'</p>');else i++;
+  }
+  return out.join('');
+}
+
+/* ═══════════════════ PASS 40 — CHAT, FORGE-GRADE ═══════════════════
+   The Assistant shows everything a turn actually did, the way the DeepSeek Forge harness does, using what this
+   app already measures (usage, cache, free-route and fallback swaps, citations, tool results were all recorded
+   by streamChat and then thrown away by the chat, which printed only the cost):
+     · a turn that used tools opens with "Worked for 12s · 3 steps" and folds its steps away once it is done
+     · reasoning streams live as "Thinking… 4s" and closes into "Thought for 9s · 1.2k tokens"
+     · every tool call is a card: status, name, what it was asked, and its arguments and result on demand
+     · the footer: copy, retry, fork, read aloud, save to Brain, details — then provider · model · route,
+       time, time to first token, tokens in / out / thinking / cached, cost, and anything unusual (cache hit,
+       free-route swap, fallback, loop recovered, cut off)
+     · above the composer, the status of the whole chat: model, mode, tools, web, context used, totals
+     · a composer that grows as you type, takes attachments, has quick switches, and one Send that turns into Stop
+   UI state (what is open) lives in WeakMaps keyed on the message, so a re-render on every token keeps it. */
+const T40={open:new WeakMap(),think:new WeakMap(),tool:new WeakMap(),info:new WeakMap(),explain:new WeakMap(),
+  stick:true,ctx:[],q:'',rec:null};
+const num40=(...v)=>{for(const x of v){const n=+x;if(x!=null&&x!==''&&Number.isFinite(n))return n;}return 0;};
+/* PURE. One completion's accounting, from whichever shape the provider sent (OpenAI, Anthropic, OpenRouter). */
+function turn40Meta(acc,requested){
+  const a=acc||{},u=a.usage||{},cd=u.completion_tokens_details||{},pd=u.prompt_tokens_details||{};
+  return{model:String(a.freeModel||a.model||requested||''),requested:String(requested||''),
+    tin:num40(u.prompt_tokens,u.input_tokens),tout:num40(u.completion_tokens,u.output_tokens),
+    tthink:num40(cd.reasoning_tokens,u.reasoning_tokens),tcache:num40(pd.cached_tokens,u.cache_read_input_tokens),
+    ttft:a.ttft!=null&&a.ttft!==''?Math.round(+a.ttft):null,ms:Math.round(+a.elapsed||0),
+    finish:String(a.finishReason||''),cached:!!a.cached,semantic:!!a.semanticHit,local:!!a.local,
+    freeFrom:String(a.freeFrom||''),fellBack:String(a.fellBackFrom||''),recovered:!!a.recoveredFromLoop,
+    truncated:!!a.stillTruncated,cost:a.cost!=null&&a.cost!==''?+a.cost:null,
+    cites:(typeof citationsOf==='function'?citationsOf(a):[]).slice(0,12),rounds:1,est:false};
+}
+/* Some providers stream no usage at all. Then the footer shows an estimate from characters (≈, four per token),
+   never a blank that reads as "free of tokens" and never a number presented as measured. */
+function turn40Estimate(x,acc){
+  if(!x||x.tin||x.tout)return x;
+  const a=acc||{},th=String((typeof thoughtOf==='function'?thoughtOf(a):a.reasoning)||''),out=String(a.content||'');
+  if(!out&&!th)return x;
+  return Object.assign({},x,{est:true,tin:Math.round((+a.ctxChars||0)/4),tout:Math.round((out.length+th.length)/4),tthink:Math.round(th.length/4)});
+}
+/* PURE. Two rounds of one turn added together — a tool loop is several completions, one answer. */
+function turn40Merge(a,b){
+  if(!a)return b||null;if(!b)return a;
+  const seen=new Set((a.cites||[]).map(c=>c.url));
+  return Object.assign({},a,{model:b.model||a.model,tin:a.tin+b.tin,tout:a.tout+b.tout,tthink:a.tthink+b.tthink,
+    tcache:a.tcache+b.tcache,ms:a.ms+b.ms,est:!!(a.est||b.est),finish:b.finish||a.finish,cached:a.cached&&b.cached,semantic:a.semantic&&b.semantic,
+    truncated:b.truncated,recovered:a.recovered||b.recovered,fellBack:a.fellBack||b.fellBack,freeFrom:a.freeFrom||b.freeFrom,
+    cost:a.cost==null&&b.cost==null?null:(a.cost||0)+(b.cost||0),
+    cites:(a.cites||[]).concat((b.cites||[]).filter(c=>!seen.has(c.url))).slice(0,12),rounds:a.rounds+b.rounds});
+}
+function fmtTok40(n){n=+n||0;return n<1000?String(n):n<10000?(n/1000).toFixed(1).replace(/\.0$/,'')+'k':n<1e6?Math.round(n/1000)+'k':(n/1e6).toFixed(1)+'M';}
+function fmtDur40(ms){ms=Math.max(0,+ms||0);if(ms<10000)return (ms/1000).toFixed(1).replace(/\.0$/,'')+'s';
+  if(ms<60000)return Math.round(ms/1000)+'s';const m=Math.floor(ms/60000),s=Math.round((ms%60000)/1000);return m+'m'+(s?' '+s+'s':'');}
+/* PURE. A tool card's state from either the new record or the old {ok,note} shape. */
+function tool40Status(t){
+  if(!t)return'err';if(t.status)return t.status;
+  if(/declined/i.test(t.name||''))return'declined';if(/blocked/i.test(t.note||''))return'blocked';
+  return t.ok?'ok':'err';
+}
+/* PURE. The header of a turn that did work. */
+function turn40Summary(m,now){
+  const n=(m.tools||[]).length;if(!n)return '';
+  const t1=m.streaming?(now||Date.now()):(m.t1||m.t0||0),dur=m.t0?t1-m.t0:0;
+  return (m.streaming?'Working':'Worked')+(dur?' for '+fmtDur40(dur):'')+' · '+n+' step'+(n===1?'':'s');
+}
+/* PURE. "Thinking… 4s" while it streams, "Thought for 9s · 1.2k tokens" once the answer starts. */
+function think40Label(m,now){
+  if(!m||!String(m.reasoning||'').trim())return '';
+  const done=!m.streaming||!!String(m.content||'').trim();
+  const t0=m.th0||m.t0,t1=done?(m.th1||m.t1||now||Date.now()):(now||Date.now());
+  const secs=t0?Math.max(1,Math.round((t1-t0)/1000)):0;
+  const tok=m.meta&&m.meta.tthink?' · '+fmtTok40(m.meta.tthink)+' tokens':'';
+  return done?(secs?'Thought for '+secs+'s':'Thought')+tok:'Thinking…'+(secs?' '+secs+'s':'');
+}
+/* PURE. Totals for the chat, for the status strip. */
+function chatTotals40(c){
+  const t={tin:0,tout:0,tthink:0,turns:0,cost:+((c&&c.cost)||0)};
+  ((c&&c.msgs)||[]).forEach(m=>{if(m.role!=='assistant')return;t.turns++;const x=m.meta;if(!x)return;t.tin+=x.tin||0;t.tout+=x.tout||0;t.tthink+=x.tthink||0;});
+  return t;
+}
+/* PURE. The block that carries attachments into the prompt. */
+function att40Block(list){
+  return (list||[]).filter(a=>a&&a.name).map(a=>'### Attached: '+a.name+'\n```\n'+String(a.text||'').slice(0,30000)+'\n```').join('\n\n');
+}
+/* PURE. Route flags worth seeing next to the answer. */
+function route40(x){
+  if(!x)return[];const f=[];
+  if(x.cached)f.push(x.semantic?'similar-prompt cache':'cache hit');
+  if(x.freeFrom)f.push('free route');
+  if(x.fellBack)f.push('fallback from '+String(x.fellBack).split('/').pop());
+  if(x.recovered)f.push('loop recovered');
+  if(x.truncated)f.push('cut off');else if(x.rounds>1)f.push(x.rounds+' rounds');
+  return f;
+}
+function prov40(model,x){
+  const id=String(model||''),head=id.split('/')[0];
+  if((x&&x.local)||/^(ollama|lmstudio|llamacpp|mlxs|locals|osaurus)$/i.test(head))return 'Local';
+  const p=typeof providerById==='function'?providerById(head):null;
+  return String((p&&(p.label||p.name))||(id.includes('/')?'OpenRouter':'')).split(/\s+[—–(]/)[0];
+}
+const short40=m=>String(m||'').split('/').pop();
+
+/* ── Rendering ─────────────────────────────────────────────────────────── */
+function tool40HTML(t,k){
+  const st=tool40Status(t),open=T40.tool.get(t);
+  const ico={ok:'check',err:'x',blocked:'shield-alert',declined:'x',run:'loader-circle'}[st]||'circle-alert';
+  const j=v=>{try{return typeof v==='string'?v:JSON.stringify(v,null,2);}catch(_){return String(v);}};
+  const has=t.args!=null||t.result!=null;
+  const body=open&&has?`<div class="t40-tb">${t.args!=null?`<div class="t40-lbl">Arguments</div><pre>${esc(j(t.args).slice(0,4000))}</pre>`:''}${
+    t.result!=null?`<div class="t40-lbl">Result</div><pre>${esc(j(t.result).slice(0,6000))}</pre>`:''}</div>`:'';
+  return `<div class="t40-tool st-${st}${open?' open':''}">
+    <button type="button" class="t40-th" data-t40tool="${k}"${has?` aria-expanded="${open?'true':'false'}"`:' tabindex="-1"'}>
+      <span class="t40-st">${ic40(ico,st==='run'?'spin40':'')}</span><span class="t40-nm">${esc(t.name||'step')}</span>
+      <span class="t40-sm">${esc(String(t.note||'').slice(0,160))}</span>${t.injection?'<span class="t40-warn" title="The result contained text shaped like instructions; it was treated as data">instructions in result</span>':''}${
+      t.ms?`<span class="t40-ms">${fmtDur40(t.ms)}</span>`:''}${has?ic40('chevron-down','t40-chev'):''}</button>${body}</div>`;
+}
+function meta40HTML(m){
+  const x=m.meta||null,bits=[];
+  const model=(x&&x.model)||m.model||'';
+  if(model||x){const pv=prov40(model,x);bits.push(`<span class="t40-chip strong" title="provider · model${x&&x.requested&&x.requested!==model?' (asked for '+esc(x.requested)+')':''}">${ic40('cpu')}${esc([pv,short40(model)].filter(Boolean).join(' · ')||'model')}</span>`);}
+  route40(x).forEach(f=>bits.push(`<span class="t40-chip${/fallback|cut off|loop/.test(f)?' flag':''}">${esc(f)}</span>`));
+  const dur=m.t0&&m.t1?m.t1-m.t0:(x&&x.ms)||m.ms||0;
+  if(dur)bits.push(`<span class="t40-chip" title="total time">${ic40('clock')}${fmtDur40(dur)}${x&&x.ttft!=null&&x.ttft>0?` <i>· first token ${x.ttft<1000?x.ttft+'ms':fmtDur40(x.ttft)}</i>`:''}</span>`);
+  if(x&&(x.tin||x.tout))bits.push(`<span class="t40-chip" title="${x.est?'estimated from characters — the provider sent no token counts':'tokens in / out'}">${ic40('layers')}${x.est?'≈ ':''}${fmtTok40(x.tin)} in · ${fmtTok40(x.tout)} out${x.tthink?` <i>· ${fmtTok40(x.tthink)} thinking</i>`:''}${x.tcache?` <i>· ${fmtTok40(x.tcache)} cached</i>`:''}</span>`);
+  const cost=m.cost!=null?m.cost:x&&x.cost;
+  if(cost!=null&&(cost>0||x))bits.push(`<span class="t40-chip" title="cost">${ic40('coins')}${cost>0?money(cost):'free'}</span>`);
+  return bits.length?`<div class="t40-meta">${bits.join('')}</div>`:'';
+}
+function info40HTML(m){
+  const x=m.meta||{},row=(k,v)=>v===''||v==null?'':`<tr><th>${esc(k)}</th><td>${v}</td></tr>`;
+  return `<table class="t40-info">${row('Provider',esc(prov40(x.model||m.model,x)))}${row('Model',esc(x.model||m.model||''))}${
+    x.requested&&x.requested!==x.model?row('Asked for',esc(x.requested)):''}${row('Mode',esc(m.mode||''))}${
+    row('Finish',esc(x.finish||''))}${row('Rounds',x.rounds||'')}${row('Time',m.t0&&m.t1?fmtDur40(m.t1-m.t0):'')}${
+    row('First token',x.ttft!=null&&x.ttft>0?x.ttft+' ms':'')}${row('Thinking',m.th0&&m.th1?fmtDur40(m.th1-m.th0):'')}${
+    row('Tokens in',x.tin?(x.est?'≈ ':'')+x.tin.toLocaleString():'')}${row('Tokens out',x.tout?(x.est?'≈ ':'')+x.tout.toLocaleString():'')}${
+    row('Thinking tokens',x.tthink?x.tthink.toLocaleString():'')}${row('Cached tokens',x.tcache?x.tcache.toLocaleString():'')}${
+    row('Cost',m.cost!=null?money(m.cost):x.cost!=null?money(x.cost):'')}${row('Route',esc(route40(x).join(', ')))}${
+    row('Steps',(m.tools||[]).length||'')}</table>`;
+}
+function cites40HTML(x){
+  const c=(x&&x.cites)||[];if(!c.length)return '';
+  return `<div class="t40-cites"><span class="t40-lbl">${ic40('link')}Sources</span>${c.map((s,i)=>{
+    let host='';try{host=new URL(s.url).hostname.replace(/^www\./,'');}catch(_){}
+    return `<a class="t40-cite" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer" title="${esc(s.title||s.url)}"><b>${i+1}</b>${esc(host||s.title||'source')}</a>`;}).join('')}</div>`;
+}
+function turn40HTML(m,i){
+  if(typeof i!=='number'){const c=achat();i=c?c.msgs.indexOf(m):-1;}
+  const idx=i>=0?i:'';
+  if(m.role==='user'){
+    const shown=m.shown!=null?m.shown:m.content;
+    return `<div class="am user t40u" data-t40u="${idx}">${m.att&&m.att.length?`<div class="t40-att">${ic40('paperclip')}${m.att.map(esc).join(', ')}</div>`:''}
+      <div class="am-body">${esc(shown)}</div>
+      ${i>=0?`<div class="t40-uact"><button type="button" data-t40copy="${i}" aria-label="Copy message" title="Copy">${ic40('copy')}</button><button type="button" data-rewind38="${i}" aria-label="Edit and resend" title="Edit and resend (the full chat is kept as a copy)">${ic40('pencil')}</button><button type="button" data-fork="${i}" aria-label="Fork from here" title="Copy this chat up to here into a new one">${ic40('git-fork')}</button></div>`:''}</div>`;
+  }
+  const c=achat(),last=c&&i===c.msgs.length-1;
+  const now=Date.now(),tools=m.tools||[];
+  const openSteps=T40.open.has(m)?T40.open.get(m):!!m.streaming;
+  const steps=tools.length?`<button type="button" class="t40-wk${openSteps?' open':''}" data-t40steps="${idx}" aria-expanded="${openSteps?'true':'false'}">${
+      m.streaming?ic40('loader-circle','spin40'):ic40('wrench')}<span>${esc(turn40Summary(m,now))}</span><i></i>${ic40('chevron-down','t40-chev')}</button>
+    <div class="t40-steps"${openSteps?'':' hidden'}>${tools.map((t,k)=>tool40HTML(t,idx+':'+k)).join('')}</div>`:'';
+  const tl=ASST.showThinking?think40Label(m,now):'';
+  const thinkDone=!m.streaming||!!String(m.content||'').trim();
+  const openThink=T40.think.has(m)?T40.think.get(m):!thinkDone;
+  const think=tl?`<div class="t40-think${thinkDone?'':' live'}"><button type="button" class="t40-ts" data-t40think="${idx}" aria-expanded="${openThink?'true':'false'}">${
+      ic40('atom',thinkDone?'':'spin40')}<span>${esc(m.bot?m.bot.name+' · '+tl:tl)}</span>${ic40('chevron-down','t40-chev')}</button>${
+      openThink?`<div class="t40-tt">${esc(m.reasoning)}</div>`:''}</div>`:'';
+  const typing=m.streaming&&!String(m.content||'').trim()&&!tl?'<div class="t40-typing" aria-label="Working"><i></i><i></i><i></i></div>':'';
+  const err=m.error?`<div class="t40-err">${ic40('circle-alert')}<span>${esc(m.error)}</span>${last&&!m.streaming?`<button type="button" class="btn small" data-t40retry="${i}">${ic40('rotate-ccw')}Retry</button>`:''}</div>`:'';
+  const head=m.bot?`<div class="bt-head"><span class="bt-face">${botSprite(m.bot.avatar||m.bot.name,30)}</span><b>${esc(m.bot.name)}</b><i>${esc(m.bot.role||'')}</i>${
+    m.fellBack?'<span class="tag warn" title="First choice did not answer">fallback</span>':''}</div>`:'';
+  if(!m.streaming&&m.content&&!m._offers)m._offers=asstArtifacts(m.content);
+  const ex=T40.explain.get(m)?' explain-open':'',info=T40.info.get(m);
+  const act=(k,ico,label,extra)=>`<button type="button" ${k}="${i}" aria-label="${label}" title="${label}"${extra||''}>${ic40(ico)}</button>`;
+  const foot=m.streaming?'':`<div class="t40-foot"><div class="t40-act">${m.content?act('data-t40copy','copy','Copy'):''}${
+      last?act('data-t40retry','rotate-ccw','Retry'):''}${i>=0?act('data-fork','git-fork','Fork from here'):''}${
+      m.content&&'speechSynthesis' in window?act('data-t40speak','volume-2','Read aloud'):''}${
+      m.content?act('data-t40brain','brain','Save to Brain'):''}${m.content?act('data-t40explain','lightbulb','Explain it another way',` aria-pressed="${ex?'true':'false'}"`):''}${
+      act('data-t40info','info','Details',` aria-expanded="${info?'true':'false'}"`)}${m.runId?`<a href="#" data-botrun="${esc(m.runId)}" class="t40-audit">audit</a>`:''}</div>${meta40HTML(m)}${info?info40HTML(m):''}</div>`;
+  return `<div class="am asst t40${m.streaming?' streaming':''}${m.bot?' bot-turn':''}${ex}" data-t40i="${idx}">${head}${steps}${think}${typing}${err}
+    ${asstBodyHTML(m)}${asstOfferHTML(m)}${cites40HTML(m.meta)}${foot}</div>`;
+}
+/* Timing, kept by whichever path streams: first reasoning, first answer text after it. */
+function turn40Tick(m){
+  if(!m||m.role!=='assistant')return;
+  if(!m.t0)m.t0=Date.now();
+  if(!m.th0&&String(m.reasoning||'').trim())m.th0=Date.now();
+  if(m.th0&&!m.th1&&String(m.content||'').trim())m.th1=Date.now();
+  if(!m.streaming&&!m.t1)m.t1=Date.now();
+}
+function turn40Rerender(i){
+  const c=achat(),th=$('#asst-thread');if(!c||!th)return;const m=c.msgs[+i];if(!m)return;
+  const n=th.querySelector(`[data-t40i="${+i}"]`);if(!n)return;
+  n.outerHTML=turn40HTML(m,+i);try{genuiHydrate(th.querySelector(`[data-t40i="${+i}"]`));}catch(_){}
+}
+
+/* ── Empty state ───────────────────────────────────────────────────────── */
+const SUGG40=[
+  {ic:'lightbulb',t:'Explain something',s:'clearly, with a worked example',p:'Explain how attention in a transformer works, with a tiny worked example I can follow by hand.'},
+  {ic:'code',t:'Write and check code',s:'with tests and edge cases',p:'Write a JavaScript function that debounces another function, with tests for the edge cases.'},
+  {ic:'globe',t:'Research with sources',s:'and say what is uncertain',p:'What changed in web browsers this year that matters to people building web apps? Cite sources.',web:true},
+  {ic:'list-checks',t:'Plan a project',s:'in steps you can start today',p:'Plan a weekend project: a habit tracker web app. Give me the steps, smallest first.'},
+  {ic:'file-text',t:'Draft a document',s:'that you can open in Office',p:'Draft a one-page project brief for a small team building a mobile app: goal, scope, risks, timeline.'},
+  {ic:'sparkles',t:'Show it, do not tell it',s:'an interactive explanation',p:'Show me how compound interest grows with an interactive chart I can adjust.'},
+];
+function empty40HTML(){
+  const md=asstMode(),cfg=asstCfg(),pv=prov40(cfg.model);
+  const conn=(typeof API_KEY!=='undefined'&&API_KEY)||providerFor(cfg.model)||pv==='Local'
+    ?`Connected · <b>${esc([pv,short40(cfg.model)].filter(Boolean).join(' · '))}</b>`
+    :`No key yet · the free no-key models answer, or add a key in <a href="#" data-t40go="settings">Settings</a>`;
+  return `<div class="t40-empty"><div class="t40-mark">${ic40('message-circle')}</div>
+    <h2>${esc(md.label==='Chat'?'What can I help with?':md.label)}</h2>
+    <p class="help">${esc(md.blurb)} — with this app's models, connectors, MCP tools, skills and Brain already wired in.</p>
+    <p class="t40-conn">${conn}</p>
+    <div class="t40-sugg">${SUGG40.map((s,k)=>`<button type="button" data-t40sugg="${k}">${ic40(s.ic)}<span><b>${esc(s.t)}</b><small>${esc(s.s)}</small></span></button>`).join('')}</div></div>`;
+}
+
+/* ── Chat list: search, time, model, cost ──────────────────────────────── */
+function ago40(iso){const t=Date.parse(iso||'');if(!t)return '';const s=(Date.now()-t)/1000;
+  return s<60?'now':s<3600?Math.round(s/60)+'m':s<86400?Math.round(s/3600)+'h':s<604800?Math.round(s/86400)+'d':new Date(t).toLocaleDateString();}
+/* PURE. Chats matching a query by title or by anything said in them. */
+function chatFind40(list,q){
+  const w=String(q||'').toLowerCase().trim().split(/\s+/).filter(Boolean);if(!w.length)return (list||[]).slice();
+  return (list||[]).filter(c=>{const hay=((c.title||'')+' '+(c.msgs||[]).map(m=>typeof m.content==='string'?m.content:'').join(' ')).toLowerCase();return w.every(x=>hay.includes(x));});
+}
+function chatList40HTML(){
+  const list=chatFind40(achatOrder38(ACHATS),T40.q);
+  return list.map(x=>{const lm=(x.msgs||[])[x.msgs.length-1];
+    return `<button class="asst-chat ${x.id===ACHAT?'on':''}" data-id="${x.id}">
+      <span>${x.pinned?ic40('pin','t40-pin'):''}${esc(x.title)}</span><small>${esc(x.mode||'chat')}${x.model?' · '+esc(short40(x.model)):''}${x.cost?' · '+money(x.cost):''}${lm&&lm.ts?' · '+ago40(lm.ts):''}</small></button>`;}).join('')
+    ||`<p class="help" style="padding:8px">${T40.q?'No chat matches “'+esc(T40.q)+'”.':'No chats yet.'}</p>`;
+}
+
+/* ── Status strip ──────────────────────────────────────────────────────── */
+function status40HTML(){
+  const c=achat(),cfg=asstCfg(),md=asstMode();
+  const hist=((c&&c.msgs)||[]).slice(-cfg.history);
+  let sys=0;try{sys=String(asstSystem()||'').length;}catch(_){}
+  const u=contextUtilization(msgChars(hist)+sys,cfg.model),tt=chatTotals40(c);
+  const pct=Math.min(100,Math.round(u.pct*100));
+  const per=(ASST.perMode&&ASST.perMode[ASST.mode])||{};
+  return `<button type="button" class="t40-chip strong" data-t40s="model" title="Model for this mode — change it in settings">${ic40('cpu')}${esc(short40(cfg.model)||'model')}</button>
+    <button type="button" class="t40-chip" data-t40s="mode" title="Mode">${ic40('layers')}${esc(md.label)}</button>
+    <button type="button" class="t40-chip${ASST.auto?' on':''}" data-t40s="tools" aria-pressed="${ASST.auto?'true':'false'}" title="${ASST.auto?'Tools run without asking':'Every tool call asks first'}">${ic40('wrench')}Tools ${ASST.auto?'auto':'ask'}</button>
+    <button type="button" class="t40-chip${cfg.web?' on':''}" data-t40s="web" aria-pressed="${cfg.web?'true':'false'}" title="Search the web for this mode">${ic40('globe')}Web ${cfg.web?'on':'off'}</button>
+    <button type="button" class="t40-chip${cfg.effort?' on':''}" data-t40s="think" title="Thinking effort (models that support it)">${ic40('atom')}Think ${esc(per.effort&&MOA_EFFORTS.indexOf(per.effort)>0?per.effort:'off')}</button>
+    <span class="t40-chip ctx-${u.state}" title="${esc(u.advice)}">${ic40('gauge')}<span class="t40-bar"><i style="width:${Math.max(2,pct)}%"></i></span>${pct}% · ${fmtTok40(u.tokens)} / ${fmtTok40(u.window)}</span>
+    ${tt.tin||tt.tout||tt.cost?`<span class="t40-chip" title="This chat so far">${ic40('coins')}${fmtTok40(tt.tin+tt.tout)} tokens · ${tt.cost?money(tt.cost):'free'}</span>`:''}`;
+}
+function status40Render(){const el=$('#asst-status40');if(el)el.innerHTML=status40HTML();}
+
+/* ── Composer ──────────────────────────────────────────────────────────── */
+function ctx40Render(){
+  const bar=$('#asst-ctx40');if(!bar)return;
+  bar.innerHTML=T40.ctx.map((a,k)=>`<span class="t40-ctxchip">${ic40('paperclip')}${esc(a.name)}<small>${fmtTok40(Math.round(String(a.text||'').length/4))} tok</small><button type="button" data-t40unatt="${k}" aria-label="Remove ${esc(a.name)}">${ic40('x')}</button></span>`).join('');
+  bar.hidden=!T40.ctx.length;send40Sync();
+}
+function send40Sync(){
+  const b=$('#asst-send'),inp=$('#asst-input');if(!b)return;
+  const run=!!(ASST_ABORT&&!ASST_ABORT.signal.aborted&&(achat()||{msgs:[]}).msgs.some(m=>m.streaming));
+  b.classList.toggle('stop',run);b.innerHTML=run?ic40('square'):ic40('arrow-up');
+  b.setAttribute('aria-label',run?'Stop':'Send');b.title=run?'Stop':'Send';
+  b.disabled=!run&&!(inp&&inp.value.trim())&&!T40.ctx.length;
+}
+function grow40(){const t=$('#asst-input');if(!t)return;t.style.height='auto';t.style.height=Math.min(Math.round(innerHeight*0.34),Math.max(44,t.scrollHeight))+'px';send40Sync();}
+async function send40(){
+  const inp=$('#asst-input');if(!inp)return;
+  const text=inp.value.trim();if(!text&&!T40.ctx.length)return;
+  const att=T40.ctx.slice();T40.ctx=[];ctx40Render();
+  inp.value='';grow40();T40.stick=true;
+  const full=att.length?(text||'(see the attached context)')+'\n\n'+att40Block(att):text;
+  const p=asstSend(full);
+  const c=achat();
+  if(c&&att.length){const um=[...c.msgs].reverse().find(m=>m.role==='user');if(um){um.shown=text;um.att=att.map(a=>a.name);renderAsst();}}
+  send40Sync();
+  try{await p;}finally{send40Sync();status40Render();}
+}
+function plus40(btn){
+  const items=[
+    {ic:'paperclip',l:'Attach a file',d:'text, code, CSV, JSON, Markdown',run:()=>{const f=document.createElement('input');f.type='file';f.multiple=true;
+      f.onchange=async()=>{for(const x of f.files){if(x.size>400000){toast(x.name+' is over 400 KB — attach part of it',3200);continue;}
+        try{T40.ctx.push({name:x.name,text:await x.text()});}catch(_){}}ctx40Render();};f.click();}},
+    {ic:'brain',l:'Add a Brain note',d:'send a note along as context',run:()=>{const docs=((typeof BRAIN!=='undefined'&&BRAIN.docs)||[]).slice(0,40);
+      if(!docs.length)return toast('The Brain has no notes yet',2400);
+      openModal(`<h3 style="margin-top:0">Add a Brain note</h3><div class="t40-pick">${docs.map((d,k)=>`<button type="button" class="btn ghost" data-t40note="${k}">${esc(d.name||d.title||'note')}</button>`).join('')}</div>`);
+      $$('[data-t40note]').forEach(b=>b.onclick=()=>{const d=docs[+b.dataset.t40note];T40.ctx.push({name:d.name||'note',text:d.body||d.text||''});closeModal();ctx40Render();});}},
+    {ic:'sparkles',l:'Load a skill',d:'type / to search them',run:()=>{const t=$('#asst-input');t.value=(t.value&&!/\n$/.test(t.value)?t.value+'\n':t.value)+'/';t.focus();t.dispatchEvent(new Event('input'));}},
+  ];
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(SR)items.push({ic:'mic',l:T40.rec?'Stop dictation':'Dictate',d:'speech to text',run:()=>dictate40()});
+  let m=$('#t40-menu');if(m)m.remove();
+  m=document.createElement('div');m.id='t40-menu';m.className='t40-menu';m.setAttribute('role','menu');
+  m.innerHTML=items.map((x,k)=>`<button type="button" role="menuitem" data-k="${k}">${ic40(x.ic)}<span><b>${esc(x.l)}</b><small>${esc(x.d)}</small></span></button>`).join('');
+  document.body.appendChild(m);
+  const r=btn.getBoundingClientRect();m.style.left=Math.max(8,Math.min(r.left,innerWidth-m.offsetWidth-8))+'px';m.style.top=Math.max(8,r.top-m.offsetHeight-8)+'px';
+  const close=()=>{m.remove();document.removeEventListener('pointerdown',out,true);};
+  const out=e=>{if(!m.contains(e.target))close();};
+  setTimeout(()=>document.addEventListener('pointerdown',out,true),0);
+  m.onclick=e=>{const b=e.target.closest('[data-k]');if(!b)return;close();items[+b.dataset.k].run();};
+  const f=m.querySelector('button');if(f)f.focus();
+  m.onkeydown=e=>{if(e.key==='Escape'){close();btn.focus();}};
+}
+function dictate40(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;
+  if(T40.rec){try{T40.rec.stop();}catch(_){}T40.rec=null;return;}
+  const r=new SR();r.interimResults=true;r.continuous=false;const inp=$('#asst-input'),base=inp.value?inp.value+' ':'';
+  r.onresult=e=>{inp.value=base+[...e.results].map(x=>x[0].transcript).join('');grow40();};
+  r.onend=()=>{T40.rec=null;toast('Dictation stopped',1500);};r.onerror=e=>{T40.rec=null;toast('Dictation: '+(e.error||'failed'),2600);};
+  T40.rec=r;try{r.start();toast('Listening…',1800);}catch(e){T40.rec=null;}
+}
+function retry40(){
+  const c=achat();if(!c)return;if((c.msgs||[]).some(m=>m.streaming))return;
+  let i=c.msgs.length-1;while(i>=0&&c.msgs[i].role!=='user')i--;if(i<0)return;
+  const u=c.msgs[i];c.msgs.splice(i);saveAChats();
+  const p=asstSend(u.content);
+  if(u.shown!=null||u.att){const um=c.msgs[i];if(um&&um.role==='user'){um.shown=u.shown;um.att=u.att;renderAsst();}}
+  send40Sync();p.finally(()=>{send40Sync();status40Render();});
+}
+function copy40(text){
+  const t=String(text||'');
+  (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Copied',1200),()=>{
+    const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast('Copied',1200);}catch(_){}a.remove();});
+}
+function chatMd40(c){
+  return '# '+(c.title||'Chat')+'\n\n'+(c.msgs||[]).map(m=>m.role==='user'?'**You:** '+(m.shown!=null?m.shown:m.content):
+    '**Assistant'+(m.bot?' ('+m.bot.name+')':'')+':** '+(m.tools&&m.tools.length?'\n\n'+m.tools.map(t=>'> step `'+t.name+'` '+(t.note||'')).join('\n')+'\n\n':'')+(m.content||'')+(m.error?'\n\n> error: '+m.error:'')).join('\n\n---\n\n');
+}
+function menu40(){
+  const c=achat();if(!c)return toast('Open a chat first',2000);
+  openModal(`<h3 style="margin-top:0">${esc(c.title)}</h3><div class="t40-pick">
+    <button type="button" class="btn ghost" data-t40m="pin">${ic40('pin')}${c.pinned?'Unpin':'Pin to the top'}</button>
+    <button type="button" class="btn ghost" data-t40m="dream">${ic40('sparkles')}Dream over this chat</button>
+    <button type="button" class="btn ghost" data-t40m="rename">${ic40('pencil')}Rename</button>
+    <button type="button" class="btn ghost" data-t40m="md">${ic40('download')}Export Markdown</button>
+    <button type="button" class="btn ghost" data-t40m="json">${ic40('download')}Export JSON</button>
+    <button type="button" class="btn ghost" data-t40m="copy">${ic40('copy')}Copy as Markdown</button>
+    <button type="button" class="btn ghost" data-t40m="fork">${ic40('git-fork')}Fork the whole chat</button>
+    <button type="button" class="btn ghost bad" data-t40m="delete">${ic40('trash-2')}Delete chat</button></div>`);
+  const slug=(c.title||'chat').replace(/[^\w-]+/g,'-').slice(0,40)||'chat';
+  $$('[data-t40m]').forEach(b=>b.onclick=()=>{const k=b.dataset.t40m;
+    if(k==='pin'){c.pinned=!c.pinned;saveAChats();}
+    else if(k==='dream'){closeModal();const d=$('#asst-dream38');if(d)d.click();return;}
+    else if(k==='rename'){const n=prompt('Rename chat',c.title);if(n&&n.trim()){c.title=n.trim().slice(0,80);saveAChats();}}
+    else if(k==='md')downloadText(slug+'.md',chatMd40(c));
+    else if(k==='json')downloadJSON(slug+'.json',c);
+    else if(k==='copy')copy40(chatMd40(c));
+    else if(k==='fork'){const r=achatFork(c.id,c.msgs.length-1,{});if(r&&r.note)toast(r.note,3000);}
+    else if(k==='delete'){if(!confirm('Delete “'+c.title+'”? This cannot be undone.'))return;ACHATS=ACHATS.filter(x=>x!==c);ACHAT=ACHATS[0]?ACHATS[0].id:null;saveAChats();}
+    closeModal();renderAsst();});
+}
+function init40(){
+  const th=$('#asst-thread');if(!th||th._t40)return;th._t40=1;
+  th.addEventListener('scroll',()=>{T40.stick=th.scrollHeight-th.scrollTop-th.clientHeight<90;
+    const j=$('#asst-jump40');if(j)j.hidden=T40.stick;},{passive:true});
+  th.addEventListener('click',e=>{
+    const q=s=>e.target.closest(s);let b;
+    const c=achat();const msg=k=>c&&c.msgs[+k];
+    if((b=q('[data-t40steps]'))){const m=msg(b.dataset.t40steps);if(!m)return;T40.open.set(m,b.getAttribute('aria-expanded')!=='true');return turn40Rerender(b.dataset.t40steps);}
+    if((b=q('[data-t40think]'))){const m=msg(b.dataset.t40think);if(!m)return;T40.think.set(m,b.getAttribute('aria-expanded')!=='true');return turn40Rerender(b.dataset.t40think);}
+    if((b=q('[data-t40tool]'))){const [mi,ti]=b.dataset.t40tool.split(':');const m=msg(mi),t=m&&(m.tools||[])[+ti];if(!t||(t.args==null&&t.result==null))return;T40.tool.set(t,!T40.tool.get(t));return turn40Rerender(mi);}
+    if((b=q('[data-t40info]'))){const m=msg(b.dataset.t40info);if(!m)return;T40.info.set(m,!T40.info.get(m));return turn40Rerender(b.dataset.t40info);}
+    if((b=q('[data-t40explain]'))){const m=msg(b.dataset.t40explain);if(!m)return;T40.explain.set(m,!T40.explain.get(m));return turn40Rerender(b.dataset.t40explain);}
+    if((b=q('[data-t40copy]'))){const m=msg(b.dataset.t40copy);return m&&copy40(m.shown!=null?m.shown:m.content);}
+    if((b=q('[data-t40retry]')))return retry40();
+    if((b=q('[data-t40speak]'))){const m=msg(b.dataset.t40speak);if(!m)return;
+      if(speechSynthesis.speaking){speechSynthesis.cancel();return;}
+      const u=new SpeechSynthesisUtterance(String(m.content||'').replace(/```[\s\S]*?```/g,' (code) ').replace(/[#*_`>|]/g,'').slice(0,6000));speechSynthesis.speak(u);return;}
+    if((b=q('[data-t40brain]'))){const m=msg(b.dataset.t40brain);if(!m)return;
+      const name=String(m.content||'').split('\n').find(x=>x.trim())||'Chat answer';
+      brainAdd({name:name.replace(/^#+\s*/,'').slice(0,70),body:m.content,kind:'note',tags:['chat'],source:'chat: '+(c.title||'')}).then(()=>toast('Saved to the Brain',1800),e=>toast('Brain: '+(e.message||e),2600));return;}
+    if((b=q('[data-t40sugg]'))){const s=SUGG40[+b.dataset.t40sugg];if(!s)return;
+      if(s.web){ASST.perMode=ASST.perMode||{};ASST.perMode[ASST.mode]=Object.assign({},ASST.perMode[ASST.mode],{web:true});saveASST();}
+      const inp=$('#asst-input');inp.value=s.p;grow40();send40();return;}
+    if((b=q('[data-t40go]'))){e.preventDefault();go(b.dataset.t40go);return;}
+    if((b=q('[data-t40code]'))){const pre=b.closest('.t40-code');if(pre)copy40(pre.querySelector('code').textContent);}
+  });
+  const st=$('#asst-status40');
+  if(st)st.onclick=e=>{const b=e.target.closest('[data-t40s]');if(!b)return;const k=b.dataset.t40s;
+    ASST.perMode=ASST.perMode||{};const per=ASST.perMode[ASST.mode]=Object.assign({},ASST.perMode[ASST.mode]);
+    if(k==='model'||k==='mode'){$('#asst-settings').classList.add('open');renderAsstSettings();if(k==='mode'){const ms=$('#asst-modes');if(ms)ms.scrollIntoView({block:'nearest',inline:'nearest'});}return;}
+    if(k==='tools'){ASST.auto=!ASST.auto;toast(ASST.auto?'Tools will run automatically':'Every tool call will ask first',2200);}
+    if(k==='web'){per.web=!asstCfg().web;toast(per.web?'Web search on for this mode':'Web search off for this mode',2000);}
+    if(k==='think'){const L=MOA_EFFORTS.filter(Boolean);const cur=L.indexOf(per.effort);per.effort=cur<0?L[0]:cur+1<L.length?L[cur+1]:'';
+      toast(per.effort?'Thinking effort: '+per.effort:'Thinking effort off',2000);}
+    saveASST();renderAsst();};
+  const ctx=$('#asst-ctx40');if(ctx)ctx.onclick=e=>{const b=e.target.closest('[data-t40unatt]');if(!b)return;T40.ctx.splice(+b.dataset.t40unatt,1);ctx40Render();};
+  const plus=$('#asst-plus40');if(plus)plus.onclick=()=>plus40(plus);
+  const more=$('#asst-more40');if(more)more.onclick=menu40;
+  const j=$('#asst-jump40');if(j)j.onclick=()=>{T40.stick=true;th.scrollTo({top:th.scrollHeight,behavior:'smooth'});j.hidden=true;};
+  const s=$('#asst-search40');if(s)s.oninput=()=>{T40.q=s.value;$('#asst-list').innerHTML=chatList40HTML();};
+  const inp=$('#asst-input');
+  if(inp){inp.addEventListener('input',grow40);
+    /* Enter sends on a keyboard; on a touch screen Enter is a new line and the arrow sends. ⌘/Ctrl+Enter always sends. */
+    inp.addEventListener('keydown',e=>{
+      if(e.defaultPrevented||e.isComposing||e.key!=='Enter'||e.shiftKey||e.metaKey||e.ctrlKey)return;
+      if($('#asst-slash')&&$('#asst-slash').classList.contains('open'))return;
+      if(matchMedia('(pointer:coarse)').matches)return;
+      e.preventDefault();send40();});
+    inp.addEventListener('dragover',e=>e.preventDefault());
+    inp.addEventListener('drop',async e=>{const fs=[...(e.dataTransfer&&e.dataTransfer.files||[])];if(!fs.length)return;e.preventDefault();
+      for(const x of fs){if(x.size<=400000)try{T40.ctx.push({name:x.name,text:await x.text()});}catch(_){}}ctx40Render();});}
+  /* One button: Send, or Stop while a turn runs. The old Stop stays (hidden) for anything that clicks it by id. */
+  const send=$('#asst-send');
+  if(send)send.onclick=()=>{if(send.classList.contains('stop')){if(ASST_ABORT)ASST_ABORT.abort();setTimeout(send40Sync,50);return;}send40();};
+  grow40();status40Render();ctx40Render();
 }
 
 /* ═══════════════════ ASSISTANT — the front door ═══════════════════
@@ -56131,7 +56905,7 @@ async function asstSend(text){
   const c=achat()||achatNew(text.slice(0,48));
   if(c.title==='New chat')c.title=text.slice(0,48);
   c.msgs.push({role:'user',content:text,ts:nowISO()});
-  const slot={role:'assistant',content:'',reasoning:'',tools:[],ts:nowISO(),streaming:true};
+  const slot={role:'assistant',content:'',reasoning:'',tools:[],ts:nowISO(),streaming:true,t0:Date.now(),mode:asstMode().label||ASST.mode};
   c.msgs.push(slot);
   renderAsst();
   const cfg=asstCfg();
@@ -56255,6 +57029,7 @@ async function asstSend(text){
     slot.content=acc.content||slot.content;
     slot.reasoning=(typeof thoughtOf==='function'?thoughtOf(acc):'')||slot.reasoning;
     slot.cost=acc.cost||0;c.cost=(c.cost||0)+(acc.cost||0);
+    slot.meta=turn40Estimate(turn40Meta(acc,cfg.model),acc);slot.model=slot.meta.model;
     spanEnd(span,acc);styleNote(acc);
     /* Tool calls run through the app's existing handler, so the Assistant gets GitHub, MCP
        and every connector for free — and in Ask mode the user approves each one first.
@@ -56266,15 +57041,20 @@ async function asstSend(text){
       if(!ASST.auto){
         const ok=confirm('The assistant wants to run a tool:\n\n'+
           (slot.content.match(/===USE TOOL===[\s\S]{0,300}/)||[''])[0]+'\n\nAllow?');
-        if(!ok){slot.tools.push({name:'(declined)',ok:false,note:'you declined this tool call'});
+        if(!ok){slot.tools.push({name:'(declined)',ok:false,status:'declined',note:'you declined this tool call'});
           slot.streaming=false;saveAChats();renderAsst();return slot;}
       }
       let r=null;
+      const run40={name:'running tools',ok:true,status:'run',note:'calling…'};slot.tools.push(run40);renderAsstStream();
+      const tt0=Date.now();
       try{r=await handleToolCalls(slot.content);}
-      catch(e){slot.tools.push({name:'tools',ok:false,note:e.message});break;}
+      catch(e){slot.tools.splice(slot.tools.indexOf(run40),1);slot.tools.push({name:'tools',ok:false,status:'err',note:e.message});break;}
+      slot.tools.splice(slot.tools.indexOf(run40),1);
       if(!r||!r.length)break;
-      r.forEach(x=>slot.tools.push({name:x.req.tool,ok:!x.error,
-        note:(x.blocked?'blocked — ':'')+(x.error||toolText(x.result)).slice(0,200)+(x.injection?' ⚠ instruction-shaped text found':'')}));
+      const per40=Math.round((Date.now()-tt0)/r.length);
+      r.forEach(x=>slot.tools.push({name:x.req.tool,ok:!x.error,status:x.blocked?'blocked':x.error?'err':'ok',ms:per40,
+        args:x.req.args||{},result:x.error?x.error:(typeof x.result==='string'?x.result:toolText(x.result)).slice(0,6000),injection:!!x.injection,
+        note:(x.blocked?'blocked — ':'')+(x.error||toolText(x.result)).slice(0,200)}));
       renderAsstStream();
       opts.messages=opts.messages.concat([{role:'assistant',content:slot.content},
         {role:'user',content:'TOOL RESULTS\n\n'+r.map(x=>x.obs).join('\n\n')+'\n\n'+TOOL_SPOTLIGHT_RULE+
@@ -56283,12 +57063,13 @@ async function asstSend(text){
       const acc2=await streamComplete(opts,a=>{slot.content=a.content||'';renderAsstStream();},ASST_ABORT.signal,'assistant');
       slot.content=acc2.content||before;
       slot.cost=(slot.cost||0)+(acc2.cost||0);c.cost=(c.cost||0)+(acc2.cost||0);
+      slot.meta=turn40Merge(slot.meta,turn40Estimate(turn40Meta(acc2,cfg.model),acc2));
     }
   }catch(e){
     slot.error=e.message;spanEnd(span,null,e);
     paneEvent('agent','assistant',{label:ASST.mode,ok:false,note:e.message});
   }
-  slot.streaming=false;saveAChats();renderAsst();
+  slot.streaming=false;slot.t1=Date.now();saveAChats();renderAsst();
   /* Opt-in: dream over the last exchange once it is finished (one extra model call per reply, so off by default). */
   if(DREAM38.afterReply&&!slot.error&&String(slot.content||'').length>200)
     dreamCatch38(c.msgs.slice(-4).map(m=>m.role+': '+(typeof m.content==='string'?m.content:'')).join('\n'),'chat: '+c.title).catch(()=>{});
@@ -56777,48 +57558,8 @@ function asstOffer(kind,note){
   clearTimeout(asstOffer._t);asstOffer._t=setTimeout(hide,14000);
 }
 function asstMsgHTML(m,i){
-  /* `.map(asstMsgHTML)` already passes the index, so the control needs no call-site change.
-     Guarded because other callers render a single message with no index. */
-  const fork=(typeof i==='number')
-    ? `<button class="am-fork" data-fork="${i}" title="Copy this chat up to here into a new one — the original is untouched">⑂</button>`
-    : '';
-  if(m.role==='user')return `<div class="am user"><div class="am-body">${esc(m.content)}</div>${fork}${typeof i==='number'?`<button class="am-fork" data-rewind38="${i}" style="right:38px" title="Rewind to before this message — it goes back into the composer; the full chat is kept as a copy" aria-label="Rewind to before this message">↶</button>`:''}</div>`;
-  /* A bot turn is an assistant turn with a face and a name on it. Rendered here rather than in
-     a parallel renderer so replies, tool notes, costs and the hand-off offers all keep working
-     exactly as they do for a normal answer. */
-  if(m.bot){
-    const think=m.reasoning&&ASST.showThinking
-      ? `<details class="am-think"><summary>💭 ${esc(m.bot.name)} thinking</summary><div>${esc(m.reasoning)}</div></details>`:'';
-    const tools=(m.tools||[]).map(t=>
-      `<div class="am-tool ${t.ok?'':'bad'}">⚒ ${esc(t.name)} — ${esc(t.note||'')}</div>`).join('');
-    if(!m.streaming&&m.content&&!m._offers)m._offers=asstArtifacts(m.content);
-    return `<div class="am asst bot-turn${m.streaming?' streaming':''}">
-      <div class="bt-head">
-        <span class="bt-face">${botSprite(m.bot.avatar||m.bot.name,34)}</span>
-        <b>${esc(m.bot.name)}</b><i>${esc(m.bot.role||'')}</i>
-        <span style="flex:1"></span>
-        ${m.fellBack?`<span class="tag warn" title="First choice did not answer">fallback</span>`:''}
-        <span class="mono mini muted">${esc((m.model||'').split('/').pop())}</span>
-      </div>
-      ${think}${tools}
-      ${m.error?`<div class="am-tool bad">✗ ${esc(m.error)}</div>`:''}
-      ${m.streaming?'':fork}
-      ${asstBodyHTML(m)}
-      ${asstOfferHTML(m)}
-      <div class="am-meta mono">${m.cost?money(m.cost)+' · ':''}${m.ms?m.ms+'ms':''}${
-        m.runId?` · <a href="#" data-botrun="${esc(m.runId)}">audit ↗</a>`:''}</div>
-    </div>`;
-  }
-  const think=m.reasoning&&ASST.showThinking
-    ? `<details class="am-think" ${m.streaming?'open':''}><summary>💭 Thinking${m.streaming?' …':''}</summary><div>${esc(m.reasoning)}</div></details>`:'';
-  const tools=(m.tools||[]).map(t=>
-    `<div class="am-tool ${t.ok?'':'bad'}">⚒ ${esc(t.name)} — ${esc(t.note||'')}</div>`).join('');
-  const err=m.error?`<div class="am-tool bad">✗ ${esc(m.error)}</div>`:'';
-  if(!m.streaming&&m.content&&!m._offers)m._offers=asstArtifacts(m.content);
-  return `<div class="am asst${m.streaming?' streaming':''}">${think}${tools}${err}
-    ${asstBodyHTML(m)}
-    ${asstOfferHTML(m)}
-    ${m.cost?`<div class="am-meta mono">${money(m.cost)}</div>`:''}${m.streaming?'':fork}</div>`;
+  /* pass 40: one renderer for every kind of turn — chat, bots, MoA, cascade, scouts, playbooks, harnesses */
+  return turn40HTML(m,i);
 }
 function renderAsstStream(){
   const c=achat();if(!c||!$('#asst-thread'))return;
@@ -56828,23 +57569,21 @@ function renderAsstStream(){
      msgs[length-1] is msgs[-1], undefined, and asstMsgHTML throws on m.role out of a streaming
      callback, taking the answer the user already paid for with it. */
   const m=c.msgs[c.msgs.length-1];
-  if(last&&m){last.outerHTML=asstMsgHTML(m);try{genuiHydrate($('#asst-thread').lastElementChild);}catch(_){}}
-  const th=$('#asst-thread');th.scrollTop=th.scrollHeight;
+  if(m)turn40Tick(m);
+  if(last&&m){last.outerHTML=asstMsgHTML(m,c.msgs.length-1);try{genuiHydrate($('#asst-thread').lastElementChild);}catch(_){}}
+  const th=$('#asst-thread');if(T40.stick)th.scrollTop=th.scrollHeight;
+  send40Sync();
 }
 function renderAsst(){
   const th=$('#asst-thread');if(!th)return;
   const c=achat();
-  th.innerHTML=c&&c.msgs.length?c.msgs.map(asstMsgHTML).join('')
-    :`<div class="asst-empty"><h3>${esc(asstMode().label)}</h3>
-       <p class="help">${esc(asstMode().blurb)} — with this app's models, connectors, MCP tools,
-       skills and Brain already wired in.</p></div>`;
+  if(c&&c.msgs.length)c.msgs.forEach(turn40Tick);
+  th.innerHTML=c&&c.msgs.length?c.msgs.map(asstMsgHTML).join(''):empty40HTML();
   try{genuiHydrate(th);}catch(_){}
-  th.scrollTop=th.scrollHeight;
+  if(T40.stick)th.scrollTop=th.scrollHeight;
+  try{status40Render();send40Sync();}catch(_){}
   {const pb=$('#asst-pin38'),cc=achat();if(pb)pb.textContent=cc&&cc.pinned?'Unpin':'Pin';}
-  $('#asst-list').innerHTML=achatOrder38(ACHATS).map(x=>
-    `<button class="asst-chat ${x.id===ACHAT?'on':''}" data-id="${x.id}">
-       <span>${x.pinned?'📌 ':''}${esc(x.title)}</span><small>${esc((x.mode||'chat'))}${x.model?' · '+esc(x.model.split('/').pop()):''}${x.cost?' · '+money(x.cost):''}</small></button>`).join('')
-    ||'<p class="help" style="padding:8px">No chats yet.</p>';
+  $('#asst-list').innerHTML=chatList40HTML();
   $$('#asst-modes .chip').forEach(b=>b.classList.toggle('on',b.dataset.mode===ASST.mode));
   $('#asst-auto').textContent=ASST.auto?'⚡ Auto':'🔒 Ask first';
   const gb=$('#asst-genui');if(gb){gb.textContent=GENUI.chat?'✨ UI on':'✨ UI off';gb.setAttribute('aria-pressed',String(!!GENUI.chat));}
@@ -56855,7 +57594,7 @@ function initAsst(){
   initAsstModes();
   $('#asst-modes').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;
     ASST.mode=b.dataset.mode;saveASST();renderAsst();renderAsstSettings();};
-  $('#asst-new').onclick=()=>{achatNew();renderAsst();};
+  $('#asst-new').onclick=()=>{achatNew();T40.stick=true;renderAsst();const i=$('#asst-input');if(i)i.focus();};
   if($('#asst-pin38'))$('#asst-pin38').onclick=()=>{const c=achat();if(!c)return;c.pinned=!c.pinned;saveAChats();renderAsst();};
   if($('#asst-dream38'))$('#asst-dream38').onclick=async()=>{const c=achat();if(!c||!(c.msgs||[]).length)return toast('Nothing to dream over yet',2500);
     const b=$('#asst-dream38');b.disabled=true;
@@ -56880,11 +57619,12 @@ function initAsst(){
     }
     const b=e.target.closest('.am-offer');if(!b)return;
     const bubble=b.closest('.am');
+    const cm=achat(),mi=bubble&&bubble.dataset.t40i,mm=cm&&mi!==''&&mi!=null?cm.msgs[+mi]:null;
     const body=bubble&&bubble.querySelector('.am-body');
-    asstTakeOffer(b.dataset.offer,b.dataset.payload,body?body.textContent:'');
+    asstTakeOffer(b.dataset.offer,b.dataset.payload,mm&&typeof mm.content==='string'?mm.content:body?body.textContent:'');
   });
   $('#asst-list').onclick=e=>{const b=e.target.closest('.asst-chat');if(!b)return;
-    ACHAT=b.dataset.id;renderAsst();};
+    ACHAT=b.dataset.id;T40.stick=true;renderAsst();};
   $('#asst-genui').onclick=()=>{GENUI.chat=!GENUI.chat;saveGenui();renderAsst();
     toast(GENUI.chat?'Generative UI on — answers can include live widgets':'Generative UI off — widgets show as code',2600);};
   $('#asst-auto').onclick=()=>{ASST.auto=!ASST.auto;saveASST();renderAsst();
@@ -56947,6 +57687,7 @@ function initAsst(){
   };
   $('#asst-settings-btn').onclick=()=>{$('#asst-settings').classList.toggle('open');renderAsstSettings();};
   renderAsstSettings();renderAsst();
+  try{init40();}catch(e){console.warn('chat40',e);}
 }
 /* ── The room, editable from inside the room ───────────────────────────────
    Group chat settings used to show only the generic Model / System prompt fields, which are the
@@ -71121,7 +71862,7 @@ async function persistInit(){
    worker updating is NOT the same thing as the user seeing the new app: clients.claim() makes
    a new worker control the page, but the HTML already parsed keeps running until something
    reloads it. This is what lets the app notice and say so. */
-const APP_BUILD='a6812b1214928d53';
+const APP_BUILD='8e137962623e2a52';
 const PWA={reg:null,state:'unknown',why:'',prompt:null,update:null,checking:false,lastCheck:0};
 
 /* ── Staying current, which is the whole problem on iOS ──────────────────────
@@ -75016,7 +75757,7 @@ stripEdges,tabEdges,traceDiff,tdAlign,tdStepKey,tdSpansFor,tdSourceList,renderRu
     modelBadge,modelMenu,isModelField,modelFieldEnhance,MODEL_FIELD_RX,
     modelRunnable,freeCandidates,modelParamsB,
     primaryModel,setPrimaryModel,renderPrimaryPill,openAutomate,
-    pbKey,pbBradleyTerry,pbBestModel,pbShortlist,pbRoutineMatch,pbParseGenerated,pbCost,pbAdd,pbSelect,pbRun,pbMatchesFromRanking,pbArena,pbVote,pbGenerate,pbRender,get PB(){return PB},set PB(v){PB=v},ledgerClusterOf,ledgerJudge,wilsonLower,ledgerRecord,ledgerUpdate,ledgerMatrix,ledgerRecommend,ledgerRecordDecision,ledgerCalibration,ledgerEscalationThreshold,ledgerTotals,ledgerLesson,toolSignature,toolLoopGuard,instinctAdd,instinctPick,instinctCredit,instinctBlock,instinctConf,learnRng,betaSample,routerPick,routerChoose,routerCandidates,ledgerRowFromReact,ledgerRowsFromS1,ledgerFeedback,ledgerFromReact,ledgerFromS1,s1Diff,s1PathSig,s1SuccessHolds,s1ParseSuccess,s1WireAnswers,s1DecisionGuard,s1SystemOneDecider,S1_DECISION_PRESETS,s1ControlContext,s1PlainText,s1Headings,freeCoolMs,FREE_STICKY,FREE_COOL,harnessNotes,auditChecks,auditSecretScan,auditSnapshot,playtestVerdict,playtestStudio,learnRender,get LEARN(){return LEARN},set LEARN(v){LEARN=v},storageJunkSweep,syncKeep36,specParseTasks,specReady,specCycles,specJsonl,specHandoff,readerUrlOk,gauntletSabotageAsync,addrSpace,sideClamp37,classicNext37,SIDE37,slopCheck37,slopSteer37,get S1MOD(){return S1MOD},s1ModBundle,s1PatchApply,s1PatchGate37,s1Checks37,s1BundleToOps,s1Presets37,s1Consequential37,s1ModApply37,gatewayAllows37,ctTransports38,ctMinutesLeft38,CT38_PRESETS,tutorNext38,tutorPlan38,tutorJson38,recallExtract38,recallMerge38,recallUnion38,recallFind38,RECALL38_FLOOR,stackSkillPaths38,STACK38,dreamItems38,achatOrder38,achatRewind38,hub39Auto,hub39Complete,hub39Slots,navTabPos39,vgap39,home39Report,emo39Scan,emo39Strip,emo39Split,emo39Icon,emo39Left,layoutAudit39,EMO39_MAP,HUB39_CAND,get HUB39(){return HUB39},shellMode36,tabPosFor36,tabFace36,clamp36,contrast36,ICONS36,DOCK36,fixtureChatSweep,gauntletResidueSweep,saveAChats,gauntletSandbox,cloudNormUrl,bridgeOrder,codespaceBridgeUrl,bridgeBase,cloudPairCode,gtfixContext,gtfixPrompt,gtfixHandoff,gtfixEnv,gtfixOpen,steLint,EXPLAIN_AS,STE_STYLE_BLOCK,h2PathOk,h2Validate,h2Diff,h2Assemble,h2Files,h2ParseReply,h2AnonIds,h2ParseExperience,h2Budget,h2RunTask,h2LibraryAdd,h2Render,reaSniff,reaEntropy,reaStrings,reaClassify,reaWasm,reaJS,reaLedger,reaEvidenceText,reaCliFor,reaGhidraReadOnly,reaInspect,reaHAR,reaSafetensors,reaPE,reaELF,reaMachO,reaRender,lgGraph,lgMerge,lgAppend,mastraWorkflow,mastraStep,graphitiAdd,graphitiAsOf,cogneeAdd,lfBatch,deEvaluate,DE_METRICS,buIndex,e2bRun,genuiRoute,ouiMermaidHydrate,get CLOUD(){return CLOUD},get H2(){return H2},get REA(){return REA},modelKind,modelGroupOf,modelGroups,modelOptionsHTML,modelDatalistHTML,modelListAttrs,modelListsRepaint,catalogSummary,catalogAgeText,catalogStale,artNearest,catalogRefresh,catalogFetchRemote,catalogStatusText,genImageModalities,MODEL_KINDS,get CATALOG_META(){return CATALOG_META},ouiPrepare,ouiStripComments,ouiLex,ouiSplit,ouiParse,ouiEvaluate,ouiSummary,ouiMerge,ouiSerialize,ouiValidate,ouiRuntime,ouiLibFromSpec,ouiLib,ouiSystemPrompt,ouiMount,ouiPaint,ouiSplitMessage,ouiXYChart,ouiPie,ouiMd,ouiFindByPath,ouiInteractionReplay,ouiTok,OUI_R,OUI_LIB_SPEC,artSave,artDelete,artPin,artCollect,artFilter,artKindOf,artBlocksFrom,artBody,artPreviewHtml,artRender,get ARTLIB(){return ARTLIB},set ARTLIB(v){ARTLIB=v},genuiCompare,genuiBodyHTML,genuiHydrate,genuiChatSystem,genuiGenerate,genuiRender,get GENUI(){return GENUI},GENUI_CORE,asstBodyHTML,fwValidate,fwJson,fwEmbedLexical,fwCosine,fwArith,lcRunnable,lcPrompt,lcCoerce,lcFill,lcParallel,lcBranch,liSplit,liIndex,chromaClient,chromaWhere,chromaWhereDoc,instructorCreate,instructorReask,paAgent,paSystem,crewPrompt,crewKickoff,skKernel,skParse,hsPipeline,autogptParse,autogptRun,TF_TASKS,tfPipeline,fwRender,FW_DEMOS,hhCommand,hhSlug,hhHandoffDoc,hhReadmeCommands,hhAddCustom,hhRender,HH_HARNESSES,get HH(){return HH},hhPassOff,hhCollect,hhExperiment,hhSearch,saveLearn,get S1PATHS(){return S1PATHS},pageIsLoopback,localFetchOpts,lnaPermission,ollamaOS,ollamaFixCommands,
+    pbKey,pbBradleyTerry,pbBestModel,pbShortlist,pbRoutineMatch,pbParseGenerated,pbCost,pbAdd,pbSelect,pbRun,pbMatchesFromRanking,pbArena,pbVote,pbGenerate,pbRender,get PB(){return PB},set PB(v){PB=v},ledgerClusterOf,ledgerJudge,wilsonLower,ledgerRecord,ledgerUpdate,ledgerMatrix,ledgerRecommend,ledgerRecordDecision,ledgerCalibration,ledgerEscalationThreshold,ledgerTotals,ledgerLesson,toolSignature,toolLoopGuard,instinctAdd,instinctPick,instinctCredit,instinctBlock,instinctConf,learnRng,betaSample,routerPick,routerChoose,routerCandidates,ledgerRowFromReact,ledgerRowsFromS1,ledgerFeedback,ledgerFromReact,ledgerFromS1,s1Diff,s1PathSig,s1SuccessHolds,s1ParseSuccess,s1WireAnswers,s1DecisionGuard,s1SystemOneDecider,S1_DECISION_PRESETS,s1ControlContext,s1PlainText,s1Headings,freeCoolMs,FREE_STICKY,FREE_COOL,harnessNotes,auditChecks,auditSecretScan,auditSnapshot,playtestVerdict,playtestStudio,learnRender,get LEARN(){return LEARN},set LEARN(v){LEARN=v},storageJunkSweep,syncKeep36,specParseTasks,specReady,specCycles,specJsonl,specHandoff,readerUrlOk,gauntletSabotageAsync,addrSpace,sideClamp37,classicNext37,SIDE37,slopCheck37,slopSteer37,get S1MOD(){return S1MOD},s1ModBundle,s1PatchApply,s1PatchGate37,s1Checks37,s1BundleToOps,s1Presets37,s1Consequential37,s1ModApply37,gatewayAllows37,ctTransports38,ctMinutesLeft38,CT38_PRESETS,tutorNext38,tutorPlan38,tutorJson38,recallExtract38,recallMerge38,recallUnion38,recallFind38,RECALL38_FLOOR,stackSkillPaths38,STACK38,dreamItems38,achatOrder38,achatRewind38,hub39Auto,hub39Complete,hub39Slots,navTabPos39,vgap39,home39Report,emo39Scan,emo39Strip,emo39Split,emo39Icon,emo39Left,layoutAudit39,EMO39_MAP,HUB39_CAND,get HUB39(){return HUB39},md40,turn40Estimate,turn40Meta,turn40Merge,turn40Summary,think40Label,tool40Status,chatTotals40,att40Block,route40,fmtTok40,fmtDur40,chatFind40,turn40HTML,T40,shellMode36,tabPosFor36,tabFace36,clamp36,contrast36,ICONS36,DOCK36,fixtureChatSweep,gauntletResidueSweep,saveAChats,gauntletSandbox,cloudNormUrl,bridgeOrder,codespaceBridgeUrl,bridgeBase,cloudPairCode,gtfixContext,gtfixPrompt,gtfixHandoff,gtfixEnv,gtfixOpen,steLint,EXPLAIN_AS,STE_STYLE_BLOCK,h2PathOk,h2Validate,h2Diff,h2Assemble,h2Files,h2ParseReply,h2AnonIds,h2ParseExperience,h2Budget,h2RunTask,h2LibraryAdd,h2Render,reaSniff,reaEntropy,reaStrings,reaClassify,reaWasm,reaJS,reaLedger,reaEvidenceText,reaCliFor,reaGhidraReadOnly,reaInspect,reaHAR,reaSafetensors,reaPE,reaELF,reaMachO,reaRender,lgGraph,lgMerge,lgAppend,mastraWorkflow,mastraStep,graphitiAdd,graphitiAsOf,cogneeAdd,lfBatch,deEvaluate,DE_METRICS,buIndex,e2bRun,genuiRoute,ouiMermaidHydrate,get CLOUD(){return CLOUD},get H2(){return H2},get REA(){return REA},modelKind,modelGroupOf,modelGroups,modelOptionsHTML,modelDatalistHTML,modelListAttrs,modelListsRepaint,catalogSummary,catalogAgeText,catalogStale,artNearest,catalogRefresh,catalogFetchRemote,catalogStatusText,genImageModalities,MODEL_KINDS,get CATALOG_META(){return CATALOG_META},ouiPrepare,ouiStripComments,ouiLex,ouiSplit,ouiParse,ouiEvaluate,ouiSummary,ouiMerge,ouiSerialize,ouiValidate,ouiRuntime,ouiLibFromSpec,ouiLib,ouiSystemPrompt,ouiMount,ouiPaint,ouiSplitMessage,ouiXYChart,ouiPie,ouiMd,ouiFindByPath,ouiInteractionReplay,ouiTok,OUI_R,OUI_LIB_SPEC,artSave,artDelete,artPin,artCollect,artFilter,artKindOf,artBlocksFrom,artBody,artPreviewHtml,artRender,get ARTLIB(){return ARTLIB},set ARTLIB(v){ARTLIB=v},genuiCompare,genuiBodyHTML,genuiHydrate,genuiChatSystem,genuiGenerate,genuiRender,get GENUI(){return GENUI},GENUI_CORE,asstBodyHTML,fwValidate,fwJson,fwEmbedLexical,fwCosine,fwArith,lcRunnable,lcPrompt,lcCoerce,lcFill,lcParallel,lcBranch,liSplit,liIndex,chromaClient,chromaWhere,chromaWhereDoc,instructorCreate,instructorReask,paAgent,paSystem,crewPrompt,crewKickoff,skKernel,skParse,hsPipeline,autogptParse,autogptRun,TF_TASKS,tfPipeline,fwRender,FW_DEMOS,hhCommand,hhSlug,hhHandoffDoc,hhReadmeCommands,hhAddCustom,hhRender,HH_HARNESSES,get HH(){return HH},hhPassOff,hhCollect,hhExperiment,hhSearch,saveLearn,get S1PATHS(){return S1PATHS},pageIsLoopback,localFetchOpts,lnaPermission,ollamaOS,ollamaFixCommands,
     beaconExportLines,beaconSelfLearn,BEACON_SESSION,
     HL_KINDS,HL_TEMPLATES,HL_TARGETS,hlRefs,hlTemplate,hlValidate,hlOverBudget,hlPick,hlParseSpec,hlRun,hlScore,hlBaseline,hlBench,hlDesign,hlModes,hlApplyHooks,hlRender,get HL(){return HL},set HL(v){HL=v},asstModeEntries,freeModelFor,freeRoute,freeSlotWait,get FREE(){return FREE},set FREE(v){FREE=v},get FREE_LOG(){return FREE_LOG},
     HARNESS_LAYERS,harnessAudit,
